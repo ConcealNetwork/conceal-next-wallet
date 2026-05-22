@@ -1,0 +1,120 @@
+"use client"
+
+import {
+  BarChart3,
+  BookOpen,
+  Coins,
+  Download,
+  Gift,
+  Home,
+  LogOut,
+  Mail,
+  Menu,
+  Network,
+  QrCode,
+  Send,
+  Settings,
+  WalletCards,
+} from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { cn } from "@/lib/utils"
+import { useWalletSession } from "@/lib/session/wallet-session"
+
+const mainNav = [
+  { href: "/wallet/account", label: "Account", icon: Home },
+  { href: "/wallet/market", label: "Market", icon: BarChart3 },
+  { href: "/wallet/transactions", label: "Transactions", icon: WalletCards },
+  { href: "/wallet/send", label: "Send", icon: Send },
+  { href: "/wallet/receive", label: "Receive", icon: QrCode },
+  { href: "/wallet/messages", label: "Messages", icon: Mail },
+  { href: "/wallet/deposits", label: "Deposits", icon: Coins },
+  { href: "/wallet/address-book", label: "Address Book", icon: BookOpen },
+]
+
+const bottomNav = [
+  { href: "/wallet/settings", label: "Settings", icon: Settings },
+  { href: "/wallet/export", label: "Export", icon: Download },
+  { href: "/wallet/network", label: "Network", icon: Network },
+  { href: "/wallet/donate", label: "Donate", icon: Gift },
+]
+
+function NavLink({ item }: { item: (typeof mainNav)[number] }) {
+  const pathname = usePathname()
+  const Icon = item.icon
+  const active = pathname === item.href
+
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "flex min-h-11 items-center gap-3 rounded-xl px-4 text-sm font-medium text-zinc-300 transition hover:bg-zinc-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wallet-amber",
+        active && "bg-wallet-amber text-black hover:bg-wallet-amber hover:text-black"
+      )}
+    >
+      <Icon className="size-4" aria-hidden="true" />
+      <span>{item.label}</span>
+    </Link>
+  )
+}
+
+function SidebarContent() {
+  const { closeSession } = useWalletSession()
+
+  return (
+    <div className="flex h-full flex-col bg-zinc-950 px-4 py-5">
+      <Link href="/wallet/account" className="mb-8 flex items-center gap-3 px-2">
+        <div className="grid size-10 place-items-center rounded-xl bg-wallet-amber text-black">
+          <WalletCards className="size-5" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-lg font-bold text-white">Conceal Wallet</p>
+          <p className="text-xs text-zinc-500">Mock CCX interface</p>
+        </div>
+      </Link>
+      <nav className="flex flex-1 flex-col gap-2">
+        {mainNav.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
+        <div className="my-4 border-t border-zinc-800" />
+        {bottomNav.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
+      </nav>
+      <Button
+        type="button"
+        variant="ghost"
+        className="mt-4 h-11 justify-start gap-3 px-4 text-zinc-300 hover:bg-red-500/10 hover:text-red-300"
+        onClick={closeSession}
+      >
+        <LogOut className="size-4" aria-hidden="true" />
+        Disconnect
+      </Button>
+    </div>
+  )
+}
+
+export function Sidebar() {
+  return (
+    <>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-zinc-800 lg:block">
+        <SidebarContent />
+      </aside>
+      <div className="sticky top-0 z-40 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-4 backdrop-blur lg:hidden">
+        <Sheet>
+          <SheetTrigger>
+            <Button type="button" variant="ghost" size="icon" aria-label="Open navigation">
+              <Menu className="size-5" aria-hidden="true" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[290px] border-zinc-800 bg-zinc-950 p-0">
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
+        <p className="ml-3 text-base font-semibold">Conceal Wallet</p>
+      </div>
+    </>
+  )
+}
