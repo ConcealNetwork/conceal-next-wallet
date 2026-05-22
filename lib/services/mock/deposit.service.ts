@@ -1,7 +1,7 @@
 import { MOCK_ADDRESS, mockDeposits } from "@/lib/mock-data/wallet"
 import { ccxAmount } from "@/lib/utils"
 import { clone, mockDelay } from "@/lib/services/mock/helpers"
-import type { DepositService } from "@/lib/services/deposit.service"
+import { estimateDepositInterest, estimateDepositUnlockDays, getDepositApr, type DepositService } from "@/lib/services/deposit.service"
 
 export const mockDepositService: DepositService = {
   async listDeposits() {
@@ -17,9 +17,9 @@ export const mockDepositService: DepositService = {
       amount: ccxAmount(input.amount),
       status: "active",
       durationMonths: input.durationMonths,
-      apr: 4.2,
-      interest: ccxAmount(input.amount * 0.0042),
-      unlocksInDays: input.durationMonths * 30,
+      apr: getDepositApr(input.durationMonths),
+      interest: ccxAmount(estimateDepositInterest(input.amount, input.durationMonths)),
+      unlocksInDays: estimateDepositUnlockDays(input.durationMonths),
       progressPct: 0,
       address: MOCK_ADDRESS,
     }
