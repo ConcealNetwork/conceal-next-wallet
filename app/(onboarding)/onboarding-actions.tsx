@@ -20,7 +20,7 @@ export function OpenWalletButton() {
   }
 
   return (
-    <Button type="button" className="gap-2 bg-wallet-amber text-black" onClick={openWallet}>
+    <Button type="button" className="gap-2" onClick={openWallet}>
       Open Wallet
       <ArrowRight className="size-4" aria-hidden="true" />
     </Button>
@@ -40,15 +40,19 @@ export function ImportMethodCards() {
       {importMethods.map((method) => {
         const Icon = method.icon
         return (
-          <Link key={method.href} href={method.href}>
-            <Card className="wallet-card h-full transition hover:border-wallet-amber">
+          <Link
+            key={method.href}
+            href={method.href}
+            className="block cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Card className="wallet-card h-full transition-colors duration-200 hover:border-ring">
               <CardContent className="flex h-full items-start gap-4">
-                <div className="rounded-xl bg-wallet-amber p-3 text-black">
+                <div className="rounded-xl bg-primary p-3 text-primary-foreground">
                   <Icon className="size-5" aria-hidden="true" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-white">{method.label}</h2>
-                  <p className="mt-2 text-sm text-zinc-500">{method.description}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{method.description}</p>
                 </div>
               </CardContent>
             </Card>
@@ -71,7 +75,7 @@ export function MockImportButton({ method }: { method: "mnemonic" | "keys" | "fi
   }
 
   return (
-    <Button type="button" className="w-full bg-wallet-amber text-black" onClick={submit}>
+    <Button type="button" className="w-full" onClick={submit}>
       Open Mock Wallet
     </Button>
   )
@@ -79,7 +83,7 @@ export function MockImportButton({ method }: { method: "mnemonic" | "keys" | "fi
 
 export function WalletIconHeader() {
   return (
-    <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-wallet-amber text-black">
+    <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary text-primary-foreground">
       <Wallet className="size-7" aria-hidden="true" />
     </div>
   )

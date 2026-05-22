@@ -52,10 +52,10 @@ export default function TransactionsPage() {
       </SectionCard>
       <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative max-w-md flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search transactions..." className="pl-9" />
         </div>
-        <select className="h-10 rounded-xl border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-300">
+        <select className="h-10 w-full cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring md:w-auto">
           <option>Show: 10 per page</option>
         </select>
       </div>

@@ -33,7 +33,7 @@ export default function AccountPage() {
         title="Account Overview"
         subtitle="Manage your CCX holdings and view transaction summary"
         action={
-          <Button type="button" onClick={() => refresh.mutate()} className="gap-2 bg-wallet-amber text-black">
+          <Button type="button" onClick={() => refresh.mutate()} className="gap-2">
             <RefreshCw className="size-4" aria-hidden="true" />
             Refresh
           </Button>
@@ -92,7 +92,10 @@ export default function AccountPage() {
                 ))
               : recent.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction} />)}
           </div>
-          <Link className="mt-4 inline-flex text-sm font-semibold text-wallet-amber" href="/wallet/transactions">
+          <Link
+            className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            href="/wallet/transactions"
+          >
             View All Transactions →
           </Link>
         </SectionCard>
@@ -106,7 +109,10 @@ export default function AccountPage() {
               detail="Current holdings"
             />
           </div>
-          <Link className="mt-4 inline-flex text-sm font-semibold text-wallet-amber" href="/wallet/market">
+          <Link
+            className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            href="/wallet/market"
+          >
             View Full Market →
           </Link>
         </SectionCard>

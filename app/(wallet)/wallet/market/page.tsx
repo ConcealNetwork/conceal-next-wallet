@@ -17,7 +17,7 @@ export default function MarketPage() {
         title="Market Data"
         subtitle="Conceal Network (CCX) market information"
         action={
-          <Button type="button" onClick={() => market.refetch()} className="gap-2 bg-wallet-amber text-black">
+          <Button type="button" onClick={() => market.refetch()} className="gap-2">
             <RefreshCw className="size-4" aria-hidden="true" />
             Refresh
           </Button>

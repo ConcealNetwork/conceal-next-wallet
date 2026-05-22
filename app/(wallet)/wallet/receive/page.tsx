@@ -29,11 +29,11 @@ export default function ReceivePage() {
         <div className="space-y-6">
           <SectionCard title="Your Wallet Address">
             <div className="space-y-5">
-              <p className="break-all rounded-xl bg-zinc-950 p-4 text-sm text-zinc-300">{address}</p>
+              <p className="break-all rounded-xl bg-secondary p-4 text-sm text-foreground">{address}</p>
               <CopyButton value={address} label="Copy Address" />
               <div className="text-center">
                 <WalletQrCode value={qrValue} size={240} />
-                <p className="mt-3 text-sm text-zinc-500">Scan to receive CCX at this placeholder address.</p>
+                <p className="mt-3 text-sm text-muted-foreground">Scan to receive CCX at this placeholder address.</p>
               </div>
             </div>
           </SectionCard>
@@ -62,19 +62,22 @@ export default function ReceivePage() {
         <div className="space-y-6">
           <SectionCard title="Recently Received" description="Last 5 incoming">
             {received.map((transaction) => (
-              <div key={transaction.id} className="flex justify-between border-b border-zinc-800 py-3 last:border-b-0">
-                <span className="text-sm text-zinc-400">{timeAgo(transaction.timestamp)}</span>
+              <div key={transaction.id} className="flex justify-between border-b border-border py-3 last:border-b-0">
+                <span className="text-sm text-muted-foreground">{timeAgo(transaction.timestamp)}</span>
                 <span className="font-semibold text-wallet-incoming">+{formatCcx(transaction.amount)}</span>
               </div>
             ))}
-            <Link className="mt-4 inline-flex text-sm font-semibold text-wallet-amber" href="/wallet/transactions">
+            <Link
+              className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              href="/wallet/transactions"
+            >
               View all transactions
             </Link>
           </SectionCard>
           <SectionCard title="Deposit History" description="Last 5 deposits">
             {(deposits.data ?? []).map((deposit) => (
-              <div key={deposit.id} className="flex justify-between border-b border-zinc-800 py-3 last:border-b-0">
-                <span className="text-sm text-zinc-400">{deposit.durationMonths} months</span>
+              <div key={deposit.id} className="flex justify-between border-b border-border py-3 last:border-b-0">
+                <span className="text-sm text-muted-foreground">{deposit.durationMonths} months</span>
                 <span className="font-semibold text-wallet-deposit">+{formatCcx(deposit.amount)}</span>
               </div>
             ))}

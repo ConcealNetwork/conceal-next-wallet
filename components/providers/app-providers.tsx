@@ -11,7 +11,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <WalletSessionProvider>
         <TooltipProvider>
           {children}
-          <Toaster richColors position="top-right" toastOptions={{ className: "bg-zinc-900 text-white" }} />
+          <Toaster richColors position="top-right" toastOptions={{ className: "bg-popover text-popover-foreground" }} />
         </TooltipProvider>
       </WalletSessionProvider>
     </WalletQueryProvider>

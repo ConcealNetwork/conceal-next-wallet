@@ -13,7 +13,7 @@ export default function DonatePage() {
       <SectionCard title="Conceal Donation Address">
         <div className="grid gap-6 xl:grid-cols-[0.7fr_0.3fr]">
           <div>
-            <p className="break-all rounded-xl bg-zinc-950 p-4 text-sm text-zinc-300">{donationAddress}</p>
+            <p className="break-all rounded-xl bg-secondary p-4 text-sm text-foreground">{donationAddress}</p>
             <div className="mt-4 flex flex-wrap gap-3">
               <CopyButton value={donationAddress} label="Copy Address" />
               {[10, 25, 50, 100].map((amount) => (

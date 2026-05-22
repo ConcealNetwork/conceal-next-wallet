@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Sidebar } from "@/components/layout/sidebar"
 import { AmountText, FilterTabs, StatCard, TransactionRow } from "@/components/wallet/common"
@@ -72,6 +72,7 @@ describe("wallet components", () => {
     render(<Sidebar />)
     expect(screen.getByRole("link", { name: /Send/ })).toHaveClass("bg-primary")
     fireEvent.click(screen.getByRole("button", { name: /Disconnect/ }))
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Disconnect" }))
     expect(closeSession).toHaveBeenCalled()
   })
 })

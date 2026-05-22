@@ -48,12 +48,12 @@ export default function CreateWalletPage() {
           </div>
           {mnemonic && (
             <div className="rounded-xl border border-wallet-amber bg-wallet-amber/10 p-4">
-              <p className="text-sm font-semibold text-wallet-amber">Placeholder mnemonic</p>
-              <p className="mt-2 font-mono text-sm text-zinc-200">{mnemonic}</p>
+              <p className="text-sm font-semibold text-primary">Placeholder mnemonic</p>
+              <p className="mt-2 font-mono text-sm text-foreground">{mnemonic}</p>
             </div>
           )}
           <div className="flex gap-3">
-            <Button type="submit" className="bg-wallet-amber text-black">
+            <Button type="submit">
               Generate
             </Button>
             {mnemonic && (

@@ -42,6 +42,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
+        <SheetPrimitive.Title className="sr-only">Navigation</SheetPrimitive.Title>
+        <SheetPrimitive.Description className="sr-only">Wallet navigation menu</SheetPrimitive.Description>
         {children}
         <SheetPrimitive.Close className="absolute right-4 top-4 cursor-pointer rounded-sm opacity-70 transition-colors duration-200 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring">
           <X className="size-4" />

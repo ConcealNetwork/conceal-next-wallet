@@ -18,6 +18,17 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -86,15 +97,32 @@ function SidebarContent() {
           <NavLink key={item.href} item={item} />
         ))}
       </nav>
-      <Button
-        type="button"
-        variant="ghost"
-        className="mt-4 h-11 shrink-0 justify-start gap-3 px-4 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-        onClick={closeSession}
-      >
-        <LogOut className="size-4" aria-hidden="true" />
-        Disconnect
-      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            className="mt-4 h-11 shrink-0 justify-start gap-3 px-4 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            Disconnect
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect wallet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This clears the current mock wallet session and returns you to the open wallet screen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={closeSession}>
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

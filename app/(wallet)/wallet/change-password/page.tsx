@@ -57,7 +57,7 @@ export default function ChangePasswordPage() {
             <Input type="password" {...form.register("confirmPassword")} />
             {form.formState.errors.confirmPassword && <p className="text-sm text-red-400">{form.formState.errors.confirmPassword.message}</p>}
           </div>
-          <Button type="submit" className="bg-wallet-amber text-black">Change Password</Button>
+          <Button type="submit">Change Password</Button>
         </form>
       </SectionCard>
     </>

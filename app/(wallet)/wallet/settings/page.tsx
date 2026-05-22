@@ -2,6 +2,17 @@
 
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,8 +23,8 @@ import { useWalletSession } from "@/lib/session/wallet-session"
 
 function ToggleRow({ label, checked, onCheckedChange }: { label: string; checked: boolean; onCheckedChange: (checked: boolean) => void }) {
   return (
-    <div className="flex min-h-12 items-center justify-between gap-4 rounded-xl bg-zinc-950 px-4">
-      <span className="text-sm text-zinc-300">{label}</span>
+    <div className="flex min-h-12 items-center justify-between gap-4 rounded-xl bg-secondary px-4">
+      <span className="text-sm text-foreground">{label}</span>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   )
@@ -37,12 +48,12 @@ export default function SettingsPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <div className="space-y-6">
           <SectionCard title="Language">
-            <select className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3">
+            <select className="h-10 w-full cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring">
               <option>English</option>
             </select>
           </SectionCard>
           <SectionCard title="Optimization">
-            <Button type="button" className="bg-wallet-amber text-black" onClick={() => toast.success("Mock optimization complete.")}>
+            <Button type="button" onClick={() => toast.success("Mock optimization complete.")}>
               Optimize Now
             </Button>
           </SectionCard>
@@ -54,7 +65,7 @@ export default function SettingsPage() {
                   <Label>Node URL</Label>
                   <Input defaultValue={current.nodeUrl} placeholder="https://node.conceal.network:16000/" />
                 </div>
-                <Button type="button" className="bg-wallet-amber text-black" onClick={() => update({ nodeUrl: current.nodeUrl })}>
+                <Button type="button" onClick={() => update({ nodeUrl: current.nodeUrl })}>
                   Update
                 </Button>
               </div>
@@ -81,18 +92,30 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <Button type="button" className="bg-wallet-amber text-black" onClick={() => toast.success("Mock wallet updated.")}>Update</Button>
+                  <Button type="button" onClick={() => toast.success("Mock wallet updated.")}>Update</Button>
                   <Button type="button" variant="outline" onClick={() => router.push("/wallet/change-password")}>Change password</Button>
                   <Button type="button" variant="outline" onClick={() => toast.success("Mock rescan started.")}>Reset & rescan</Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => {
-                      if (window.confirm("Delete this mock wallet session?")) closeSession()
-                    }}
-                  >
-                    Delete wallet
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button type="button" variant="destructive">
+                        Delete wallet
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete wallet?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This deletes the current mock wallet session and returns you to the open wallet screen.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={closeSession}>
+                          Delete wallet
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             )}

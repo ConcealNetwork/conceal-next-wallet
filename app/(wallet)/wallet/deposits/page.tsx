@@ -39,7 +39,7 @@ export default function DepositsPage() {
         title="Deposits"
         subtitle="Create time-locked deposits and track returns"
         action={
-          <Button type="button" className="gap-2 bg-wallet-amber text-black" onClick={() => setOpen(true)}>
+          <Button type="button" className="gap-2" onClick={() => setOpen(true)}>
             <Plus className="size-4" aria-hidden="true" />
             Create New Deposit
           </Button>
@@ -53,34 +53,34 @@ export default function DepositsPage() {
       <SectionCard title="Active Deposits" className="mt-6">
         <div className="space-y-4">
           {data.map((deposit) => (
-            <div key={deposit.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+            <div key={deposit.id} className="rounded-xl border border-border bg-secondary p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-zinc-800 p-3 text-wallet-amber">
+                  <div className="rounded-xl bg-card p-3 text-primary">
                     <Lock className="size-5" aria-hidden="true" />
                   </div>
                   <div>
                     <p className="font-semibold">Unlocks in {deposit.unlocksInDays} days</p>
-                    <p className="text-sm text-zinc-500">Wallet {truncateAddress(deposit.address)}</p>
+                    <p className="text-sm text-muted-foreground">Wallet {truncateAddress(deposit.address)}</p>
                   </div>
                 </div>
-                <p className="text-lg font-bold text-wallet-amber">{deposit.apr}% APR</p>
+                <p className="text-lg font-bold text-primary">{deposit.apr}% APR</p>
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-3">
-                <p><span className="text-zinc-500">Amount</span><br />{formatCcx(deposit.amount)}</p>
-                <p><span className="text-zinc-500">Duration</span><br />{deposit.durationMonths} months</p>
-                <p><span className="text-zinc-500">Est. Interest</span><br />{formatCcx(deposit.interest, 6)}</p>
+                <p><span className="text-muted-foreground">Amount</span><br />{formatCcx(deposit.amount)}</p>
+                <p><span className="text-muted-foreground">Duration</span><br />{deposit.durationMonths} months</p>
+                <p><span className="text-muted-foreground">Est. Interest</span><br />{formatCcx(deposit.interest, 6)}</p>
               </div>
               <div className="mt-5">
                 <Progress value={deposit.progressPct} className="h-2" />
-                <p className="mt-2 text-sm text-zinc-500">{deposit.progressPct}% complete</p>
+                <p className="mt-2 text-sm text-muted-foreground">{deposit.progressPct}% complete</p>
               </div>
             </div>
           ))}
         </div>
       </SectionCard>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border-zinc-800 bg-zinc-900">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Deposit</DialogTitle>
           </DialogHeader>
@@ -91,13 +91,13 @@ export default function DepositsPage() {
             </div>
             <div className="space-y-2">
               <Label>Duration</Label>
-              <select value={duration} onChange={(event) => setDuration(event.target.value)} className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3">
+              <select value={duration} onChange={(event) => setDuration(event.target.value)} className="h-10 w-full cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="6">6 months</option>
                 <option value="12">12 months</option>
                 <option value="24">24 months</option>
               </select>
             </div>
-            <Button type="button" className="w-full bg-wallet-amber text-black" onClick={submit}>
+            <Button type="button" className="w-full" onClick={submit}>
               Create Deposit
             </Button>
           </div>

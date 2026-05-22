@@ -71,15 +71,15 @@ export function StatCard({
     incoming: "text-wallet-incoming",
     outgoing: "text-wallet-outgoing",
     deposit: "text-wallet-deposit",
-    amber: "text-wallet-amber",
+    amber: "text-primary",
   }[tone]
 
   return (
     <Card className="wallet-card">
       <CardContent className="flex min-h-[136px] items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{label}</p>
-          <p className={cn("mt-3 text-2xl font-bold", toneClass)}>{value}</p>
+          <p className={cn("mt-3 break-words text-2xl font-bold", toneClass)}>{value}</p>
           <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
         </div>
         {icon && (

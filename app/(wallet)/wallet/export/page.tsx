@@ -30,17 +30,17 @@ export default function ExportPage() {
       </Alert>
       <SectionCard title="Backup Data">
         <div className="space-y-5">
-          <div className="rounded-xl bg-zinc-950 p-4">
-            <p className="text-sm text-zinc-500">Mnemonic seed words</p>
-            <p className="mt-2 break-words font-mono text-sm text-zinc-200">{revealed ? data?.mnemonic : hidden}</p>
+          <div className="rounded-xl bg-secondary p-4">
+            <p className="text-sm text-muted-foreground">Mnemonic seed words</p>
+            <p className="mt-2 break-words font-mono text-sm text-foreground">{revealed ? data?.mnemonic : hidden}</p>
           </div>
-          <div className="rounded-xl bg-zinc-950 p-4">
-            <p className="text-sm text-zinc-500">Spend key</p>
-            <p className="mt-2 break-all font-mono text-sm text-zinc-200">{revealed ? data?.spendKey : hidden}</p>
+          <div className="rounded-xl bg-secondary p-4">
+            <p className="text-sm text-muted-foreground">Spend key</p>
+            <p className="mt-2 break-all font-mono text-sm text-foreground">{revealed ? data?.spendKey : hidden}</p>
           </div>
-          <div className="rounded-xl bg-zinc-950 p-4">
-            <p className="text-sm text-zinc-500">View key</p>
-            <p className="mt-2 break-all font-mono text-sm text-zinc-200">{revealed ? data?.viewKey : hidden}</p>
+          <div className="rounded-xl bg-secondary p-4">
+            <p className="text-sm text-muted-foreground">View key</p>
+            <p className="mt-2 break-all font-mono text-sm text-foreground">{revealed ? data?.viewKey : hidden}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button type="button" variant="outline" className="gap-2" onClick={() => setRevealed((value) => !value)}>
@@ -48,7 +48,7 @@ export default function ExportPage() {
               {revealed ? "Hide" : "Reveal"}
             </Button>
             {data && <CopyButton value={`${data.mnemonic}\n${data.spendKey}\n${data.viewKey}`} label="Copy Backup" />}
-            <Button type="button" className="gap-2 bg-wallet-amber text-black" onClick={() => toast.success("Mock backup download prepared.")}>
+            <Button type="button" className="gap-2" onClick={() => toast.success("Mock backup download prepared.")}>
               <FileDown className="size-4" aria-hidden="true" />
               Download backup
             </Button>

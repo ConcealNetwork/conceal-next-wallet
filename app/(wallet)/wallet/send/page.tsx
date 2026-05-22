@@ -47,13 +47,13 @@ export default function SendPage() {
             <div className="space-y-2">
               <Label htmlFor="address">Destination Address</Label>
               <Input id="address" placeholder="ccx7 ..." {...form.register("address")} />
-              <p className="text-xs text-zinc-500">Enter the recipients CCX address (98 characters starting with ccx)</p>
+              <p className="text-xs text-muted-foreground">Enter the recipients CCX address (98 characters starting with ccx)</p>
               {form.formState.errors.address && <p className="text-sm text-red-400">{form.formState.errors.address.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="amount">Amount to Send</Label>
               <Input id="amount" type="number" step="0.01" placeholder="0.00" {...form.register("amount", { valueAsNumber: true })} />
-              <p className="text-xs text-zinc-500">Amount in CCX</p>
+              <p className="text-xs text-muted-foreground">Amount in CCX</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="paymentId">Payment ID</Label>
@@ -63,7 +63,7 @@ export default function SendPage() {
               <Label htmlFor="message">Message</Label>
               <Textarea id="message" placeholder="Optional message, max 255 characters" {...form.register("message")} />
             </div>
-            <Button type="submit" className="w-full bg-wallet-amber text-black" disabled={send.isPending}>
+            <Button type="submit" className="w-full" disabled={send.isPending}>
               Send
             </Button>
           </form>
@@ -72,12 +72,12 @@ export default function SendPage() {
           <SectionCard title="Deposit" description="Your receiving address">
             {wallet.data && (
               <div className="space-y-4">
-                <p className="break-all rounded-xl bg-zinc-950 p-3 text-sm text-zinc-300">{wallet.data.address}</p>
+                <p className="break-all rounded-xl bg-secondary p-3 text-sm text-foreground">{wallet.data.address}</p>
                 <div className="flex flex-wrap gap-3">
                   <CopyButton value={wallet.data.address} label="Copy Address" />
-                  <Link className="inline-flex h-10 items-center rounded-xl bg-wallet-amber px-4 text-sm font-semibold text-black" href="/wallet/receive">
-                    Open Receive
-                  </Link>
+                  <Button asChild>
+                    <Link href="/wallet/receive">Open Receive</Link>
+                  </Button>
                 </div>
                 <WalletQrCode value={wallet.data.address} size={150} />
               </div>
@@ -86,10 +86,10 @@ export default function SendPage() {
           <SectionCard title="Recently Sent" description="Last 5 outgoing transactions">
             <div>
               {recentSent.map((transaction) => (
-                <div key={transaction.id} className="flex justify-between border-b border-zinc-800 py-3 last:border-b-0">
+                <div key={transaction.id} className="flex justify-between border-b border-border py-3 last:border-b-0">
                   <div>
                     <p className="text-sm text-white">{truncateAddress(transaction.address)}</p>
-                    <p className="text-xs text-zinc-500">{timeAgo(transaction.timestamp)}</p>
+                    <p className="text-xs text-muted-foreground">{timeAgo(transaction.timestamp)}</p>
                   </div>
                   <p className="text-sm font-semibold text-wallet-outgoing">-{formatCcx(transaction.amount)}</p>
                 </div>

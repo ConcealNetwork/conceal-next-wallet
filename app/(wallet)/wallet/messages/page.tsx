@@ -58,7 +58,7 @@ export default function MessagesPage() {
         title="Messages"
         subtitle="Your message history"
         action={
-          <Button type="button" className="gap-2 bg-wallet-amber text-black" onClick={() => setCompose(true)}>
+          <Button type="button" className="gap-2" onClick={() => setCompose(true)}>
             <Plus className="size-4" aria-hidden="true" />
             New Message
           </Button>
@@ -66,7 +66,7 @@ export default function MessagesPage() {
       />
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search messages..." className="max-w-md" />
-        <select className="h-10 rounded-xl border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-300">
+        <select className="h-10 w-full cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring md:w-auto">
           <option>Show: 10 per page</option>
         </select>
       </div>
@@ -80,21 +80,21 @@ export default function MessagesPage() {
                 type="button"
                 onClick={() => setSelected(message)}
                 className={cn(
-                  "w-full rounded-xl border border-zinc-800 p-4 text-left transition hover:border-wallet-amber",
+                  "w-full cursor-pointer rounded-xl border border-border p-4 text-left transition-colors duration-200 hover:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   message.unread && "border-l-4 border-l-wallet-amber bg-wallet-amber/5"
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <div className="grid size-10 place-items-center rounded-full bg-zinc-800 font-semibold text-wallet-amber">
+                  <div className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary font-semibold text-primary">
                     {message.counterpartyName[0]}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-semibold text-white">{message.counterpartyName}</p>
-                      <span className="text-xs text-zinc-500">{timeAgo(message.timestamp)}</span>
+                      <span className="text-xs text-muted-foreground">{timeAgo(message.timestamp)}</span>
                     </div>
-                    <p className="truncate text-xs text-zinc-500">{truncateAddress(message.counterpartyAddress)}</p>
-                    <p className="mt-2 line-clamp-2 text-sm text-zinc-400">{message.body}</p>
+                    <p className="truncate text-xs text-muted-foreground">{truncateAddress(message.counterpartyAddress)}</p>
+                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{message.body}</p>
                   </div>
                   {message.unread && <span className="rounded-full bg-wallet-amber px-2 py-1 text-xs font-semibold text-black">New</span>}
                 </div>
@@ -107,16 +107,16 @@ export default function MessagesPage() {
             <EmptyState title="No message selected" description="Select a message from the list to read the full conversation." />
           ) : (
             <article>
-              <p className="text-sm text-zinc-500">{selected.direction === "received" ? "From" : "To"}</p>
+              <p className="text-sm text-muted-foreground">{selected.direction === "received" ? "From" : "To"}</p>
               <h2 className="mt-2 text-2xl font-bold">{selected.counterpartyName}</h2>
-              <p className="mt-1 break-all text-sm text-zinc-500">{selected.counterpartyAddress}</p>
-              <p className="mt-6 rounded-xl bg-zinc-950 p-5 leading-7 text-zinc-200">{selected.body}</p>
+              <p className="mt-1 break-all text-sm text-muted-foreground">{selected.counterpartyAddress}</p>
+              <p className="mt-6 rounded-xl bg-secondary p-5 leading-7 text-foreground">{selected.body}</p>
             </article>
           )}
         </SectionCard>
       </div>
       <Dialog open={compose} onOpenChange={setCompose}>
-        <DialogContent className="border-zinc-800 bg-zinc-900">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>New Message</DialogTitle>
           </DialogHeader>
@@ -129,7 +129,7 @@ export default function MessagesPage() {
               <Label>Message</Label>
               <Textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Write a mock message" />
             </div>
-            <Button type="button" className="w-full bg-wallet-amber text-black" onClick={submitMessage}>
+            <Button type="button" className="w-full" onClick={submitMessage}>
               Send Message
             </Button>
           </div>

@@ -44,7 +44,7 @@ export default function AddressBookPage() {
         title="Address Book"
         subtitle="Save and manage frequently used addresses"
         action={
-          <Button type="button" className="gap-2 bg-wallet-amber text-black" onClick={() => setOpen(true)}>
+          <Button type="button" className="gap-2" onClick={() => setOpen(true)}>
             <Plus className="size-4" aria-hidden="true" />
             Create New
           </Button>
@@ -56,13 +56,13 @@ export default function AddressBookPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {visibleEntries.map((entry) => (
-              <div key={entry.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                <div className="flex items-start justify-between gap-3">
+              <div key={entry.id} className="rounded-xl border border-border bg-secondary p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="font-semibold text-white">{entry.label}</p>
-                    <p className="mt-2 text-sm text-zinc-500">{truncateAddress(entry.address, 14, 10)}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{truncateAddress(entry.address, 14, 10)}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 sm:justify-end">
                     <CopyButton value={entry.address} label="Copy" />
                     <Button type="button" variant="outline" size="icon" aria-label="Edit address"><Edit className="size-4" /></Button>
                     <Button type="button" variant="destructive" size="icon" aria-label="Delete address" onClick={() => setEntries((current) => current.filter((item) => item.id !== entry.id))}>
@@ -76,7 +76,7 @@ export default function AddressBookPage() {
         )}
       </SectionCard>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border-zinc-800 bg-zinc-900">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Address</DialogTitle>
           </DialogHeader>
@@ -93,7 +93,7 @@ export default function AddressBookPage() {
               <Label>Payment ID</Label>
               <Input value={paymentId} onChange={(event) => setPaymentId(event.target.value)} placeholder="Optional" />
             </div>
-            <Button type="button" className="w-full bg-wallet-amber text-black" onClick={submit}>
+            <Button type="button" className="w-full" onClick={submit}>
               Save Address
             </Button>
           </div>
