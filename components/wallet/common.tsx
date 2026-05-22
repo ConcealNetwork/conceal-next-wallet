@@ -172,10 +172,12 @@ export function FilterTabs({
   tabs,
   active,
   onChange,
+  badges,
 }: {
   tabs: string[]
   active: string
   onChange: (tab: string) => void
+  badges?: Partial<Record<string, React.ReactNode>>
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -189,7 +191,21 @@ export function FilterTabs({
             active === tab && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground"
           )}
         >
-          {tab}
+          <span className="inline-flex items-center gap-2">
+            {tab}
+            {badges?.[tab] ? (
+              <span
+                className={cn(
+                  "inline-flex min-w-5 items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-semibold",
+                  active === tab
+                    ? "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground"
+                    : "border-border bg-secondary text-foreground"
+                )}
+              >
+                {badges[tab]}
+              </span>
+            ) : null}
+          </span>
         </button>
       ))}
     </div>

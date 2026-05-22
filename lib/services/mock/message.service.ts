@@ -12,12 +12,12 @@ export const mockMessageService: MessageService = {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay()
     return {
-      id: "msg-mock-submit",
+      id: `msg-mock-${Date.now()}`,
       direction: "sent",
       counterpartyName: "New Contact",
       counterpartyAddress: input.recipientAddress,
       body: input.body,
-      timestamp: "2026-05-22T03:05:00.000Z",
+      timestamp: new Date().toISOString(),
       unread: false,
     }
   },
