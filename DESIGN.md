@@ -14,7 +14,7 @@ shadcn theme tokens below — **never ad-hoc hex** for foundational surfaces.
 | `--secondary` / `--muted` | `0 0% 18%` | `#2e2e2e` | Insets, nested boxes, subtle fills. |
 | `--muted-foreground` | `0 0% 64%` | `#a3a3a3` | Secondary text. |
 | `--primary` / `--accent` / `--ring` | `39 100% 50%` | `#FFA500` | **Pure orange** accent — active nav (solid pill, black text), primary buttons, links, focus ring. |
-| `--footer` | `222 16% 12%` | ~`#191d28` | Cool navy slate — footer only (deliberate cool tint against the neutral body). |
+| `--chrome` | `0 0% 11%` | ~`#1c1c1c` | Shared dark chrome surface — sidebar + footer. Neutral, subtly darker than the body. |
 | `--destructive` | `0 84% 60%` | `#ef4444` | Outgoing amounts, delete actions. |
 
 ### Critical rules learned
@@ -58,7 +58,7 @@ shadcn theme tokens below — **never ad-hoc hex** for foundational surfaces.
 
 ## Known polish backlog (bottom-up pass)
 - [ ] Transaction Summary nested "Recent Transactions / Last Activity" boxes are too dark → use `--secondary`.
-- [ ] Apply `--footer` navy to the Footer component.
+- [x] Sidebar + footer share the neutral `--chrome` surface.
 - [ ] Hover/focus states + `cursor-pointer` audit across cards, rows, nav, tabs.
 - [ ] Empty/loading/error states get designed treatment (skeletons, not bare text).
 - [ ] Responsive sweep + sidebar mobile drawer.

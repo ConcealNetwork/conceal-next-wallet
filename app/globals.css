@@ -57,7 +57,7 @@
     --input: 0 0% 25%;
     --ring: 39 100% 50%;
     --radius: 0.75rem;
-    --footer: 0 0% 11%; /* neutral grey, subtly darker than the body (no blue tint) */
+    --chrome: 0 0% 11%; /* shared dark chrome surface (sidebar + footer), subtly darker than the body */
     --chart-1: 199 89% 48%;
     --chart-2: 160 84% 39%;
     --chart-3: 39 100% 50%;

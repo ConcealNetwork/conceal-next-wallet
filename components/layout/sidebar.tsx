@@ -132,7 +132,7 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
 
 function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
   return (
-    <div className={cn("flex h-full flex-col bg-background py-5", collapsed ? "px-2" : "px-4")}>
+    <div className={cn("flex h-full flex-col bg-[hsl(var(--chrome))] py-5", collapsed ? "px-2" : "px-4")}>
       <div className={cn("mb-8 flex", collapsed ? "justify-center" : "items-center")}>
         <Link
           href="/wallet/account"
@@ -199,7 +199,7 @@ export function Sidebar() {
               <Menu className="size-5" aria-hidden="true" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[290px] border-border bg-background p-0">
+          <SheetContent side="left" className="w-[290px] border-border bg-[hsl(var(--chrome))] p-0">
             <SidebarContent />
           </SheetContent>
         </Sheet>
