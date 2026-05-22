@@ -74,7 +74,7 @@ function SidebarContent() {
           <p className="text-xs text-zinc-500">Mock CCX interface</p>
         </div>
       </Link>
-      <nav className="flex flex-1 flex-col gap-2">
+      <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {mainNav.map((item) => (
           <NavLink key={item.href} item={item} />
         ))}
@@ -86,7 +86,7 @@ function SidebarContent() {
       <Button
         type="button"
         variant="ghost"
-        className="mt-4 h-11 justify-start gap-3 px-4 text-zinc-300 hover:bg-red-500/10 hover:text-red-300"
+        className="mt-4 h-11 shrink-0 justify-start gap-3 px-4 text-zinc-300 hover:bg-red-500/10 hover:text-red-300"
         onClick={closeSession}
       >
         <LogOut className="size-4" aria-hidden="true" />
