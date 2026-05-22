@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import localFont from "next/font/local";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
-const geist = Geist({
-  subsets: ["latin"],
+const geist = localFont({
+  src: "./fonts/GeistVF.woff",
   variable: "--font-sans",
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {
