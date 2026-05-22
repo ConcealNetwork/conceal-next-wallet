@@ -6,9 +6,9 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader, SectionCard, StatCard } from "@/components/wallet/common"
-import type { MarketData, WalletInfo } from "@/lib/types"
+import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types"
 import { useMarketData, useRefreshWallet, useTransactions, useWalletInfo } from "@/lib/hooks"
-import { ccxToNumber, cn, formatCcx, formatUsd } from "@/lib/utils"
+import { ccxToNumber, cn, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils"
 
 const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false })
 const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false })
@@ -111,6 +111,9 @@ export default function AccountPage() {
               lastActivity="1h ago"
             />
           )}
+          {transactions.data && transactions.data.length > 0 ? (
+            <RecentActivityList transactions={transactions.data.slice(0, 5)} />
+          ) : null}
           <Link
             className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             href="/wallet/transactions"
@@ -205,6 +208,47 @@ function TransactionFlowSummary({
       <p className="mt-4 text-sm text-muted-foreground">
         {transactionCount} transactions · last activity {lastActivity}
       </p>
+    </div>
+  )
+}
+
+const TX_META: Record<TransactionType, { label: string; sign: string; className: string }> = {
+  receive: { label: "Receive", sign: "+", className: "text-wallet-incoming" },
+  deposit: { label: "Deposit", sign: "+", className: "text-wallet-deposit" },
+  send: { label: "Send", sign: "−", className: "text-wallet-outgoing" },
+  withdrawal: { label: "Withdraw", sign: "−", className: "text-wallet-outgoing" },
+}
+
+function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
+  return (
+    <div className="mt-5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recent Activity</p>
+      <ul className="mt-1 divide-y divide-border">
+        {transactions.map((transaction) => {
+          const meta = TX_META[transaction.type]
+          return (
+            <li key={transaction.id} className="flex items-center justify-between gap-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-[10.5px] text-muted-foreground">
+                  {meta.label}
+                </span>
+                <span className="truncate font-mono text-xs text-muted-foreground">
+                  {truncateAddress(transaction.address)}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <span className={cn("font-mono text-sm font-medium", meta.className)}>
+                  {meta.sign}
+                  {formatCcx(transaction.amount)}
+                </span>
+                <span className="hidden w-16 text-right text-xs text-muted-foreground sm:inline">
+                  {timeAgo(transaction.timestamp)}
+                </span>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
