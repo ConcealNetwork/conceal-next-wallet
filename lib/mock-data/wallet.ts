@@ -2,6 +2,8 @@ import type {
   AddressEntry,
   Deposit,
   MarketData,
+  MarketHistoryPoint,
+  MarketTimeframe,
   Message,
   NodeStatus,
   Transaction,
@@ -163,22 +165,82 @@ export const mockMessages: Message[] = [
   },
 ]
 
+const MARKET_PRICE_USD = 0.045
+const CIRCULATING_SUPPLY_CCX = 6_456_200
+const TIMEFRAME_POINT_COUNT: Record<MarketTimeframe, number> = {
+  "24H": 25,
+  "7D": 8,
+  "30D": 31,
+  "90D": 91,
+}
+const TIMEFRAME_DRIFT: Record<MarketTimeframe, number> = {
+  "24H": 0.0012,
+  "7D": 0.0035,
+  "30D": 0.008,
+  "90D": 0.013,
+}
+const TIMEFRAME_WAVE: Record<MarketTimeframe, number> = {
+  "24H": 0.00055,
+  "7D": 0.001,
+  "30D": 0.0015,
+  "90D": 0.0024,
+}
+
+function formatMockHistoryLabel(date: Date, range: MarketTimeframe) {
+  if (range === "24H") {
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: "UTC",
+    })
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    timeZone: "UTC",
+  })
+}
+
+function generateMockPriceHistory(range: MarketTimeframe): MarketHistoryPoint[] {
+  const pointCount = TIMEFRAME_POINT_COUNT[range]
+  const anchor = new Date("2026-05-22T12:00:00.000Z")
+  const stepMs = range === "24H" ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000
+  const drift = TIMEFRAME_DRIFT[range]
+  const wave = TIMEFRAME_WAVE[range]
+
+  return Array.from({ length: pointCount }, (_, index) => {
+    const progress = pointCount === 1 ? 1 : index / (pointCount - 1)
+    const date = new Date(anchor.getTime() - (pointCount - 1 - index) * stepMs)
+    const waveOffset = Math.sin(index * 1.21 + range.length) * wave + Math.cos(index * 0.47) * wave * 0.45
+    const price = index === pointCount - 1 ? MARKET_PRICE_USD : MARKET_PRICE_USD - drift * (1 - progress) + waveOffset
+
+    return {
+      date: formatMockHistoryLabel(date, range),
+      price: Number(Math.max(price, 0.001).toFixed(6)),
+    }
+  })
+}
+
+export const mockMarketHistoryByTimeframe: Record<MarketTimeframe, MarketHistoryPoint[]> = {
+  "24H": generateMockPriceHistory("24H"),
+  "7D": generateMockPriceHistory("7D"),
+  "30D": generateMockPriceHistory("30D"),
+  "90D": generateMockPriceHistory("90D"),
+}
+
 export const mockMarketData: MarketData = {
-  price: usdAmount(0.045),
+  price: usdAmount(MARKET_PRICE_USD),
   change24hPct: 2.34,
+  high24h: usdAmount(0.0462),
+  low24h: usdAmount(0.0438),
   volume24h: usdAmount(125000),
+  marketCap: usdAmount(MARKET_PRICE_USD * CIRCULATING_SUPPLY_CCX),
+  circulatingSupply: ccxAmount(CIRCULATING_SUPPLY_CCX),
+  ath: usdAmount(0.0875),
   portfolioValueUsd: usdAmount(56.2725),
-  history: [
-    ["Apr 22", 0.037],
-    ["Apr 26", 0.039],
-    ["Apr 30", 0.038],
-    ["May 04", 0.041],
-    ["May 08", 0.044],
-    ["May 12", 0.043],
-    ["May 16", 0.046],
-    ["May 20", 0.044],
-    ["May 22", 0.045],
-  ].map(([date, price]) => ({ date: String(date), price: Number(price) })),
+  history: mockMarketHistoryByTimeframe["30D"],
+  historyByTimeframe: mockMarketHistoryByTimeframe,
 }
 
 export const mockAddressBook: AddressEntry[] = []

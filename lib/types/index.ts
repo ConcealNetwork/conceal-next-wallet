@@ -62,9 +62,22 @@ export type Message = {
 export type MarketData = {
   price: UsdAmount
   change24hPct: number
+  high24h: UsdAmount
+  low24h: UsdAmount
   volume24h: UsdAmount
+  marketCap: UsdAmount
+  circulatingSupply: CcxAmount
+  ath?: UsdAmount
   history: { date: string; price: number }[]
+  historyByTimeframe: Record<MarketTimeframe, MarketHistoryPoint[]>
   portfolioValueUsd: UsdAmount
+}
+
+export type MarketTimeframe = "24H" | "7D" | "30D" | "90D"
+
+export type MarketHistoryPoint = {
+  date: string
+  price: number
 }
 
 export type AddressEntry = {
