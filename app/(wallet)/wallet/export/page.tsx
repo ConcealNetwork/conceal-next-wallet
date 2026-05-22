@@ -1,0 +1,60 @@
+"use client"
+
+import { Eye, FileDown } from "lucide-react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { CopyButton, PageHeader, SectionCard } from "@/components/wallet/common"
+import { services } from "@/lib/services"
+import type { ExportWalletData } from "@/lib/services/wallet.service"
+
+export default function ExportPage() {
+  const [data, setData] = useState<ExportWalletData | null>(null)
+  const [revealed, setRevealed] = useState(false)
+
+  useEffect(() => {
+    services.wallet.exportWallet().then(setData)
+  }, [])
+
+  const hidden = "•••• •••• •••• •••• •••• ••••"
+
+  return (
+    <>
+      <PageHeader title="Export" subtitle="Back up placeholder wallet material" />
+      <Alert className="mb-6 border-wallet-amber bg-wallet-amber/10">
+        <AlertTitle>Mock-only export data</AlertTitle>
+        <AlertDescription>
+          These strings are placeholders. This app does not generate, derive, validate, store, or reveal real wallet keys.
+        </AlertDescription>
+      </Alert>
+      <SectionCard title="Backup Data">
+        <div className="space-y-5">
+          <div className="rounded-xl bg-zinc-950 p-4">
+            <p className="text-sm text-zinc-500">Mnemonic seed words</p>
+            <p className="mt-2 break-words font-mono text-sm text-zinc-200">{revealed ? data?.mnemonic : hidden}</p>
+          </div>
+          <div className="rounded-xl bg-zinc-950 p-4">
+            <p className="text-sm text-zinc-500">Spend key</p>
+            <p className="mt-2 break-all font-mono text-sm text-zinc-200">{revealed ? data?.spendKey : hidden}</p>
+          </div>
+          <div className="rounded-xl bg-zinc-950 p-4">
+            <p className="text-sm text-zinc-500">View key</p>
+            <p className="mt-2 break-all font-mono text-sm text-zinc-200">{revealed ? data?.viewKey : hidden}</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button type="button" variant="outline" className="gap-2" onClick={() => setRevealed((value) => !value)}>
+              <Eye className="size-4" aria-hidden="true" />
+              {revealed ? "Hide" : "Reveal"}
+            </Button>
+            {data && <CopyButton value={`${data.mnemonic}\n${data.spendKey}\n${data.viewKey}`} label="Copy Backup" />}
+            <Button type="button" className="gap-2 bg-wallet-amber text-black" onClick={() => toast.success("Mock backup download prepared.")}>
+              <FileDown className="size-4" aria-hidden="true" />
+              Download backup
+            </Button>
+          </div>
+        </div>
+      </SectionCard>
+    </>
+  )
+}
