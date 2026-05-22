@@ -3,6 +3,7 @@
 import { Clock, Lock, RefreshCw, ShieldCheck, Wallet } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader, SectionCard, StatCard, TransactionRow } from "@/components/wallet/common"
 import { useMarketData, useRefreshWallet, useTransactions, useWalletInfo } from "@/lib/hooks"
 import { ccxToNumber, formatCcx, formatUsd } from "@/lib/utils"
@@ -38,7 +39,7 @@ export default function AccountPage() {
           </Button>
         }
       />
-      {info && (
+      {info ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <StatCard label="Total Balance" value={formatCcx(info.balanceTotal)} detail="$56.2725 USD" icon={<Wallet />} />
           <StatCard label="Available" value={formatCcx(info.available)} detail="Ready to spend" />
@@ -52,16 +53,26 @@ export default function AccountPage() {
           <StatCard label="Staking" value={formatCcx(info.staking)} detail="Earning rewards" icon={<ShieldCheck />} />
           <StatCard label="Withdrawable" value={formatCcx(info.withdrawable)} detail="Available for withdrawal" />
         </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="wallet-card min-h-[136px] space-y-4 p-4">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-8 w-36" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          ))}
+        </div>
       )}
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
         <SectionCard title="Transaction Summary">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl bg-zinc-950 p-4">
-              <p className="text-sm text-zinc-500">Recent Transactions</p>
+            <div className="rounded-xl bg-secondary p-4">
+              <p className="text-sm text-muted-foreground">Recent Transactions</p>
               <p className="mt-2 text-2xl font-bold">{transactions.data?.length ?? 0}</p>
             </div>
-            <div className="rounded-xl bg-zinc-950 p-4">
-              <p className="text-sm text-zinc-500">Last Activity</p>
+            <div className="rounded-xl bg-secondary p-4">
+              <p className="text-sm text-muted-foreground">Last Activity</p>
               <p className="mt-2 text-2xl font-bold">1h ago</p>
             </div>
           </div>
@@ -72,9 +83,14 @@ export default function AccountPage() {
           </div>
           <div className="mt-6">
             <h3 className="mb-2 font-semibold">Recent Activity</h3>
-            {recent.map((transaction) => (
-              <TransactionRow key={transaction.id} transaction={transaction} />
-            ))}
+            {transactions.isLoading
+              ? Array.from({ length: 3 }, (_, index) => (
+                  <div key={index} className="border-b border-border py-4 last:border-b-0">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="mt-3 h-3 w-28" />
+                  </div>
+                ))
+              : recent.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction} />)}
           </div>
           <Link className="mt-4 inline-flex text-sm font-semibold text-wallet-amber" href="/wallet/transactions">
             View All Transactions →
