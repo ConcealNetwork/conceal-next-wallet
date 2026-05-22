@@ -62,8 +62,19 @@ export default function AccountPage() {
         )}
       </div>
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-        <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
-          <SectionCard title="Transaction Summary" description="Net flow this period">
+        <div className="h-full animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
+          <SectionCard
+            title="Transaction Summary"
+            description="Net flow this period"
+            footer={
+              <Link
+                className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
+                href="/wallet/transactions"
+              >
+                View All Transactions →
+              </Link>
+            }
+          >
             {transactions.isLoading ? (
               <div className="space-y-5">
                 <Skeleton className="h-3 w-full rounded-full" />
@@ -86,16 +97,21 @@ export default function AccountPage() {
             {transactions.data && transactions.data.length > 0 ? (
               <RecentActivityList transactions={transactions.data.slice(0, 5)} />
             ) : null}
-            <Link
-              className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
-              href="/wallet/transactions"
-            >
-              View All Transactions →
-            </Link>
           </SectionCard>
         </div>
-        <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
-          <SectionCard title="Market Summary" description="Live CCX price and your holdings">
+        <div className="h-full animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
+          <SectionCard
+            title="Market Summary"
+            description="Live CCX price and your holdings"
+            footer={
+              <Link
+                className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
+                href="/wallet/market"
+              >
+                View Full Market →
+              </Link>
+            }
+          >
             {info && market.data ? (
               <MarketSummaryHybrid market={market.data} walletInfo={info} />
             ) : (
@@ -119,12 +135,6 @@ export default function AccountPage() {
                 </div>
               </div>
             )}
-            <Link
-              className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
-              href="/wallet/market"
-            >
-              View Full Market →
-            </Link>
           </SectionCard>
         </div>
       </div>

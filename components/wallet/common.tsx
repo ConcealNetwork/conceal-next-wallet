@@ -33,22 +33,25 @@ export function SectionCard({
   title,
   description,
   children,
+  footer,
   className,
 }: {
   title?: string
   description?: string
   children: React.ReactNode
+  footer?: React.ReactNode
   className?: string
 }) {
   return (
-    <Card className={cn("wallet-card", className)}>
+    <Card className={cn("wallet-card flex h-full flex-col", className)}>
       {(title || description) && (
         <CardHeader>
           {title && <CardTitle>{title}</CardTitle>}
           {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
       )}
-      <CardContent>{children}</CardContent>
+      <CardContent className="flex flex-1 flex-col">{children}</CardContent>
+      {footer ? <div className="mt-auto border-t border-border px-6 pt-4">{footer}</div> : null}
     </Card>
   )
 }
