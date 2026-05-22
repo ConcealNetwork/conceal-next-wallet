@@ -2,7 +2,7 @@
 
 import { Check, Clipboard, Inbox } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
-import { useState } from "react"
+import { cloneElement, isValidElement, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,7 +22,7 @@ export function PageHeader({
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-white">{title}</h1>
-        <p className="mt-2 text-zinc-400">{subtitle}</p>
+        <p className="mt-2 text-muted-foreground">{subtitle}</p>
       </div>
       {action}
     </div>
@@ -78,11 +78,17 @@ export function StatCard({
     <Card className="wallet-card">
       <CardContent className="flex min-h-[136px] items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-zinc-400">{label}</p>
+          <p className="text-sm text-muted-foreground">{label}</p>
           <p className={cn("mt-3 text-2xl font-bold", toneClass)}>{value}</p>
-          <p className="mt-2 text-sm text-zinc-500">{detail}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
         </div>
-        {icon && <div className="rounded-xl bg-zinc-800 p-3 text-wallet-amber">{icon}</div>}
+        {icon && (
+          <div className="rounded-xl bg-secondary p-3 text-primary">
+            {isValidElement<{ className?: string }>(icon)
+              ? cloneElement(icon, { className: cn("size-5", icon.props.className) })
+              : icon}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -115,8 +121,8 @@ export function FilterTabs({
           type="button"
           onClick={() => onChange(tab)}
           className={cn(
-            "min-h-10 rounded-xl border border-zinc-800 px-4 text-sm text-zinc-300 transition hover:border-wallet-amber hover:text-white",
-            active === tab && "border-wallet-amber bg-wallet-amber text-black hover:text-black"
+            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm text-muted-foreground transition-colors duration-200 hover:border-ring hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            active === tab && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground"
           )}
         >
           {tab}
@@ -136,13 +142,13 @@ export function TransactionRow({ transaction }: { transaction: Transaction }) {
   const prefix = transaction.type === "send" || transaction.type === "withdrawal" ? "-" : "+"
 
   return (
-    <div className="flex flex-col gap-3 border-b border-zinc-800 py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <div className="flex items-center gap-3">
-          <Badge className="bg-zinc-800 text-zinc-200">{label}</Badge>
+          <Badge variant="secondary">{label}</Badge>
           <p className="font-medium text-white">{truncateAddress(transaction.address)}</p>
         </div>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           {timeAgo(transaction.timestamp)} • {transaction.confirmations} conf
         </p>
       </div>
@@ -178,10 +184,12 @@ export function WalletQrCode({ value, size = 180 }: { value: string; size?: numb
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex min-h-[220px] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 p-8 text-center">
-      <Inbox className="size-10 text-zinc-600" aria-hidden="true" />
+    <div className="flex min-h-[220px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-secondary/60 p-8 text-center">
+      <div className="grid size-12 place-items-center rounded-xl bg-card text-muted-foreground">
+        <Inbox className="size-5" aria-hidden="true" />
+      </div>
       <p className="mt-4 font-semibold text-white">{title}</p>
-      <p className="mt-2 max-w-md text-sm text-zinc-500">{description}</p>
+      <p className="mt-2 max-w-md text-sm text-muted-foreground">{description}</p>
     </div>
   )
 }

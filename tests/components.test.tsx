@@ -70,7 +70,7 @@ describe("wallet components", () => {
   it("marks the active sidebar route and disconnects", () => {
     pathname = "/wallet/send"
     render(<Sidebar />)
-    expect(screen.getByRole("link", { name: /Send/ })).toHaveClass("bg-wallet-amber")
+    expect(screen.getByRole("link", { name: /Send/ })).toHaveClass("bg-primary")
     fireEvent.click(screen.getByRole("button", { name: /Disconnect/ }))
     expect(closeSession).toHaveBeenCalled()
   })

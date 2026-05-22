@@ -50,8 +50,8 @@ function NavLink({ item }: { item: (typeof mainNav)[number] }) {
     <Link
       href={item.href}
       className={cn(
-        "flex min-h-11 items-center gap-3 rounded-xl px-4 text-sm font-medium text-zinc-300 transition hover:bg-zinc-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wallet-amber",
-        active && "bg-wallet-amber text-black hover:bg-wallet-amber hover:text-black"
+        "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-4 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
       )}
     >
       <Icon className="size-4" aria-hidden="true" />
@@ -64,21 +64,24 @@ function SidebarContent() {
   const { closeSession } = useWalletSession()
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950 px-4 py-5">
-      <Link href="/wallet/account" className="mb-8 flex items-center gap-3 px-2">
-        <div className="grid size-10 place-items-center rounded-xl bg-wallet-amber text-black">
+    <div className="flex h-full flex-col bg-background px-4 py-5">
+      <Link
+        href="/wallet/account"
+        className="mb-8 flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1 transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
           <WalletCards className="size-5" aria-hidden="true" />
         </div>
         <div>
           <p className="text-lg font-bold text-white">Conceal Wallet</p>
-          <p className="text-xs text-zinc-500">Mock CCX interface</p>
+          <p className="text-xs text-muted-foreground">Mock CCX interface</p>
         </div>
       </Link>
       <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {mainNav.map((item) => (
           <NavLink key={item.href} item={item} />
         ))}
-        <div className="my-4 border-t border-zinc-800" />
+        <div className="my-4 border-t border-border" />
         {bottomNav.map((item) => (
           <NavLink key={item.href} item={item} />
         ))}
@@ -86,7 +89,7 @@ function SidebarContent() {
       <Button
         type="button"
         variant="ghost"
-        className="mt-4 h-11 shrink-0 justify-start gap-3 px-4 text-zinc-300 hover:bg-red-500/10 hover:text-red-300"
+        className="mt-4 h-11 shrink-0 justify-start gap-3 px-4 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         onClick={closeSession}
       >
         <LogOut className="size-4" aria-hidden="true" />
@@ -99,17 +102,17 @@ function SidebarContent() {
 export function Sidebar() {
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-zinc-800 lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-border lg:block">
         <SidebarContent />
       </aside>
-      <div className="sticky top-0 z-40 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-4 backdrop-blur lg:hidden">
+      <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur lg:hidden">
         <Sheet>
-          <SheetTrigger>
+          <SheetTrigger asChild>
             <Button type="button" variant="ghost" size="icon" aria-label="Open navigation">
               <Menu className="size-5" aria-hidden="true" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[290px] border-zinc-800 bg-zinc-950 p-0">
+          <SheetContent side="left" className="w-[290px] border-border bg-background p-0">
             <SidebarContent />
           </SheetContent>
         </Sheet>

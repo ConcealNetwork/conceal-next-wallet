@@ -11,12 +11,16 @@ const footerLinks = [
 
 export function Footer() {
   return (
-    <footer className="mt-12 border-t border-zinc-800 py-6 text-sm text-zinc-500">
+    <footer className="mt-12 border-t border-border py-6 text-sm text-muted-foreground">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <p>© 2018-2025 Conceal.Network</p>
         <nav className="flex flex-wrap gap-x-4 gap-y-2">
           {footerLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="transition hover:text-wallet-amber">
+            <Link
+              key={link.href}
+              href={link.href}
+              className="cursor-pointer rounded-sm transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               {link.label}
             </Link>
           ))}
