@@ -1,5 +1,7 @@
 import Link from "next/link"
 
+import { cn } from "@/lib/utils"
+
 const footerLinks = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
@@ -9,12 +11,17 @@ const footerLinks = [
   { href: "https://github.com/ConcealNetwork", label: "GitHub" },
 ]
 
-export function Footer() {
+export function Footer({ collapsed = false }: { collapsed?: boolean }) {
   return (
-    <footer className="mt-12 -mx-4 border-t border-border bg-[hsl(var(--footer))] px-4 py-6 text-sm text-muted-foreground sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <p>© 2018-2025 Conceal.Network</p>
-        <nav className="flex flex-wrap gap-x-4 gap-y-2">
+    <footer className="border-t border-border bg-[hsl(var(--footer))] text-sm text-muted-foreground">
+      <div
+        className={cn(
+          "mx-auto flex w-full flex-col gap-4 px-4 py-6 transition-[max-width] duration-200 motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8",
+          collapsed ? "max-w-[1360px]" : "max-w-[1200px]"
+        )}
+      >
+        <p>© 2018–2025 Conceal.Network</p>
+        <nav className="flex flex-wrap gap-x-5 gap-y-2">
           {footerLinks.map((link) => (
             <Link
               key={link.href}
