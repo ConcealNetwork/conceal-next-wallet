@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Donate · Card Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--inset:#2e2e2e;--border:#404040;--hair:#353535;--accent:#FFA500;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f;--radius:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:40px 32px 80px}
+h1{font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+.note{color:var(--muted2);font-size:12.5px;margin:0 0 36px}
+.variant{margin:48px 0 16px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--hair);padding-bottom:10px}
+.variant .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.variant h2{font-size:17px;font-weight:600;margin:0}
+.variant span.d{color:var(--muted2);font-size:12.5px}
+.frame{max-width:1080px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.card h3{font-size:16px;font-weight:600;margin:0 0 4px}
+.card .cd{font-size:12.5px;color:var(--muted2);margin:0 0 18px}
+.addr{word-break:break-all;background:var(--inset);border-radius:10px;padding:14px;font-family:"Geist Mono",monospace;font-size:12.5px;color:var(--fg)}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:38px;padding:0 16px;border-radius:10px;background:var(--accent);color:#000;font-weight:600;font-size:13px}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--fg)}
+.btn.on{background:var(--accent);color:#000;border-color:var(--accent)}
+.qr{border-radius:14px;background:#fff;padding:14px;flex:none}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.lbl{font-size:12px;color:var(--muted2)}
+.tier{flex:1;min-width:150px;border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--inset)}
+.tier.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tier .amt{font-size:20px;font-weight:700;font-family:"Geist Mono",monospace}
+.tier .nm{font-size:13px;color:var(--accent);font-weight:600;margin-top:2px}
+.tier .ds{font-size:11.5px;color:var(--muted2);margin-top:6px}
+.qrbox{display:grid;place-items:center;gap:10px}
+</style>
+</head>
+<body>
+  <h1>Donate — Card Variants</h1>
+  <p class="sub">4 ways to present the donation page · built on the wallet tokens</p>
+  <p class="note">Real mock donation address. Pick one — or mix. (QR is a stylised placeholder here.)</p>
+
+  <!-- shared QR symbol -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="qr" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><g fill="#000"><rect x="6" y="6" width="22" height="22"/><rect x="72" y="6" width="22" height="22"/><rect x="6" y="72" width="22" height="22"/><rect x="40" y="10" width="6" height="6"/><rect x="52" y="10" width="6" height="6"/><rect x="40" y="40" width="20" height="20"/><rect x="68" y="44" width="6" height="6"/><rect x="80" y="56" width="6" height="6"/><rect x="44" y="72" width="6" height="6"/><rect x="60" y="80" width="10" height="10"/><rect x="78" y="74" width="6" height="6"/><rect x="14" y="40" width="6" height="6"/><rect x="26" y="52" width="6" height="6"/></g></symbol></svg>
+
+  <!-- V1 -->
+  <div class="variant"><span class="tag">V1</span><h2>Refined Card</h2><span class="d">Current approach, tightened: address + amount chips + QR.</span></div>
+  <div class="frame">
+    <div class="card">
+      <h3>Conceal Donation Address</h3>
+      <p class="cd">Thank you for supporting open-source development</p>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:28px;align-items:start">
+        <div>
+          <div class="addr">ccx7DonateConcealNetworkMockOnlyAddressT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+          <p class="lbl" style="margin:16px 0 8px">Suggested amount</p>
+          <div class="row"><span class="btn ghost">10 CCX</span><span class="btn on">25 CCX</span><span class="btn ghost">50 CCX</span><span class="btn ghost">100 CCX</span></div>
+          <div class="row" style="margin-top:16px"><span class="btn ghost">Copy donation link</span></div>
+        </div>
+        <div class="qr"><svg width="150" height="150"><use href="#qr"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- V2 -->
+  <div class="variant"><span class="tag">V2</span><h2>Centered Hero</h2><span class="d">Focused, centered call to support with amount + custom input.</span></div>
+  <div class="frame">
+    <div class="card" style="text-align:center">
+      <h3 style="font-size:22px">Support the Conceal Network</h3>
+      <p class="cd" style="margin-bottom:22px">Donations fund open-source development of the privacy network</p>
+      <div class="qr" style="display:inline-block;margin-bottom:20px"><svg width="160" height="160"><use href="#qr"/></svg></div>
+      <div class="row" style="justify-content:center;margin-bottom:12px"><span class="btn ghost">10</span><span class="btn on">25</span><span class="btn ghost">50</span><span class="btn ghost">100</span><span class="btn ghost" style="width:96px">Custom…</span></div>
+      <div style="display:flex;gap:10px;justify-content:center"><span class="btn">Copy Address</span><span class="btn ghost">Open in wallet</span></div>
+    </div>
+  </div>
+
+  <!-- V3 -->
+  <div class="variant"><span class="tag">V3</span><h2>Tiered</h2><span class="d">Named contribution tiers; selecting one builds the request.</span></div>
+  <div class="frame">
+    <div class="card">
+      <h3>Choose a contribution</h3>
+      <p class="cd">Every amount helps keep Conceal independent</p>
+      <div class="row" style="margin-bottom:20px">
+        <div class="tier"><div class="amt">10 CCX</div><div class="nm">Supporter</div><div class="ds">Keep the nodes humming</div></div>
+        <div class="tier on"><div class="amt">25 CCX</div><div class="nm">Backer</div><div class="ds">Fund a week of CI</div></div>
+        <div class="tier"><div class="amt">50 CCX</div><div class="nm">Patron</div><div class="ds">Sponsor a feature</div></div>
+        <div class="tier"><div class="amt">100 CCX</div><div class="nm">Sponsor</div><div class="ds">Power a release</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center">
+        <div class="addr">ccx7DonateConcealNetworkMockOnlyAddress…0jK3m &nbsp;·&nbsp; requesting <b style="color:var(--accent)">25 CCX</b></div>
+        <div class="qr"><svg width="110" height="110"><use href="#qr"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- V4 -->
+  <div class="variant"><span class="tag">V4</span><h2>Split — Why + Action</h2><span class="d">Context/links on the left, donate action on the right.</span></div>
+  <div class="frame">
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:28px">
+        <div>
+          <h3>Why support Conceal?</h3>
+          <p class="cd" style="margin-bottom:14px">Conceal is community-run, open-source privacy infrastructure. Donations cover node hosting, audits, and development — no VCs, no token sale.</p>
+          <div class="row"><span class="btn ghost">GitHub</span><span class="btn ghost">Discord</span><span class="btn ghost">Network stats</span></div>
+        </div>
+        <div style="border-left:1px solid var(--hair);padding-left:24px">
+          <div class="qrbox">
+            <div class="qr"><svg width="150" height="150"><use href="#qr"/></svg></div>
+            <div class="row" style="justify-content:center"><span class="btn ghost">10</span><span class="btn on">25</span><span class="btn ghost">50</span><span class="btn ghost">100</span></div>
+            <span class="btn" style="width:100%">Copy Address</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>
