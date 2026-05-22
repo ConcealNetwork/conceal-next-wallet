@@ -82,19 +82,6 @@
   .wallet-card {
     @apply rounded-xl border border-border bg-card shadow-[0_18px_70px_rgba(0,0,0,0.22)];
   }
-
-  .wallet-card-hover {
-    transition-property: border-color, box-shadow, transform;
-    transition-duration: 200ms;
-    transition-timing-function: ease-out;
-    will-change: transform;
-  }
-
-  .wallet-card-hover:hover {
-    border-color: hsl(var(--ring) / 0.48);
-    box-shadow: 0 22px 72px rgb(0 0 0 / 0.28);
-    transform: translate3d(0, -2px, 0);
-  }
 }
 
 @keyframes rise-in {
@@ -161,15 +148,6 @@
   .animate-fade-in {
     opacity: 1;
     animation: none;
-    transform: none;
-  }
-
-  .wallet-card-hover {
-    transition: none;
-    will-change: auto;
-  }
-
-  .wallet-card-hover:hover {
     transform: none;
   }
 }

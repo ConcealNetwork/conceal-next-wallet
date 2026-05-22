@@ -41,7 +41,7 @@ export function SectionCard({
   className?: string
 }) {
   return (
-    <Card className={cn("wallet-card wallet-card-hover motion-reduce:transition-none", className)}>
+    <Card className={cn("wallet-card", className)}>
       {(title || description) && (
         <CardHeader>
           {title && <CardTitle>{title}</CardTitle>}
@@ -81,7 +81,7 @@ export function StatCard({
   const trendTone = (changePct ?? 0) >= 0 ? "text-wallet-incoming bg-wallet-incoming/10" : "text-wallet-outgoing bg-wallet-outgoing/10"
 
   return (
-    <Card className="wallet-card wallet-card-hover transition-colors duration-200 motion-reduce:transition-none">
+    <Card className="wallet-card">
       <CardContent className="min-h-[150px]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">

@@ -77,7 +77,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   ]
 
   return (
-    <Card className="wallet-card wallet-card-hover motion-reduce:transition-none">
+    <Card className="wallet-card">
       <CardContent className="p-6 sm:p-7">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
