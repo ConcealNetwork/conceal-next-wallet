@@ -17,7 +17,12 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
           collapsed ? "lg:pl-[64px]" : "lg:pl-[260px]"
         )}
       >
-        <div className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6 lg:px-8">
+        <div
+          className={cn(
+            "mx-auto w-full px-4 py-8 transition-[max-width] duration-200 motion-reduce:transition-none sm:px-6 lg:px-8",
+            collapsed ? "max-w-[1360px]" : "max-w-[1200px]"
+          )}
+        >
           {children}
           <Footer />
         </div>

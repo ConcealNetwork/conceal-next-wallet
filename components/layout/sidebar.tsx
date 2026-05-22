@@ -3,6 +3,8 @@
 import {
   BarChart3,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   Coins,
   Download,
   Gift,
@@ -11,8 +13,6 @@ import {
   Mail,
   Menu,
   Network,
-  PanelLeftClose,
-  PanelLeftOpen,
   QrCode,
   Send,
   Settings,
@@ -130,43 +130,28 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-function SidebarContent({ collapsed = false, showToggle = false }: { collapsed?: boolean; showToggle?: boolean }) {
-  const { toggle } = useSidebarCollapse()
-  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose
-
+function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div className={cn("flex h-full flex-col bg-background py-5", collapsed ? "px-2" : "px-4")}>
-      <div className={cn("mb-8 flex", collapsed ? "flex-col items-center gap-3" : "items-center gap-2")}>
+      <div className={cn("mb-8 flex", collapsed ? "justify-center" : "items-center")}>
         <Link
           href="/wallet/account"
           aria-label={collapsed ? "Conceal Wallet" : undefined}
           className={cn(
             "flex cursor-pointer items-center rounded-xl py-1 transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            collapsed ? "justify-center px-0" : "min-w-0 flex-1 gap-3 px-2"
+            collapsed ? "justify-center px-0" : "min-w-0 gap-3 px-2"
           )}
         >
           <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
             <WalletCards className="size-5" aria-hidden="true" />
           </div>
           {!collapsed && (
-            <div>
-              <p className="text-lg font-bold text-foreground">Conceal Wallet</p>
+            <div className="min-w-0">
+              <p className="whitespace-nowrap text-lg font-bold text-foreground">Conceal Wallet</p>
               <p className="text-xs text-muted-foreground">Mock CCX interface</p>
             </div>
           )}
         </Link>
-        {showToggle && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
-            onClick={toggle}
-            className="shrink-0 cursor-pointer text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ToggleIcon className="size-4" aria-hidden="true" />
-          </Button>
-        )}
       </div>
       <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {mainNav.map((item) => (
@@ -183,18 +168,28 @@ function SidebarContent({ collapsed = false, showToggle = false }: { collapsed?:
 }
 
 export function Sidebar() {
-  const { collapsed } = useSidebarCollapse()
+  const { collapsed, toggle } = useSidebarCollapse()
+  const EdgeToggleIcon = collapsed ? ChevronRight : ChevronLeft
 
   return (
     <>
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-30 hidden border-r border-border transition-[width] duration-200 motion-reduce:transition-none lg:block",
+          "fixed inset-y-0 left-0 z-30 hidden overflow-visible border-r border-border transition-[width] duration-200 motion-reduce:transition-none lg:block",
           collapsed ? "w-[64px]" : "w-[260px]"
         )}
       >
         <TooltipProvider>
-          <SidebarContent collapsed={collapsed} showToggle />
+          <SidebarContent collapsed={collapsed} />
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            onClick={toggle}
+            className="absolute right-0 top-7 z-50 size-7 min-h-0 translate-x-1/2 rounded-full border border-border bg-card p-0 text-muted-foreground shadow-sm hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <EdgeToggleIcon className="size-4" aria-hidden="true" />
+          </Button>
         </TooltipProvider>
       </aside>
       <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur lg:hidden">
