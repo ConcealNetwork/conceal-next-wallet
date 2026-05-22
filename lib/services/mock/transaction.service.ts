@@ -14,6 +14,8 @@ export const mockTransactionService: TransactionService = {
     await mockDelay()
     return {
       id: "tx-mock-submit",
+      // TODO(backend): replace mock hash with the walletd transaction hash.
+      hash: "0b7f26f4c5b748c28e91f67627c5f85bb295dd2bf2638d7ef8b2f035e7c71155",
       type: "send",
       amount: ccxAmount(input.amount),
       address: input.address,

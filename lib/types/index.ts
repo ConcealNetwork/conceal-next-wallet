@@ -28,6 +28,7 @@ export type TransactionType = "receive" | "send" | "deposit" | "withdrawal"
 
 export type Transaction = {
   id: string
+  hash: string
   type: TransactionType
   amount: CcxAmount
   address: string

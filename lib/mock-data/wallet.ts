@@ -44,6 +44,8 @@ export const mockWalletInfo: WalletInfo = {
 export const mockTransactions: Transaction[] = [
   {
     id: "tx-001",
+    // TODO(backend): replace mock hash with the walletd transaction hash.
+    hash: "8c3f6fbb51e79ff33f90bb1a41635e27f9d67a2acaa55fc5b5a968c9d42f011a",
     type: "receive",
     amount: ccxAmount(100),
     address: "ccx7IncomingA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
@@ -53,6 +55,8 @@ export const mockTransactions: Transaction[] = [
   },
   {
     id: "tx-002",
+    // TODO(backend): replace mock hash with the walletd transaction hash.
+    hash: "68d12f7225bb7c6e4ef91c6b8dc8b7fd1c71d3f33d72ebcfbd6bd20433aa9c92",
     type: "send",
     amount: ccxAmount(50),
     address: "ccx7OutgoingB2zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
@@ -62,6 +66,8 @@ export const mockTransactions: Transaction[] = [
   },
   {
     id: "tx-003",
+    // TODO(backend): replace mock hash with the walletd transaction hash.
+    hash: "3d7bb0e693ad5d9de58a05cc97ea9b2c5b0d45c4ad8e8f5b6f98c9f04cb7df35",
     type: "deposit",
     amount: ccxAmount(200),
     address: MOCK_ADDRESS,
@@ -70,6 +76,8 @@ export const mockTransactions: Transaction[] = [
   },
   {
     id: "tx-004",
+    // TODO(backend): replace mock hash with the walletd transaction hash.
+    hash: "fe9ce188607f23c38b413bc216f6f2f8db12a62e6bfe518123328297248b2a71",
     type: "receive",
     amount: ccxAmount(75),
     address: "ccx7IncomingC3zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
@@ -78,6 +86,8 @@ export const mockTransactions: Transaction[] = [
   },
   {
     id: "tx-005",
+    // TODO(backend): replace mock hash with the walletd transaction hash.
+    hash: "f0a03fd6c4cb37e92dc4ed1ac04f6896d73cc69e09a50210a0c9568671eec24e",
     type: "send",
     amount: ccxAmount(25),
     address: "ccx7OutgoingD4zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
@@ -86,6 +96,8 @@ export const mockTransactions: Transaction[] = [
   },
   {
     id: "tx-006",
+    // TODO(backend): replace mock hash with the walletd transaction hash.
+    hash: "72ee8158d6c6bd56fb290f195b77f20616d6074e433f55ef0b117b90420961e1",
     type: "withdrawal",
     amount: ccxAmount(150),
     address: MOCK_ADDRESS,
@@ -94,6 +106,8 @@ export const mockTransactions: Transaction[] = [
   },
   {
     id: "tx-007",
+    // TODO(backend): replace mock hash with the walletd transaction hash.
+    hash: "276585050412d162479ef0c0c789b192e28baa3574d5e4fc3bca749d5e92de45",
     type: "deposit",
     amount: ccxAmount(500),
     address: MOCK_ADDRESS,
@@ -102,6 +116,8 @@ export const mockTransactions: Transaction[] = [
   },
   {
     id: "tx-008",
+    // TODO(backend): replace mock hash with the walletd transaction hash.
+    hash: "d1dedc197df2bfe9d92da420a69798099a878529f581bd5f47fe1443de0b4f38",
     type: "send",
     amount: ccxAmount(100),
     address: "ccx7OutgoingE5zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
