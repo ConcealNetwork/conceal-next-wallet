@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--inset:#2e2e2e;--border:#404040;--hair:#353535;--accent:#FFA500;--in:#10b981;--dep:#60a5fa;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:48px;display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start}
+.mono{font-family:"Geist Mono",monospace}
+.cap{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 10px}
+.card{width:520px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;position:relative;overflow:hidden}
+.title{font-size:16px;font-weight:600;margin:0}
+.desc{font-size:12px;color:var(--muted2);margin:2px 0 18px}
+.hero{display:flex;align-items:flex-start;justify-content:space-between}
+.lbl{font-size:12px;color:var(--muted)}
+.price{font-size:38px;font-weight:700;color:var(--accent);letter-spacing:-.02em;line-height:1.05;margin-top:2px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;color:var(--in);background:rgba(16,185,129,.12)}
+.divider{height:1px;background:var(--hair);margin:18px 0}
+.bottom{display:flex;align-items:center;gap:24px}
+.ringwrap{position:relative;width:120px;height:120px;flex:none}
+.ringwrap .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringwrap .ctr .t{font-size:8.5px;color:var(--muted2);letter-spacing:.06em;text-transform:uppercase}
+.ringwrap .ctr .v{font-size:12.5px;font-weight:600;line-height:1.1}
+.ringwrap .ctr .u{font-size:8.5px;color:var(--muted2);margin-top:1px}
+.leg .pct{color:var(--muted2);font-variant-numeric:tabular-nums;width:34px;text-align:right;margin-left:10px}
+.legend{flex:1;display:flex;flex-direction:column;gap:9px}
+.leg{display:flex;align-items:center;gap:9px;font-size:13px}
+.dot{width:9px;height:9px;border-radius:3px;flex:none}
+.leg .amt{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats{display:flex;gap:28px;margin-top:18px}
+.stats .k{font-size:11px;color:var(--muted2)}
+.stats .sv{font-size:16px;font-weight:600}
+</style></head>
+<body>
+  <div>
+    <p class="cap">Market Summary · V2 + V4 hybrid</p>
+    <div class="card">
+      <p class="title">Market Summary</p>
+      <p class="desc">Live CCX price and your holdings</p>
+
+      <!-- V2: price hero + delta + sparkline -->
+      <div class="hero">
+        <div>
+          <div class="lbl">CCX / USD</div>
+          <div class="price">$0.045</div>
+        </div>
+        <span class="chip">▲ 2.34%</span>
+      </div>
+      <svg width="472" height="60" viewBox="0 0 472 60" preserveAspectRatio="none" style="margin-top:10px">
+        <polygon points="0,46 52,42 104,44 156,30 208,34 260,20 312,26 364,12 416,18 472,10 472,60 0,60" fill="rgba(96,165,250,.10)"/>
+        <polyline points="0,46 52,42 104,44 156,30 208,34 260,20 312,26 364,12 416,18 472,10" fill="none" stroke="var(--dep)" stroke-width="2"/>
+      </svg>
+
+      <div class="divider"></div>
+
+      <!-- V4: holdings ring (real composition) -->
+      <div class="bottom">
+        <div class="ringwrap">
+          <svg width="120" height="120" viewBox="0 0 42 42">
+            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--inset)" stroke-width="4.5"/>
+            <!-- Available 51% (orange), Locked 40% (blue), Staking 8% (green) -->
+            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--accent)" stroke-width="4.5" stroke-dasharray="51 49" stroke-dashoffset="25" transform="rotate(-90 21 21)" stroke-linecap="butt"/>
+            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--dep)" stroke-width="4.5" stroke-dasharray="40 60" stroke-dashoffset="-26" transform="rotate(-90 21 21)" stroke-linecap="butt"/>
+            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--in)" stroke-width="4.5" stroke-dasharray="8 92" stroke-dashoffset="-66" transform="rotate(-90 21 21)" stroke-linecap="butt"/>
+          </svg>
+          <div class="ctr"><div class="t">Holdings</div><div class="v mono">1,250.50</div><div class="u">CCX</div></div>
+        </div>
+        <div class="legend">
+          <div class="leg"><span class="dot" style="background:var(--accent)"></span>Available <span class="amt mono">634.75</span><span class="pct mono">51%</span></div>
+          <div class="leg"><span class="dot" style="background:var(--dep)"></span>Locked <span class="amt mono">500.00</span><span class="pct mono">40%</span></div>
+          <div class="leg"><span class="dot" style="background:var(--in)"></span>Staking <span class="amt mono">100.00</span><span class="pct mono">8%</span></div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div><div class="k">Portfolio Value</div><div class="sv mono">$56.2725</div></div>
+        <div><div class="k">24h Volume</div><div class="sv mono">$125,000</div></div>
+      </div>
+    </div>
+  </div>
+</body></html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Settings · Layout Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--inset:#2e2e2e;--border:#404040;--hair:#353535;--accent:#FFA500;--in:#10b981;--out:#ef4444;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f;--radius:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:40px 32px 80px}
+h1{font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+.note{color:var(--muted2);font-size:12.5px;margin:0 0 36px}
+.variant{margin:48px 0 16px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--hair);padding-bottom:10px}
+.variant .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.variant h2{font-size:17px;font-weight:600;margin:0}
+.variant span.d{color:var(--muted2);font-size:12.5px}
+.frame{max-width:1080px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.card h3{font-size:16px;font-weight:600;margin:0 0 16px}
+.lbl{font-size:13px;color:var(--muted)}
+.desc{font-size:12px;color:var(--muted2);margin-top:2px}
+.ctrl{height:38px;border:1px solid var(--border);border-radius:10px;background:var(--inset);display:flex;align-items:center;padding:0 12px;font-size:13px;color:var(--fg)}
+.btn{display:inline-flex;align-items:center;height:38px;padding:0 16px;border-radius:10px;background:var(--accent);color:#000;font-weight:600;font-size:13px}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--fg)}
+.btn.danger{background:var(--out);color:#fff}
+.sw{width:40px;height:22px;border-radius:999px;background:var(--accent);position:relative;flex:none}
+.sw::after{content:"";position:absolute;right:2px;top:2px;width:18px;height:18px;border-radius:50%;background:#000}
+.sw.off{background:var(--inset)}
+.sw.off::after{left:2px;right:auto;background:#777}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--hair)}
+.row:first-child{border-top:none}
+.sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);font-weight:600;margin:22px 0 2px}
+.sec:first-child{margin-top:0}
+.tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.tab{height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:10px;border:1px solid var(--border);font-size:13px;color:var(--muted)}
+.tab.on{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+.navwrap{display:grid;grid-template-columns:200px 1fr;gap:18px}
+.navlist{display:flex;flex-direction:column;gap:4px}
+.navitem{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:10px;font-size:13px;color:var(--muted)}
+.navitem.on{background:var(--accent);color:#000;font-weight:600}
+.stack>*+*{margin-top:14px}
+.field{flex:1}
+</style></head>
+<body>
+  <h1>Settings — Layout Variants</h1>
+  <p class="sub">4 ways to structure the settings screen · built on the wallet tokens</p>
+  <p class="note">The current page (V1) is 2-column grouped cards. V2–V4 explore tabbed, sectioned-row, and nav+panel patterns. Pick one — or mix.</p>
+
+  <!-- V1 -->
+  <div class="variant"><span class="tag">V1</span><h2>Refined Grouped Cards</h2><span class="d">Current approach, tightened. Each group = a card.</span></div>
+  <div class="frame">
+    <div class="grid2">
+      <div class="card">
+        <h3>Language</h3>
+        <div class="ctrl">English ▾</div>
+      </div>
+      <div class="card">
+        <h3>Security</h3>
+        <div class="stack">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Auto-lock wallet</span><span class="sw"></span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Biometric authentication</span><span class="sw off"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- V2 -->
+  <div class="variant"><span class="tag">V2</span><h2>Tabbed Settings</h2><span class="d">Tabs group settings; one panel, far less scrolling.</span></div>
+  <div class="frame">
+    <div class="card">
+      <div class="tabs">
+        <span class="tab on">General</span><span class="tab">Node</span><span class="tab">Wallet</span><span class="tab">Security</span>
+      </div>
+      <div class="stack">
+        <div><div class="lbl">Language</div><div class="ctrl" style="margin-top:6px">English ▾</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--hair);padding-top:14px">
+          <div><div class="lbl">Wallet optimization</div><div class="desc">Compact transaction outputs</div></div>
+          <span class="btn">Optimize Now</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- V3 -->
+  <div class="variant"><span class="tag">V3</span><h2>Sectioned Rows</h2><span class="d">Settings-app style: label+description left, control right. Most scannable.</span></div>
+  <div class="frame">
+    <div class="card">
+      <div class="sec">General</div>
+      <div class="row"><div><div class="lbl">Language</div><div class="desc">Interface language</div></div><div class="ctrl" style="width:160px">English ▾</div></div>
+      <div class="row"><div><div class="lbl">Optimization</div><div class="desc">Compact wallet outputs</div></div><span class="btn ghost">Optimize</span></div>
+      <div class="sec">Node</div>
+      <div class="row"><div><div class="lbl">Use custom node</div><div class="desc">Connect to your own daemon</div></div><span class="sw off"></span></div>
+      <div class="row"><div class="field"><div class="lbl">Node URL</div><div class="desc">https://node.conceal.network:16000/</div></div><span class="btn ghost">Update</span></div>
+      <div class="sec">Security</div>
+      <div class="row"><div><div class="lbl">Auto-lock wallet</div><div class="desc">Lock after inactivity</div></div><span class="sw"></span></div>
+      <div class="row"><div><div class="lbl">Biometric authentication</div><div class="desc">Unlock with biometrics</div></div><span class="sw off"></span></div>
+    </div>
+  </div>
+
+  <!-- V4 -->
+  <div class="variant"><span class="tag">V4</span><h2>Nav + Panel</h2><span class="d">Left sub-nav, right detail panel. Scales best as settings grow.</span></div>
+  <div class="frame">
+    <div class="card">
+      <div class="navwrap">
+        <div class="navlist">
+          <div class="navitem on">⚙ General</div>
+          <div class="navitem">🖧 Node</div>
+          <div class="navitem">▣ Wallet</div>
+          <div class="navitem">🛡 Security</div>
+        </div>
+        <div class="stack">
+          <h3 style="margin:0 0 4px">General</h3>
+          <div><div class="lbl">Language</div><div class="ctrl" style="margin-top:6px;max-width:280px">English ▾</div></div>
+          <div style="border-top:1px solid var(--hair);padding-top:14px;display:flex;justify-content:space-between;align-items:center">
+            <div><div class="lbl">Wallet optimization</div><div class="desc">Compact transaction outputs</div></div>
+            <span class="btn">Optimize Now</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body></html>

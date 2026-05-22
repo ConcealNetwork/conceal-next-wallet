@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Design Explorations · Conceal Wallet</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--border:#404040;--accent:#FFA500;--fg:#fff;--muted:#a3a3a3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:48px 32px;max-width:760px}
+h1{font-size:26px;font-weight:700;margin:0 0 6px}
+p{color:var(--muted);font-size:14px;margin:0 0 28px}
+a.card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color .2s,transform .2s}
+a.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+a.card .t{font-size:16px;font-weight:600}
+a.card .d{font-size:13px;color:var(--muted);margin-top:3px}
+.tag{display:inline-block;font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+</style></head>
+<body>
+  <span class="tag">Design Explorations</span>
+  <h1>Card &amp; layout variants</h1>
+  <p>Pick a winner per card; I'll wire it into the real app. Served from the dev server so you can open them anytime.</p>
+
+  <a class="card" href="/explorations/settings-variants.html">
+    <div class="t">Settings — Layout Variants</div>
+    <div class="d">4 approaches: grouped cards · tabbed · sectioned rows · nav+panel</div>
+  </a>
+  <a class="card" href="/explorations/account-card-variants.html">
+    <div class="t">Account — Card Variants</div>
+    <div class="d">Stat card · transaction summary · market summary (4 each)</div>
+  </a>
+  <a class="card" href="/explorations/top-cards-concepts.html">
+    <div class="t">Account — Top Balance Concepts</div>
+    <div class="d">Hero+bar · spendable hero+trio · grouped · incremental</div>
+  </a>
+  <a class="card" href="/explorations/top-cards-hybrid.html">
+    <div class="t">Account — Balance Hero (A+B hybrid)</div>
+    <div class="d">The chosen consolidated balance hero</div>
+  </a>
+  <a class="card" href="/explorations/market-summary-hybrid.html">
+    <div class="t">Account — Market Summary (V2+V4 hybrid)</div>
+    <div class="d">Price + sparkline + holdings ring</div>
+  </a>
+</body></html>
