@@ -57,7 +57,7 @@
     --input: 0 0% 25%;
     --ring: 39 100% 50%;
     --radius: 0.75rem;
-    --footer: 222 16% 12%; /* cool navy slate — matches original footer tint */
+    --footer: 0 0% 11%; /* neutral grey, subtly darker than the body (no blue tint) */
     --chart-1: 199 89% 48%;
     --chart-2: 160 84% 39%;
     --chart-3: 39 100% 50%;
