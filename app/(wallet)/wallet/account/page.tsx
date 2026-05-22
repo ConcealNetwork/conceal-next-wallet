@@ -1,13 +1,14 @@
 "use client"
 
-import { Clock, Lock, RefreshCw, ShieldCheck, Wallet } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageHeader, SectionCard, StatCard } from "@/components/wallet/common"
+import { BalanceHero, BalanceHeroSkeleton } from "@/components/wallet/balance-hero"
+import { PageHeader, SectionCard } from "@/components/wallet/common"
 import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types"
-import { useMarketData, useRefreshWallet, useTransactions, useWalletInfo } from "@/lib/hooks"
+import { useDeposits, useMarketData, useRefreshWallet, useTransactions, useWalletInfo } from "@/lib/hooks"
 import { ccxToNumber, cn, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils"
 
 const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false })
@@ -19,6 +20,7 @@ export default function AccountPage() {
   const wallet = useWalletInfo()
   const transactions = useTransactions()
   const market = useMarketData()
+  const deposits = useDeposits()
   const refresh = useRefreshWallet()
   const info = wallet.data
 
@@ -45,50 +47,10 @@ export default function AccountPage() {
           </Button>
         }
       />
-      {info ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <StatCard
-            label="Total Balance"
-            value={formatCcx(info.balanceTotal)}
-            detail="$56.2725 USD"
-            icon={<Wallet />}
-            trend={info.trends?.balanceTotal?.trend}
-            changePct={info.trends?.balanceTotal?.changePct}
-          />
-          <StatCard
-            label="Available"
-            value={formatCcx(info.available)}
-            detail="Ready to spend"
-            trend={info.trends?.available?.trend}
-            changePct={info.trends?.available?.changePct}
-          />
-          <StatCard label="Pending" value={formatCcx(info.pending)} detail="Awaiting confirmation" icon={<Clock />} />
-          <StatCard
-            label="Locked Deposits"
-            value={formatCcx(info.lockedDeposits)}
-            detail="In time-locked deposits"
-            icon={<Lock />}
-          />
-          <StatCard
-            label="Staking"
-            value={formatCcx(info.staking)}
-            detail="Earning rewards"
-            icon={<ShieldCheck />}
-            trend={info.trends?.staking?.trend}
-            changePct={info.trends?.staking?.changePct}
-          />
-          <StatCard label="Withdrawable" value={formatCcx(info.withdrawable)} detail="Available for withdrawal" />
-        </div>
+      {info && market.data && deposits.data ? (
+        <BalanceHero wallet={info} market={market.data} deposits={deposits.data} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="wallet-card min-h-[136px] space-y-4 p-4">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-8 w-36" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-          ))}
-        </div>
+        <BalanceHeroSkeleton />
       )}
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
         <SectionCard title="Transaction Summary" description="Net flow this period">

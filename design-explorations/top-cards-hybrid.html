@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--inset:#2e2e2e;--border:#404040;--hair:#353535;--accent:#FFA500;--in:#10b981;--out:#ef4444;--dep:#60a5fa;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f;--radius:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:48px 40px}
+.mono{font-family:"Geist Mono",monospace}
+.cap{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 12px}
+.frame{width:1180px;max-width:100%}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 26px;position:relative;overflow:hidden}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.lbl{font-size:12.5px;color:var(--muted)}
+.big{font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.02;margin:6px 0 4px}
+.big .u{font-size:19px;font-weight:500;color:var(--muted);margin-left:6px}
+.ctx{font-size:13px;color:var(--muted2)}
+.ctx b{color:var(--muted);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;color:var(--in);background:rgba(16,185,129,.12)}
+svg{display:block}
+.bar{height:14px;border-radius:999px;overflow:hidden;display:flex;background:var(--inset);margin-top:22px}
+.bar i{display:block;height:100%}
+.legend{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px;border-top:1px solid var(--hair);padding-top:18px}
+.leg .h{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:3px;flex:none}
+.leg .v{font-size:19px;font-weight:700;margin:6px 0 2px}
+.leg .n{font-size:11.5px;color:var(--muted2)}
+.apr{font-size:10.5px;color:var(--in);font-weight:600}
+</style></head>
+<body>
+  <div class="frame">
+    <p class="cap">Top Balance Widget · A + B Hybrid</p>
+    <div class="card">
+      <div class="top">
+        <div>
+          <div class="lbl">Available · ready to spend</div>
+          <div class="big mono">634.75<span class="u">CCX</span></div>
+          <div class="ctx">of <b>1,250.50 CCX</b> total · <b>$56.2725</b> USD</div>
+        </div>
+        <div style="text-align:right">
+          <span class="chip">▲ 2.34%</span>
+          <svg width="240" height="50" viewBox="0 0 240 50" preserveAspectRatio="none" style="margin-top:12px">
+            <polygon points="0,38 30,34 60,36 90,25 120,27 150,18 180,20 210,10 240,13 240,50 0,50" fill="rgba(255,165,0,.08)"/>
+            <polyline points="0,38 30,34 60,36 90,25 120,27 150,18 180,20 210,10 240,13" fill="none" stroke="var(--accent)" stroke-width="2"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- composition bar -->
+      <div class="bar" aria-hidden="true">
+        <i style="width:50.8%;background:var(--accent)"></i>
+        <i style="width:1.3%;background:var(--out)"></i>
+        <i style="width:40%;background:var(--dep)"></i>
+        <i style="width:8%;background:var(--in)"></i>
+      </div>
+
+      <!-- breakdown legend with context -->
+      <div class="legend">
+        <div class="leg">
+          <div class="h"><span class="dot" style="background:var(--accent)"></span>Available</div>
+          <div class="v mono">634.75</div>
+          <div class="n">ready to spend · 51%</div>
+        </div>
+        <div class="leg">
+          <div class="h"><span class="dot" style="background:var(--out)"></span>Pending</div>
+          <div class="v mono">15.75</div>
+          <div class="n">awaiting confirmation</div>
+        </div>
+        <div class="leg">
+          <div class="h"><span class="dot" style="background:var(--dep)"></span>Locked</div>
+          <div class="v mono">500.00</div>
+          <div class="n">unlocks in 6 days</div>
+        </div>
+        <div class="leg">
+          <div class="h"><span class="dot" style="background:var(--in)"></span>Staking</div>
+          <div class="v mono">100.00</div>
+          <div class="n">earning · <span class="apr">4.5% APR</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

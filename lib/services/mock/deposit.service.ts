@@ -15,6 +15,7 @@ export const mockDepositService: DepositService = {
     return {
       id: "dep-mock-submit",
       amount: ccxAmount(input.amount),
+      status: "active",
       durationMonths: input.durationMonths,
       apr: 4.2,
       interest: ccxAmount(input.amount * 0.0042),

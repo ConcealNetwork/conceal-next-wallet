@@ -40,6 +40,7 @@ export type Transaction = {
 export type Deposit = {
   id: string
   amount: CcxAmount
+  status: "active" | "unlocked"
   durationMonths: number
   apr: number
   interest: CcxAmount

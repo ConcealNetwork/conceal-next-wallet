@@ -112,6 +112,7 @@ export const mockDeposits: Deposit[] = [
   {
     id: "dep-001",
     amount: ccxAmount(250),
+    status: "active",
     durationMonths: 12,
     apr: 4.2,
     interest: ccxAmount(0.089),
@@ -122,6 +123,7 @@ export const mockDeposits: Deposit[] = [
   {
     id: "dep-002",
     amount: ccxAmount(500),
+    status: "active",
     durationMonths: 24,
     apr: 5.4,
     interest: ccxAmount(0.089),
