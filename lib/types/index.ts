@@ -14,8 +14,14 @@ export type WalletInfo = {
   lockedDeposits: CcxAmount
   staking: CcxAmount
   withdrawable: CcxAmount
+  trends?: Partial<Record<"balanceTotal" | "available" | "pending" | "lockedDeposits" | "staking" | "withdrawable", WalletStatTrend>>
   creationHeight: number
   currentHeight: number
+}
+
+export type WalletStatTrend = {
+  trend: number[]
+  changePct: number
 }
 
 export type TransactionType = "receive" | "send" | "deposit" | "withdrawal"

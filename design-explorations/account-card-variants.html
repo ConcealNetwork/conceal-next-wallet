@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conceal Wallet · Account Card Variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #212121;          /* lifted neutral grey — ground truth */
+    --card: #262626;
+    --inset: #2e2e2e;
+    --border: #404040;
+    --hair: #353535;
+    --accent: #FFA500;      /* pure orange */
+    --in: #10b981;          /* incoming */
+    --out: #ef4444;         /* outgoing */
+    --dep: #60a5fa;         /* deposits */
+    --fg: #ffffff;
+    --muted: #a3a3a3;
+    --muted2: #6f6f6f;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 48px 40px 80px;
+  }
+  .mono { font-family: "Geist Mono", ui-monospace, monospace; }
+  h1 { font-size: 28px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+  .note { color: var(--muted2); font-size: 12.5px; max-width: 760px; line-height: 1.6; margin: 0 0 40px; }
+  .archetype { margin: 56px 0 20px; display: flex; align-items: baseline; gap: 12px; border-bottom: 1px solid var(--hair); padding-bottom: 12px; }
+  .archetype h2 { font-size: 18px; font-weight: 600; margin: 0; }
+  .archetype span { color: var(--muted2); font-size: 13px; }
+  .row { display: flex; gap: 22px; flex-wrap: wrap; }
+  .slot { width: 300px; }
+  .slot.wide { width: 380px; }
+  .vlabel { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0 0 3px; }
+  .vdesc { font-size: 11.5px; color: var(--muted2); margin: 0 0 12px; line-height: 1.5; min-height: 32px; }
+
+  /* base card */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; }
+  .lbl { font-size: 13px; color: var(--muted); }
+  .val { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin: 6px 0 2px; }
+  .val .unit { font-size: 15px; font-weight: 500; color: var(--muted); margin-left: 4px; }
+  .sublbl { font-size: 12px; color: var(--muted2); }
+  .iconbox { width: 38px; height: 38px; border-radius: 10px; background: rgba(255,165,0,0.12); display: grid; place-items: center; color: var(--accent); }
+  svg { display: block; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; }
+  .chip.up { color: var(--in); background: rgba(16,185,129,0.12); }
+  .row-between { display: flex; align-items: flex-start; justify-content: space-between; }
+
+  /* ---- STAT V1 refined ---- */
+  .s1 .row-between { align-items: center; }
+  .s1 .val { font-size: 28px; }
+
+  /* ---- STAT V2 sparkline ---- */
+  .s2 .spark { margin-top: 14px; }
+
+  /* ---- STAT V3 bento ---- */
+  .s3 { padding: 22px; }
+  .s3::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--accent); }
+  .s3 .val { font-size: 34px; }
+  .s3 .ghost { position:absolute; right:-6px; bottom:-10px; color: rgba(255,165,0,0.07); }
+
+  /* ---- STAT V4 quiet ---- */
+  .s4 { background: transparent; border: none; border-radius: 0; padding: 4px 2px; }
+  .s4 .ovl { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted2); }
+  .s4 .val { font-weight: 500; font-size: 30px; }
+  .s4 .val .unit { color: var(--accent); }
+  .s4 hr { border: none; border-top: 1px solid var(--hair); margin: 14px 0 8px; }
+
+  /* ---- shared summary bits ---- */
+  .title { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
+  .desc { font-size: 12px; color: var(--muted2); margin: 0 0 16px; }
+  .inset { background: var(--inset); border-radius: 10px; padding: 12px 14px; }
+  .tri { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .tri .k { font-size: 11px; color: var(--muted2); }
+  .tri .v { font-size: 15px; font-weight: 600; }
+  .act { display:flex; align-items:center; justify-content:space-between; padding: 9px 0; border-top: 1px solid var(--hair); font-size: 13px; }
+  .tag { font-size: 10.5px; padding: 2px 7px; border-radius: 6px; background: var(--inset); color: var(--muted); margin-right: 8px; }
+
+  /* TX V2 flow bar */
+  .flowbar { height: 12px; border-radius: 999px; overflow: hidden; display: flex; margin: 4px 0 14px; }
+  .flowbar i { display:block; height:100%; }
+
+  /* TX V3 timeline */
+  .tl { position: relative; padding-left: 20px; }
+  .tl::before { content:""; position:absolute; left:5px; top:6px; bottom:6px; width:2px; background: var(--hair); }
+  .tl .item { position: relative; padding: 6px 0; font-size: 13px; display:flex; justify-content:space-between; }
+  .tl .item::before { content:""; position:absolute; left:-19px; top:11px; width:9px; height:9px; border-radius:50%; background: var(--accent); box-shadow: 0 0 0 3px var(--card); }
+
+  /* TX V4 table */
+  table { width:100%; border-collapse: collapse; font-size: 12.5px; }
+  td, th { text-align:left; padding: 8px 6px; border-bottom: 1px solid var(--hair); }
+  th { color: var(--muted2); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td.r, th.r { text-align: right; }
+
+  /* MARKET V3 ticker */
+  .ticker { display:flex; align-items:center; gap: 22px; }
+  .ticker .pc { font-size: 30px; font-weight: 700; }
+  .ticker .div { width:1px; height:34px; background: var(--hair); }
+  .ticker .k { font-size: 11px; color: var(--muted2); }
+  .ticker .v { font-size: 15px; font-weight: 600; }
+
+  /* MARKET V4 donut */
+  .donut-wrap { display:flex; align-items:center; gap: 18px; }
+</style>
+</head>
+<body>
+  <h1>Account Card Variants</h1>
+  <p class="sub">4 designs per archetype · built on the live wallet tokens (#212121 / #FFA500 / Geist)</p>
+  <p class="note">Each archetype below shows four directions, left→right from refined-default to novel. The six account stat cards (Total Balance, Available, Pending, Locked Deposits, Staking, Withdrawable) all share the <b>Stat Card</b> archetype, so it's varied once with real data. Pick per archetype — or mix (e.g. “Stat V2 + Summary V3”). Colors: <span style="color:var(--in)">incoming</span> · <span style="color:var(--out)">outgoing</span> · <span style="color:var(--dep)">deposits</span> · <span style="color:var(--accent)">accent</span>.</p>
+
+  <!-- ============ STAT CARD ============ -->
+  <div class="archetype"><h2>① Stat Card</h2><span>used ×6 — sample: Total Balance</span></div>
+  <div class="row">
+
+    <div class="slot">
+      <p class="vlabel">V1 · Refined Default</p>
+      <p class="vdesc">Current pattern, tightened hierarchy + ghost icon.</p>
+      <div class="card s1">
+        <div class="row-between">
+          <div>
+            <div class="lbl">Total Balance</div>
+            <div class="val">1,250.50<span class="unit">CCX</span></div>
+            <div class="sublbl">$56.2725 USD</div>
+          </div>
+          <div class="iconbox">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M16 12h.01M2 10h20"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <p class="vlabel">V2 · Data-Forward</p>
+      <p class="vdesc">Delta chip + inline sparkline for trend at a glance.</p>
+      <div class="card s2">
+        <div class="row-between">
+          <div class="lbl">Total Balance</div>
+          <span class="chip up">▲ 2.34%</span>
+        </div>
+        <div class="val">1,250.50<span class="unit">CCX</span></div>
+        <svg class="spark" width="260" height="40" viewBox="0 0 260 40" preserveAspectRatio="none">
+          <polyline points="0,30 30,26 60,28 90,20 120,22 150,14 180,16 210,8 240,12 260,6" fill="none" stroke="var(--accent)" stroke-width="2"/>
+          <polygon points="0,30 30,26 60,28 90,20 120,22 150,14 180,16 210,8 240,12 260,6 260,40 0,40" fill="rgba(255,165,0,0.08)"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="slot">
+      <p class="vlabel">V3 · Accent Bento</p>
+      <p class="vdesc">Bold value, accent edge rule, watermark icon.</p>
+      <div class="card s3">
+        <div class="lbl">Total Balance</div>
+        <div class="val">1,250.50<span class="unit">CCX</span></div>
+        <div class="sublbl">$56.2725 USD</div>
+        <svg class="ghost" width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M16 12h.01"/></svg>
+      </div>
+    </div>
+
+    <div class="slot">
+      <p class="vlabel">V4 · Quiet Minimal</p>
+      <p class="vdesc">Borderless, type-led restraint; accent only on unit.</p>
+      <div class="card s4">
+        <div class="ovl">Total Balance</div>
+        <div class="val">1,250.50<span class="unit">CCX</span></div>
+        <hr/>
+        <div class="sublbl">$56.2725 USD · ready to spend</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ TRANSACTION SUMMARY ============ -->
+  <div class="archetype"><h2>② Transaction Summary</h2><span>recent activity + totals</span></div>
+  <div class="row">
+
+    <div class="slot wide">
+      <p class="vlabel">V1 · Refined List</p>
+      <p class="vdesc">Inset total chips + clean activity rows.</p>
+      <div class="card">
+        <div class="title">Transaction Summary</div>
+        <div class="desc">Recent activity and overview</div>
+        <div class="tri" style="margin-bottom:16px">
+          <div class="inset"><div class="k">Received</div><div class="v" style="color:var(--in)">+175.00</div></div>
+          <div class="inset"><div class="k">Sent</div><div class="v" style="color:var(--out)">175.00</div></div>
+          <div class="inset"><div class="k">Deposits</div><div class="v" style="color:var(--dep)">+700.00</div></div>
+        </div>
+        <div class="act"><span><span class="tag">Receive</span>ccx7…0jK3m</span><span style="color:var(--in)">+100.00</span></div>
+        <div class="act"><span><span class="tag">Send</span>ccx7…0jK3m</span><span style="color:var(--out)">−50.00</span></div>
+        <div class="act"><span><span class="tag">Deposit</span>ccx7…0jK3m</span><span style="color:var(--dep)">+200.00</span></div>
+      </div>
+    </div>
+
+    <div class="slot wide">
+      <p class="vlabel">V2 · Flow Bar</p>
+      <p class="vdesc">Proportional in/out/deposit bar — money-flow at a glance.</p>
+      <div class="card">
+        <div class="title">Transaction Summary</div>
+        <div class="desc">Net flow this period</div>
+        <div class="flowbar">
+          <i style="width:20%;background:var(--in)"></i>
+          <i style="width:20%;background:var(--out)"></i>
+          <i style="width:60%;background:var(--dep)"></i>
+        </div>
+        <div class="tri">
+          <div><div class="k" style="font-size:11px;color:var(--muted2)">In</div><div class="v" style="font-size:16px;font-weight:600;color:var(--in)">+175.00</div></div>
+          <div><div class="k" style="font-size:11px;color:var(--muted2)">Out</div><div class="v" style="font-size:16px;font-weight:600;color:var(--out)">175.00</div></div>
+          <div><div class="k" style="font-size:11px;color:var(--muted2)">Deposits</div><div class="v" style="font-size:16px;font-weight:600;color:var(--dep)">+700.00</div></div>
+        </div>
+        <div style="margin-top:14px;font-size:12px;color:var(--muted2)">8 transactions · last activity 1h ago</div>
+      </div>
+    </div>
+
+    <div class="slot wide">
+      <p class="vlabel">V3 · Timeline</p>
+      <p class="vdesc">Vertical activity feed with connectors.</p>
+      <div class="card">
+        <div class="title">Transaction Summary</div>
+        <div class="desc">Recent activity</div>
+        <div class="tl">
+          <div class="item"><span>Received <span style="color:var(--muted2)">· 8h ago</span></span><span style="color:var(--in)">+100.00</span></div>
+          <div class="item"><span>Sent <span style="color:var(--muted2)">· 15h ago</span></span><span style="color:var(--out)">−50.00</span></div>
+          <div class="item"><span>Deposit <span style="color:var(--muted2)">· 1d ago</span></span><span style="color:var(--dep)">+200.00</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot wide">
+      <p class="vlabel">V4 · Compact Table</p>
+      <p class="vdesc">Dense, scannable, exchange-style rows.</p>
+      <div class="card">
+        <div class="title">Transaction Summary</div>
+        <div class="desc">8 transactions found</div>
+        <table>
+          <tr><th>Type</th><th>Address</th><th class="r">Amount</th></tr>
+          <tr><td>Receive</td><td class="mono">ccx7…0jK3m</td><td class="r" style="color:var(--in)">+100.00</td></tr>
+          <tr><td>Send</td><td class="mono">ccx7…0jK3m</td><td class="r" style="color:var(--out)">−50.00</td></tr>
+          <tr><td>Deposit</td><td class="mono">ccx7…0jK3m</td><td class="r" style="color:var(--dep)">+200.00</td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ MARKET SUMMARY ============ -->
+  <div class="archetype"><h2>③ Market Summary</h2><span>price · change · portfolio</span></div>
+  <div class="row">
+
+    <div class="slot wide">
+      <p class="vlabel">V1 · Refined</p>
+      <p class="vdesc">Stacked metrics, current pattern cleaned.</p>
+      <div class="card">
+        <div class="title">Market Summary</div>
+        <div class="desc">Current CCX price &amp; overview</div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div><div class="lbl">Current Price</div><div class="val" style="color:var(--accent);font-size:24px">$0.045</div></div>
+          <div><div class="lbl">24h Change</div><div class="v" style="color:var(--in);font-size:18px;font-weight:600">+2.34%</div></div>
+          <div><div class="lbl">Portfolio Value</div><div class="v" style="font-size:18px;font-weight:600">$56.2725</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot wide">
+      <p class="vlabel">V2 · Sparkline Hero</p>
+      <p class="vdesc">Big price + area sparkline + delta chip.</p>
+      <div class="card">
+        <div class="row-between">
+          <div>
+            <div class="lbl">CCX / USD</div>
+            <div class="val" style="font-size:32px;color:var(--accent)">$0.045</div>
+          </div>
+          <span class="chip up">▲ 2.34%</span>
+        </div>
+        <svg width="336" height="56" viewBox="0 0 336 56" preserveAspectRatio="none" style="margin-top:8px">
+          <polygon points="0,44 40,40 80,42 120,30 160,32 200,20 240,24 280,12 336,16 336,56 0,56" fill="rgba(96,165,250,0.10)"/>
+          <polyline points="0,44 40,40 80,42 120,30 160,32 200,20 240,24 280,12 336,16" fill="none" stroke="var(--dep)" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="slot wide">
+      <p class="vlabel">V3 · Ticker Row</p>
+      <p class="vdesc">Single horizontal strip, mono — trader feel.</p>
+      <div class="card">
+        <div class="ticker">
+          <div><div class="k">CCX/USD</div><div class="pc mono" style="color:var(--accent)">$0.045</div></div>
+          <div class="div"></div>
+          <div><div class="k">24h</div><div class="v mono" style="color:var(--in)">+2.34%</div></div>
+          <div class="div"></div>
+          <div><div class="k">Volume</div><div class="v mono">$125,000</div></div>
+          <div class="div"></div>
+          <div><div class="k">Portfolio</div><div class="v mono">$56.27</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot wide">
+      <p class="vlabel">V4 · Holdings Ring</p>
+      <p class="vdesc">Price + a ring hinting portfolio composition.</p>
+      <div class="card">
+        <div class="title">Market Summary</div>
+        <div class="desc">Price &amp; holdings</div>
+        <div class="donut-wrap">
+          <svg width="92" height="92" viewBox="0 0 42 42">
+            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--inset)" stroke-width="5"/>
+            <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--accent)" stroke-width="5" stroke-dasharray="63 37" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+          </svg>
+          <div>
+            <div class="lbl">Current Price</div>
+            <div class="val" style="color:var(--accent);font-size:24px">$0.045</div>
+            <div class="sublbl"><span style="color:var(--in)">+2.34%</span> · $56.2725 holdings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

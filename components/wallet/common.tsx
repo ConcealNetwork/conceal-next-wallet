@@ -58,12 +58,16 @@ export function StatCard({
   value,
   detail,
   icon,
+  trend,
+  changePct,
   tone = "default",
 }: {
   label: string
   value: string
   detail: string
   icon?: React.ReactNode
+  trend?: number[]
+  changePct?: number
   tone?: "default" | "incoming" | "outgoing" | "deposit" | "amber"
 }) {
   const toneClass = {
@@ -73,24 +77,71 @@ export function StatCard({
     deposit: "text-wallet-deposit",
     amber: "text-primary",
   }[tone]
+  const hasTrend = trend && trend.length > 1 && typeof changePct === "number"
+  const trendTone = (changePct ?? 0) >= 0 ? "text-wallet-incoming bg-wallet-incoming/10" : "text-wallet-outgoing bg-wallet-outgoing/10"
 
   return (
-    <Card className="wallet-card">
-      <CardContent className="flex min-h-[136px] items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className={cn("mt-3 break-words text-2xl font-bold", toneClass)}>{value}</p>
-          <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
-        </div>
-        {icon && (
-          <div className="rounded-xl bg-secondary p-3 text-primary">
-            {isValidElement<{ className?: string }>(icon)
-              ? cloneElement(icon, { className: cn("size-5", icon.props.className) })
-              : icon}
+    <Card className="wallet-card transition-colors duration-200 motion-reduce:transition-none">
+      <CardContent className="min-h-[150px]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className={cn("mt-3 break-words text-2xl font-bold tracking-tight", toneClass)}>{value}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
           </div>
-        )}
+          {hasTrend ? (
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold",
+                trendTone
+              )}
+              aria-label={`${label} ${changePct >= 0 ? "up" : "down"} ${Math.abs(changePct).toFixed(2)} percent`}
+            >
+              <span aria-hidden="true">{changePct >= 0 ? "▲" : "▼"}</span>
+              {Math.abs(changePct).toFixed(2)}%
+            </span>
+          ) : (
+            icon && (
+              <div className="rounded-xl bg-secondary p-3 text-primary">
+                {isValidElement<{ className?: string }>(icon)
+                  ? cloneElement(icon, { className: cn("size-5", icon.props.className) })
+                  : icon}
+              </div>
+            )
+          )}
+        </div>
+        {hasTrend && <InlineSparkline values={trend} className="mt-4" />}
       </CardContent>
     </Card>
+  )
+}
+
+function InlineSparkline({ values, className }: { values: number[]; className?: string }) {
+  const width = 260
+  const height = 40
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const step = width / (values.length - 1)
+  const points = values
+    .map((value, index) => {
+      const x = index * step
+      const y = height - ((value - min) / range) * (height - 6) - 3
+      return `${x.toFixed(2)},${y.toFixed(2)}`
+    })
+    .join(" ")
+  const areaPoints = `0,${height} ${points} ${width},${height}`
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={cn("h-10 w-full text-primary", className)}
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+    >
+      <polygon points={areaPoints} fill="hsl(var(--primary) / 0.08)" />
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+    </svg>
   )
 }
 
