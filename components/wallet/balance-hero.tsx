@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useCountUp } from "@/lib/hooks/use-count-up"
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types"
 import { ccxToNumber, cn, formatCcx, formatUsd } from "@/lib/utils"
 
@@ -33,6 +34,12 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   const stakingApr = getRepresentativeApr(activeDeposits)
   const availablePct = getPct(available, total)
   const changeLabel = `${market.change24hPct.toFixed(2)}%`
+  const availableLabel = useCountUp(available, {
+    formatter: (value) => formatCcx(value).replace(" CCX", ""),
+  })
+  const totalLabel = useCountUp(total, {
+    formatter: (value) => formatCcx(value),
+  })
 
   const segments: Segment[] = [
     {
@@ -70,17 +77,17 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   ]
 
   return (
-    <Card className="wallet-card">
+    <Card className="wallet-card wallet-card-hover motion-reduce:transition-none">
       <CardContent className="p-6 sm:p-7">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Available · ready to spend</p>
             <p className="mt-2 break-words font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]">
-              {formatCcx(available).replace(" CCX", "")}
+              {availableLabel}
               <span className="ml-2 align-baseline text-xl font-medium text-muted-foreground">CCX</span>
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              of <span className="font-semibold text-muted-foreground">{formatCcx(wallet.balanceTotal)}</span> total ·{" "}
+              of <span className="font-semibold text-muted-foreground">{totalLabel}</span> total ·{" "}
               <span className="font-semibold text-muted-foreground">{formatUsd(market.portfolioValueUsd)}</span> USD
             </p>
           </div>
@@ -97,11 +104,11 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
         </div>
 
         <div className="mt-6 flex h-3.5 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
-          {segments.map((segment) => (
+          {segments.map((segment, index) => (
             <span
               key={segment.label}
-              className={segment.barClassName}
-              style={{ width: `${segment.pct}%` }}
+              className={cn("animate-scale-x-in motion-reduce:animate-none", segment.barClassName)}
+              style={{ width: `${segment.pct}%`, animationDelay: `${index * 70}ms` }}
             />
           ))}
         </div>
@@ -181,7 +188,17 @@ function BalanceSparkline({ values, className }: { values: number[]; className?:
       preserveAspectRatio="none"
     >
       <polygon points={areaPoints} fill="hsl(var(--primary) / 0.08)" />
-      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <polyline
+        className="animate-stroke-draw motion-reduce:animate-none"
+        points={points}
+        fill="none"
+        pathLength={1}
+        stroke="currentColor"
+        strokeDasharray={1}
+        strokeDashoffset={0}
+        strokeWidth="2"
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
   )
 }

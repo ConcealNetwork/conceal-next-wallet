@@ -41,7 +41,7 @@ export function SectionCard({
   className?: string
 }) {
   return (
-    <Card className={cn("wallet-card", className)}>
+    <Card className={cn("wallet-card wallet-card-hover motion-reduce:transition-none", className)}>
       {(title || description) && (
         <CardHeader>
           {title && <CardTitle>{title}</CardTitle>}
@@ -81,7 +81,7 @@ export function StatCard({
   const trendTone = (changePct ?? 0) >= 0 ? "text-wallet-incoming bg-wallet-incoming/10" : "text-wallet-outgoing bg-wallet-outgoing/10"
 
   return (
-    <Card className="wallet-card transition-colors duration-200 motion-reduce:transition-none">
+    <Card className="wallet-card wallet-card-hover transition-colors duration-200 motion-reduce:transition-none">
       <CardContent className="min-h-[150px]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -139,8 +139,18 @@ function InlineSparkline({ values, className }: { values: number[]; className?: 
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
     >
-      <polygon points={areaPoints} fill="hsl(var(--primary) / 0.08)" />
-      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <polygon className="animate-fade-in motion-reduce:animate-none motion-reduce:opacity-100" points={areaPoints} fill="hsl(var(--primary) / 0.08)" />
+      <polyline
+        className="animate-stroke-draw motion-reduce:animate-none"
+        points={points}
+        fill="none"
+        pathLength={1}
+        stroke="currentColor"
+        strokeDasharray={1}
+        strokeDashoffset={0}
+        strokeWidth="2"
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
   )
 }
@@ -172,7 +182,7 @@ export function FilterTabs({
           type="button"
           onClick={() => onChange(tab)}
           className={cn(
-            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm text-muted-foreground transition-colors duration-200 hover:border-ring hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none",
             active === tab && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground"
           )}
         >
@@ -218,7 +228,7 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
   }
 
   return (
-    <Button type="button" variant="outline" onClick={copy} className="gap-2">
+    <Button type="button" variant="outline" onClick={copy} className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100">
       {copied ? <Check className="size-4" aria-hidden="true" /> : <Clipboard className="size-4" aria-hidden="true" />}
       {copied ? "Copied" : label}
     </Button>

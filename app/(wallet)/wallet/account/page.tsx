@@ -3,10 +3,12 @@
 import { RefreshCw } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
+import type { CSSProperties } from "react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BalanceHero, BalanceHeroSkeleton } from "@/components/wallet/balance-hero"
 import { PageHeader, SectionCard } from "@/components/wallet/common"
+import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
 import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types"
 import { useDeposits, useMarketData, useRefreshWallet, useTransactions, useWalletInfo } from "@/lib/hooks"
 import { ccxToNumber, cn, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils"
@@ -41,79 +43,90 @@ export default function AccountPage() {
         title="Account Overview"
         subtitle="Manage your CCX holdings and view transaction summary"
         action={
-          <Button type="button" onClick={() => refresh.mutate()} disabled={refresh.isPending} className="gap-2">
+          <Button
+            type="button"
+            onClick={() => refresh.mutate()}
+            disabled={refresh.isPending}
+            className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
+          >
             <RefreshCw className={cn("size-4", refresh.isPending && "animate-spin motion-reduce:animate-none")} aria-hidden="true" />
             {refresh.isPending ? "Refreshing" : "Refresh"}
           </Button>
         }
       />
-      {info && market.data && deposits.data ? (
-        <BalanceHero wallet={info} market={market.data} deposits={deposits.data} />
-      ) : (
-        <BalanceHeroSkeleton />
-      )}
+      <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
+        {info && market.data && deposits.data ? (
+          <BalanceHero wallet={info} market={market.data} deposits={deposits.data} />
+        ) : (
+          <BalanceHeroSkeleton />
+        )}
+      </div>
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-        <SectionCard title="Transaction Summary" description="Net flow this period">
-          {transactions.isLoading ? (
-            <div className="space-y-5">
-              <Skeleton className="h-3 w-full rounded-full" />
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Skeleton className="h-12" />
-                <Skeleton className="h-12" />
-                <Skeleton className="h-12" />
-              </div>
-              <Skeleton className="h-4 w-48" />
-            </div>
-          ) : (
-            <TransactionFlowSummary
-              received={totals.received}
-              sent={totals.sent}
-              deposits={totals.deposits}
-              transactionCount={transactions.data?.length ?? 0}
-              lastActivity="1h ago"
-            />
-          )}
-          {transactions.data && transactions.data.length > 0 ? (
-            <RecentActivityList transactions={transactions.data.slice(0, 5)} />
-          ) : null}
-          <Link
-            className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            href="/wallet/transactions"
-          >
-            View All Transactions →
-          </Link>
-        </SectionCard>
-        <SectionCard title="Market Summary" description="Live CCX price and your holdings">
-          {info && market.data ? (
-            <MarketSummaryHybrid market={market.data} walletInfo={info} />
-          ) : (
-            <div className="space-y-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-10 w-36" />
+        <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
+          <SectionCard title="Transaction Summary" description="Net flow this period">
+            {transactions.isLoading ? (
+              <div className="space-y-5">
+                <Skeleton className="h-3 w-full rounded-full" />
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Skeleton className="h-12" />
+                  <Skeleton className="h-12" />
+                  <Skeleton className="h-12" />
                 </div>
-                <Skeleton className="h-7 w-20 rounded-full" />
+                <Skeleton className="h-4 w-48" />
               </div>
-              <Skeleton className="h-[60px] w-full" />
-              <Skeleton className="h-px w-full" />
-              <div className="flex gap-5">
-                <Skeleton className="size-[120px] rounded-full" />
-                <div className="flex-1 space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
+            ) : (
+              <TransactionFlowSummary
+                received={totals.received}
+                sent={totals.sent}
+                deposits={totals.deposits}
+                transactionCount={transactions.data?.length ?? 0}
+                lastActivity="1h ago"
+              />
+            )}
+            {transactions.data && transactions.data.length > 0 ? (
+              <RecentActivityList transactions={transactions.data.slice(0, 5)} />
+            ) : null}
+            <Link
+              className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
+              href="/wallet/transactions"
+            >
+              View All Transactions →
+            </Link>
+          </SectionCard>
+        </div>
+        <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
+          <SectionCard title="Market Summary" description="Live CCX price and your holdings">
+            {info && market.data ? (
+              <MarketSummaryHybrid market={market.data} walletInfo={info} />
+            ) : (
+              <div className="space-y-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-36" />
+                  </div>
+                  <Skeleton className="h-7 w-20 rounded-full" />
+                </div>
+                <Skeleton className="h-[60px] w-full" />
+                <Skeleton className="h-px w-full" />
+                <div className="flex gap-5">
+                  <Skeleton className="size-[120px] rounded-full" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          <Link
-            className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            href="/wallet/market"
-          >
-            View Full Market →
-          </Link>
-        </SectionCard>
+            )}
+            <Link
+              className="mt-4 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
+              href="/wallet/market"
+            >
+              View Full Market →
+            </Link>
+          </SectionCard>
+        </div>
       </div>
     </>
   )
@@ -145,11 +158,14 @@ function TransactionFlowSummary({
         className="flex h-3 overflow-hidden rounded-full bg-secondary"
         aria-hidden="true"
       >
-        {segments.map((segment) => (
+        {segments.map((segment, index) => (
           <span
             key={segment.label}
-            className={segment.className}
-            style={{ width: `${total > 0 ? (segment.value / total) * 100 : 0}%` }}
+            className={cn("animate-scale-x-in motion-reduce:animate-none", segment.className)}
+            style={{
+              width: `${total > 0 ? (segment.value / total) * 100 : 0}%`,
+              animationDelay: `${index * 70}ms`,
+            }}
           />
         ))}
       </div>
@@ -186,10 +202,14 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
     <div className="mt-5">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recent Activity</p>
       <ul className="mt-1 divide-y divide-border">
-        {transactions.map((transaction) => {
+        {transactions.map((transaction, index) => {
           const meta = TX_META[transaction.type]
           return (
-            <li key={transaction.id} className="flex items-center justify-between gap-3 py-2.5">
+            <li
+              key={transaction.id}
+              className="animate-rise-in flex items-center justify-between gap-3 py-2.5 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
+              style={{ animationDelay: `${180 + index * 40}ms` }}
+            >
               <div className="flex min-w-0 items-center gap-2.5">
                 <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-[10.5px] text-muted-foreground">
                   {meta.label}
@@ -216,10 +236,14 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
 }
 
 function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walletInfo: WalletInfo }) {
+  const prefersReducedMotion = usePrefersReducedMotion()
   const available = ccxToNumber(walletInfo.available)
   const locked = ccxToNumber(walletInfo.lockedDeposits)
   const staking = ccxToNumber(walletInfo.staking)
   const holdingsTotal = available + locked + staking
+  const marketPriceLabel = useCountUp(market.price.value, {
+    formatter: (value) => formatUsd(value, 3),
+  })
   const segments = [
     { label: "Available", value: available, className: "text-primary", stroke: "hsl(var(--primary))", dotClassName: "bg-primary" },
     { label: "Locked", value: locked, className: "text-wallet-deposit", stroke: "hsl(var(--chart-1))", dotClassName: "bg-wallet-deposit" },
@@ -233,7 +257,7 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
         <div>
           <p className="text-xs text-muted-foreground">CCX / USD</p>
           <p className="mt-1 font-mono text-4xl font-bold leading-none tracking-tight text-primary">
-            {formatUsd(market.price, 3)}
+            {marketPriceLabel}
           </p>
         </div>
         <span
@@ -269,7 +293,9 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
               stroke="hsl(var(--chart-1))"
               strokeWidth={2}
               fill="url(#accountMarketFill)"
-              isAnimationActive={false}
+              isAnimationActive={!prefersReducedMotion}
+              animationDuration={700}
+              animationEasing="ease-out"
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -279,7 +305,7 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
         <div className="relative size-[120px] shrink-0">
           <svg className="size-[120px]" viewBox="0 0 42 42" aria-hidden="true">
             <circle cx="21" cy="21" r="15.9" fill="none" stroke="hsl(var(--secondary))" strokeWidth="4.5" />
-            {segments.map((segment) => {
+            {segments.map((segment, index) => {
               const pct = holdingsTotal > 0 ? (segment.value / holdingsTotal) * 100 : 0
               const dashOffset = offset
               offset -= pct
@@ -296,6 +322,14 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
                   strokeDashoffset={dashOffset}
                   strokeLinecap="butt"
                   transform="rotate(-90 21 21)"
+                  className="animate-donut-sweep motion-reduce:animate-none"
+                  style={
+                    {
+                      "--donut-offset": dashOffset,
+                      "--donut-pct": pct,
+                      animationDelay: `${index * 80}ms`,
+                    } as CSSProperties
+                  }
                 />
               )
             })}

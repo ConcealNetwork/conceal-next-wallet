@@ -6,6 +6,29 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .animate-rise-in {
+    opacity: 0;
+    animation: rise-in 320ms ease-out forwards;
+  }
+
+  .animate-scale-x-in {
+    transform-origin: left center;
+    animation: scale-x-in 650ms ease-out both;
+  }
+
+  .animate-stroke-draw {
+    animation: stroke-draw 700ms ease-out both;
+  }
+
+  .animate-donut-sweep {
+    animation: donut-sweep 700ms ease-out both;
+  }
+
+  .animate-fade-in {
+    opacity: 0;
+    animation: fade-in 520ms ease-out forwards;
+  }
 }
 
 @layer base {
@@ -58,5 +81,95 @@
 @layer components {
   .wallet-card {
     @apply rounded-xl border border-border bg-card shadow-[0_18px_70px_rgba(0,0,0,0.22)];
+  }
+
+  .wallet-card-hover {
+    transition-property: border-color, box-shadow, transform;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out;
+    will-change: transform;
+  }
+
+  .wallet-card-hover:hover {
+    border-color: hsl(var(--ring) / 0.48);
+    box-shadow: 0 22px 72px rgb(0 0 0 / 0.28);
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes scale-x-in {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes stroke-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes donut-sweep {
+  from {
+    stroke-dashoffset: calc(var(--donut-offset) + var(--donut-pct));
+  }
+
+  to {
+    stroke-dashoffset: var(--donut-offset);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-rise-in,
+  .animate-scale-x-in,
+  .animate-stroke-draw,
+  .animate-donut-sweep,
+  .animate-fade-in {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
+
+  .wallet-card-hover {
+    transition: none;
+    will-change: auto;
+  }
+
+  .wallet-card-hover:hover {
+    transform: none;
   }
 }
