@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Conceal Next Wallet Mockup
 
-## Getting Started
+This is a Next.js 14 App Router recreation of the Conceal CCX wallet mockup.
 
-First, run the development server:
+## Mock-only safety warning
+
+This project is a UI mockup with mock data only. It does not generate, derive, validate, store, import, export, or transmit real wallet keys, seeds, mnemonics, transactions, or RPC calls. Do not use it with real CCX funds. Any production wallet must add genuine key security, cryptography, storage, and backend wallet handling separately.
+
+## Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Verify
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm run lint
+npm test
+npm run test:e2e
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Backend wiring guide
 
-## Learn More
+The UI talks to typed services only. Interfaces live in `lib/services/*.service.ts`, mock implementations live in `lib/services/mock`, and the single swap point is `lib/services/index.ts`.
 
-To learn more about Next.js, take a look at the following resources:
+To wire a real backend:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Implement the interfaces in `lib/services` with real wallet/RPC calls in a new folder such as `lib/services/real`.
+2. Preserve the same method signatures and return the domain models from `lib/types`.
+3. Change only `lib/services/index.ts` so `getWalletServices()` returns the real service bundle when `NEXT_PUBLIC_USE_MOCK=false`.
+4. Keep key generation, seed handling, and secret storage outside this mock UI until a proper audited wallet backend exists.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Every mock service method includes a `// TODO(backend)` marker showing where the real implementation boundary belongs.
