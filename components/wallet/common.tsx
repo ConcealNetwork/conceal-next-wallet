@@ -34,24 +34,28 @@ export function SectionCard({
   description,
   children,
   footer,
+  fill = false,
   className,
 }: {
   title?: string
   description?: string
   children: React.ReactNode
   footer?: React.ReactNode
+  /** Stretch to fill the parent height and pin the footer to the bottom.
+   *  Use only for equal-height cards laid out one-per-cell (e.g. account summary). */
+  fill?: boolean
   className?: string
 }) {
   return (
-    <Card className={cn("wallet-card flex h-full flex-col", className)}>
+    <Card className={cn("wallet-card", fill && "flex h-full flex-col", className)}>
       {(title || description) && (
         <CardHeader>
           {title && <CardTitle>{title}</CardTitle>}
           {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
       )}
-      <CardContent className="flex flex-1 flex-col">{children}</CardContent>
-      {footer ? <div className="mt-auto border-t border-border px-6 pt-4">{footer}</div> : null}
+      <CardContent className={cn(fill && "flex flex-1 flex-col")}>{children}</CardContent>
+      {footer ? <div className={cn("border-t border-border px-6 pt-4", fill && "mt-auto")}>{footer}</div> : null}
     </Card>
   )
 }

@@ -66,6 +66,7 @@ export default function AccountPage() {
           <SectionCard
             title="Transaction Summary"
             description="Net flow this period"
+            fill
             footer={
               <Link
                 className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
@@ -103,6 +104,7 @@ export default function AccountPage() {
           <SectionCard
             title="Market Summary"
             description="Live CCX price and your holdings"
+            fill
             footer={
               <Link
                 className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
