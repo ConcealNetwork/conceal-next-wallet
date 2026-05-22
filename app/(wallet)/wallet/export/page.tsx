@@ -22,12 +22,13 @@ export default function ExportPage() {
   return (
     <>
       <PageHeader title="Export" subtitle="Back up placeholder wallet material" />
-      <Alert className="mb-6 border-wallet-amber bg-wallet-amber/10">
+      <Alert className="mb-6 animate-rise-in border-wallet-amber bg-wallet-amber/10 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <AlertTitle>Mock-only export data</AlertTitle>
         <AlertDescription>
           These strings are placeholders. This app does not generate, derive, validate, store, or reveal real wallet keys.
         </AlertDescription>
       </Alert>
+      <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
       <SectionCard title="Backup Data">
         <div className="space-y-5">
           <div className="rounded-xl bg-secondary p-4">
@@ -55,6 +56,7 @@ export default function ExportPage() {
           </div>
         </div>
       </SectionCard>
+      </div>
     </>
   )
 }

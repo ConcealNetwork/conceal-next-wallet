@@ -46,7 +46,7 @@ export default function SettingsPage() {
     <>
       <PageHeader title="Settings" subtitle="Change your parameters here" />
       <div className="grid gap-6 xl:grid-cols-2">
-        <div className="space-y-6">
+        <div className="animate-rise-in space-y-6 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
           <SectionCard title="Language">
             <select className="h-10 w-full cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring">
               <option>English</option>
@@ -72,7 +72,7 @@ export default function SettingsPage() {
             )}
           </SectionCard>
         </div>
-        <div className="space-y-6">
+        <div className="animate-rise-in space-y-6 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
           <SectionCard title="Wallet-Related Settings">
             {current && (
               <div className="space-y-4">

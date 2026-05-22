@@ -50,6 +50,7 @@ export default function AddressBookPage() {
           </Button>
         }
       />
+      <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
       <SectionCard>
         {visibleEntries.length === 0 ? (
           <EmptyState title="No addresses saved yet" description="Add your first CCX address to get started." />
@@ -75,6 +76,7 @@ export default function AddressBookPage() {
           </div>
         )}
       </SectionCard>
+      </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
