@@ -11,6 +11,8 @@ import {
   Mail,
   Menu,
   Network,
+  PanelLeftClose,
+  PanelLeftOpen,
   QrCode,
   Send,
   Settings,
@@ -31,6 +33,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useSidebarCollapse } from "@/components/layout/sidebar-collapse"
 import { cn } from "@/lib/utils"
 import { useWalletSession } from "@/lib/session/wallet-session"
 
@@ -52,86 +56,146 @@ const bottomNav = [
   { href: "/wallet/donate", label: "Donate", icon: Gift },
 ]
 
-function NavLink({ item }: { item: (typeof mainNav)[number] }) {
+function NavLink({ item, collapsed = false }: { item: (typeof mainNav)[number]; collapsed?: boolean }) {
   const pathname = usePathname()
   const Icon = item.icon
   const active = pathname === item.href
 
-  return (
+  const link = (
     <Link
       href={item.href}
+      aria-label={collapsed ? item.label : undefined}
       className={cn(
-        "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-4 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex min-h-11 cursor-pointer items-center rounded-xl text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        collapsed ? "justify-center px-0" : "gap-3 px-4",
         active && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
       )}
     >
       <Icon className="size-4" aria-hidden="true" />
-      <span>{item.label}</span>
+      {!collapsed && <span>{item.label}</span>}
     </Link>
+  )
+
+  if (!collapsed) {
+    return link
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right">{item.label}</TooltipContent>
+    </Tooltip>
   )
 }
 
-function SidebarContent() {
+function DisconnectButton({ collapsed }: { collapsed: boolean }) {
   const { closeSession } = useWalletSession()
 
   return (
-    <div className="flex h-full flex-col bg-background px-4 py-5">
-      <Link
-        href="/wallet/account"
-        className="mb-8 flex cursor-pointer items-center gap-3 rounded-xl px-2 py-1 transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
-          <WalletCards className="size-5" aria-hidden="true" />
-        </div>
-        <div>
-          <p className="text-lg font-bold text-white">Conceal Wallet</p>
-          <p className="text-xs text-muted-foreground">Mock CCX interface</p>
-        </div>
-      </Link>
-      <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-        {mainNav.map((item) => (
-          <NavLink key={item.href} item={item} />
-        ))}
-        <div className="my-4 border-t border-border" />
-        {bottomNav.map((item) => (
-          <NavLink key={item.href} item={item} />
-        ))}
-      </nav>
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
+    <AlertDialog>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={collapsed ? "Disconnect" : undefined}
+              className={cn(
+                "mt-4 h-11 shrink-0 gap-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+                collapsed ? "w-full justify-center px-0" : "justify-start px-4"
+              )}
+            >
+              <LogOut className="size-4" aria-hidden="true" />
+              {!collapsed && <span>Disconnect</span>}
+            </Button>
+          </AlertDialogTrigger>
+        </TooltipTrigger>
+        {collapsed && <TooltipContent side="right">Disconnect</TooltipContent>}
+      </Tooltip>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Disconnect wallet?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This clears the current mock wallet session and returns you to the open wallet screen.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={closeSession}>
+            Disconnect
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+function SidebarContent({ collapsed = false, showToggle = false }: { collapsed?: boolean; showToggle?: boolean }) {
+  const { toggle } = useSidebarCollapse()
+  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose
+
+  return (
+    <div className={cn("flex h-full flex-col bg-background py-5", collapsed ? "px-2" : "px-4")}>
+      <div className={cn("mb-8 flex", collapsed ? "flex-col items-center gap-3" : "items-center gap-2")}>
+        <Link
+          href="/wallet/account"
+          aria-label={collapsed ? "Conceal Wallet" : undefined}
+          className={cn(
+            "flex cursor-pointer items-center rounded-xl py-1 transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            collapsed ? "justify-center px-0" : "min-w-0 flex-1 gap-3 px-2"
+          )}
+        >
+          <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
+            <WalletCards className="size-5" aria-hidden="true" />
+          </div>
+          {!collapsed && (
+            <div>
+              <p className="text-lg font-bold text-foreground">Conceal Wallet</p>
+              <p className="text-xs text-muted-foreground">Mock CCX interface</p>
+            </div>
+          )}
+        </Link>
+        {showToggle && (
           <Button
             type="button"
             variant="ghost"
-            className="mt-4 h-11 shrink-0 justify-start gap-3 px-4 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            size="icon-sm"
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            onClick={toggle}
+            className="shrink-0 cursor-pointer text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <LogOut className="size-4" aria-hidden="true" />
-            Disconnect
+            <ToggleIcon className="size-4" aria-hidden="true" />
           </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect wallet?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This clears the current mock wallet session and returns you to the open wallet screen.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={closeSession}>
-              Disconnect
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        )}
+      </div>
+      <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+        {mainNav.map((item) => (
+          <NavLink key={item.href} item={item} collapsed={collapsed} />
+        ))}
+        <div className="my-4 border-t border-border" />
+        {bottomNav.map((item) => (
+          <NavLink key={item.href} item={item} collapsed={collapsed} />
+        ))}
+      </nav>
+      <DisconnectButton collapsed={collapsed} />
     </div>
   )
 }
 
 export function Sidebar() {
+  const { collapsed } = useSidebarCollapse()
+
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-border lg:block">
-        <SidebarContent />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 hidden border-r border-border transition-[width] duration-200 motion-reduce:transition-none lg:block",
+          collapsed ? "w-[64px]" : "w-[260px]"
+        )}
+      >
+        <TooltipProvider>
+          <SidebarContent collapsed={collapsed} showToggle />
+        </TooltipProvider>
       </aside>
       <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur lg:hidden">
         <Sheet>
