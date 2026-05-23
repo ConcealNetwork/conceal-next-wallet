@@ -93,9 +93,25 @@ export type AddressEntry = {
 export type NodeStatus = {
   url: string
   height: number
+  networkHeight: number
   peers: number
+  peersOut: number
+  peersIn: number
   isCustom: boolean
   version: string
+  // TODO(backend): the fields below map to Conceal daemon `getinfo`
+  difficulty: number
+  hashrate: number // hashes per second
+  mempool: number // pending tx count (tx_pool_size)
+  lastBlockSecondsAgo: number
+  avgBlockTimeSeconds: number
+  latencyMs: number
+  uptimeSeconds: number
+  // Short recent-history series used by the telemetry sparklines (oldest → newest)
+  heightHistory: number[]
+  hashrateHistory: number[]
+  peersHistory: number[]
+  blockTimeHistory: number[]
 }
 
 export type WalletSettings = {

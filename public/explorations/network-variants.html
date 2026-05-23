@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Network · Layout Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--sec:#2e2e2e;--inset:#242424;--border:#404040;--hair:#353535;--accent:#FFA500;--in:#10b981;--dep:#60a5fa;--out:#ef4444;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f;--radius:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:40px 32px 90px}
+h1{font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+.note{color:var(--muted2);font-size:12.5px;margin:0 0 8px}
+.variant{margin:56px 0 20px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--hair);padding-bottom:10px}
+.variant .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.variant h2{font-size:17px;font-weight:600;margin:0}
+.variant span.d{color:var(--muted2);font-size:12.5px}
+.frame{max-width:1180px}
+.mono{font-family:"Geist Mono",monospace}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.k{font-size:12.5px;color:var(--muted)}
+.k2{font-size:11px;color:var(--muted2)}
+.pulse{position:relative;display:inline-flex;width:11px;height:11px;flex:none}
+.pulse i{position:absolute;inset:0;border-radius:50%;background:var(--in)}
+.pulse i.ring{animation:ping 1.8s cubic-bezier(0,0,.2,1) infinite;opacity:.55}
+@keyframes ping{75%,100%{transform:scale(2.2);opacity:0}}
+.chip{display:inline-flex;align-items:center;border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight:600}
+.chip.muted{background:var(--sec);color:var(--muted)}
+.chip.in{background:rgba(16,185,129,.14);color:var(--in)}
+.chip.dep{background:rgba(96,165,250,.14);color:var(--dep)}
+
+/* ===== V1 grid ===== */
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.tile{padding:18px;min-height:120px;display:flex;flex-direction:column;justify-content:space-between}
+.tile .v{font-size:24px;font-weight:700;letter-spacing:-.01em;margin-top:8px}
+.banner{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;margin-bottom:14px}
+
+/* ===== V2 console ===== */
+.console{background:#1b1b1b;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;font-family:"Geist Mono",monospace}
+.console .bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--hair);background:#161616}
+.console .dot{width:11px;height:11px;border-radius:50%}
+.console .body{padding:18px 20px;font-size:13px;line-height:1.9}
+.console .row{display:flex;justify-content:space-between;border-bottom:1px dashed #2c2c2c;padding:3px 0}
+.console .key{color:var(--muted2)}
+.console .val{color:var(--fg)}
+.console .cmd{color:var(--in)}
+.console .comment{color:var(--muted2)}
+
+/* ===== V3 sync ring + constellation ===== */
+.v3{display:grid;grid-template-columns:1.1fr 1fr;gap:14px}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px}
+.metricsR{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border-radius:var(--radius);overflow:hidden}
+.metricsR .cell{background:var(--card);padding:18px 20px}
+.metricsR .v{font-size:20px;font-weight:700;margin-top:5px}
+
+/* ===== V4 telemetry ===== */
+.v4{display:grid;grid-template-columns:300px 1fr;gap:14px}
+.identity{padding:22px;display:flex;flex-direction:column;gap:18px}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.chartcard{padding:16px}
+.chartcard .v{font-size:20px;font-weight:700;margin-top:2px}
+
+/* ===== V5 editorial chain ===== */
+.editorial{padding:28px 30px}
+.chain{display:flex;align-items:flex-end;gap:5px;height:46px;margin:18px 0 6px}
+.chain .blk{flex:1;background:var(--sec);border-radius:3px 3px 0 0;border-top:2px solid var(--border)}
+.chain .blk.new{background:rgba(255,165,0,.25);border-top-color:var(--accent)}
+.deflist{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 40px;margin-top:22px}
+.deflist .row{display:flex;justify-content:space-between;border-bottom:1px solid var(--hair);padding-bottom:8px}
+.deflist .dk{color:var(--muted)}
+.deflist .dv{font-weight:600}
+
+/* ===== V6 peer table ===== */
+.statbar{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.statbar .tile{min-height:0;padding:16px 18px}
+.statbar .v{font-size:20px;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:11px 16px;border-bottom:1px solid var(--hair);text-align:left}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted2);font-weight:500}
+td.r,th.r{text-align:right}
+.lat{display:inline-flex;align-items:center;gap:6px}
+.latdot{width:7px;height:7px;border-radius:50%}
+</style></head>
+<body>
+  <h1>Network — Layout Variants</h1>
+  <p class="sub">6 ways to present node connection &amp; chain status · built on the wallet tokens</p>
+  <p class="note mono">Live fields: node.conceal.network:16000 · height 1,971,337 · 18 peers · Conceal Core 6.9.2 · synced. Extra node telemetry (difficulty, hashrate, mempool, peer rows) is illustrative — wires to daemon getinfo.</p>
+
+  <!-- ============ V1 ============ -->
+  <div class="variant"><span class="tag">V1</span><h2>Status banner + metric grid</h2><span class="d">Refined version of today's page — live banner, polished 4-up tiles.</span></div>
+  <div class="frame">
+    <div class="card banner">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="pulse"><i class="ring"></i><i></i></span>
+        <div>
+          <div style="font-size:17px;font-weight:600">Connected &amp; synced</div>
+          <div class="mono" style="font-size:13px;color:var(--muted);margin-top:2px">node.conceal.network:16000</div>
+        </div>
+      </div>
+      <span class="chip muted">Default node</span>
+    </div>
+    <div class="grid4">
+      <div class="card tile"><div class="k">Block Height</div><div class="v mono" style="color:var(--accent)">1,971,337</div><div class="k2">Synced to network tip</div></div>
+      <div class="card tile"><div class="k">Connected Peers</div><div class="v">18</div><div class="k2">12 out · 6 in</div></div>
+      <div class="card tile"><div class="k">Sync Status</div><div class="v" style="color:var(--in)">100%</div><div class="k2">Up to date</div></div>
+      <div class="card tile"><div class="k">Core Version</div><div class="v mono" style="font-size:16px">6.9.2</div><div class="k2">Conceal Core</div></div>
+    </div>
+  </div>
+
+  <!-- ============ V2 ============ -->
+  <div class="variant"><span class="tag">V2</span><h2>Node console</h2><span class="d">Operator's readout — monospace daemon getinfo panel. Speaks to node-runners.</span></div>
+  <div class="frame">
+    <div class="console">
+      <div class="bar"><span class="dot" style="background:var(--out)"></span><span class="dot" style="background:var(--accent)"></span><span class="dot" style="background:var(--in)"></span><span style="color:var(--muted2);font-size:12px;margin-left:6px">conceald — getinfo</span></div>
+      <div class="body">
+        <div style="margin-bottom:8px"><span class="cmd">$</span> conceald status <span class="comment">› node.conceal.network:16000</span></div>
+        <div class="row"><span class="key">status</span><span class="val" style="color:var(--in)">OK · synced</span></div>
+        <div class="row"><span class="key">height</span><span class="val">1,971,337 / 1,971,337</span></div>
+        <div class="row"><span class="key">difficulty</span><span class="val">1,284,560,233</span></div>
+        <div class="row"><span class="key">hashrate</span><span class="val">10.70 MH/s</span></div>
+        <div class="row"><span class="key">tx_pool_size</span><span class="val">3</span></div>
+        <div class="row"><span class="key">connections</span><span class="val">18 (out 12 / in 6)</span></div>
+        <div class="row"><span class="key">last_block</span><span class="val">47s ago</span></div>
+        <div class="row"><span class="key">version</span><span class="val">Conceal Core 6.9.2</span></div>
+        <div style="margin-top:10px;color:var(--muted2)">▌ connection healthy — ping 42ms</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ V3 ============ -->
+  <div class="variant"><span class="tag">V3</span><h2>Sync ring + peer constellation</h2><span class="d">Big sync gauge as hero, peers orbiting the node. Most diagrammatic.</span></div>
+  <div class="frame">
+    <div class="v3">
+      <div class="card center">
+        <svg width="170" height="170" viewBox="0 0 170 170">
+          <circle cx="85" cy="85" r="68" fill="none" stroke="var(--inset)" stroke-width="12"/>
+          <circle cx="85" cy="85" r="68" fill="none" stroke="var(--in)" stroke-width="12" stroke-linecap="round" stroke-dasharray="427" stroke-dashoffset="0" transform="rotate(-90 85 85)"/>
+          <text x="85" y="80" text-anchor="middle" font-size="34" font-weight="700" fill="var(--fg)" font-family="Geist Mono">100%</text>
+          <text x="85" y="103" text-anchor="middle" font-size="12" fill="var(--muted)">synced</text>
+        </svg>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+          <span class="pulse"><i class="ring"></i><i></i></span>
+          <span style="font-weight:600">Connected &amp; synced</span>
+        </div>
+        <div class="mono k2" style="margin-top:4px">node.conceal.network:16000</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="padding:18px 20px;display:flex;align-items:center;gap:18px">
+          <svg width="92" height="92" viewBox="0 0 92 92">
+            <g stroke="var(--hair)" stroke-width="1">
+              <line x1="46" y1="46" x2="46" y2="12"/><line x1="46" y1="46" x2="76" y2="28"/><line x1="46" y1="46" x2="76" y2="64"/><line x1="46" y1="46" x2="46" y2="80"/><line x1="46" y1="46" x2="16" y2="64"/><line x1="46" y1="46" x2="16" y2="28"/>
+            </g>
+            <g fill="var(--dep)">
+              <circle cx="46" cy="12" r="4"/><circle cx="76" cy="28" r="4"/><circle cx="76" cy="64" r="4"/><circle cx="46" cy="80" r="4"/><circle cx="16" cy="64" r="4"/><circle cx="16" cy="28" r="4"/>
+            </g>
+            <circle cx="46" cy="46" r="9" fill="var(--accent)"/>
+          </svg>
+          <div><div class="k">Connected Peers</div><div style="font-size:26px;font-weight:700;margin-top:4px">18</div><div class="k2">12 outgoing · 6 incoming</div></div>
+        </div>
+        <div class="metricsR">
+          <div class="cell"><div class="k2">Block Height</div><div class="v mono" style="color:var(--accent)">1,971,337</div></div>
+          <div class="cell"><div class="k2">Last Block</div><div class="v">47s ago</div></div>
+          <div class="cell"><div class="k2">Hashrate</div><div class="v mono">10.7 MH/s</div></div>
+          <div class="cell"><div class="k2">Core Version</div><div class="v mono" style="font-size:15px">6.9.2</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ V4 ============ -->
+  <div class="variant"><span class="tag">V4</span><h2>Identity rail + telemetry charts</h2><span class="d">Connection identity left, live trend charts right. Dashboard feel.</span></div>
+  <div class="frame">
+    <div class="v4">
+      <div class="card identity">
+        <div>
+          <span class="chip in">● Online</span>
+          <div style="font-size:18px;font-weight:600;margin-top:12px">Connected &amp; synced</div>
+          <div class="mono k2" style="margin-top:4px">node.conceal.network:16000</div>
+        </div>
+        <div style="border-top:1px solid var(--hair);padding-top:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between"><span class="k">Node type</span><span style="font-weight:600">Default</span></div>
+          <div style="display:flex;justify-content:space-between"><span class="k">Core version</span><span class="mono" style="font-weight:600">6.9.2</span></div>
+          <div style="display:flex;justify-content:space-between"><span class="k">Ping</span><span class="mono" style="font-weight:600;color:var(--in)">42 ms</span></div>
+          <div style="display:flex;justify-content:space-between"><span class="k">Uptime</span><span style="font-weight:600">4h 12m</span></div>
+        </div>
+      </div>
+      <div class="charts">
+        <div class="card chartcard">
+          <div class="k">Block Height</div><div class="v mono" style="color:var(--accent)">1,971,337</div>
+          <svg width="100%" height="56" viewBox="0 0 100 40" preserveAspectRatio="none" style="margin-top:8px">
+            <polyline points="0,38 20,33 40,30 60,22 80,14 100,4" fill="none" stroke="var(--accent)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="k2">+1 block · 47s ago</div>
+        </div>
+        <div class="card chartcard">
+          <div class="k">Network Hashrate</div><div class="v mono">10.7 MH/s</div>
+          <svg width="100%" height="56" viewBox="0 0 100 40" preserveAspectRatio="none" style="margin-top:8px">
+            <defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--dep)" stop-opacity=".4"/><stop offset="1" stop-color="var(--dep)" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,28 C20,24 30,30 50,20 C70,10 80,18 100,12 L100,40 L0,40 Z" fill="url(#hg)"/>
+            <path d="M0,28 C20,24 30,30 50,20 C70,10 80,18 100,12" fill="none" stroke="var(--dep)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="k2">difficulty 1.28 G</div>
+        </div>
+        <div class="card chartcard">
+          <div class="k">Connected Peers</div><div class="v">18</div>
+          <div style="display:flex;align-items:flex-end;gap:4px;height:56px;margin-top:8px">
+            <div style="flex:1;height:55%;background:var(--dep);border-radius:2px"></div><div style="flex:1;height:70%;background:var(--dep);border-radius:2px"></div><div style="flex:1;height:60%;background:var(--dep);border-radius:2px"></div><div style="flex:1;height:85%;background:var(--dep);border-radius:2px"></div><div style="flex:1;height:75%;background:var(--dep);border-radius:2px"></div><div style="flex:1;height:100%;background:var(--dep);border-radius:2px"></div>
+          </div>
+          <div class="k2">12 out · 6 in</div>
+        </div>
+        <div class="card chartcard">
+          <div class="k">Avg Block Time</div><div class="v mono">118 s</div>
+          <svg width="100%" height="56" viewBox="0 0 100 40" preserveAspectRatio="none" style="margin-top:8px">
+            <line x1="0" y1="20" x2="100" y2="20" stroke="var(--hair)" stroke-dasharray="3 4"/>
+            <polyline points="0,22 16,18 33,24 50,16 66,21 83,15 100,19" fill="none" stroke="var(--in)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="k2">target 120 s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ V5 ============ -->
+  <div class="variant"><span class="tag">V5</span><h2>Editorial — recent-blocks chain</h2><span class="d">One calm card; a live chain of recent blocks + a tidy definition list.</span></div>
+  <div class="frame">
+    <div class="card editorial">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="pulse"><i class="ring"></i><i></i></span>
+          <span style="font-size:18px;font-weight:600">Connected &amp; synced</span>
+          <span class="chip muted" style="margin-left:4px">Default node</span>
+        </div>
+        <span class="mono k2">node.conceal.network:16000</span>
+      </div>
+      <div class="chain">
+        <div class="blk" style="height:40%"></div><div class="blk" style="height:55%"></div><div class="blk" style="height:48%"></div><div class="blk" style="height:62%"></div><div class="blk" style="height:52%"></div><div class="blk" style="height:70%"></div><div class="blk" style="height:58%"></div><div class="blk" style="height:66%"></div><div class="blk" style="height:74%"></div><div class="blk" style="height:60%"></div><div class="blk" style="height:80%"></div><div class="blk new" style="height:92%"></div>
+      </div>
+      <div class="k2 mono">last 12 blocks · newest 1,971,337 · 47s ago</div>
+      <div class="deflist">
+        <div class="row"><span class="dk">Block height</span><span class="dv mono" style="color:var(--accent)">1,971,337</span></div>
+        <div class="row"><span class="dk">Connected peers</span><span class="dv">18</span></div>
+        <div class="row"><span class="dk">Difficulty</span><span class="dv mono">1.28 G</span></div>
+        <div class="row"><span class="dk">Network hashrate</span><span class="dv mono">10.7 MH/s</span></div>
+        <div class="row"><span class="dk">Mempool</span><span class="dv">3 tx</span></div>
+        <div class="row"><span class="dk">Core version</span><span class="dv mono">6.9.2</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ V6 ============ -->
+  <div class="variant"><span class="tag">V6</span><h2>Peer table forward</h2><span class="d">P2P emphasis — summary stats over a live peer list. Densest.</span></div>
+  <div class="frame">
+    <div class="statbar">
+      <div class="card tile"><div class="k2">Status</div><div class="v" style="color:var(--in)">Synced</div></div>
+      <div class="card tile"><div class="k2">Block Height</div><div class="v mono" style="color:var(--accent)">1,971,337</div></div>
+      <div class="card tile"><div class="k2">Peers</div><div class="v">18</div></div>
+      <div class="card tile"><div class="k2">Median Latency</div><div class="v mono">41 ms</div></div>
+    </div>
+    <div class="card" style="overflow:hidden">
+      <table>
+        <tr><th>Peer</th><th>Dir</th><th>Height</th><th>Version</th><th class="r">Latency</th></tr>
+        <tr><td class="mono">node.conceal.network</td><td><span class="chip dep" style="padding:1px 8px">out</span></td><td class="mono">1,971,337</td><td class="mono">6.9.2</td><td class="r"><span class="lat"><span class="latdot" style="background:var(--in)"></span>38 ms</span></td></tr>
+        <tr><td class="mono">91.214.&bull;&bull;.44</td><td><span class="chip dep" style="padding:1px 8px">out</span></td><td class="mono">1,971,337</td><td class="mono">6.9.2</td><td class="r"><span class="lat"><span class="latdot" style="background:var(--in)"></span>41 ms</span></td></tr>
+        <tr><td class="mono">142.93.&bull;&bull;.10</td><td><span class="chip muted" style="padding:1px 8px">in</span></td><td class="mono">1,971,336</td><td class="mono">6.9.2</td><td class="r"><span class="lat"><span class="latdot" style="background:var(--accent)"></span>67 ms</span></td></tr>
+        <tr><td class="mono">45.79.&bull;&bull;.201</td><td><span class="chip dep" style="padding:1px 8px">out</span></td><td class="mono">1,971,337</td><td class="mono">6.9.1</td><td class="r"><span class="lat"><span class="latdot" style="background:var(--in)"></span>29 ms</span></td></tr>
+        <tr><td class="mono">5.161.&bull;&bull;.88</td><td><span class="chip muted" style="padding:1px 8px">in</span></td><td class="mono">1,971,337</td><td class="mono">6.9.2</td><td class="r"><span class="lat"><span class="latdot" style="background:var(--accent)"></span>54 ms</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+</body></html>
