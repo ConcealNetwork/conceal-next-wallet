@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Address Book · Contact Card Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--inset:#2e2e2e;--border:#404040;--hair:#353535;--accent:#FFA500;--in:#10b981;--out:#ef4444;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f;--radius:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:40px 32px 80px}
+h1{font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+.note{color:var(--muted2);font-size:12.5px;margin:0 0 36px}
+.variant{margin:48px 0 18px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--hair);padding-bottom:10px}
+.variant .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.variant h2{font-size:17px;font-weight:600;margin:0}
+.variant span.d{color:var(--muted2);font-size:12.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:860px}
+.av{background:rgba(255,165,0,.18);color:var(--accent);display:grid;place-items:center;font-weight:600;flex:none}
+.name{font-weight:600;font-size:14.5px}
+.addr{font-family:"Geist Mono",monospace;font-size:12px;color:var(--muted2)}
+.pid{font-family:"Geist Mono",monospace;font-size:11px;color:var(--muted2);opacity:.8}
+.ico{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);display:grid;place-items:center;color:var(--muted);font-size:14px;flex:none}
+.ico.danger{color:var(--out)}
+.btn{height:34px;padding:0 14px;border-radius:9px;background:var(--accent);color:#000;font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--fg)}
+.copy{height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--border);display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg)}
+
+/* V1 stacked + action bar */
+.c1{border:1px solid var(--border);border-radius:14px;background:var(--inset);padding:18px}
+.c1 .av{width:40px;height:40px;border-radius:12px;font-size:16px}
+.c1 .acts{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--hair)}
+
+/* V2 compact row */
+.c2{border:1px solid var(--border);border-radius:14px;background:var(--inset);padding:14px 16px;display:flex;align-items:center;gap:12px}
+.c2 .av{width:42px;height:42px;border-radius:50%;font-size:16px}
+.c2 .acts{margin-left:auto;display:flex;gap:6px}
+
+/* V3 profile / centered */
+.c3{border:1px solid var(--border);border-radius:16px;background:var(--inset);overflow:hidden;text-align:center}
+.c3 .band{height:46px;background:linear-gradient(120deg, rgba(255,165,0,.22), rgba(255,165,0,.02))}
+.c3 .av{width:60px;height:60px;border-radius:50%;font-size:22px;margin:-30px auto 0;border:3px solid var(--inset)}
+.c3 .body{padding:10px 18px 18px}
+.c3 .addr-chip{display:inline-block;margin-top:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:4px 10px}
+.c3 .acts{display:flex;gap:8px;justify-content:center;margin-top:14px}
+</style></head>
+<body>
+  <h1>Address Book — Contact Card Variants</h1>
+  <p class="sub">3 designs for the contact card in the Cards view</p>
+  <p class="note">Same data + actions (copy / edit / delete), three different treatments. Pick one — or mix.</p>
+
+  <!-- V1 -->
+  <div class="variant"><span class="tag">V1</span><h2>Stacked + Action Bar</h2><span class="d">Current: avatar + details, actions on a divided bar below.</span></div>
+  <div class="grid2">
+    <div class="c1">
+      <div style="display:flex;gap:12px"><div class="av">K</div><div><div class="name">Kraken Exchange</div><div class="addr" style="margin-top:3px">ccx7Exch…aB1cD4eF</div><div class="pid" style="margin-top:3px">PID a1b2c3…7ef099</div></div></div>
+      <div class="acts"><span class="copy">⧉ Copy</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+    </div>
+    <div class="c1">
+      <div style="display:flex;gap:12px"><div class="av">A</div><div><div class="name">Alice</div><div class="addr" style="margin-top:3px">ccx7Alic…1D6VAZKm</div><div class="pid" style="margin-top:3px">PID —</div></div></div>
+      <div class="acts"><span class="copy">⧉ Copy</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+    </div>
+  </div>
+
+  <!-- V2 -->
+  <div class="variant"><span class="tag">V2</span><h2>Compact Row</h2><span class="d">Everything on one line — avatar, info, inline actions. Densest; fits more contacts.</span></div>
+  <div class="grid2">
+    <div class="c2">
+      <div class="av">K</div>
+      <div style="min-width:0"><div class="name">Kraken Exchange</div><div class="addr">ccx7Exch…aB1cD4eF · PID a1b2c3…</div></div>
+      <div class="acts"><span class="ico">⧉</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+    </div>
+    <div class="c2">
+      <div class="av">A</div>
+      <div style="min-width:0"><div class="name">Alice</div><div class="addr">ccx7Alic…1D6VAZKm</div></div>
+      <div class="acts"><span class="ico">⧉</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+    </div>
+  </div>
+
+  <!-- V3 -->
+  <div class="variant"><span class="tag">V3</span><h2>Profile Card</h2><span class="d">Centered avatar over an accent band, address chip, centered actions. Most visual.</span></div>
+  <div class="grid2">
+    <div class="c3">
+      <div class="band"></div>
+      <div class="av">K</div>
+      <div class="body">
+        <div class="name">Kraken Exchange</div>
+        <div class="addr-chip"><span class="addr">ccx7Exch…aB1cD4eF</span></div>
+        <div class="pid" style="margin-top:6px">PID a1b2c3…7ef099</div>
+        <div class="acts"><span class="copy">⧉ Copy</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+      </div>
+    </div>
+    <div class="c3">
+      <div class="band"></div>
+      <div class="av">A</div>
+      <div class="body">
+        <div class="name">Alice</div>
+        <div class="addr-chip"><span class="addr">ccx7Alic…1D6VAZKm</span></div>
+        <div class="pid" style="margin-top:6px">PID —</div>
+        <div class="acts"><span class="copy">⧉ Copy</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+      </div>
+    </div>
+  </div>
+
+</body></html>

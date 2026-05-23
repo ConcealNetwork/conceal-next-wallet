@@ -145,29 +145,28 @@ export default function AddressBookPage() {
               {entries.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">No addresses match “{query}”.</p>
               ) : view === "cards" ? (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {entries.map((entry) => (
-                    <div key={entry.id} className="rounded-xl border border-border bg-secondary p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <ContactAvatar entry={entry} className="size-10 rounded-xl text-base" />
-                          <div className="min-w-0">
-                            <p className="font-semibold text-foreground">{entry.label}</p>
-                            <p className="mt-1 font-mono text-xs text-muted-foreground">{truncateAddress(entry.address, 12, 8)}</p>
-                            <p className="mt-1 font-mono text-[11px] text-muted-foreground/70">
-                              PID {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
-                            </p>
-                          </div>
+                    <div key={entry.id} className="overflow-hidden rounded-2xl border border-border bg-secondary text-center">
+                      <div className="h-16 bg-gradient-to-br from-primary/25 to-transparent" />
+                      <ContactAvatar entry={entry} className="mx-auto -mt-12 size-24 rounded-full border-4 border-secondary text-3xl" />
+                      <div className="px-5 pb-5 pt-3">
+                        <p className="truncate font-semibold text-foreground">{entry.label}</p>
+                        <p className="mt-2 inline-block max-w-full truncate rounded-lg border border-border bg-background px-2.5 py-1 font-mono text-xs text-muted-foreground">
+                          {truncateAddress(entry.address, 10, 8)}
+                        </p>
+                        <p className="mt-2 font-mono text-[11px] text-muted-foreground/70">
+                          PID {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
+                        </p>
+                        <div className="mt-4 flex justify-center gap-2">
+                          <CopyButton value={entry.address} label="Copy" />
+                          <Button type="button" variant="outline" size="icon" aria-label={`Edit ${entry.label}`} onClick={() => openEdit(entry)}>
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button type="button" variant="destructive" size="icon" aria-label={`Delete ${entry.label}`} onClick={() => remove(entry.id)}>
+                            <Trash2 className="size-4" />
+                          </Button>
                         </div>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <CopyButton value={entry.address} label="Copy" />
-                        <Button type="button" variant="outline" size="icon" aria-label={`Edit ${entry.label}`} onClick={() => openEdit(entry)}>
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button type="button" variant="destructive" size="icon" aria-label={`Delete ${entry.label}`} onClick={() => remove(entry.id)}>
-                          <Trash2 className="size-4" />
-                        </Button>
                       </div>
                     </div>
                   ))}
