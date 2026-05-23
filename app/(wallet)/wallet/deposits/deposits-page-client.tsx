@@ -485,10 +485,10 @@ function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[
   })
 
   return (
-    <div className="rounded-xl border border-border bg-secondary/60 p-4">
+    <div className="flex h-full flex-col rounded-xl border border-border bg-secondary/60 p-4">
       <p className="text-sm text-muted-foreground">Locked composition</p>
-      <div className="mt-3 flex items-center gap-4">
-        <div className="relative h-[120px] w-[120px] shrink-0">
+      <div className="mt-3 flex flex-1 items-center gap-5">
+        <div className="relative h-[128px] w-[128px] shrink-0">
           <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
             <circle cx="50" cy="50" r={radius} fill="none" stroke="hsl(var(--border) / 0.4)" strokeWidth="15" />
             {arcs.map(({ segment, fraction, start }) => {
@@ -510,25 +510,36 @@ function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[
             })}
           </svg>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="font-mono text-lg font-bold leading-none text-foreground">
+            <span className="font-mono text-xl font-bold leading-none text-foreground">
               {Math.round(totalLocked).toLocaleString("en-US")}
             </span>
             <span className="mt-1 text-[10px] text-muted-foreground">CCX locked</span>
           </div>
         </div>
-        <ul className="min-w-0 space-y-2.5 text-sm">
+        <ul className="flex min-w-0 flex-1 flex-col justify-center gap-4 text-sm">
           {segments.map((segment) => (
-            <li key={segment.id} className="flex items-start gap-2">
-              <span
-                className="mt-1 size-2.5 shrink-0 rounded-sm"
-                style={{ backgroundColor: segment.color }}
-                aria-hidden="true"
-              />
-              <span className="min-w-0">
+            <li key={segment.id} className="min-w-0">
+              <div className="flex items-baseline gap-2">
+                <span
+                  className="size-2.5 shrink-0 translate-y-px rounded-sm"
+                  style={{ backgroundColor: segment.color }}
+                  aria-hidden="true"
+                />
                 <span className="font-mono text-foreground">{formatCcx(segment.amount)}</span>
-                <span className="text-muted-foreground"> · {segment.apr.toFixed(2)}%</span>
-                <span className="block text-xs text-muted-foreground/70">unlocks {segment.unlocksInDays}d</span>
-              </span>
+                <span className="ml-auto font-mono text-xs text-wallet-incoming">{segment.apr.toFixed(2)}%</span>
+              </div>
+              <div className="mt-2 flex items-center gap-2 pl-[18px]">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/50">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(Math.max(segment.progressPct, 0), 100)}%`,
+                      backgroundColor: segment.color,
+                    }}
+                  />
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground/70">unlocks {segment.unlocksInDays}d</span>
+              </div>
             </li>
           ))}
         </ul>
