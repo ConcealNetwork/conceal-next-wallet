@@ -47,6 +47,7 @@ describe("wallet components", () => {
       <TransactionRow
         transaction={{
           id: "tx-test",
+          hash: "8c3f6fbb51e79ff33f90bb1a41635e27f9d67a2acaa55fc5b5a968c9d42f011a",
           type: "receive",
           amount: ccxAmount(100),
           address: "ccx7abcdefghijklmnopqrstuvwxyz",
