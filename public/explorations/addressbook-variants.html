@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Address Book · Layout Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--inset:#2e2e2e;--border:#404040;--hair:#353535;--accent:#FFA500;--in:#10b981;--out:#ef4444;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f;--radius:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:40px 32px 80px}
+h1{font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+.note{color:var(--muted2);font-size:12.5px;margin:0 0 36px}
+.variant{margin:48px 0 16px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--hair);padding-bottom:10px}
+.variant .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.variant h2{font-size:17px;font-weight:600;margin:0}
+.variant span.d{color:var(--muted2);font-size:12.5px}
+.frame{max-width:1080px}
+.av{width:38px;height:38px;border-radius:12px;background:rgba(255,165,0,.18);color:var(--accent);display:grid;place-items:center;font-weight:600;font-size:15px;flex:none}
+.name{font-weight:600;font-size:14px}
+.addr{font-family:"Geist Mono",monospace;font-size:12px;color:var(--muted2)}
+.ico{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);display:grid;place-items:center;color:var(--muted);font-size:14px;flex:none}
+.ico.danger{color:var(--out)}
+.btn{height:34px;padding:0 14px;border-radius:9px;background:var(--accent);color:#000;font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--fg)}
+.search{height:40px;border:1px solid var(--border);border-radius:10px;background:var(--inset);display:flex;align-items:center;padding:0 12px;color:var(--muted2);font-size:13px;margin-bottom:16px;max-width:360px}
+/* grid */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.gcard{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--inset)}
+/* rows */
+.rows{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.rrow{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--hair)}
+.rrow:last-child{border-bottom:none}
+/* contact cards w/ send */
+.ccard{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--inset);display:flex;flex-direction:column;gap:12px}
+.star{margin-left:auto;color:var(--accent)}
+/* table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--hair)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted2);font-weight:500}
+td.r,th.r{text-align:right}
+.mono{font-family:"Geist Mono",monospace}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+</style></head>
+<body>
+  <h1>Address Book — Layout Variants</h1>
+  <p class="sub">4 ways to present saved CCX addresses (shown populated)</p>
+  <p class="note">The original only had an empty state, so this is a clean design. Pick one — or mix. Sample contacts shown.</p>
+
+  <!-- V1 -->
+  <div class="variant"><span class="tag">V1</span><h2>Card Grid</h2><span class="d">Current: 2-column cards with copy / edit / delete.</span></div>
+  <div class="frame"><div class="card">
+    <div class="search">🔍 Search addresses…</div>
+    <div class="grid2">
+      <div class="gcard"><div style="display:flex;justify-content:space-between;gap:12px"><div><div class="name">Kraken Exchange</div><div class="addr" style="margin-top:6px">ccx7Exch…aB1cD4eF</div></div><div style="display:flex;gap:6px"><span class="ico">⧉</span><span class="ico">✎</span><span class="ico danger">🗑</span></div></div></div>
+      <div class="gcard"><div style="display:flex;justify-content:space-between;gap:12px"><div><div class="name">Alice</div><div class="addr" style="margin-top:6px">ccx7Alic…9tV2wX5y</div></div><div style="display:flex;gap:6px"><span class="ico">⧉</span><span class="ico">✎</span><span class="ico danger">🗑</span></div></div></div>
+    </div>
+  </div></div>
+
+  <!-- V2 -->
+  <div class="variant"><span class="tag">V2</span><h2>List Rows</h2><span class="d">Single-column rows with avatar + actions. Denser, more contacts visible.</span></div>
+  <div class="frame"><div class="card">
+    <div class="search">🔍 Search addresses…</div>
+    <div class="rows">
+      <div class="rrow"><div class="av">K</div><div style="flex:1;min-width:0"><div class="name">Kraken Exchange</div><div class="addr">ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG…aB1cD4eF</div></div><span class="ico">⧉</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+      <div class="rrow"><div class="av">A</div><div style="flex:1;min-width:0"><div class="name">Alice</div><div class="addr">ccx7Alice…rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div></div><span class="ico">⧉</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+      <div class="rrow"><div class="av">M</div><div style="flex:1;min-width:0"><div class="name">Mining Pool</div><div class="addr">ccx7Pool…2wX5yZ8aB1cD4eF7gH0jK3m</div></div><span class="ico">⧉</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+      <div class="rrow"><div class="av">C</div><div style="flex:1;min-width:0"><div class="name">Cold Storage</div><div class="addr">ccx7Cold…8aB1cD4eF7gH0jK3m</div></div><span class="ico">⧉</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+    </div>
+  </div></div>
+
+  <!-- V3 -->
+  <div class="variant"><span class="tag">V3</span><h2>Contact Cards + Quick Send</h2><span class="d">Address book's job is to send — surface a prominent Send action + favorites.</span></div>
+  <div class="frame"><div class="card">
+    <div class="search">🔍 Search addresses…</div>
+    <div class="grid2">
+      <div class="ccard">
+        <div style="display:flex;align-items:center;gap:12px"><div class="av">K</div><div><div class="name">Kraken Exchange</div><div class="addr" style="margin-top:2px">ccx7Exch…aB1cD4eF</div></div><span class="star">★</span></div>
+        <div style="display:flex;gap:8px"><span class="btn">↗ Send</span><span class="btn ghost">⧉ Copy</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+      </div>
+      <div class="ccard">
+        <div style="display:flex;align-items:center;gap:12px"><div class="av">A</div><div><div class="name">Alice</div><div class="addr" style="margin-top:2px">ccx7Alic…9tV2wX5y</div></div><span class="star" style="color:var(--muted2)">☆</span></div>
+        <div style="display:flex;gap:8px"><span class="btn">↗ Send</span><span class="btn ghost">⧉ Copy</span><span class="ico">✎</span><span class="ico danger">🗑</span></div>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- V4 -->
+  <div class="variant"><span class="tag">V4</span><h2>Table</h2><span class="d">Most data-dense: label / address / payment ID / actions. Sortable feel.</span></div>
+  <div class="frame"><div class="card">
+    <div class="search">🔍 Search addresses…</div>
+    <table>
+      <tr><th>Label</th><th>Address</th><th>Payment ID</th><th class="r">Actions</th></tr>
+      <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="av" style="width:30px;height:30px;font-size:13px">K</div>Kraken Exchange</div></td><td class="mono">ccx7Exch…aB1cD4eF</td><td class="mono">a1b2…f099</td><td class="r"><span class="ico" style="display:inline-grid">↗</span> <span class="ico" style="display:inline-grid">⧉</span> <span class="ico danger" style="display:inline-grid">🗑</span></td></tr>
+      <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="av" style="width:30px;height:30px;font-size:13px">A</div>Alice</div></td><td class="mono">ccx7Alic…9tV2wX5y</td><td class="mono">—</td><td class="r"><span class="ico" style="display:inline-grid">↗</span> <span class="ico" style="display:inline-grid">⧉</span> <span class="ico danger" style="display:inline-grid">🗑</span></td></tr>
+      <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="av" style="width:30px;height:30px;font-size:13px">M</div>Mining Pool</div></td><td class="mono">ccx7Pool…0jK3m</td><td class="mono">7f3a…11cd</td><td class="r"><span class="ico" style="display:inline-grid">↗</span> <span class="ico" style="display:inline-grid">⧉</span> <span class="ico danger" style="display:inline-grid">🗑</span></td></tr>
+    </table>
+  </div></div>
+
+</body></html>
