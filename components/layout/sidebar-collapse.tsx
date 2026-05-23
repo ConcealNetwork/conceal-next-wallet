@@ -18,10 +18,14 @@ export function SidebarCollapseProvider({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
+    function applyStoredCollapsed(next: boolean) {
+      setCollapsed(next)
+    }
+
     try {
-      setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSE_STORAGE_KEY) === "true")
+      applyStoredCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSE_STORAGE_KEY) === "true")
     } catch {
-      setCollapsed(false)
+      applyStoredCollapsed(false)
     }
   }, [])
 

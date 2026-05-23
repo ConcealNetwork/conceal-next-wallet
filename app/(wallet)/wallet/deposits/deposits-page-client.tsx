@@ -67,8 +67,12 @@ export default function DepositsPageClient() {
   )
 
   useEffect(() => {
+    function applyStoredView(next: DepositView) {
+      setView(next)
+    }
+
     const stored = window.localStorage.getItem(DEPOSITS_VIEW_KEY)
-    if (stored === "cards" || stored === "table" || stored === "timeline") setView(stored)
+    if (stored === "cards" || stored === "table" || stored === "timeline") applyStoredView(stored)
   }, [])
 
   function chooseView(next: DepositView) {
@@ -476,13 +480,11 @@ function ProjectionChart({
 function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[]; totalLocked: number }) {
   const radius = 40
   const circumference = 2 * Math.PI * radius
-  let cursor = 0
-  const arcs = segments.map((segment) => {
+  const arcs = segments.reduce<{ segment: DepositSegment; fraction: number; start: number }[]>((current, segment) => {
+    const start = current.reduce((sum, arc) => sum + arc.fraction, 0)
     const fraction = totalLocked > 0 ? segment.amount / totalLocked : 0
-    const arc = { segment, fraction, start: cursor }
-    cursor += fraction
-    return arc
-  })
+    return [...current, { segment, fraction, start }]
+  }, [])
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-border bg-secondary/60 p-4">
@@ -866,12 +868,16 @@ function AnimatedProgress({
   const clampedValue = Math.min(Math.max(value, 0), 100)
 
   useEffect(() => {
+    function applyDisplayValue(next: number) {
+      setDisplayValue(next)
+    }
+
     if (prefersReducedMotion) {
-      setDisplayValue(clampedValue)
+      applyDisplayValue(clampedValue)
       return
     }
 
-    const frame = window.requestAnimationFrame(() => setDisplayValue(clampedValue))
+    const frame = window.requestAnimationFrame(() => applyDisplayValue(clampedValue))
     return () => window.cancelAnimationFrame(frame)
   }, [clampedValue, prefersReducedMotion])
 

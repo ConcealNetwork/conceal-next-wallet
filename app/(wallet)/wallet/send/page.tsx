@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -57,8 +57,8 @@ export default function SendPage() {
     defaultValues: { address: "", amount: 0, paymentId: "", message: "" },
   })
 
-  const amount = form.watch("amount") || 0
-  const message = form.watch("message") || ""
+  const amount = useWatch({ control: form.control, name: "amount" }) || 0
+  const message = useWatch({ control: form.control, name: "message" }) || ""
   const recentSent = (transactions.data ?? []).filter((transaction) => transaction.type === "send").slice(0, 5)
 
   function confirmSend() {

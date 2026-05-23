@@ -44,8 +44,12 @@ export default function AddressBookPage() {
   }
 
   useEffect(() => {
+    function applyStoredView(next: View) {
+      setView(next)
+    }
+
     const stored = window.localStorage.getItem(VIEW_KEY)
-    if (stored === "cards" || stored === "table") setView(stored)
+    if (stored === "cards" || stored === "table") applyStoredView(stored)
   }, [])
 
   function chooseView(next: View) {

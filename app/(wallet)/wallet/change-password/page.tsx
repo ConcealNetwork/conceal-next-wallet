@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -52,7 +52,7 @@ export default function ChangePasswordPage() {
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
   })
 
-  const newPassword = form.watch("newPassword") || ""
+  const newPassword = useWatch({ control: form.control, name: "newPassword" }) || ""
   const score = strength(newPassword)
 
   async function submit(values: PasswordForm) {

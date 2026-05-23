@@ -30,17 +30,25 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
   const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
+    function applySession(nextSession: PersistedSession) {
+      setStatus(nextSession.status)
+      setWalletInfo(nextSession.walletInfo)
+    }
+
+    function applyHydrated() {
+      setIsHydrated(true)
+    }
+
     const stored = window.localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as PersistedSession
-        setStatus(parsed.status)
-        setWalletInfo(parsed.walletInfo)
+        applySession(parsed)
       } catch {
         window.localStorage.removeItem(STORAGE_KEY)
       }
     }
-    setIsHydrated(true)
+    applyHydrated()
   }, [])
 
   const openSession = useCallback((nextWalletInfo: WalletInfo) => {
