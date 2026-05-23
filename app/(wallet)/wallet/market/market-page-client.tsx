@@ -240,99 +240,143 @@ function PriceAreaChart({ data, range }: { data: MarketHistoryPoint[]; range: Ma
   )
 }
 
-function MarketStatsGrid({ market }: { market: MarketData }) {
-  const stats: MarketStat[] = [
-    {
-      label: "24h Change",
-      value: market.change24hPct,
-      formatter: (value) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`,
-      detail: "Last 24 hours",
-      tone: market.change24hPct >= 0 ? "incoming" : "outgoing",
-    },
-    {
-      label: "24h High",
-      value: market.high24h.value,
-      formatter: (value) => formatUsd(value, 4),
-      detail: "Highest traded price",
-      tone: "default",
-    },
-    {
-      label: "24h Low",
-      value: market.low24h.value,
-      formatter: (value) => formatUsd(value, 4),
-      detail: "Lowest traded price",
-      tone: "default",
-    },
-    {
-      label: "24h Volume",
-      value: market.volume24h.value,
-      formatter: (value) => formatUsd(value, 0),
-      detail: "Trading volume",
-      tone: "default",
-    },
-    {
-      label: "Market Cap",
-      value: market.marketCap.value,
-      formatter: (value) => formatUsd(value, 0),
-      detail: "Price × circulating supply",
-      tone: "amber",
-    },
-    {
-      label: "Circulating Supply",
-      value: ccxToNumber(market.circulatingSupply),
-      formatter: (value) => formatCcx(value, 0),
-      detail: "Estimated CCX in market",
-      tone: "default",
-    },
-    ...(market.ath
-      ? [
-          {
-            label: "All-Time High",
-            value: market.ath.value,
-            formatter: (value: number) => formatUsd(value, 4),
-            detail: "Historical peak",
-            tone: "amber" as const,
-          },
-        ]
-      : []),
-  ]
+const TILE =
+  "wallet-card animate-rise-in flex min-h-[148px] flex-col justify-between gap-3 p-5 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
+const tileDelay = (index: number) => ({ animationDelay: `${180 + index * 40}ms` })
 
+function MarketStatsGrid({ market }: { market: MarketData }) {
   return (
     <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {stats.map((stat, index) => (
-        <MarketStatCell key={stat.label} stat={stat} index={index} />
-      ))}
+      <ChangeMetric market={market} index={0} />
+      <RangeMetric market={market} index={1} />
+      <ValueMetric index={2} label="24h Volume" value={market.volume24h.value} formatter={(v) => formatUsd(v, 0)} detail="Trading volume" />
+      <ValueMetric index={3} label="Market Cap" value={market.marketCap.value} formatter={(v) => formatUsd(v, 0)} detail="Price × circulating supply" tone="amber" />
+      <ValueMetric index={4} label="Circulating Supply" value={ccxToNumber(market.circulatingSupply)} formatter={(v) => formatCcx(v, 0)} detail="Estimated CCX in market" />
+      {market.ath ? <AthMetric market={market} index={5} /> : null}
     </div>
   )
 }
 
-type MarketStat = {
+function ValueMetric({
+  label,
+  value,
+  formatter,
+  detail,
+  tone = "default",
+  index,
+}: {
   label: string
   value: number
   formatter: (value: number) => string
   detail: string
-  tone: "default" | "incoming" | "outgoing" | "amber"
+  tone?: "default" | "amber"
+  index: number
+}) {
+  const display = useCountUp(value, { formatter })
+  return (
+    <div className={TILE} style={tileDelay(index)}>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <div>
+        <p className={cn("break-words font-mono text-2xl font-bold tracking-tight", tone === "amber" ? "text-primary" : "text-foreground")}>{display}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
+      </div>
+    </div>
+  )
 }
 
-function MarketStatCell({ stat, index }: { stat: MarketStat; index: number }) {
-  const value = useCountUp(stat.value, { formatter: stat.formatter })
-  const toneClass = {
-    default: "text-foreground",
-    incoming: "text-wallet-incoming",
-    outgoing: "text-wallet-outgoing",
-    amber: "text-primary",
-  }[stat.tone]
-
+function ChangeMetric({ market, index }: { market: MarketData; index: number }) {
+  const positive = market.change24hPct >= 0
+  const display = useCountUp(market.change24hPct, { formatter: (v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%` })
+  const toneClass = positive ? "text-wallet-incoming" : "text-wallet-outgoing"
   return (
-    <div
-      className="wallet-card animate-rise-in flex min-h-[132px] flex-col justify-between p-5 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
-      style={{ animationDelay: `${180 + index * 40}ms` }}
-    >
-      <div>
-        <p className="text-sm text-muted-foreground">{stat.label}</p>
-        <p className={cn("mt-3 break-words font-mono text-2xl font-bold tracking-tight", toneClass)}>{value}</p>
+    <div className={TILE} style={tileDelay(index)}>
+      <div className="flex items-start justify-between">
+        <p className="text-sm text-muted-foreground">24h Change</p>
+        <span aria-hidden="true" className={cn("text-xs", toneClass)}>{positive ? "▲" : "▼"}</span>
       </div>
-      <p className="mt-4 text-sm text-muted-foreground">{stat.detail}</p>
+      <p className={cn("font-mono text-2xl font-bold tracking-tight", toneClass)}>{display}</p>
+      <Sparkline values={market.history.map((point) => point.price)} positive={positive} />
+    </div>
+  )
+}
+
+function Sparkline({ values, positive }: { values: number[]; positive: boolean }) {
+  if (values.length < 2) return <div className="h-9" />
+  const width = 240
+  const height = 36
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const step = width / (values.length - 1)
+  const points = values
+    .map((value, index) => `${(index * step).toFixed(1)},${(height - ((value - min) / range) * (height - 4) - 2).toFixed(1)}`)
+    .join(" ")
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      className={cn("h-9 w-full", positive ? "text-wallet-incoming" : "text-wallet-outgoing")}
+    >
+      <polyline
+        className="animate-stroke-draw motion-reduce:animate-none"
+        points={points}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeDasharray={1}
+        pathLength={1}
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  )
+}
+
+function RangeMetric({ market, index }: { market: MarketData; index: number }) {
+  const low = market.low24h.value
+  const high = market.high24h.value
+  const price = market.price.value
+  const pct = high > low ? Math.min(100, Math.max(0, ((price - low) / (high - low)) * 100)) : 50
+  return (
+    <div className={TILE} style={tileDelay(index)}>
+      <p className="text-sm text-muted-foreground">24h Range</p>
+      <div>
+        <p className="font-mono text-2xl font-bold tracking-tight">{formatUsd(price, 4)}</p>
+        <p className="mt-1 text-sm text-muted-foreground">Current price within 24h range</p>
+      </div>
+      <div>
+        <div className="relative h-1.5 rounded-full bg-secondary">
+          <div className="h-full rounded-full bg-primary/40" style={{ width: `${pct}%` }} />
+          <span
+            className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-primary"
+            style={{ left: `${pct}%` }}
+          />
+        </div>
+        <div className="mt-2 flex justify-between font-mono text-xs text-muted-foreground">
+          <span>L {formatUsd(low, 4)}</span>
+          <span>H {formatUsd(high, 4)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AthMetric({ market, index }: { market: MarketData; index: number }) {
+  const ath = market.ath?.value ?? market.price.value
+  const price = market.price.value
+  const fromAth = ath > 0 ? ((price - ath) / ath) * 100 : 0
+  const pctOfAth = ath > 0 ? Math.min(100, Math.max(0, (price / ath) * 100)) : 0
+  const display = useCountUp(ath, { formatter: (v) => formatUsd(v, 4) })
+  return (
+    <div className={TILE} style={tileDelay(index)}>
+      <p className="text-sm text-muted-foreground">All-Time High</p>
+      <p className="font-mono text-2xl font-bold tracking-tight text-primary">{display}</p>
+      <div>
+        <div className="h-1.5 rounded-full bg-secondary">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${pctOfAth}%` }} />
+        </div>
+        <p className="mt-2 text-sm text-wallet-outgoing">{fromAth.toFixed(1)}% from ATH</p>
+      </div>
     </div>
   )
 }
