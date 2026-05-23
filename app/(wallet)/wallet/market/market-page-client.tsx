@@ -68,10 +68,10 @@ export default function MarketPage() {
         </SectionCard>
       </div>
 
-      <div className="mt-6 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
-        <SectionCard title="Market Metrics" description="CCX market snapshot">
-          {data ? <MarketStatsGrid market={data} /> : <StatsSkeleton />}
-        </SectionCard>
+      <div className="mt-8 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
+        <h2 className="text-lg font-semibold text-foreground">Market Metrics</h2>
+        <p className="mb-4 mt-1 text-sm text-muted-foreground">CCX market snapshot</p>
+        {data ? <MarketStatsGrid market={data} /> : <StatsSkeleton />}
       </div>
     </>
   )
@@ -325,7 +325,7 @@ function MarketStatCell({ stat, index }: { stat: MarketStat; index: number }) {
 
   return (
     <div
-      className="animate-rise-in flex min-h-[132px] flex-col justify-between rounded-xl border border-border bg-secondary/60 p-4 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
+      className="wallet-card animate-rise-in flex min-h-[132px] flex-col justify-between p-5 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
       style={{ animationDelay: `${180 + index * 40}ms` }}
     >
       <div>
