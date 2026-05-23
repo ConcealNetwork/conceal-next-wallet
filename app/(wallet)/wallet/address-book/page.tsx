@@ -28,6 +28,8 @@ export default function AddressBookPage() {
   const [address, setAddress] = useState("")
   const [paymentId, setPaymentId] = useState("")
   const [avatar, setAvatar] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [edited, setEdited] = useState<Record<string, AddressEntry>>({})
 
   function onPhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -52,14 +54,46 @@ export default function AddressBookPage() {
   }
 
   const entries = useMemo(() => {
-    const base = [...(addressBook.data ?? []), ...added].filter((entry) => !removed.has(entry.id))
+    const base = [...(addressBook.data ?? []), ...added]
+      .filter((entry) => !removed.has(entry.id))
+      .map((entry) => edited[entry.id] ?? entry)
     const term = query.trim().toLowerCase()
     return term ? base.filter((entry) => `${entry.label} ${entry.address}`.toLowerCase().includes(term)) : base
-  }, [addressBook.data, added, removed, query])
+  }, [addressBook.data, added, removed, edited, query])
 
   const total = (addressBook.data ?? []).length + added.length - removed.size
 
+  function resetForm() {
+    setLabel("")
+    setAddress("")
+    setPaymentId("")
+    setAvatar(null)
+    setEditingId(null)
+  }
+
+  function openCreate() {
+    resetForm()
+    setOpen(true)
+  }
+
+  function openEdit(entry: AddressEntry) {
+    setEditingId(entry.id)
+    setLabel(entry.label)
+    setAddress(entry.address)
+    setPaymentId(entry.paymentId ?? "")
+    setAvatar(entry.avatar ?? null)
+    setOpen(true)
+  }
+
   function submit() {
+    if (editingId) {
+      const updated: AddressEntry = { id: editingId, label, address, paymentId: paymentId || undefined, avatar: avatar ?? undefined }
+      setEdited((current) => ({ ...current, [editingId]: updated }))
+      toast.success("Mock address updated.")
+      setOpen(false)
+      resetForm()
+      return
+    }
     createEntry.mutate(
       { label, address, paymentId, avatar: avatar ?? undefined },
       {
@@ -67,10 +101,7 @@ export default function AddressBookPage() {
           setAdded((current) => [...current, entry])
           toast.success("Mock address saved.")
           setOpen(false)
-          setLabel("")
-          setAddress("")
-          setPaymentId("")
-          setAvatar(null)
+          resetForm()
         },
       }
     )
@@ -87,7 +118,7 @@ export default function AddressBookPage() {
         title="Address Book"
         subtitle="Save and manage frequently used addresses"
         action={
-          <Button type="button" className="gap-2" onClick={() => setOpen(true)}>
+          <Button type="button" className="gap-2" onClick={openCreate}>
             <Plus className="size-4" aria-hidden="true" />
             Create New
           </Button>
@@ -131,7 +162,7 @@ export default function AddressBookPage() {
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <CopyButton value={entry.address} label="Copy" />
-                        <Button type="button" variant="outline" size="icon" aria-label={`Edit ${entry.label}`} onClick={() => toast.info("Mock edit.")}>
+                        <Button type="button" variant="outline" size="icon" aria-label={`Edit ${entry.label}`} onClick={() => openEdit(entry)}>
                           <Pencil className="size-4" />
                         </Button>
                         <Button type="button" variant="destructive" size="icon" aria-label={`Delete ${entry.label}`} onClick={() => remove(entry.id)}>
@@ -166,7 +197,7 @@ export default function AddressBookPage() {
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-2">
                               <CopyButton value={entry.address} label="Copy" />
-                              <Button type="button" variant="outline" size="icon" aria-label={`Edit ${entry.label}`} onClick={() => toast.info("Mock edit.")}>
+                              <Button type="button" variant="outline" size="icon" aria-label={`Edit ${entry.label}`} onClick={() => openEdit(entry)}>
                                 <Pencil className="size-4" />
                               </Button>
                               <Button type="button" variant="destructive" size="icon" aria-label={`Delete ${entry.label}`} onClick={() => remove(entry.id)}>
@@ -185,10 +216,10 @@ export default function AddressBookPage() {
         </SectionCard>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) resetForm() }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create new address</DialogTitle>
+            <DialogTitle>{editingId ? "Edit address" : "Create new address"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -225,8 +256,8 @@ export default function AddressBookPage() {
               <Label htmlFor="ab-paymentId">Payment ID</Label>
               <Input id="ab-paymentId" value={paymentId} onChange={(event) => setPaymentId(event.target.value)} placeholder="Optional" autoComplete="off" />
             </div>
-            <Button type="button" className="w-full" onClick={submit} disabled={!label.trim() || !address.trim() || createEntry.isPending}>
-              Save Address
+            <Button type="button" className="w-full" onClick={submit} disabled={!label.trim() || !address.trim() || (!editingId && createEntry.isPending)}>
+              {editingId ? "Save changes" : "Save Address"}
             </Button>
           </div>
         </DialogContent>
