@@ -1,7 +1,8 @@
 "use client"
 
-import { LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react"
+import { Camera, LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
+import type { ChangeEvent } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -26,6 +27,19 @@ export default function AddressBookPage() {
   const [label, setLabel] = useState("")
   const [address, setAddress] = useState("")
   const [paymentId, setPaymentId] = useState("")
+  const [avatar, setAvatar] = useState<string | null>(null)
+
+  function onPhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 2_000_000) {
+      toast.error("Please choose an image under 2 MB.")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setAvatar(typeof reader.result === "string" ? reader.result : null)
+    reader.readAsDataURL(file)
+  }
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_KEY)
@@ -47,7 +61,7 @@ export default function AddressBookPage() {
 
   function submit() {
     createEntry.mutate(
-      { label, address, paymentId },
+      { label, address, paymentId, avatar: avatar ?? undefined },
       {
         onSuccess: (entry) => {
           setAdded((current) => [...current, entry])
@@ -56,6 +70,7 @@ export default function AddressBookPage() {
           setLabel("")
           setAddress("")
           setPaymentId("")
+          setAvatar(null)
         },
       }
     )
@@ -104,13 +119,13 @@ export default function AddressBookPage() {
                     <div key={entry.id} className="rounded-xl border border-border bg-secondary p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-3">
-                          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 font-semibold text-primary">
-                            {entry.label.charAt(0)}
-                          </span>
+                          <ContactAvatar entry={entry} className="size-10 rounded-xl text-base" />
                           <div className="min-w-0">
                             <p className="font-semibold text-foreground">{entry.label}</p>
                             <p className="mt-1 font-mono text-xs text-muted-foreground">{truncateAddress(entry.address, 12, 8)}</p>
-                            {entry.paymentId && <p className="mt-1 font-mono text-[11px] text-muted-foreground/70">PID {truncateAddress(entry.paymentId, 6, 6)}</p>}
+                            <p className="mt-1 font-mono text-[11px] text-muted-foreground/70">
+                              PID {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -142,9 +157,7 @@ export default function AddressBookPage() {
                         <tr key={entry.id} className="border-b border-border last:border-b-0">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-xs font-semibold text-primary">
-                                {entry.label.charAt(0)}
-                              </span>
+                              <ContactAvatar entry={entry} className="size-8 rounded-lg text-xs" />
                               <span className="font-medium">{entry.label}</span>
                             </div>
                           </td>
@@ -179,6 +192,28 @@ export default function AddressBookPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
+              <Label>Photo (optional)</Label>
+              <div className="flex items-center gap-3">
+                <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/15 text-primary">
+                  {avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatar} alt="" className="size-12 object-cover" />
+                  ) : (
+                    <Camera className="size-5" aria-hidden="true" />
+                  )}
+                </span>
+                <label className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-border px-3 text-sm transition-colors duration-200 hover:border-ring focus-within:ring-2 focus-within:ring-ring">
+                  Upload photo
+                  <input type="file" accept="image/*" className="sr-only" onChange={onPhoto} />
+                </label>
+                {avatar && (
+                  <button type="button" onClick={() => setAvatar(null)} className="cursor-pointer text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="ab-label">Label</Label>
               <Input id="ab-label" value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Exchange, friend, miner" />
             </div>
@@ -197,6 +232,20 @@ export default function AddressBookPage() {
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+function ContactAvatar({ entry, className }: { entry: AddressEntry; className?: string }) {
+  if (entry.avatar) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={entry.avatar} alt="" className={cn("shrink-0 object-cover", className)} />
+    )
+  }
+  return (
+    <span className={cn("grid shrink-0 place-items-center bg-primary/15 font-semibold text-primary", className)}>
+      {entry.label.charAt(0)}
+    </span>
   )
 }
 

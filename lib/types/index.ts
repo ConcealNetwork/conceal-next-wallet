@@ -86,6 +86,8 @@ export type AddressEntry = {
   label: string
   address: string
   paymentId?: string
+  /** Optional contact photo as a data URL (mock — set client-side). */
+  avatar?: string
 }
 
 export type NodeStatus = {

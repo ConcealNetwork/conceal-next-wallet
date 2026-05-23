@@ -11,7 +11,7 @@ export const mockAddressBookService: AddressBookService = {
   async createEntry(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay()
-    return { id: "addr-mock-submit", ...input }
+    return { id: `addr-${Date.now()}`, ...input }
   },
   async updateEntry(id, input) {
     // TODO(backend): replace with real Conceal RPC/walletd call

@@ -4,6 +4,7 @@ export type AddressEntryInput = {
   label: string
   address: string
   paymentId?: string
+  avatar?: string
 }
 
 export interface AddressBookService {
