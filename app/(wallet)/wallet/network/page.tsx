@@ -4,13 +4,15 @@ import { useId } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/components/wallet/common"
 import { useNetworkStatus } from "@/lib/hooks"
-import { useCountUp } from "@/lib/hooks/use-count-up"
+import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
 import { cn } from "@/lib/utils"
 
 const BLOCK_TARGET_SECONDS = 120
 
 export default function NetworkPage() {
   const { data, isLoading } = useNetworkStatus()
+  const prefersReducedMotion = usePrefersReducedMotion()
+  const animate = !prefersReducedMotion
   const heightLabel = useCountUp(data?.height ?? 0, { formatter: (value) => Math.round(value).toLocaleString() })
   const peersLabel = useCountUp(data?.peers ?? 0, { formatter: (value) => String(Math.round(value)) })
 
@@ -80,9 +82,9 @@ export default function NetworkPage() {
           </div>
         </div>
 
-        <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 wallet-card flex items-center gap-6 p-6 [animation-delay:140ms]">
-          <PeerGraph />
-          <div>
+        <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 wallet-card flex flex-col items-center justify-center gap-4 p-6 [animation-delay:140ms]">
+          <PeerGraph animate={animate} />
+          <div className="text-center">
             <p className="text-sm text-muted-foreground">Connected Peers</p>
             <p className="mt-1 font-mono text-3xl font-bold tracking-tight">{peersLabel}</p>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -100,7 +102,7 @@ export default function NetworkPage() {
           detail={`+1 block · ${formatRelative(data.lastBlockSecondsAgo)}`}
           tone="amber"
           delay={210}
-          chart={<Sparkline values={data.heightHistory} color="hsl(var(--primary))" />}
+          chart={<BlockChainStrip blocks={data.heightHistory.length} animate={animate} />}
         />
         <ChartCard
           label="Network Hashrate"
@@ -184,30 +186,77 @@ function SyncRing({ pct }: { pct: number }) {
   )
 }
 
-// Decorative P2P node graph: a central node linked to surrounding peers.
-function PeerGraph() {
+// Live P2P node graph: peers stream packets into the central node, which pulses.
+function PeerGraph({ animate }: { animate: boolean }) {
+  // Six peers evenly placed on a circle (radius 60) around the central node at (85,85).
   const peers = [
-    [85, 16],
-    [123, 38],
-    [123, 82],
-    [85, 104],
-    [47, 82],
-    [47, 38],
+    [85, 25],
+    [137, 55],
+    [137, 115],
+    [85, 145],
+    [33, 115],
+    [33, 55],
   ] as const
   return (
-    <svg viewBox="0 0 170 120" className="h-28 w-28 shrink-0" aria-hidden="true">
+    <svg viewBox="0 0 170 170" className="h-40 w-40" aria-hidden="true">
       <g stroke="hsl(var(--border))" strokeWidth="1.2">
         {peers.map(([x, y]) => (
-          <line key={`l-${x}-${y}`} x1="85" y1="60" x2={x} y2={y} />
+          <line key={`l-${x}-${y}`} x1="85" y1="85" x2={x} y2={y} />
         ))}
       </g>
       <g fill="hsl(var(--chart-1))">
         {peers.map(([x, y]) => (
-          <circle key={`d-${x}-${y}`} cx={x} cy={y} r="5" />
+          <circle key={`d-${x}-${y}`} cx={x} cy={y} r="5.5" />
         ))}
       </g>
-      <circle cx="85" cy="60" r="11" fill="hsl(var(--primary))" />
+      {animate ? (
+        <>
+          {peers.map(([x, y], index) => {
+            const begin = `${(index * 0.32).toFixed(2)}s`
+            return (
+              <circle key={`pkt-${x}-${y}`} r="2.6" fill="hsl(var(--chart-1))">
+                <animateMotion dur="1.9s" begin={begin} repeatCount="indefinite" path={`M${x},${y} L85,85`} />
+                <animate
+                  attributeName="opacity"
+                  values="0;1;1;0"
+                  keyTimes="0;0.15;0.8;1"
+                  dur="1.9s"
+                  begin={begin}
+                  repeatCount="indefinite"
+                />
+              </circle>
+            )
+          })}
+          <circle cx="85" cy="85" r="13" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5">
+            <animate attributeName="r" values="13;26" dur="2.4s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.5;0" dur="2.4s" repeatCount="indefinite" />
+          </circle>
+        </>
+      ) : null}
+      <circle cx="85" cy="85" r="13" fill="hsl(var(--primary))" />
     </svg>
+  )
+}
+
+// Recent blocks as a chain — each bar is a block, the newest is highlighted (and pulses).
+function BlockChainStrip({ blocks, animate }: { blocks: number; animate: boolean }) {
+  const count = Math.max(blocks, 1)
+  return (
+    <div className="flex h-12 items-stretch gap-1.5" aria-hidden="true">
+      {Array.from({ length: count }, (_, index) => {
+        const isNewest = index === count - 1
+        return (
+          <div
+            key={index}
+            className={cn(
+              "flex-1 rounded-[4px]",
+              isNewest ? "bg-primary" : "bg-secondary",
+              isNewest && animate && "animate-pulse"
+            )}
+          />
+        )
+      })}
+    </div>
   )
 }
 
