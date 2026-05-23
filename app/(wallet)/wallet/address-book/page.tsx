@@ -148,7 +148,7 @@ export default function AddressBookPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {entries.map((entry) => (
                     <div key={entry.id} className="overflow-hidden rounded-2xl border border-border bg-secondary text-center">
-                      <div className="h-16 bg-gradient-to-br from-primary/25 to-transparent" />
+                      <div className="h-16 bg-gradient-to-b from-primary/15 to-transparent" />
                       <ContactAvatar entry={entry} className="mx-auto -mt-12 size-24 rounded-full border-4 border-secondary text-3xl" />
                       <div className="px-5 pb-5 pt-3">
                         <p className="truncate font-semibold text-foreground">{entry.label}</p>
