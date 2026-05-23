@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Messages · Layout Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--inset:#2e2e2e;--border:#404040;--hair:#353535;--accent:#FFA500;--in:#10b981;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f;--radius:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:40px 32px 80px}
+h1{font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+.note{color:var(--muted2);font-size:12.5px;margin:0 0 36px}
+.variant{margin:48px 0 16px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--hair);padding-bottom:10px}
+.variant .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.variant h2{font-size:17px;font-weight:600;margin:0}
+.variant span.d{color:var(--muted2);font-size:12.5px}
+.frame{max-width:1080px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.av{width:36px;height:36px;border-radius:50%;background:rgba(255,165,0,.18);color:var(--accent);display:grid;place-items:center;font-weight:600;font-size:14px;flex:none}
+.name{font-weight:600;font-size:14px}
+.addr{font-family:"Geist Mono",monospace;font-size:11px;color:var(--muted2)}
+.snip{font-size:13px;color:var(--muted);margin-top:4px}
+.time{font-size:11.5px;color:var(--muted2)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+.badge{font-size:10.5px;font-weight:600;color:#000;background:var(--accent);border-radius:6px;padding:1px 6px}
+.row{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--hair);align-items:flex-start}
+.row.unread{border-left:3px solid var(--accent);background:rgba(255,165,0,.04)}
+.row.sel{background:var(--inset)}
+/* master-detail */
+.md{display:grid;grid-template-columns:0.85fr 1.15fr}
+.pane{border-left:1px solid var(--border);padding:20px}
+.list{max-height:360px;overflow:auto}
+/* chat */
+.chat{display:grid;grid-template-columns:0.7fr 1fr}
+.bub{max-width:74%;padding:10px 14px;border-radius:14px;font-size:13px;margin-bottom:10px;line-height:1.4}
+.bub.in{background:var(--inset);border-bottom-left-radius:4px}
+.bub.out{background:var(--accent);color:#000;margin-left:auto;border-bottom-right-radius:4px}
+.composer{display:flex;gap:8px;padding:14px;border-top:1px solid var(--border)}
+.composer .inp{flex:1;height:38px;border:1px solid var(--border);border-radius:10px;background:var(--inset);padding:0 12px;font-size:13px;color:var(--muted2);display:flex;align-items:center}
+.btn{height:38px;padding:0 16px;border-radius:10px;background:var(--accent);color:#000;font-weight:600;font-size:13px;display:inline-flex;align-items:center}
+/* grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:16px}
+.mcard{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--inset)}
+.mcard.unread{border-color:var(--accent)}
+.tabs{display:flex;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.tab{font-size:13px;color:var(--muted);padding:4px 10px;border-radius:8px}
+.tab.on{background:var(--accent);color:#000;font-weight:600}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted2);height:100%;gap:8px;text-align:center}
+</style></head>
+<body>
+  <h1>Messages — Layout Variants</h1>
+  <p class="sub">4 ways to present the encrypted messages screen</p>
+  <p class="note">V1 is the current master-detail. V2–V4 explore chat threads, a full-width inbox, and a card grid. Pick one — or mix.</p>
+
+  <!-- V1 -->
+  <div class="variant"><span class="tag">V1</span><h2>Master–Detail</h2><span class="d">Current: list left, reading pane right. Familiar inbox.</span></div>
+  <div class="frame"><div class="card md">
+    <div class="list">
+      <div class="row unread"><div class="av">A</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">Alice Johnson <span class="dot"></span></span><span class="time">30m</span></div><div class="addr">ccx7fae…3456789</div><div class="snip">Hey! Just wanted to check in…</div></div></div>
+      <div class="row"><div class="av">B</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">Bob Smith</span><span class="time">2h</span></div><div class="addr">ccx7fae…7654321</div><div class="snip">Great work on the update…</div></div></div>
+      <div class="row"><div class="av">C</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">Carol Davis</span><span class="time">1d</span></div><div class="addr">ccx7fae…5555555</div><div class="snip">Meeting tomorrow at 2 PM…</div></div></div>
+    </div>
+    <div class="pane"><div class="empty"><div class="av" style="width:48px;height:48px">✉</div><div style="font-weight:600;color:var(--fg)">No message selected</div><div style="font-size:13px">Choose a message to read & reply.</div></div></div>
+  </div></div>
+
+  <!-- V2 -->
+  <div class="variant"><span class="tag">V2</span><h2>Chat Threads</h2><span class="d">Grouped by contact into conversations with chat bubbles + inline reply. Most modern.</span></div>
+  <div class="frame"><div class="card chat">
+    <div class="list">
+      <div class="row sel"><div class="av">A</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">Alice Johnson</span><span class="time">30m</span></div><div class="snip">Hey! Just wanted to check in…</div></div><span class="dot"></span></div>
+      <div class="row"><div class="av">B</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">Bob Smith</span><span class="time">2h</span></div><div class="snip">Great work on the update…</div></div></div>
+      <div class="row"><div class="av">C</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">Carol Davis</span><span class="time">1d</span></div><div class="snip">Meeting tomorrow at 2 PM…</div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-left:1px solid var(--border)">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center"><div class="av">A</div><div><div class="name">Alice Johnson</div><div class="addr">ccx7fae…3456789</div></div></div>
+      <div style="flex:1;padding:16px;overflow:auto">
+        <div class="bub in">Hey! Just wanted to check in and see how the project is going.</div>
+        <div class="bub out">Going well — shipping the wallet redesign this week.</div>
+        <div class="bub in">Amazing. Ping me if you need testing help 🙌</div>
+      </div>
+      <div class="composer"><div class="inp">Message Alice…</div><span class="btn">Send</span></div>
+    </div>
+  </div></div>
+
+  <!-- V3 -->
+  <div class="variant"><span class="tag">V3</span><h2>Full-width Inbox → Modal</h2><span class="d">One dense list using the full width; clicking opens the message in a dialog. Max density.</span></div>
+  <div class="frame"><div class="card">
+    <div class="tabs"><span class="tab on">All</span><span class="tab">Received <span class="badge">2</span></span><span class="tab">Sent</span></div>
+    <div>
+      <div class="row unread"><div class="av">A</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">Alice Johnson <span class="badge">New</span></span><span class="time">30 minutes ago</span></div><div class="snip">Hey! Just wanted to check in and see how the project is going…</div></div></div>
+      <div class="row"><div class="av">B</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">Bob Smith</span><span class="time">about 2 hours ago</span></div><div class="snip">Great work on the latest update! The new features look clean…</div></div></div>
+      <div class="row"><div class="av">Y</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><span class="name">You → Carol</span><span class="time">about 5 hours ago</span></div><div class="snip">Hello! I wanted to follow up on our previous conversation…</div></div></div>
+    </div>
+  </div></div>
+
+  <!-- V4 -->
+  <div class="variant"><span class="tag">V4</span><h2>Card Grid</h2><span class="d">Messages as a scannable grid of cards. Good for skimming many at a glance.</span></div>
+  <div class="frame"><div class="card">
+    <div class="tabs"><span class="tab on">All</span><span class="tab">Received <span class="badge">2</span></span><span class="tab">Sent</span></div>
+    <div class="grid">
+      <div class="mcard unread"><div style="display:flex;gap:10px;align-items:center"><div class="av">A</div><div><div class="name">Alice Johnson</div><div class="time">30m · New</div></div></div><div class="snip">Hey! Just wanted to check in…</div></div>
+      <div class="mcard"><div style="display:flex;gap:10px;align-items:center"><div class="av">B</div><div><div class="name">Bob Smith</div><div class="time">2h</div></div></div><div class="snip">Great work on the update…</div></div>
+      <div class="mcard"><div style="display:flex;gap:10px;align-items:center"><div class="av">C</div><div><div class="name">Carol Davis</div><div class="time">1d</div></div></div><div class="snip">Meeting tomorrow at 2 PM…</div></div>
+    </div>
+  </div></div>
+
+</body></html>
