@@ -1,7 +1,7 @@
 "use client"
 
 import type { LucideIcon } from "lucide-react"
-import { CalendarClock, Coins, Lock, Plus, TrendingUp, Unlock } from "lucide-react"
+import { CalendarClock, Coins, LayoutGrid, Lock, Plus, Table2, TrendingUp, Unlock } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -34,15 +34,30 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
 })
 
+type DepositView = "cards" | "table" | "timeline"
+
+const DEPOSITS_VIEW_KEY = "conceal-deposits-view"
+
 export default function DepositsPageClient() {
   const { data = [] } = useDeposits()
   const createDeposit = useCreateDeposit()
   const [open, setOpen] = useState(false)
+  const [view, setView] = useState<DepositView>("cards")
 
   const sortedDeposits = useMemo(
     () => data.toSorted((a, b) => a.unlocksInDays - b.unlocksInDays),
     [data]
   )
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(DEPOSITS_VIEW_KEY)
+    if (stored === "cards" || stored === "table" || stored === "timeline") setView(stored)
+  }, [])
+
+  function chooseView(next: DepositView) {
+    setView(next)
+    window.localStorage.setItem(DEPOSITS_VIEW_KEY, next)
+  }
 
   return (
     <>
@@ -68,20 +83,22 @@ export default function DepositsPageClient() {
       </div>
 
       <div className="mt-6 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:90ms]">
-        <SectionCard
-          title="Active Deposits"
-          description={
-            data.length > 0
-              ? `${data.length} time-locked position${data.length === 1 ? "" : "s"}`
-              : "No active time locks"
-          }
-        >
-          {sortedDeposits.length > 0 ? (
-            <div className="grid gap-4">
-              {sortedDeposits.map((deposit, index) => (
-                <DepositCard key={deposit.id} deposit={deposit} index={index} />
-              ))}
+        <SectionCard>
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold leading-none tracking-tight text-card-foreground">Active Deposits</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {data.length > 0
+                  ? `${data.length} time-locked position${data.length === 1 ? "" : "s"}`
+                  : "No active time locks"}
+              </p>
             </div>
+            {sortedDeposits.length > 0 ? (
+              <DepositViewSwitcher value={view} onChange={chooseView} />
+            ) : null}
+          </div>
+          {sortedDeposits.length > 0 ? (
+            <DepositsView deposits={sortedDeposits} view={view} />
           ) : (
             <DepositEmptyState onCreate={() => setOpen(true)} />
           )}
@@ -214,6 +231,68 @@ function SummaryMetricCard({
   )
 }
 
+function DepositViewSwitcher({
+  value,
+  onChange,
+}: {
+  value: DepositView
+  onChange: (view: DepositView) => void
+}) {
+  return (
+    <div className="inline-flex rounded-xl border border-border p-1" role="group" aria-label="Deposit view">
+      <DepositViewToggle active={value === "cards"} onClick={() => onChange("cards")} label="Cards">
+        <LayoutGrid className="size-4" aria-hidden="true" />
+      </DepositViewToggle>
+      <DepositViewToggle active={value === "table"} onClick={() => onChange("table")} label="Table">
+        <Table2 className="size-4" aria-hidden="true" />
+      </DepositViewToggle>
+      <DepositViewToggle active={value === "timeline"} onClick={() => onChange("timeline")} label="Timeline">
+        <CalendarClock className="size-4" aria-hidden="true" />
+      </DepositViewToggle>
+    </div>
+  )
+}
+
+function DepositViewToggle({
+  active,
+  onClick,
+  label,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+      )}
+    >
+      {children}
+      {label}
+    </button>
+  )
+}
+
+function DepositsView({ deposits, view }: { deposits: Deposit[]; view: DepositView }) {
+  if (view === "table") return <DepositsTable deposits={deposits} />
+  if (view === "timeline") return <DepositsTimeline deposits={deposits} />
+
+  return (
+    <div className="grid gap-4">
+      {deposits.map((deposit, index) => (
+        <DepositCard key={deposit.id} deposit={deposit} index={index} />
+      ))}
+    </div>
+  )
+}
+
 function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
   const status = getDepositStatus(deposit)
   const Icon = status === "matured" ? Unlock : Lock
@@ -282,6 +361,138 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
   )
 }
 
+function DepositsTable({ deposits }: { deposits: Deposit[] }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border">
+      <table className="w-full min-w-[880px] text-sm">
+        <thead>
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <th className="px-4 py-3 font-medium">Amount</th>
+            <th className="px-4 py-3 font-medium">APR</th>
+            <th className="px-4 py-3 font-medium">Est. Interest</th>
+            <th className="px-4 py-3 font-medium">At Maturity</th>
+            <th className="px-4 py-3 font-medium">Progress</th>
+            <th className="px-4 py-3 font-medium">Unlocks</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 text-right font-medium">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {deposits.map((deposit, index) => {
+            const interest = ccxToNumber(deposit.interest)
+            const maturityValue = ccxToNumber(deposit.amount) + interest
+            const status = getDepositStatus(deposit)
+            const progress = getProgressPct(deposit)
+
+            return (
+              <tr
+                key={deposit.id}
+                className="animate-rise-in border-b border-border last:border-b-0 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
+                style={{ animationDelay: `${120 + index * 40}ms` }}
+              >
+                <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-foreground">
+                  {formatCcx(deposit.amount)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-primary">
+                  {deposit.apr.toFixed(2)}%
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-wallet-incoming">
+                  +{formatCcx(interest, 4)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-foreground">
+                  {formatCcx(maturityValue, 4)}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex min-w-[132px] items-center gap-2">
+                    <AnimatedProgress
+                      value={progress}
+                      label={`${progress} percent complete`}
+                      className={cn(
+                        "mt-0 h-1.5 min-w-[88px] bg-secondary",
+                        status === "matured" ? "[&>div]:bg-wallet-incoming" : "[&>div]:bg-primary"
+                      )}
+                    />
+                    <span className="font-mono text-xs text-muted-foreground">{progress}%</span>
+                  </div>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                  {getUnlocksLabel(deposit, "table")}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <DepositStatusPill status={status} />
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <DepositWithdrawButton deposit={deposit} />
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
+  return (
+    <div className="relative pl-7 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-px before:bg-border">
+      {deposits.map((deposit, index) => {
+        const interest = ccxToNumber(deposit.interest)
+        const maturityValue = ccxToNumber(deposit.amount) + interest
+        const status = getDepositStatus(deposit)
+        const progress = getProgressPct(deposit)
+
+        return (
+          <article
+            key={deposit.id}
+            className="animate-rise-in relative pb-6 last:pb-0 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
+            style={{ animationDelay: `${120 + index * 50}ms` }}
+            aria-labelledby={`${deposit.id}-timeline-title`}
+          >
+            <span
+              className={cn(
+                "absolute -left-[23px] top-1.5 size-3 rounded-full ring-4 ring-background",
+                status === "matured" ? "bg-wallet-incoming" : "bg-primary"
+              )}
+              aria-hidden="true"
+            />
+            <p className="text-xs text-muted-foreground">{getTimelineDateLabel(deposit)}</p>
+            <div className="mt-2 flex flex-col gap-3 rounded-xl border border-border bg-secondary/60 p-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 id={`${deposit.id}-timeline-title`} className="font-mono font-semibold text-foreground">
+                    {formatCcx(deposit.amount)}
+                  </h3>
+                  <DepositStatusPill status={status} />
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  <span className="font-mono text-primary">{deposit.apr.toFixed(2)}% APR</span>
+                  <span aria-hidden="true"> · </span>
+                  <span className="font-mono text-wallet-incoming">+{formatCcx(interest, 4)}</span>
+                  <span aria-hidden="true"> → </span>
+                  <span className="font-mono text-foreground">{formatCcx(maturityValue, 4)}</span>
+                  <span> at maturity</span>
+                </p>
+                <div className="mt-3 max-w-sm">
+                  <AnimatedProgress
+                    value={progress}
+                    label={`${progress} percent complete`}
+                    className={cn(
+                      "mt-0 h-2 bg-card",
+                      status === "matured" ? "[&>div]:bg-wallet-incoming" : "[&>div]:bg-primary"
+                    )}
+                  />
+                </div>
+              </div>
+              {status === "matured" ? <DepositWithdrawButton deposit={deposit} /> : null}
+            </div>
+          </article>
+        )
+      })}
+    </div>
+  )
+}
+
 function DepositDetail({
   label,
   value,
@@ -306,7 +517,33 @@ function DepositDetail({
   )
 }
 
-function AnimatedProgress({ value, label }: { value: number; label: string }) {
+function DepositWithdrawButton({ deposit }: { deposit: Deposit }) {
+  const canWithdraw = isMatured(deposit)
+
+  return (
+    <Button
+      type="button"
+      variant={canWithdraw ? "default" : "outline"}
+      size="xs"
+      disabled={!canWithdraw}
+      onClick={() => toast.success("Mock withdrawal started.")}
+      className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
+    >
+      <Unlock className="size-4" aria-hidden="true" />
+      Withdraw
+    </Button>
+  )
+}
+
+function AnimatedProgress({
+  value,
+  label,
+  className,
+}: {
+  value: number
+  label: string
+  className?: string
+}) {
   const prefersReducedMotion = usePrefersReducedMotion()
   const [displayValue, setDisplayValue] = useState(prefersReducedMotion ? value : 0)
   const clampedValue = Math.min(Math.max(value, 0), 100)
@@ -326,7 +563,7 @@ function AnimatedProgress({ value, label }: { value: number; label: string }) {
       value={displayValue}
       aria-label="Deposit progress"
       aria-valuetext={label}
-      className="mt-3 h-2.5 bg-background [&>div]:bg-wallet-deposit"
+      className={cn("mt-3 h-2.5 bg-background [&>div]:bg-wallet-deposit", className)}
     />
   )
 }
@@ -512,7 +749,21 @@ function getDepositStatus(deposit: Deposit): DepositStatus {
 }
 
 function isMatured(deposit: Deposit) {
-  return deposit.progressPct >= 100
+  return deposit.progressPct >= 100 || deposit.unlocksInDays <= 0
+}
+
+function getProgressPct(deposit: Deposit) {
+  return Math.min(Math.max(deposit.progressPct, 0), 100)
+}
+
+function getUnlocksLabel(deposit: Deposit, variant: "table" | "timeline") {
+  if (isMatured(deposit)) return variant === "table" ? "Ready" : "Ready now"
+  return `${deposit.unlocksInDays} day${deposit.unlocksInDays === 1 ? "" : "s"}`
+}
+
+function getTimelineDateLabel(deposit: Deposit) {
+  if (isMatured(deposit)) return "Ready now"
+  return `${formatMaturityDate(deposit.unlocksInDays)} - in ${getUnlocksLabel(deposit, "timeline")}`
 }
 
 function formatMaturityDate(unlocksInDays: number) {
