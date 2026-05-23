@@ -1,8 +1,8 @@
 "use client"
 
-import type { LucideIcon } from "lucide-react"
-import { CalendarClock, Coins, LayoutGrid, Lock, Plus, Table2, TrendingUp, Unlock } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { CalendarClock, LayoutGrid, Lock, Plus, Table2, Unlock } from "lucide-react"
+import dynamic from "next/dynamic"
+import { useEffect, useId, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -27,6 +27,23 @@ import {
 } from "@/lib/services/deposit.service"
 import type { Deposit } from "@/lib/types"
 import { ccxToNumber, cn, formatCcx, truncateAddress } from "@/lib/utils"
+
+const ResponsiveContainer = dynamic(() => import("recharts").then((mod) => mod.ResponsiveContainer), { ssr: false })
+const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false })
+const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false })
+const ReferenceLine = dynamic(() => import("recharts").then((mod) => mod.ReferenceLine), { ssr: false })
+const RechartsTooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), { ssr: false })
+const XAxis = dynamic(() => import("recharts").then((mod) => mod.XAxis), { ssr: false })
+const YAxis = dynamic(() => import("recharts").then((mod) => mod.YAxis), { ssr: false })
+
+// Deposit-series colors drawn from the shared chart token palette (see app/globals.css).
+const DEPOSIT_SERIES_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-2))",
+]
+const PROJECTION_SAMPLES = 28
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
@@ -122,10 +139,43 @@ export default function DepositsPageClient() {
   )
 }
 
+type DepositSegment = {
+  id: string
+  amount: number
+  apr: number
+  unlocksInDays: number
+  progressPct: number
+  color: string
+}
+
+type ProjectionPoint = { day: number; value: number }
+
+// Projects total deposit value forward from today to the furthest maturity, accruing
+// each deposit's interest linearly across its own remaining lock period.
+function buildProjection(deposits: Deposit[], maxDays: number): ProjectionPoint[] {
+  if (deposits.length === 0 || maxDays <= 0) return []
+  const points: ProjectionPoint[] = []
+  for (let sample = 0; sample <= PROJECTION_SAMPLES; sample += 1) {
+    const day = (maxDays * sample) / PROJECTION_SAMPLES
+    let value = 0
+    for (const deposit of deposits) {
+      const principal = ccxToNumber(deposit.amount)
+      const interest = ccxToNumber(deposit.interest)
+      const durationDays = Math.max(deposit.durationMonths * 30, 1)
+      const elapsedDays = durationDays - deposit.unlocksInDays
+      const fraction = Math.min(Math.max((elapsedDays + day) / durationDays, 0), 1)
+      value += principal + interest * fraction
+    }
+    points.push({ day: Math.round(day), value: Number(value.toFixed(4)) })
+  }
+  return points
+}
+
 function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
-  const activeDeposits = deposits.filter((deposit) => !isMatured(deposit))
+  const activeDeposits = useMemo(() => deposits.filter((deposit) => !isMatured(deposit)), [deposits])
   const totalLocked = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0)
   const totalInterest = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.interest), 0)
+  const totalAtMaturity = totalLocked + totalInterest
   const weightedApr = totalLocked > 0
     ? activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount) * deposit.apr, 0) / totalLocked
     : 0
@@ -133,74 +183,106 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
     if (!soonest || deposit.unlocksInDays < soonest.unlocksInDays) return deposit
     return soonest
   }, null)
+  const maxUnlock = activeDeposits.reduce((max, deposit) => Math.max(max, deposit.unlocksInDays), 0)
+
+  const segments = useMemo<DepositSegment[]>(
+    () =>
+      activeDeposits.map((deposit, index) => ({
+        id: deposit.id,
+        amount: ccxToNumber(deposit.amount),
+        apr: deposit.apr,
+        unlocksInDays: deposit.unlocksInDays,
+        progressPct: deposit.progressPct,
+        color: DEPOSIT_SERIES_COLORS[index % DEPOSIT_SERIES_COLORS.length],
+      })),
+    [activeDeposits]
+  )
+  const projection = useMemo(() => buildProjection(activeDeposits, maxUnlock), [activeDeposits, maxUnlock])
+  const maxAmount = segments.reduce((max, segment) => Math.max(max, segment.amount), 0)
+  const maxApr = segments.reduce((max, segment) => Math.max(max, segment.apr), 0)
 
   return (
-    <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-5">
-      <SummaryMetricCard
-        label="Total Locked"
-        value={totalLocked}
-        formatter={(value) => formatCcx(value)}
-        detail="Currently earning"
-        tone="deposit"
-        icon={Lock}
-        index={0}
-      />
-      <SummaryMetricCard
-        label="Active Deposits"
-        value={activeDeposits.length}
-        formatter={(value) => Math.round(value).toLocaleString("en-US")}
-        detail="Time locks open"
-        tone="default"
-        icon={Coins}
-        index={1}
-      />
-      <SummaryMetricCard
-        label="Total Est. Interest"
-        value={totalInterest}
-        formatter={(value) => formatCcx(value, 4)}
-        detail="Projected return"
-        tone="amber"
-        icon={TrendingUp}
-        index={2}
-      />
-      <SummaryMetricCard
-        label="Weighted Avg APR"
-        value={weightedApr}
-        formatter={(value) => `${value.toLocaleString("en-US", { maximumFractionDigits: 2 })}%`}
-        detail="Amount-weighted"
-        tone="incoming"
-        icon={TrendingUp}
-        index={3}
-      />
-      <SummaryMetricCard
-        label="Next Unlock"
-        value={nextUnlock?.unlocksInDays ?? 0}
-        formatter={(value) => nextUnlock ? `${Math.round(value)} days` : "None"}
-        detail={nextUnlock ? `Matures ${formatMaturityDate(nextUnlock.unlocksInDays)}` : "No active deposits"}
-        tone="default"
-        icon={CalendarClock}
-        index={4}
-      />
+    <div className="space-y-4">
+      <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <SummaryCard
+          label="Total Locked"
+          value={totalLocked}
+          formatter={(value) => formatCcx(value)}
+          detail={`${activeDeposits.length} position${activeDeposits.length === 1 ? "" : "s"} earning`}
+          tone="deposit"
+          index={0}
+          chart={<CompositionBar segments={segments} total={totalLocked} />}
+        />
+        <SummaryCard
+          label="Active Deposits"
+          value={activeDeposits.length}
+          formatter={(value) => Math.round(value).toLocaleString("en-US")}
+          detail="Time locks open"
+          tone="default"
+          index={1}
+          chart={<AmountBars segments={segments} max={maxAmount} />}
+        />
+        <SummaryCard
+          label="Total Est. Interest"
+          value={totalInterest}
+          formatter={(value) => formatCcx(value, 4)}
+          detail="Projected return"
+          tone="amber"
+          index={2}
+          chart={<MiniArea values={projection.map((point) => point.value)} color="hsl(var(--primary))" />}
+        />
+        <SummaryCard
+          label="Weighted Avg APR"
+          value={weightedApr}
+          formatter={(value) => `${value.toLocaleString("en-US", { maximumFractionDigits: 2 })}%`}
+          detail="Amount-weighted"
+          tone="incoming"
+          index={3}
+          chart={<AprBars segments={segments} max={maxApr} weighted={weightedApr} />}
+        />
+        <SummaryCard
+          label="Next Unlock"
+          value={nextUnlock?.unlocksInDays ?? 0}
+          formatter={(value) => (nextUnlock ? `${Math.round(value)} days` : "None")}
+          detail={nextUnlock ? `Matures ${formatMaturityDate(nextUnlock.unlocksInDays)}` : "No active deposits"}
+          tone="default"
+          index={4}
+          chart={<ProgressRing pct={nextUnlock?.progressPct ?? 0} />}
+        />
+      </div>
+
+      {activeDeposits.length > 0 ? (
+        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+          <ProjectionChart
+            projection={projection}
+            totalLocked={totalLocked}
+            totalAtMaturity={totalAtMaturity}
+            nextUnlock={nextUnlock}
+            maxUnlock={maxUnlock}
+          />
+          <CompositionDonut segments={segments} totalLocked={totalLocked} />
+        </div>
+      ) : null}
     </div>
   )
 }
 
-function SummaryMetricCard({
+function SummaryCard({
   label,
   value,
   formatter,
   detail,
   tone,
-  icon: Icon,
   index,
+  chart,
 }: {
   label: string
   value: number
   formatter: (value: number) => string
   detail: string
   tone: "default" | "incoming" | "deposit" | "amber"
-  icon: LucideIcon
   index: number
+  chart: React.ReactNode
 }) {
   const valueLabel = useCountUp(value, { formatter })
   const toneClass = {
@@ -212,21 +294,245 @@ function SummaryMetricCard({
 
   return (
     <div
-      className="animate-rise-in flex min-h-[132px] flex-col justify-between rounded-xl border border-border bg-secondary/60 p-4 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
+      className="animate-rise-in flex min-h-[148px] flex-col rounded-xl border border-border bg-secondary/60 p-4 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
       style={{ animationDelay: `${120 + index * 40}ms` }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className={cn("mt-2 break-words font-mono text-2xl font-bold tracking-tight", toneClass)}>
-            {valueLabel}
-          </p>
-        </div>
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-card text-primary" aria-hidden="true">
-          <Icon className="size-4" />
-        </span>
-      </div>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className={cn("mt-2 break-words font-mono text-2xl font-bold tracking-tight", toneClass)}>{valueLabel}</p>
+      <div className="mt-auto pt-4">{chart}</div>
       <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
+    </div>
+  )
+}
+
+function CompositionBar({ segments, total }: { segments: DepositSegment[]; total: number }) {
+  if (segments.length === 0 || total <= 0) {
+    return <div className="h-2.5 w-full rounded-full bg-border/60" />
+  }
+  return (
+    <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
+      {segments.map((segment) => (
+        <div
+          key={segment.id}
+          className="h-full first:rounded-l-full last:rounded-r-full"
+          style={{ flexBasis: `${(segment.amount / total) * 100}%`, backgroundColor: segment.color }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function AmountBars({ segments, max }: { segments: DepositSegment[]; max: number }) {
+  if (segments.length === 0 || max <= 0) return <div className="h-9" />
+  return (
+    <div className="flex h-9 items-end gap-1.5" aria-hidden="true">
+      {segments.map((segment) => (
+        <div
+          key={segment.id}
+          className="min-h-[4px] flex-1 rounded-sm"
+          style={{ height: `${Math.max((segment.amount / max) * 100, 8)}%`, backgroundColor: segment.color }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function MiniArea({ values, color }: { values: number[]; color: string }) {
+  const gradientId = useId()
+  if (values.length < 2) return <div className="h-9" />
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const span = max - min || 1
+  const stepX = 100 / (values.length - 1)
+  const coords = values.map((value, index) => [index * stepX, 32 - ((value - min) / span) * 28] as const)
+  const line = coords.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ")
+  return (
+    <svg viewBox="0 0 100 34" preserveAspectRatio="none" className="h-9 w-full" aria-hidden="true">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path d={`${line} L100,34 L0,34 Z`} fill={`url(#${gradientId})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth={1.6} vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
+
+function AprBars({ segments, max, weighted }: { segments: DepositSegment[]; max: number; weighted: number }) {
+  if (segments.length === 0 || max <= 0) return <div className="h-9" />
+  return (
+    <div className="relative flex h-9 items-end gap-2" aria-hidden="true">
+      {segments.map((segment) => (
+        <div
+          key={segment.id}
+          className="min-h-[4px] flex-1 rounded-sm bg-wallet-incoming/55"
+          style={{ height: `${Math.max((segment.apr / max) * 100, 10)}%` }}
+        />
+      ))}
+      <div
+        className="pointer-events-none absolute inset-x-0 border-t border-dashed border-foreground/40"
+        style={{ bottom: `${(weighted / max) * 100}%` }}
+      />
+    </div>
+  )
+}
+
+function ProgressRing({ pct }: { pct: number }) {
+  const clamped = Math.min(Math.max(pct, 0), 100)
+  const radius = 18
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference * (1 - clamped / 100)
+  return (
+    <svg viewBox="0 0 44 44" className="h-11 w-11" aria-hidden="true">
+      <circle cx="22" cy="22" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="5" />
+      <circle
+        cx="22"
+        cy="22"
+        r={radius}
+        fill="none"
+        stroke="hsl(var(--primary))"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform="rotate(-90 22 22)"
+      />
+      <text x="22" y="26" textAnchor="middle" className="fill-foreground font-mono text-[10px]">
+        {`${Math.round(clamped)}%`}
+      </text>
+    </svg>
+  )
+}
+
+function ProjectionChart({
+  projection,
+  totalLocked,
+  totalAtMaturity,
+  nextUnlock,
+  maxUnlock,
+}: {
+  projection: ProjectionPoint[]
+  totalLocked: number
+  totalAtMaturity: number
+  nextUnlock: Deposit | null
+  maxUnlock: number
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-secondary/60 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Projected value to maturity</p>
+        <p className="font-mono text-xs text-muted-foreground">
+          {formatCcx(totalLocked)} <span className="text-muted-foreground/60">→</span>{" "}
+          <span className="text-wallet-incoming">{formatCcx(totalAtMaturity)}</span>
+        </p>
+      </div>
+      <div className="mt-3 h-[150px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={projection} margin={{ top: 8, right: 6, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id="depositProjectionFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.32} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="day" type="number" domain={[0, maxUnlock]} hide />
+            <YAxis domain={["dataMin", "dataMax"]} hide />
+            {nextUnlock ? (
+              <ReferenceLine x={nextUnlock.unlocksInDays} stroke="hsl(var(--wallet-deposit))" strokeDasharray="4 4" />
+            ) : null}
+            <RechartsTooltip
+              cursor={{ stroke: "hsl(var(--border))" }}
+              contentStyle={{
+                background: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: 12,
+                color: "hsl(var(--foreground))",
+                fontSize: 12,
+              }}
+              labelFormatter={(label) => `In ${label} day${label === 1 ? "" : "s"}`}
+              formatter={(value) => [formatCcx(Number(value)), "Value"]}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              fill="url(#depositProjectionFill)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
+        <span>Today</span>
+        {nextUnlock ? <span className="text-wallet-deposit">{nextUnlock.unlocksInDays}d · first unlock</span> : null}
+        <span>{maxUnlock}d · maturity</span>
+      </div>
+    </div>
+  )
+}
+
+function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[]; totalLocked: number }) {
+  const radius = 40
+  const circumference = 2 * Math.PI * radius
+  let cursor = 0
+  const arcs = segments.map((segment) => {
+    const fraction = totalLocked > 0 ? segment.amount / totalLocked : 0
+    const arc = { segment, fraction, start: cursor }
+    cursor += fraction
+    return arc
+  })
+
+  return (
+    <div className="rounded-xl border border-border bg-secondary/60 p-4">
+      <p className="text-sm text-muted-foreground">Locked composition</p>
+      <div className="mt-3 flex items-center gap-4">
+        <div className="relative h-[120px] w-[120px] shrink-0">
+          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
+            <circle cx="50" cy="50" r={radius} fill="none" stroke="hsl(var(--border) / 0.4)" strokeWidth="15" />
+            {arcs.map(({ segment, fraction, start }) => {
+              const gap = arcs.length > 1 ? 1.5 : 0
+              const dash = Math.max(fraction * circumference - gap, 0)
+              return (
+                <circle
+                  key={segment.id}
+                  cx="50"
+                  cy="50"
+                  r={radius}
+                  fill="none"
+                  stroke={segment.color}
+                  strokeWidth="15"
+                  strokeDasharray={`${dash} ${circumference - dash}`}
+                  strokeDashoffset={-start * circumference}
+                />
+              )
+            })}
+          </svg>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="font-mono text-lg font-bold leading-none text-foreground">
+              {Math.round(totalLocked).toLocaleString("en-US")}
+            </span>
+            <span className="mt-1 text-[10px] text-muted-foreground">CCX locked</span>
+          </div>
+        </div>
+        <ul className="min-w-0 space-y-2.5 text-sm">
+          {segments.map((segment) => (
+            <li key={segment.id} className="flex items-start gap-2">
+              <span
+                className="mt-1 size-2.5 shrink-0 rounded-sm"
+                style={{ backgroundColor: segment.color }}
+                aria-hidden="true"
+              />
+              <span className="min-w-0">
+                <span className="font-mono text-foreground">{formatCcx(segment.amount)}</span>
+                <span className="text-muted-foreground"> · {segment.apr.toFixed(2)}%</span>
+                <span className="block text-xs text-muted-foreground/70">unlocks {segment.unlocksInDays}d</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Deposits Summary · Chart Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#212121;--card:#262626;--sec:#2e2e2e;--inset:#242424;--border:#404040;--hair:#353535;--accent:#FFA500;--in:#10b981;--dep:#60a5fa;--out:#ef4444;--fg:#fff;--muted:#a3a3a3;--muted2:#6f6f6f;--radius:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:40px 32px 90px}
+h1{font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+.note{color:var(--muted2);font-size:12.5px;margin:0 0 8px}
+.variant{margin:54px 0 20px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--hair);padding-bottom:10px}
+.variant .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.variant h2{font-size:17px;font-weight:600;margin:0}
+.variant span.d{color:var(--muted2);font-size:12.5px}
+.frame{max-width:1180px}
+.mono{font-family:"Geist Mono",monospace}
+.k{font-size:12.5px;color:var(--muted);font-weight:500}
+.detail{font-size:12.5px;color:var(--muted2)}
+.val{font-family:"Geist Mono",monospace;font-weight:700;letter-spacing:-.01em}
+
+/* ===== V1 micro-chart cards ===== */
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.s1{border:1px solid var(--border);border-radius:var(--radius);background:rgba(46,46,46,.6);padding:16px;display:flex;flex-direction:column;justify-content:space-between;min-height:138px}
+.s1 .val{font-size:24px;margin-top:8px}
+.s1 .chart{margin-top:14px}
+.s1 .detail{margin-top:10px}
+
+/* ===== V2 editorial ===== */
+.v2{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+.bigcard{border:1px solid var(--border);border-radius:14px;background:var(--card);padding:20px}
+.bigcard .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.bigcard .big{font-size:30px}
+.donutwrap{display:flex;align-items:center;gap:20px}
+.legend{font-size:12.5px;display:flex;flex-direction:column;gap:10px}
+.legend .row{display:flex;align-items:center;gap:8px}
+.legend .dot{width:9px;height:9px;border-radius:3px;flex:none}
+.strip{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--border);border-radius:14px;background:var(--card);overflow:hidden}
+.strip .cell{padding:16px 20px;border-right:1px solid var(--hair)}
+.strip .cell:last-child{border-right:none}
+.strip .val{font-size:22px;margin-top:6px}
+
+/* ===== V3 maturity ladder ===== */
+.ladder{border:1px solid var(--border);border-radius:14px;background:var(--card);overflow:hidden}
+.lhead{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--hair)}
+.lhead .cell{padding:18px 22px;border-right:1px solid var(--hair)}
+.lhead .cell:last-child{border-right:none}
+.lhead .val{font-size:22px;margin-top:6px}
+.lbody{padding:22px 26px}
+.track{margin-bottom:20px}
+.track:last-child{margin-bottom:6px}
+.track .meta{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px}
+.track .rail{position:relative;height:10px;border-radius:999px;background:var(--inset);overflow:visible}
+.track .fill{position:absolute;left:0;top:0;height:100%;border-radius:999px}
+.track .node{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;transform:translate(-50%,-50%);border:3px solid var(--card)}
+.axis{position:relative;height:18px;margin-top:6px;font-size:11px;color:var(--muted2)}
+.axis span{position:absolute;transform:translateX(-50%)}
+.pill{font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px}
+.pill.dep{background:rgba(96,165,250,.15);color:var(--dep)}
+.pill.amber{background:rgba(255,165,0,.15);color:var(--accent)}
+</style></head>
+<body>
+  <h1>Deposits — Summary, Charted</h1>
+  <p class="sub">Same 5 metrics, no icons — data given a visual instead. Built on the wallet tokens.</p>
+  <p class="note mono">Active: 250 CCX @ 4.60% (63%, 87d) · 500 CCX @ 5.40% (29%, 221d) · locked 750 · est. interest +65.50 · weighted APR 5.13% · 779.50 at maturity</p>
+
+  <!-- ============ V1 ============ -->
+  <div class="variant"><span class="tag">V1</span><h2>Micro-chart cards</h2><span class="d">Keeps the 5-up grid; each icon swapped for a relevant tiny chart. Least disruptive.</span></div>
+  <div class="frame">
+    <div class="grid5">
+      <!-- Total Locked: composition bar -->
+      <div class="s1">
+        <div><div class="k">Total Locked</div><div class="val" style="color:var(--dep)">750.00 CCX</div></div>
+        <div class="chart">
+          <svg width="100%" height="10" viewBox="0 0 100 10" preserveAspectRatio="none">
+            <rect x="0" y="0" width="33.3" height="10" rx="2" fill="var(--dep)"/>
+            <rect x="34.3" y="0" width="65.7" height="10" rx="2" fill="#3b6ea5"/>
+          </svg>
+          <div class="detail" style="margin-top:6px">2 positions · 250 + 500</div>
+        </div>
+      </div>
+      <!-- Active Deposits: bars by amount -->
+      <div class="s1">
+        <div><div class="k">Active Deposits</div><div class="val">2</div></div>
+        <div class="chart" style="display:flex;align-items:flex-end;gap:6px;height:34px">
+          <div style="flex:1;height:50%;background:var(--dep);border-radius:3px"></div>
+          <div style="flex:1;height:100%;background:#3b6ea5;border-radius:3px"></div>
+        </div>
+        <div class="detail">Time locks open</div>
+      </div>
+      <!-- Est. Interest: accrual area -->
+      <div class="s1">
+        <div><div class="k">Total Est. Interest</div><div class="val" style="color:var(--accent)">+65.50</div></div>
+        <div class="chart">
+          <svg width="100%" height="34" viewBox="0 0 100 34" preserveAspectRatio="none">
+            <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".45"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,32 C30,30 45,20 70,12 C82,8 92,5 100,3 L100,34 L0,34 Z" fill="url(#g1)"/>
+            <path d="M0,32 C30,30 45,20 70,12 C82,8 92,5 100,3" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+          </svg>
+        </div>
+        <div class="detail">Projected return</div>
+      </div>
+      <!-- Weighted APR: paired bars + weighted marker -->
+      <div class="s1">
+        <div><div class="k">Weighted Avg APR</div><div class="val" style="color:var(--in)">5.13%</div></div>
+        <div class="chart" style="position:relative;height:34px;display:flex;align-items:flex-end;gap:8px">
+          <div style="flex:1;height:64%;background:var(--in);opacity:.55;border-radius:3px"></div>
+          <div style="flex:1;height:88%;background:var(--in);border-radius:3px"></div>
+          <div style="position:absolute;left:0;right:0;bottom:74%;border-top:1.5px dashed var(--fg);opacity:.5"></div>
+        </div>
+        <div class="detail">4.60% &amp; 5.40% — amount-weighted</div>
+      </div>
+      <!-- Next Unlock: progress ring -->
+      <div class="s1">
+        <div><div class="k">Next Unlock</div><div class="val">87 days</div></div>
+        <div class="chart" style="display:flex;justify-content:flex-start">
+          <svg width="48" height="48" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="20" fill="none" stroke="var(--inset)" stroke-width="5"/>
+            <circle cx="24" cy="24" r="20" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"
+              stroke-dasharray="125.6" stroke-dashoffset="46.5" transform="rotate(-90 24 24)"/>
+            <text x="24" y="27" text-anchor="middle" font-size="11" font-family="Geist Mono" fill="var(--fg)">63%</text>
+          </svg>
+        </div>
+        <div class="detail">Matures 19 Aug 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ V2 ============ -->
+  <div class="variant"><span class="tag">V2</span><h2>Editorial — chart-forward</h2><span class="d">Two hero charts (growth-to-maturity + composition donut) over a borderless metric strip.</span></div>
+  <div class="frame">
+    <div class="v2" style="margin-bottom:14px">
+      <!-- growth to maturity -->
+      <div class="bigcard">
+        <div class="head"><div class="k">Projected value to maturity</div><div class="detail mono">750.00 → <span style="color:var(--in)">779.50</span></div></div>
+        <svg width="100%" height="150" viewBox="0 0 600 150" preserveAspectRatio="none" style="margin-top:8px">
+          <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".30"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+          <line x1="0" y1="120" x2="600" y2="120" stroke="var(--hair)" stroke-width="1"/>
+          <line x1="0" y1="70" x2="600" y2="70" stroke="var(--hair)" stroke-width="1" stroke-dasharray="3 5"/>
+          <path d="M0,108 C150,104 230,92 320,74 C420,54 520,36 600,24 L600,135 L0,135 Z" fill="url(#g2)"/>
+          <path d="M0,108 C150,104 230,92 320,74 C420,54 520,36 600,24" fill="none" stroke="var(--accent)" stroke-width="2.2"/>
+          <!-- 87d unlock marker -->
+          <line x1="236" y1="20" x2="236" y2="120" stroke="var(--dep)" stroke-width="1.4" stroke-dasharray="4 4"/>
+          <circle cx="236" cy="86" r="4.5" fill="var(--dep)"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted2);margin-top:4px">
+          <span>Today</span><span style="color:var(--dep)">87d · first unlock</span><span>221d · maturity</span>
+        </div>
+      </div>
+      <!-- composition donut -->
+      <div class="bigcard">
+        <div class="k" style="margin-bottom:14px">Locked composition</div>
+        <div class="donutwrap">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="46" fill="none" stroke="#3b6ea5" stroke-width="16"/>
+            <circle cx="60" cy="60" r="46" fill="none" stroke="var(--dep)" stroke-width="16" stroke-linecap="butt"
+              stroke-dasharray="96.3 192.7" transform="rotate(-90 60 60)"/>
+            <text x="60" y="56" text-anchor="middle" font-size="20" font-weight="700" font-family="Geist Mono" fill="var(--fg)">750</text>
+            <text x="60" y="74" text-anchor="middle" font-size="10" fill="var(--muted)">CCX locked</text>
+          </svg>
+          <div class="legend">
+            <div class="row"><span class="dot" style="background:var(--dep)"></span><span>250 CCX · 4.60%<br><span style="color:var(--muted2)">unlocks 87d</span></span></div>
+            <div class="row"><span class="dot" style="background:#3b6ea5"></span><span>500 CCX · 5.40%<br><span style="color:var(--muted2)">unlocks 221d</span></span></div>
+          </div>
+        </div>
+      </div>
+      <!-- metric strip -->
+      <div class="strip">
+        <div class="cell"><div class="k">Total Est. Interest</div><div class="val" style="color:var(--accent)">+65.50 CCX</div></div>
+        <div class="cell"><div class="k">Weighted Avg APR</div><div class="val" style="color:var(--in)">5.13%</div></div>
+        <div class="cell"><div class="k">Next Unlock</div><div class="val">87 days</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ V3 ============ -->
+  <div class="variant"><span class="tag">V3</span><h2>Maturity ladder</h2><span class="d">Borderless number header over a timeline chart — each deposit a track, progress + maturity node on a shared axis.</span></div>
+  <div class="frame">
+    <div class="ladder">
+      <div class="lhead">
+        <div class="cell"><div class="k">Total Locked</div><div class="val" style="color:var(--dep)">750.00</div></div>
+        <div class="cell"><div class="k">Est. Interest</div><div class="val" style="color:var(--accent)">+65.50</div></div>
+        <div class="cell"><div class="k">Weighted APR</div><div class="val" style="color:var(--in)">5.13%</div></div>
+        <div class="cell"><div class="k">At Maturity</div><div class="val">779.50</div></div>
+      </div>
+      <div class="lbody">
+        <!-- deposit A: matures 87/221 = 39.4% across, fill 63% of its own span -->
+        <div class="track">
+          <div class="meta"><span>250.00 CCX <span class="pill amber" style="margin-left:6px">Unlocks soon</span></span><span class="mono" style="color:var(--muted)">4.60% · +11.50 → 261.50</span></div>
+          <div class="rail">
+            <div class="fill" style="width:39.4%;background:var(--accent)"></div>
+            <div class="node" style="left:39.4%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <!-- deposit B: matures 221/221 = 100% across -->
+        <div class="track">
+          <div class="meta"><span>500.00 CCX <span class="pill dep" style="margin-left:6px">Active</span></span><span class="mono" style="color:var(--muted)">5.40% · +54.00 → 554.00</span></div>
+          <div class="rail">
+            <div class="fill" style="width:100%;background:linear-gradient(90deg,#3b6ea5,var(--dep))"></div>
+            <div class="node" style="left:100%;background:var(--dep)"></div>
+          </div>
+        </div>
+        <div class="axis">
+          <span style="left:0">Today</span>
+          <span style="left:39.4%;color:var(--accent)">19 Aug · 87d</span>
+          <span style="left:100%">31 Dec · 221d</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body></html>
