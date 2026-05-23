@@ -62,7 +62,7 @@ export default function SettingsPage() {
           <CardContent className="divide-y divide-border">
             <Section title="General">
               <Row label="Language" description="Interface language">
-                <select className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring">
+                <select className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring">
                   <option>English</option>
                 </select>
               </Row>

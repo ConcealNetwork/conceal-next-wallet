@@ -66,7 +66,7 @@ function NavLink({ item, collapsed = false }: { item: (typeof mainNav)[number]; 
       href={item.href}
       aria-label={collapsed ? item.label : undefined}
       className={cn(
-        "flex min-h-11 cursor-pointer items-center rounded-xl text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex min-h-11 cursor-pointer items-center rounded-xl text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         collapsed ? "justify-center px-0" : "gap-3 px-4",
         active && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
       )}
@@ -138,7 +138,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
           href="/wallet/account"
           aria-label={collapsed ? "Conceal Wallet" : undefined}
           className={cn(
-            "flex cursor-pointer items-center rounded-xl py-1 transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "flex cursor-pointer items-center rounded-xl py-1 transition-colors duration-200 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
             collapsed ? "justify-center px-0" : "min-w-0 gap-3 px-2"
           )}
         >
@@ -186,13 +186,13 @@ export function Sidebar() {
             variant="ghost"
             aria-label={collapsed ? "Expand menu" : "Collapse menu"}
             onClick={toggle}
-            className="absolute right-0 top-7 z-50 size-7 min-h-0 translate-x-1/2 rounded-full border border-border bg-card p-0 text-muted-foreground shadow-sm hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="absolute right-0 top-7 z-50 size-7 min-h-0 translate-x-1/2 rounded-full border border-border bg-card p-0 text-muted-foreground shadow-xs hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <EdgeToggleIcon className="size-4" aria-hidden="true" />
           </Button>
         </TooltipProvider>
       </aside>
-      <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur lg:hidden">
+      <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur-sm lg:hidden">
         <Sheet>
           <SheetTrigger asChild>
             <Button type="button" variant="ghost" size="icon" aria-label="Open navigation">

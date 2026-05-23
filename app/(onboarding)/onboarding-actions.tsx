@@ -27,7 +27,7 @@ export function OpenWalletButton() {
   )
 }
 
-export const importMethods = [
+const importMethods = [
   { href: "/import/mnemonic", label: "Mnemonic", icon: FileKey, description: "Import placeholder seed words." },
   { href: "/import/keys", label: "Keys", icon: KeyRound, description: "Enter placeholder spend and view keys." },
   { href: "/import/file", label: "File", icon: Upload, description: "Pick a .wallet file for mock parsing." },
@@ -43,7 +43,7 @@ export function ImportMethodCards() {
           <Link
             key={method.href}
             href={method.href}
-            className="block cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="block cursor-pointer rounded-xl focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Card className="wallet-card h-full transition-colors duration-200 hover:border-ring">
               <CardContent className="flex h-full items-start gap-4">

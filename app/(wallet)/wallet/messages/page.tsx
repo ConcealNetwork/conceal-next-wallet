@@ -132,7 +132,7 @@ export default function MessagesPage() {
                         type="button"
                         onClick={() => openThread(conversation.address)}
                         className={cn(
-                          "flex w-full items-start gap-3 border-l-2 border-transparent px-4 py-3 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                          "flex w-full items-start gap-3 border-l-2 border-transparent px-4 py-3 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                           isActive && "bg-secondary",
                           conversation.unread > 0 && "border-l-primary"
                         )}

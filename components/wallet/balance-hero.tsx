@@ -82,7 +82,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Available · ready to spend</p>
-            <p className="mt-2 break-words font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]">
+            <p className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]">
               {availableLabel}
               <span className="ml-2 align-baseline text-xl font-medium text-muted-foreground">CCX</span>
             </p>

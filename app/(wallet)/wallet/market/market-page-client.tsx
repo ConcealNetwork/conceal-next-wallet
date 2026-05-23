@@ -157,7 +157,7 @@ function TimeframeToggle({
           onClick={() => onChange(range)}
           aria-pressed={active === range}
           className={cn(
-            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm font-semibold text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none",
+            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm font-semibold text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none",
             active === range && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground"
           )}
         >
@@ -277,7 +277,7 @@ function ValueMetric({
     <div className={TILE} style={tileDelay(index)}>
       <p className="text-sm text-muted-foreground">{label}</p>
       <div>
-        <p className={cn("break-words font-mono text-2xl font-bold tracking-tight", tone === "amber" ? "text-primary" : "text-foreground")}>{display}</p>
+        <p className={cn("wrap-break-word font-mono text-2xl font-bold tracking-tight", tone === "amber" ? "text-primary" : "text-foreground")}>{display}</p>
         <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
       </div>
     </div>

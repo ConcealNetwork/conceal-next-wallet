@@ -281,7 +281,7 @@ function TransactionSummary({
           </div>
           <div className="rounded-xl border border-border bg-card p-4 lg:min-w-[230px]">
             <p className="text-sm text-muted-foreground">Net Flow</p>
-            <p className={cn("mt-2 break-words font-mono text-2xl font-bold", netFlow >= 0 ? "text-wallet-incoming" : "text-wallet-outgoing")}>
+            <p className={cn("mt-2 wrap-break-word font-mono text-2xl font-bold", netFlow >= 0 ? "text-wallet-incoming" : "text-wallet-outgoing")}>
               {netFlowLabel}
             </p>
           </div>
@@ -317,7 +317,7 @@ function SummaryMetricCard({
     <div className="flex min-h-[118px] flex-col justify-between rounded-xl border border-border bg-secondary/60 p-4">
       <div>
         <p className="text-sm text-muted-foreground">{label}</p>
-        <p className={cn("mt-3 break-words font-mono text-2xl font-bold tracking-tight", toneClass)}>{valueLabel}</p>
+        <p className={cn("mt-3 wrap-break-word font-mono text-2xl font-bold tracking-tight", toneClass)}>{valueLabel}</p>
       </div>
       <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
     </div>
@@ -374,7 +374,7 @@ function TransactionListRow({
     <button
       type="button"
       onClick={() => onSelect(transaction)}
-      className="group flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors duration-200 hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between"
+      className="group flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors duration-200 hover:bg-secondary/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between"
       aria-label={`${meta.label} transaction for ${formatSignedAmount(transaction)} from ${timeAgo(transaction.timestamp)}`}
     >
       <div className="flex min-w-0 items-start gap-3">
@@ -489,7 +489,7 @@ function DetailRow({
         {Icon ? <Icon className="size-4" aria-hidden="true" /> : null}
         {label}
       </dt>
-      <dd className={cn("min-w-0 break-words text-sm text-foreground", mono && "break-all font-mono")}>{value}</dd>
+      <dd className={cn("min-w-0 wrap-break-word text-sm text-foreground", mono && "break-all font-mono")}>{value}</dd>
     </div>
   )
 }

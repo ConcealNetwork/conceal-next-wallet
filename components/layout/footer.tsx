@@ -26,7 +26,7 @@ export function Footer({ collapsed = false }: { collapsed?: boolean }) {
             <Link
               key={link.href}
               href={link.href}
-              className="cursor-pointer rounded-sm transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="cursor-pointer rounded-sm transition-colors duration-200 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
             >
               {link.label}
             </Link>

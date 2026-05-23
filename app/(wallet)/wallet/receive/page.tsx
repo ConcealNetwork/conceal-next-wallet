@@ -92,7 +92,7 @@ export default function ReceivePage() {
               description="Last 5 incoming"
               footer={
                 <Link
-                  className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   href="/wallet/transactions"
                 >
                   View all transactions →

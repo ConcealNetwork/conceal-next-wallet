@@ -16,7 +16,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors duration-200 placeholder:text-muted-foreground hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+      "flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors duration-200 placeholder:text-muted-foreground hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
       className
     )}
     {...props}
@@ -56,12 +56,12 @@ const SelectContent = React.forwardRef<
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
-      className={cn("relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md", className)}
+      className={cn("relative z-50 max-h-96 min-w-32 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md", className)}
       position={position}
       {...props}
     >
       <SelectScrollUpButton />
-      <SelectPrimitive.Viewport className={cn("p-1", position === "popper" && "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]")}>
+      <SelectPrimitive.Viewport className={cn("p-1", position === "popper" && "h-(--radix-select-trigger-height) w-full min-w-(--radix-select-trigger-width)")}>
         {children}
       </SelectPrimitive.Viewport>
       <SelectScrollDownButton />
@@ -84,7 +84,7 @@ const SelectItem = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
-    className={cn("relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-sm outline-none transition-colors duration-200 focus:bg-muted disabled:pointer-events-none disabled:opacity-50", className)}
+    className={cn("relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-sm outline-hidden transition-colors duration-200 focus:bg-muted disabled:pointer-events-none disabled:opacity-50", className)}
     {...props}
   >
     <span className="absolute left-2 flex size-3.5 items-center justify-center">

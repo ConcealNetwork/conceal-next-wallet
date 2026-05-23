@@ -95,7 +95,7 @@ export default function SendPage() {
                   <button
                     type="button"
                     onClick={() => form.setValue("amount", Number(available.toFixed(2)), { shouldValidate: true })}
-                    className="cursor-pointer rounded-sm text-xs font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="cursor-pointer rounded-sm text-xs font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     Max: {availableLabel}
                   </button>

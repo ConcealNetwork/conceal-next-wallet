@@ -33,7 +33,7 @@ export default function ExportPage() {
         <div className="space-y-5">
           <div className="rounded-xl bg-secondary p-4">
             <p className="text-sm text-muted-foreground">Mnemonic seed words</p>
-            <p className="mt-2 break-words font-mono text-sm text-foreground">{revealed ? data?.mnemonic : hidden}</p>
+            <p className="mt-2 wrap-break-word font-mono text-sm text-foreground">{revealed ? data?.mnemonic : hidden}</p>
           </div>
           <div className="rounded-xl bg-secondary p-4">
             <p className="text-sm text-muted-foreground">Spend key</p>

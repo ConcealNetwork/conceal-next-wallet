@@ -45,7 +45,7 @@ export default function DonatePage() {
       <div className="space-y-6">
         {/* Why support */}
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
-          <div className="wallet-card overflow-hidden bg-gradient-to-br from-primary/10 to-transparent p-6">
+          <div className="wallet-card overflow-hidden bg-linear-to-br from-primary/10 to-transparent p-6">
             <div className="flex items-center gap-2">
               <Sparkles className="size-5 text-primary" aria-hidden="true" />
               <h2 className="text-lg font-semibold">Why your support matters</h2>
@@ -77,7 +77,7 @@ export default function DonatePage() {
                       setCustom("")
                     }}
                     className={cn(
-                      "h-16 cursor-pointer rounded-xl border text-lg font-semibold transition-[border-color,background-color,transform] duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none",
+                      "h-16 cursor-pointer rounded-xl border text-lg font-semibold transition-[border-color,background-color,transform] duration-200 active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none",
                       active
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-secondary text-foreground hover:border-ring"
@@ -112,7 +112,7 @@ export default function DonatePage() {
                     value={frequency}
                     onChange={(event) => setFrequency(event.target.value)}
                     disabled={!recurring}
-                    className="ml-auto h-10 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    className="ml-auto h-10 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {FREQUENCIES.map((freq) => (
                       <option key={freq}>{freq}</option>
@@ -144,7 +144,7 @@ export default function DonatePage() {
                   type="button"
                   onClick={() => setMethod(item)}
                   className={cn(
-                    "min-h-10 cursor-pointer rounded-xl border px-4 text-sm transition-[border-color,color,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "min-h-10 cursor-pointer rounded-xl border px-4 text-sm transition-[border-color,color,background-color] duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                     method === item ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-ring hover:text-foreground"
                   )}
                 >

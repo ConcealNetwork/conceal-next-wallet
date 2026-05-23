@@ -298,7 +298,7 @@ function SummaryCard({
       style={{ animationDelay: `${120 + index * 40}ms` }}
     >
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={cn("mt-2 break-words font-mono text-2xl font-bold tracking-tight", toneClass)}>{valueLabel}</p>
+      <p className={cn("mt-2 wrap-break-word font-mono text-2xl font-bold tracking-tight", toneClass)}>{valueLabel}</p>
       <div className="mt-auto pt-4">{chart}</div>
       <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
     </div>
@@ -587,7 +587,7 @@ function DepositViewToggle({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
       )}
     >
@@ -768,7 +768,7 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
           >
             <span
               className={cn(
-                "absolute -left-[23px] top-1.5 size-3 rounded-full ring-4 ring-background",
+                "absolute left-[-23px] top-1.5 size-3 rounded-full ring-4 ring-background",
                 status === "matured" ? "bg-wallet-incoming" : "bg-primary"
               )}
               aria-hidden="true"

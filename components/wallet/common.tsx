@@ -93,7 +93,7 @@ export function StatCard({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className={cn("mt-3 break-words text-2xl font-bold tracking-tight", toneClass)}>{value}</p>
+            <p className={cn("mt-3 wrap-break-word text-2xl font-bold tracking-tight", toneClass)}>{value}</p>
             <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
           </div>
           {hasTrend ? (
@@ -191,7 +191,7 @@ export function FilterTabs({
           type="button"
           onClick={() => onChange(tab)}
           className={cn(
-            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none",
+            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none",
             active === tab && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground"
           )}
         >

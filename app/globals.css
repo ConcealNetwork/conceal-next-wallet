@@ -1,34 +1,99 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+@theme static {
+  --font-sans: "Geist", "Geist Fallback", Arial, sans-serif;
 
-  .animate-rise-in {
-    opacity: 0;
-    animation: rise-in 320ms ease-out forwards;
-  }
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
 
-  .animate-scale-x-in {
-    transform-origin: left center;
-    animation: scale-x-in 650ms ease-out both;
-  }
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
 
-  .animate-stroke-draw {
-    animation: stroke-draw 700ms ease-out both;
-  }
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
 
-  .animate-donut-sweep {
-    animation: donut-sweep 700ms ease-out both;
-  }
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
 
-  .animate-fade-in {
-    opacity: 0;
-    animation: fade-in 520ms ease-out forwards;
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-wallet-amber: #f5a623;
+  --color-wallet-incoming: #10b981;
+  --color-wallet-outgoing: #ef4444;
+  --color-wallet-deposit: #60a5fa;
+
+  --color-chrome: hsl(var(--chrome));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
   }
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+@utility animate-rise-in {
+  opacity: 0;
+  animation: rise-in 320ms ease-out forwards;
+}
+
+@utility animate-scale-x-in {
+  transform-origin: left center;
+  animation: scale-x-in 650ms ease-out both;
+}
+
+@utility animate-stroke-draw {
+  animation: stroke-draw 700ms ease-out both;
+}
+
+@utility animate-donut-sweep {
+  animation: donut-sweep 700ms ease-out both;
+}
+
+@utility animate-fade-in {
+  opacity: 0;
+  animation: fade-in 520ms ease-out forwards;
+}
+
+@utility wallet-card {
+  @apply rounded-xl border border-border bg-card shadow-[0_18px_70px_rgba(0,0,0,0.22)];
 }
 
 @layer base {
@@ -75,12 +140,6 @@
 
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
-  }
-}
-
-@layer components {
-  .wallet-card {
-    @apply rounded-xl border border-border bg-card shadow-[0_18px_70px_rgba(0,0,0,0.22)];
   }
 }
 

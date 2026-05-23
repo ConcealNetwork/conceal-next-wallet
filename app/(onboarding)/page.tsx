@@ -15,20 +15,20 @@ export default function LandingPage() {
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <OpenWalletButton />
         <Link
-          className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-border px-4 text-sm font-semibold text-white transition-colors duration-200 hover:border-ring hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-border px-4 text-sm font-semibold text-white transition-colors duration-200 hover:border-ring hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           href="/create"
         >
           Create Wallet
         </Link>
         <Link
-          className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-border px-4 text-sm font-semibold text-white transition-colors duration-200 hover:border-ring hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-border px-4 text-sm font-semibold text-white transition-colors duration-200 hover:border-ring hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           href="/import"
         >
           Import Wallet
         </Link>
       </div>
       <a
-        className="mt-6 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-6 inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         href="https://discord.gg/YbpHVSd"
         rel="noreferrer"
         target="_blank"

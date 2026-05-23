@@ -80,7 +80,7 @@ export default function ChangePasswordPage() {
                 <button
                   type="button"
                   onClick={() => setShow((value) => !value)}
-                  className="inline-flex cursor-pointer items-center gap-1 rounded-sm text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-sm text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                   {show ? "Hide" : "Show"}

@@ -148,7 +148,7 @@ export default function AddressBookPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {entries.map((entry) => (
                     <div key={entry.id} className="overflow-hidden rounded-2xl border border-border bg-secondary text-center">
-                      <div className="h-16 bg-gradient-to-b from-primary/15 to-transparent" />
+                      <div className="h-16 bg-linear-to-b from-primary/15 to-transparent" />
                       <ContactAvatar entry={entry} className="mx-auto -mt-12 size-24 rounded-full border-4 border-secondary text-3xl" />
                       <div className="px-5 pb-5 pt-3">
                         <p className="truncate font-semibold text-foreground">{entry.label}</p>
@@ -286,7 +286,7 @@ function ViewToggle({ active, onClick, label, children }: { active: boolean; onC
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
       )}
     >

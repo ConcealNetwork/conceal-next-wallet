@@ -282,7 +282,7 @@ function ChartCard({
       style={{ animationDelay: `${delay}ms` }}
     >
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 break-words font-mono text-2xl font-bold tracking-tight", toneClass)}>{value}</p>
+      <p className={cn("mt-1 wrap-break-word font-mono text-2xl font-bold tracking-tight", toneClass)}>{value}</p>
       <div className="mt-auto pt-4">{chart}</div>
       <p className="mt-2 text-xs text-muted-foreground">{detail}</p>
     </div>
