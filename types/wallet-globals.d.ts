@@ -46,7 +46,7 @@ declare const nacl: {
 declare const concealjs: any
 
 /** Set by applyWalletNetworkConfig() after legacy scripts load (v1 global). */
-declare const config: import("@/lib/config/network").WalletNetworkConfig
+declare const config: import("@/lib/config/config").WalletNetworkConfig
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const kjua: (options: Record<string, unknown>) => string
@@ -54,6 +54,6 @@ declare const kjua: (options: Record<string, unknown>) => string
 declare function saveAs(data: Blob, filename: string): void
 
 interface Window {
-  config: import("@/lib/config/network").WalletNetworkConfig
+  config: import("@/lib/config/config").WalletNetworkConfig
   logDebugMsg?: (...args: unknown[]) => void
 }

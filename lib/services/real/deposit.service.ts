@@ -3,6 +3,7 @@ import type {
   CreateDepositInput,
   DepositConstraints,
   DepositService,
+  PreviewCreateDepositInput,
   WithdrawDepositInput,
 } from "@/lib/services/deposit.service"
 import type { Deposit, Transaction } from "@/lib/types"
@@ -18,6 +19,9 @@ export const realDepositService: DepositService = {
   },
   async getDepositConstraints(): Promise<DepositConstraints> {
     return (await depositOps()).getDepositConstraintsOperation()
+  },
+  async previewCreateDeposit(input: PreviewCreateDepositInput) {
+    return (await depositOps()).previewCreateDepositOperation(input)
   },
   async createDeposit(input: CreateDepositInput): Promise<Deposit> {
     return (await depositOps()).createDepositOperation(input)

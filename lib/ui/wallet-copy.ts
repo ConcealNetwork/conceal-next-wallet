@@ -24,6 +24,18 @@ export const walletCopy = {
   sendSuccess: env.useMockWallet
     ? "Mock transaction submitted. No CCX was sent."
     : "Transaction submitted to the network.",
+  depositCreateSuccess: env.useMockWallet
+    ? "Mock deposit created."
+    : "Deposit submitted to the network.",
+  depositWithdrawSuccess: env.useMockWallet
+    ? "Mock withdrawal started."
+    : "Withdrawal submitted to the network.",
+  depositCreateConfirm: env.useMockWallet
+    ? "Confirm this mock deposit? No funds will be locked."
+    : "Confirm and broadcast this deposit transaction?",
+  depositWithdrawConfirm: env.useMockWallet
+    ? "Confirm this mock withdrawal?"
+    : "Confirm and broadcast this withdrawal? Principal plus interest will return to your wallet.",
 } as const
 
 /** HTML `required` on import fields — relaxed in mock so you can click through quickly. */

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Emit public/config.js for sync workers (self.config — workers cannot see window.config).
- * Keep in sync with lib/config/network.ts constants.
+ * Scalar fee fields are imported from lib/config/config.ts.
  */
 import { writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -9,6 +9,10 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const outPath = join(__dirname, "..", "public", "config.js")
+const localConfigPath = join(__dirname, "..", "lib", "config", "config.ts")
+
+const { walletNetworkScalars } = await import(localConfigPath)
+const s = walletNetworkScalars
 
 function buildPrettyAmounts() {
   const amounts = []
@@ -43,8 +47,8 @@ myGlobal.config = {
     testnetExplorerUrlHash: "https://explorer.testnet.conceal.network/index.html?hash={ID}#blockchain_transaction",
     testnetExplorerUrlBlock: "https://explorer.testnet.conceal.network/index.html?hash={ID}#blockchain_block",
     testnet: false,
-    coinUnitPlaces: 6,
-    coinDisplayUnitPlaces: 6,
+    coinUnitPlaces: ${s.coinUnitPlaces},
+    coinDisplayUnitPlaces: ${s.coinUnitPlaces},
     txMinConfirms: 10,
     txCoinbaseMinConfirms: 10,
     addressPrefix: 0x7AD4,
@@ -54,15 +58,15 @@ myGlobal.config = {
     integratedAddressPrefixTestnet: 0x7AD5,
     subAddressPrefixTestnet: 0x7AD6,
     UPGRADE_HEIGHT_V4: 45000,
-    coinFee: new JSBigInt('1000'),
-    minimumFee_V2: new JSBigInt('1000'),
-    remoteNodeFee: new JSBigInt('10000'),
-    feePerKB: new JSBigInt('1000'),
-    dustThreshold: new JSBigInt('10'),
+    coinFee: new JSBigInt('${s.coinFeeAtomic}'),
+    minimumFee_V2: new JSBigInt('${s.minimumFeeV2Atomic}'),
+    remoteNodeFee: new JSBigInt('${s.remoteNodeFeeAtomic}'),
+    feePerKB: new JSBigInt('${s.feePerKBAtomic}'),
+    dustThreshold: new JSBigInt('${s.dustThresholdAtomic}'),
     defaultMixin: 5,
     optimizeOutputs: 100,
     optimizeThreshold: 100,
-    messageTxAmount: new JSBigInt('100'),
+    messageTxAmount: new JSBigInt('${s.messageTxAmountAtomic}'),
     maxMessageSize: 260,
     cryptonoteMemPoolTxLifetime: (60 * 60 * 12),
     fusionTxMinInOutCountRatio: 4,
@@ -89,13 +93,13 @@ myGlobal.config = {
         'ccx7V4LeUXy2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQg84zbNrPduTX2whZ5pacfj',
         'ccx7YZ4RC97fqMh1bmzrFtDoSSiEgvEYzhaLE53SR9bh4QrDBUhGUH3TCmXqv8MTLjJDtnCeeaT5bLC2ZSzp3ZmQ19DoiPLLXS',
     ],
-    avgBlockTime: 120,
+    avgBlockTime: ${s.avgBlockTime},
     maxBlockNumber: 500000000,
-    depositMinAmountCoin: 1,
-    depositMinTermMonth: 1,
-    depositMinTermBlock: 21900,
-    depositMaxTermMonth: 12,
-    depositSmallWithdrawFee: 10,
+    depositMinAmountCoin: ${s.depositMinAmountCoin},
+    depositMinTermMonth: ${s.depositMinTermMonth},
+    depositMinTermBlock: ${s.depositMinTermBlock},
+    depositMaxTermMonth: ${s.depositMaxTermMonth},
+    depositSmallWithdrawFee: ${s.depositSmallWithdrawFee},
     depositRateV3: [0.029, 0.039, 0.049],
     PRETTY_AMOUNTS: ${JSON.stringify(prettyAmounts)},
 };

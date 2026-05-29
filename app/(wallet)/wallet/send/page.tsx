@@ -20,12 +20,15 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CcxAmount } from "@/components/wallet/ccx"
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common"
+import { COIN_FEE_ATOMIC, COIN_UNIT_PLACES, REMOTE_NODE_FEE_ATOMIC } from "@/lib/config/config"
 import { useCountUp } from "@/lib/hooks/use-count-up"
 import { useMarketData, useSendTransaction, useTransactions, useWalletInfo } from "@/lib/hooks"
 import { walletCopy } from "@/lib/ui/wallet-copy"
 import { ccxToNumber, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils"
 
-const NETWORK_FEE = 0.01
+const NETWORK_FEE = COIN_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES)
+const REMOTE_NODE_FEE = REMOTE_NODE_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES)
+const SEND_FEES = NETWORK_FEE + REMOTE_NODE_FEE
 
 const sendSchema = z.object({
   address: z
@@ -105,7 +108,7 @@ export default function SendPage() {
                 <Input id="amount" type="number" step="0.01" placeholder="0.00" {...form.register("amount", { valueAsNumber: true })} />
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">≈ {formatUsd(amount * price)} USD</span>
-                  {amount + NETWORK_FEE > available && amount > 0 ? (
+                  {amount + SEND_FEES > available && amount > 0 ? (
                     <span className="text-wallet-outgoing">Exceeds available balance</span>
                   ) : null}
                 </div>
@@ -125,8 +128,10 @@ export default function SendPage() {
               </div>
 
               <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Estimated network fee</span>
-                <span className="font-mono"><CcxAmount>{formatCcx(NETWORK_FEE)}</CcxAmount></span>
+                <span className="text-muted-foreground">Estimated fees</span>
+                <span className="font-mono">
+                  <CcxAmount>{formatCcx(SEND_FEES, 6)}</CcxAmount>
+                </span>
               </div>
 
               <Button
@@ -194,10 +199,11 @@ export default function SendPage() {
             <div className="space-y-3 text-sm">
               <Row label="To" value={truncateAddress(review.address, 10, 8)} mono />
               <Row label="Amount" value={formatCcx(review.amount)} mono />
-              <Row label="Network fee" value={formatCcx(NETWORK_FEE)} mono />
+              <Row label="Network fee" value={formatCcx(NETWORK_FEE, 6)} mono />
+              <Row label="Remote node fee" value={formatCcx(REMOTE_NODE_FEE, 6)} mono />
               <div className="my-1 border-t border-border" />
-              <Row label="Total" value={formatCcx(review.amount + NETWORK_FEE)} mono strong />
-              <Row label="≈ USD" value={formatUsd((review.amount + NETWORK_FEE) * price)} />
+              <Row label="Total" value={formatCcx(review.amount + SEND_FEES, 6)} mono strong />
+              <Row label="≈ USD" value={formatUsd((review.amount + SEND_FEES) * price)} />
               {review.paymentId ? <Row label="Payment ID" value={truncateAddress(review.paymentId, 8, 6)} mono /> : null}
             </div>
           ) : null}

@@ -1,3 +1,9 @@
+import {
+  AVG_BLOCK_TIME_SECONDS,
+  DEPOSIT_MAX_TERM_MONTH,
+  DEPOSIT_MIN_TERM_BLOCK,
+  DEPOSIT_MIN_TERM_MONTH,
+} from "@/lib/config/config"
 import type { Deposit, Transaction } from "@/lib/types"
 
 export type CreateDepositInput = {
@@ -10,12 +16,6 @@ export type WithdrawDepositInput = {
   txHash: string
   globalOutputIndex: number
 }
-
-/** Kept in sync with `createWalletNetworkConfig()` — no JSBigInt at module load. */
-const DEPOSIT_MIN_TERM_MONTH = 1
-const DEPOSIT_MAX_TERM_MONTH = 12
-const DEPOSIT_MIN_TERM_BLOCK = 21_900
-const AVG_BLOCK_TIME_SECONDS = 120
 
 export const DEPOSIT_DURATION_OPTIONS = Array.from(
   { length: DEPOSIT_MAX_TERM_MONTH - DEPOSIT_MIN_TERM_MONTH + 1 },
@@ -49,9 +49,20 @@ export type DepositConstraints = {
   hasPendingDeposit: boolean
 }
 
+export type PreviewCreateDepositInput = {
+  amount: number
+  durationMonths: number
+}
+
+export type PreviewCreateDepositResult = {
+  interestCcx: number
+  indicativeApr: number
+}
+
 export interface DepositService {
   listDeposits(): Promise<Deposit[]>
   getDepositConstraints(): Promise<DepositConstraints>
+  previewCreateDeposit(input: PreviewCreateDepositInput): Promise<PreviewCreateDepositResult>
   createDeposit(input: CreateDepositInput): Promise<Deposit>
   withdrawDeposit(input: WithdrawDepositInput): Promise<Transaction>
 }

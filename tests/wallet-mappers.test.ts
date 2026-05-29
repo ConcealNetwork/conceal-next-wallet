@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { WalletNetworkConfig } from "@/lib/config/network"
+import { createWalletNetworkConfig, walletNetworkScalars } from "@/lib/config/config"
 import {
   clampImportHeight,
   deriveIndicativeDepositApr,
@@ -104,20 +104,14 @@ describe("wallet mappers", () => {
   })
 
   it("maps core deposits to UI deposits with status and unlock progress", () => {
-    const network = {
-      depositMinTermBlock: 21_900,
-      coinUnitPlaces: 6,
-      avgBlockTime: 120,
-      depositMinAmountCoin: 1,
-      coinFee: 1000,
-    } as WalletNetworkConfig
+    const network = createWalletNetworkConfig()
     const walletAddress = "ccx7TestWalletAddress0000000000000000000000000000000000000000000000000000"
     const deposit = new Deposit()
     deposit.txHash = "dep-tx"
     deposit.globalOutputIndex = 2
     deposit.amount = 1_000_000
     deposit.interest = 50_000
-    deposit.term = network.depositMinTermBlock * 6
+    deposit.term = walletNetworkScalars.depositMinTermBlock * 6
     deposit.blockHeight = 100
     deposit.unlockHeight = 100 + deposit.term
 

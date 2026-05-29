@@ -15,12 +15,14 @@ import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvid
 import { Storage } from "./Storage"
 import {
   clampImportHeight,
+  deriveIndicativeDepositApr,
   getWalletDepositConstraints,
   listWalletDeposits,
   listWalletTransactions,
   mapCoreDeposit,
   mapWalletToInfo,
 } from "./mappers"
+import { InterestCalculator } from "./Interest"
 import { Deposit as CoreDeposit } from "./Transaction"
 import {
   disconnectWalletRuntime,
@@ -349,6 +351,26 @@ export async function getDepositConstraintsOperation() {
   const explorer = BlockchainExplorerProvider.getInstance()
   const height = await explorer.getHeight()
   return getWalletDepositConstraints(wallet, height)
+}
+
+export async function previewCreateDepositOperation(input: {
+  amount: number
+  durationMonths: number
+}): Promise<{ interestCcx: number; indicativeApr: number }> {
+  await ensureAllWalletLegacyLibs()
+  const explorer = BlockchainExplorerProvider.getInstance()
+  const lockHeight = await explorer.getHeight()
+  const amountCoins = Math.floor(input.amount)
+  const months = Math.floor(input.durationMonths)
+  const termBlocks = months * config.depositMinTermBlock
+  const currencyDivider = Math.pow(10, config.coinUnitPlaces)
+  const amountAtomic = amountCoins * currencyDivider
+  const interestAtomic = InterestCalculator.calculateInterest(amountAtomic, termBlocks, lockHeight)
+
+  return {
+    interestCcx: interestAtomic / currencyDivider,
+    indicativeApr: deriveIndicativeDepositApr(amountAtomic, interestAtomic, termBlocks),
+  }
 }
 
 export async function createDepositOperation(input: CreateDepositInput): Promise<Deposit> {

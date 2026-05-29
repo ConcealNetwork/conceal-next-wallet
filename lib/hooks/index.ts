@@ -122,6 +122,15 @@ export function useDepositConstraints() {
   })
 }
 
+export function useDepositPreview(amount: number, durationMonths: number, enabled: boolean) {
+  return useQuery({
+    queryKey: [...queryKeys.deposits, "preview", amount, durationMonths] as const,
+    queryFn: () => services.deposits.previewCreateDeposit({ amount, durationMonths }),
+    enabled: enabled && Number.isFinite(amount) && amount >= 1 && durationMonths >= 1,
+    staleTime: 30_000,
+  })
+}
+
 export function useAddressBook() {
   return useQuery({ queryKey: queryKeys.addressBook, queryFn: () => services.addressBook.listEntries() })
 }

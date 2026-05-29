@@ -10,6 +10,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -19,14 +20,20 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CcxAmount } from "@/components/wallet/ccx"
 import { EmptyState, PageHeader, SectionCard } from "@/components/wallet/common"
-import { useCreateDeposit, useDeposits } from "@/lib/hooks"
+import { useCreateDeposit, useDepositConstraints, useDepositPreview, useDeposits, useWithdrawDeposit } from "@/lib/hooks"
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
 import {
+  COIN_FEE_ATOMIC,
+  COIN_UNIT_PLACES,
+  DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC,
+} from "@/lib/config/config"
+import {
   DEPOSIT_DURATION_OPTIONS,
-  estimateDepositInterest,
-  getDepositApr,
+  estimateDepositUnlockDays,
 } from "@/lib/services/deposit.service"
+import type { CreateDepositInput } from "@/lib/services/deposit.service"
 import type { Deposit } from "@/lib/types"
+import { walletCopy } from "@/lib/ui/wallet-copy"
 import { ccxToNumber, cn, formatCcx, truncateAddress } from "@/lib/utils"
 
 const ResponsiveContainer = dynamic(() => import("recharts").then((mod) => mod.ResponsiveContainer), { ssr: false })
@@ -58,14 +65,27 @@ const DEPOSITS_VIEW_KEY = "conceal-deposits-view"
 
 export default function DepositsPageClient() {
   const { data = [] } = useDeposits()
+  const constraints = useDepositConstraints()
   const createDeposit = useCreateDeposit()
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<DepositView>("cards")
 
-  const sortedDeposits = useMemo(
-    () => data.toSorted((a, b) => a.unlocksInDays - b.unlocksInDays),
-    [data]
+  const openDeposits = useMemo(
+    () => data.filter((deposit) => deposit.status !== "spent"),
+    [data],
   )
+
+  const withdrawnDeposits = useMemo(
+    () => data.filter((deposit) => deposit.status === "spent"),
+    [data],
+  )
+
+  const sortedDeposits = useMemo(() => {
+    const open = openDeposits.toSorted((a, b) => a.unlocksInDays - b.unlocksInDays)
+    return [...open, ...withdrawnDeposits]
+  }, [openDeposits, withdrawnDeposits])
+
+  const createDisabled = constraints.data?.isDepositDisabled ?? false
 
   useEffect(() => {
     function applyStoredView(next: DepositView) {
@@ -91,6 +111,7 @@ export default function DepositsPageClient() {
             type="button"
             className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
             onClick={() => setOpen(true)}
+            disabled={createDisabled}
           >
             <Plus className="size-4" aria-hidden="true" />
             Create New Deposit
@@ -98,9 +119,27 @@ export default function DepositsPageClient() {
         }
       />
 
+      {constraints.data?.isWalletSyncing ? (
+        <div
+          className="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground"
+          role="status"
+        >
+          Wallet is syncing — create and withdraw are disabled until the chain is caught up.
+        </div>
+      ) : null}
+
+      {constraints.data?.hasPendingDeposit ? (
+        <div
+          className="mb-4 rounded-xl border border-border bg-secondary/60 px-4 py-3 text-sm text-muted-foreground"
+          role="status"
+        >
+          A deposit transaction is pending confirmation in the mempool.
+        </div>
+      ) : null}
+
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <SectionCard title="Summary" description="Locked CCX, maturity timing, and blended APR">
-          <DepositsSummary deposits={data} />
+          <DepositsSummary deposits={openDeposits} />
         </SectionCard>
       </div>
 
@@ -108,21 +147,32 @@ export default function DepositsPageClient() {
         <SectionCard>
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold leading-none tracking-tight text-card-foreground">Active Deposits</h2>
+              <h2 className="text-lg font-semibold leading-none tracking-tight text-card-foreground">
+                {withdrawnDeposits.length > 0 ? "All Deposits" : "Active Deposits"}
+              </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                {data.length > 0
-                  ? `${data.length} time-locked position${data.length === 1 ? "" : "s"}`
-                  : "No active time locks"}
+                {data.length === 0
+                  ? "No deposits yet"
+                  : [
+                      openDeposits.length > 0
+                        ? `${openDeposits.length} open position${openDeposits.length === 1 ? "" : "s"}`
+                        : null,
+                      withdrawnDeposits.length > 0
+                        ? `${withdrawnDeposits.length} withdrawn`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
               </p>
             </div>
-            {sortedDeposits.length > 0 ? (
+            {data.length > 0 ? (
               <DepositViewSwitcher value={view} onChange={chooseView} />
             ) : null}
           </div>
-          {sortedDeposits.length > 0 ? (
+          {data.length > 0 ? (
             <DepositsView deposits={sortedDeposits} view={view} />
           ) : (
-            <DepositEmptyState onCreate={() => setOpen(true)} />
+            <DepositEmptyState onCreate={() => setOpen(true)} createDisabled={createDisabled} />
           )}
         </SectionCard>
       </div>
@@ -130,12 +180,16 @@ export default function DepositsPageClient() {
       <CreateDepositDialog
         open={open}
         isPending={createDeposit.isPending}
+        constraints={constraints.data}
         onOpenChange={setOpen}
         onCreate={(input) => {
           createDeposit.mutate(input, {
             onSuccess: () => {
-              toast.success("Mock deposit created.")
+              toast.success(walletCopy.depositCreateSuccess)
               setOpen(false)
+            },
+            onError: (error) => {
+              toast.error(error instanceof Error ? error.message : "Failed to create deposit.")
             },
           })
         }}
@@ -177,7 +231,10 @@ function buildProjection(deposits: Deposit[], maxDays: number): ProjectionPoint[
 }
 
 function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
-  const activeDeposits = useMemo(() => deposits.filter((deposit) => !isMatured(deposit)), [deposits])
+  const activeDeposits = useMemo(
+    () => deposits.filter((deposit) => deposit.status === "active"),
+    [deposits],
+  )
   const totalLocked = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0)
   const totalInterest = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.interest), 0)
   const totalAtMaturity = totalLocked + totalInterest
@@ -615,7 +672,8 @@ function DepositsView({ deposits, view }: { deposits: Deposit[]; view: DepositVi
 
 function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
   const status = getDepositStatus(deposit)
-  const Icon = status === "matured" ? Unlock : Lock
+  const isWithdrawn = deposit.status === "spent"
+  const Icon = isWithdrawn || status === "matured" ? Unlock : Lock
   const principal = ccxToNumber(deposit.amount)
   const interest = ccxToNumber(deposit.interest)
   const maturityValue = principal + interest
@@ -623,7 +681,10 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
 
   return (
     <article
-      className="animate-rise-in rounded-xl border border-border bg-secondary/60 p-4 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 sm:p-5"
+      className={cn(
+        "animate-rise-in rounded-xl border border-border bg-secondary/60 p-4 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 sm:p-5",
+        isWithdrawn && "opacity-75",
+      )}
       style={{ animationDelay: `${160 + index * 55}ms` }}
       aria-labelledby={`${deposit.id}-title`}
     >
@@ -632,7 +693,9 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
           <span
             className={cn(
               "grid size-11 shrink-0 place-items-center rounded-xl",
-              status === "matured" ? "bg-wallet-incoming/10 text-wallet-incoming" : "bg-card text-primary"
+              isWithdrawn && "bg-muted text-muted-foreground",
+              !isWithdrawn && status === "matured" && "bg-wallet-incoming/10 text-wallet-incoming",
+              !isWithdrawn && status !== "matured" && "bg-card text-primary",
             )}
             aria-hidden="true"
           >
@@ -641,25 +704,24 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 id={`${deposit.id}-title`} className="font-semibold text-foreground">
-                {status === "matured" ? "Ready to withdraw" : `Unlocks in ${deposit.unlocksInDays} days`}
+                {isWithdrawn
+                  ? "Withdrawn"
+                  : status === "withdrawing"
+                    ? "Withdrawal in progress"
+                    : status === "matured"
+                      ? "Ready to withdraw"
+                      : `Unlocks in ${deposit.unlocksInDays} days`}
               </h2>
               <DepositStatusPill status={status} />
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Matures {maturityDate} - wallet {truncateAddress(deposit.address)}
+              {isWithdrawn
+                ? `Principal ${formatCcx(deposit.amount)} + ${formatCcx(deposit.interest, 4)} interest · ${truncateAddress(deposit.address)}`
+                : `Matures ${maturityDate} · wallet ${truncateAddress(deposit.address)}`}
             </p>
           </div>
         </div>
-        <Button
-          type="button"
-          variant={status === "matured" ? "default" : "outline"}
-          disabled={status !== "matured"}
-          onClick={() => toast.success("Mock withdrawal started.")}
-          className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100 lg:w-auto"
-        >
-          <Unlock className="size-4" aria-hidden="true" />
-          Withdraw
-        </Button>
+        {!isWithdrawn ? <DepositWithdrawButton deposit={deposit} size="default" /> : null}
       </div>
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -670,13 +732,15 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
         <DepositDetail label="Duration" value={`${deposit.durationMonths} months`} tone="default" />
       </dl>
 
-      <div className="mt-5 rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm font-medium text-muted-foreground">Deposit Progress</p>
-          <p className="font-mono text-sm font-semibold text-foreground">{Math.min(deposit.progressPct, 100)}% complete</p>
+      {!isWithdrawn ? (
+        <div className="mt-5 rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm font-medium text-muted-foreground">Deposit Progress</p>
+            <p className="font-mono text-sm font-semibold text-foreground">{Math.min(deposit.progressPct, 100)}% complete</p>
+          </div>
+          <AnimatedProgress value={deposit.progressPct} label={`${Math.min(deposit.progressPct, 100)} percent complete`} />
         </div>
-        <AnimatedProgress value={deposit.progressPct} label={`${Math.min(deposit.progressPct, 100)} percent complete`} />
-      </div>
+      ) : null}
     </article>
   )
 }
@@ -707,7 +771,10 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
             return (
               <tr
                 key={deposit.id}
-                className="animate-rise-in border-b border-border last:border-b-0 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
+                className={cn(
+                  "animate-rise-in border-b border-border last:border-b-0 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100",
+                  deposit.status === "spent" && "opacity-70",
+                )}
                 style={{ animationDelay: `${120 + index * 40}ms` }}
               >
                 <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-foreground">
@@ -765,14 +832,19 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
         return (
           <article
             key={deposit.id}
-            className="animate-rise-in relative pb-6 last:pb-0 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
+            className={cn(
+              "animate-rise-in relative pb-6 last:pb-0 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100",
+              deposit.status === "spent" && "opacity-70",
+            )}
             style={{ animationDelay: `${120 + index * 50}ms` }}
             aria-labelledby={`${deposit.id}-timeline-title`}
           >
             <span
               className={cn(
                 "absolute left-[-23px] top-1.5 size-3 rounded-full ring-4 ring-background",
-                status === "matured" ? "bg-wallet-incoming" : "bg-primary"
+                deposit.status === "spent" && "bg-muted-foreground",
+                deposit.status !== "spent" && status === "matured" && "bg-wallet-incoming",
+                deposit.status !== "spent" && status !== "matured" && "bg-primary",
               )}
               aria-hidden="true"
             />
@@ -804,7 +876,7 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
                   />
                 </div>
               </div>
-              {status === "matured" ? <DepositWithdrawButton deposit={deposit} /> : null}
+              {canWithdrawDeposit(deposit) ? <DepositWithdrawButton deposit={deposit} /> : null}
             </div>
           </article>
         )
@@ -839,21 +911,81 @@ function DepositDetail({
   )
 }
 
-function DepositWithdrawButton({ deposit }: { deposit: Deposit }) {
-  const canWithdraw = isMatured(deposit)
+function DepositWithdrawButton({
+  deposit,
+  size = "xs",
+}: {
+  deposit: Deposit
+  size?: "default" | "xs"
+}) {
+  const withdraw = useWithdrawDeposit()
+  const [open, setOpen] = useState(false)
+  const canWithdraw = canWithdrawDeposit(deposit)
+  const principal = ccxToNumber(deposit.amount)
+  const interest = ccxToNumber(deposit.interest)
+  const withdrawFee = DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES)
+  const netReceive = principal + interest - withdrawFee
+
+  function confirmWithdraw() {
+    withdraw.mutate(
+      { txHash: deposit.txHash, globalOutputIndex: deposit.globalOutputIndex },
+      {
+        onSuccess: () => {
+          toast.success(walletCopy.depositWithdrawSuccess)
+          setOpen(false)
+        },
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : "Withdrawal failed.")
+        },
+      },
+    )
+  }
+
+  if (deposit.status === "spent") {
+    return (
+      <Badge variant="secondary" className="min-h-8 px-2.5 text-muted-foreground">
+        Withdrawn
+      </Badge>
+    )
+  }
 
   return (
-    <Button
-      type="button"
-      variant={canWithdraw ? "default" : "outline"}
-      size="xs"
-      disabled={!canWithdraw}
-      onClick={() => toast.success("Mock withdrawal started.")}
-      className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
-    >
-      <Unlock className="size-4" aria-hidden="true" />
-      Withdraw
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant={canWithdraw ? "default" : "outline"}
+        size={size}
+        disabled={!canWithdraw || withdraw.isPending}
+        onClick={() => setOpen(true)}
+        className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
+      >
+        <Unlock className="size-4" aria-hidden="true" />
+        {deposit.withdrawPending ? "Withdrawing…" : "Withdraw"}
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm withdrawal</DialogTitle>
+            <DialogDescription>{walletCopy.depositWithdrawConfirm}</DialogDescription>
+          </DialogHeader>
+          <dl className="space-y-2 text-sm">
+            <ConfirmRow label="Principal" value={formatCcx(deposit.amount)} />
+            <ConfirmRow label="Interest" value={formatCcx(deposit.interest, 4)} tone="incoming" />
+            <ConfirmRow label="Network fee" value={formatCcx(withdrawFee, 6)} />
+            <ConfirmRow label="You receive" value={formatCcx(Math.max(netReceive, 0), 4)} strong />
+          </dl>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={confirmWithdraw} disabled={withdraw.isPending}>
+              {withdraw.isPending ? "Withdrawing…" : "Confirm & Withdraw"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -899,9 +1031,11 @@ function AnimatedProgress({
 
 function DepositStatusPill({ status }: { status: DepositStatus }) {
   const label = {
-    matured: "Matured",
+    matured: "Ready",
     soon: "Unlocks soon",
     active: "Active",
+    spent: "Withdrawn",
+    withdrawing: "Withdrawing",
   }[status]
 
   return (
@@ -911,7 +1045,9 @@ function DepositStatusPill({ status }: { status: DepositStatus }) {
         "min-h-7 px-2.5 py-1",
         status === "matured" && "bg-wallet-incoming/10 text-wallet-incoming",
         status === "soon" && "bg-primary/10 text-primary",
-        status === "active" && "bg-wallet-deposit/10 text-wallet-deposit"
+        status === "active" && "bg-wallet-deposit/10 text-wallet-deposit",
+        status === "spent" && "text-muted-foreground",
+        status === "withdrawing" && "bg-wallet-outgoing/10 text-wallet-outgoing",
       )}
     >
       {label}
@@ -919,7 +1055,13 @@ function DepositStatusPill({ status }: { status: DepositStatus }) {
   )
 }
 
-function DepositEmptyState({ onCreate }: { onCreate: () => void }) {
+function DepositEmptyState({
+  onCreate,
+  createDisabled,
+}: {
+  onCreate: () => void
+  createDisabled?: boolean
+}) {
   return (
     <div>
       <EmptyState
@@ -928,7 +1070,12 @@ function DepositEmptyState({ onCreate }: { onCreate: () => void }) {
         illustration="/brand/empty/deposits.png"
       />
       <div className="mt-4 flex justify-center">
-        <Button type="button" onClick={onCreate} className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100">
+        <Button
+          type="button"
+          onClick={onCreate}
+          disabled={createDisabled}
+          className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
+        >
           <Plus className="size-4" aria-hidden="true" />
           Create New Deposit
         </Button>
@@ -940,110 +1087,222 @@ function DepositEmptyState({ onCreate }: { onCreate: () => void }) {
 function CreateDepositDialog({
   open,
   isPending,
+  constraints,
   onOpenChange,
   onCreate,
 }: {
   open: boolean
   isPending: boolean
+  constraints?: {
+    maxDepositAmount: number
+    isDepositDisabled: boolean
+  }
   onOpenChange: (open: boolean) => void
-  onCreate: (input: { amount: number; durationMonths: number }) => void
+  onCreate: (input: CreateDepositInput) => void
 }) {
   const [amount, setAmount] = useState("100")
   const [duration, setDuration] = useState("12")
   const [amountError, setAmountError] = useState("")
+  const [step, setStep] = useState<"form" | "confirm">("form")
   const durationMonths = Number(duration)
-  const amountValue = Number(amount)
-  const amountIsValid = Number.isFinite(amountValue) && amountValue > 0
-  const apr = getDepositApr(durationMonths)
-  const previewInterest = amountIsValid ? estimateDepositInterest(amountValue, durationMonths) : 0
-  const maturityDate = formatDate(addMonths(new Date(), durationMonths))
+  const amountValue = Math.floor(Number(amount))
+  const maxAmount = constraints?.maxDepositAmount ?? 0
+  const amountIsValid =
+    Number.isFinite(amountValue) && amountValue >= 1 && (maxAmount <= 0 || amountValue <= maxAmount)
+  const preview = useDepositPreview(amountValue, durationMonths, open && step === "form" && amountIsValid)
+  const previewInterest = preview.data?.interestCcx ?? 0
+  const previewApr = preview.data?.indicativeApr ?? 0
+  const createFee = COIN_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES)
+  const maturityDate = formatDate(addDays(new Date(), estimateDepositUnlockDays(durationMonths)))
 
-  function submit() {
-    if (!amountIsValid) {
-      setAmountError("Enter an amount greater than 0.")
+  useEffect(() => {
+    if (!open) setStep("form")
+  }, [open])
+
+  function submitForm() {
+    if (!Number.isFinite(amountValue) || amountValue < 1) {
+      setAmountError("Enter a whole CCX amount of at least 1.")
       return
     }
-
+    if (maxAmount > 0 && amountValue > maxAmount) {
+      setAmountError(`Maximum deposit is ${maxAmount.toLocaleString("en-US")} CCX.`)
+      return
+    }
     setAmountError("")
+    setStep("confirm")
+  }
+
+  function confirmCreate() {
     onCreate({ amount: amountValue, durationMonths })
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next)
+        if (!next) setStep("form")
+      }}
+    >
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create New Deposit</DialogTitle>
-          <DialogDescription>
-            Estimate interest and maturity before creating a mock time lock.
-          </DialogDescription>
-        </DialogHeader>
+        {step === "form" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Create New Deposit</DialogTitle>
+              <DialogDescription>
+                Lock CCX for {durationMonths} month{durationMonths === 1 ? "" : "s"} and earn interest at term.
+              </DialogDescription>
+            </DialogHeader>
 
-        <div className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-[1fr_170px]">
-            <div className="space-y-2">
-              <Label htmlFor="deposit-amount">Amount</Label>
-              <Input
-                id="deposit-amount"
-                value={amount}
-                onChange={(event) => {
-                  setAmount(event.target.value)
-                  if (amountError) setAmountError("")
-                }}
-                type="number"
-                min="0"
-                step="0.000001"
-                inputMode="decimal"
-                aria-invalid={amountError ? "true" : "false"}
-                aria-describedby={amountError ? "deposit-amount-error" : undefined}
+            <div className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-[1fr_170px]">
+                <div className="space-y-2">
+                  <Label htmlFor="deposit-amount">Amount (CCX)</Label>
+                  <Input
+                    id="deposit-amount"
+                    value={amount}
+                    onChange={(event) => {
+                      setAmount(event.target.value.replace(/[^\d]/g, ""))
+                      if (amountError) setAmountError("")
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    aria-invalid={amountError ? "true" : "false"}
+                    aria-describedby={amountError ? "deposit-amount-error" : "deposit-max-hint"}
+                  />
+                  {amountError ? (
+                    <p id="deposit-amount-error" className="text-sm text-destructive">
+                      {amountError}
+                    </p>
+                  ) : (
+                    <p id="deposit-max-hint" className="text-xs text-muted-foreground">
+                      {maxAmount > 0 ? (
+                        <button
+                          type="button"
+                          className="cursor-pointer font-semibold text-primary hover:text-primary/80"
+                          onClick={() => setAmount(String(maxAmount))}
+                        >
+                          Max {maxAmount.toLocaleString("en-US")} CCX
+                        </button>
+                      ) : (
+                        "Available balance loading…"
+                      )}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="deposit-duration">Duration</Label>
+                  <Select value={duration} onValueChange={setDuration}>
+                    <SelectTrigger id="deposit-duration" aria-label="Deposit duration">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEPOSIT_DURATION_OPTIONS.map((months) => (
+                        <SelectItem key={months} value={String(months)}>
+                          {months} month{months === 1 ? "" : "s"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-secondary/60 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <CalendarClock className="size-4 text-primary" aria-hidden="true" />
+                  Live Preview
+                </div>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <PreviewRow
+                    label="Indicative APR"
+                    value={preview.isFetching ? "…" : `${previewApr.toFixed(2)}%`}
+                  />
+                  <PreviewRow label="Est. unlock" value={maturityDate} />
+                  <PreviewRow
+                    label="Est. Interest"
+                    value={preview.isFetching ? "…" : formatCcx(previewInterest, 4)}
+                    tone="incoming"
+                  />
+                  <PreviewRow
+                    label="Value at Maturity"
+                    value={
+                      preview.isFetching || !amountIsValid
+                        ? "…"
+                        : formatCcx(amountValue + previewInterest, 4)
+                    }
+                    tone="deposit"
+                  />
+                </dl>
+              </div>
+
+              <Button
+                type="button"
+                className="w-full gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
+                onClick={submitForm}
+                disabled={constraints?.isDepositDisabled || !amountIsValid || preview.isFetching}
+              >
+                <Lock className="size-4" aria-hidden="true" />
+                Review Deposit
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Confirm deposit</DialogTitle>
+              <DialogDescription>{walletCopy.depositCreateConfirm}</DialogDescription>
+            </DialogHeader>
+            <dl className="space-y-2 text-sm">
+              <ConfirmRow label="Amount" value={formatCcx(amountValue)} />
+              <ConfirmRow label="Term" value={`${durationMonths} month${durationMonths === 1 ? "" : "s"}`} />
+              <ConfirmRow label="Est. interest" value={formatCcx(previewInterest, 4)} tone="incoming" />
+              <ConfirmRow label="Network fee" value={formatCcx(createFee, 6)} />
+              <ConfirmRow
+                label="Total debit"
+                value={formatCcx(amountValue + createFee, 6)}
+                strong
               />
-              {amountError ? (
-                <p id="deposit-amount-error" className="text-sm text-destructive">
-                  {amountError}
-                </p>
-              ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="deposit-duration">Duration</Label>
-              <Select value={duration} onValueChange={setDuration}>
-                <SelectTrigger id="deposit-duration" aria-label="Deposit duration">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEPOSIT_DURATION_OPTIONS.map((months) => (
-                    <SelectItem key={months} value={String(months)}>
-                      {months} months - {getDepositApr(months).toFixed(2)}% APR
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border bg-secondary/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <CalendarClock className="size-4 text-primary" aria-hidden="true" />
-              Live Preview
-            </div>
-            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-              <PreviewRow label="APR" value={`${apr.toFixed(2)}%`} />
-              <PreviewRow label="Maturity" value={maturityDate} />
-              <PreviewRow label="Est. Interest" value={formatCcx(previewInterest, 4)} tone="incoming" />
-              <PreviewRow label="Value at Maturity" value={formatCcx(amountIsValid ? amountValue + previewInterest : 0, 4)} tone="deposit" />
             </dl>
-          </div>
-
-          <Button
-            type="button"
-            className="w-full gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
-            onClick={submit}
-            disabled={isPending}
-          >
-            <Lock className="size-4" aria-hidden="true" />
-            {isPending ? "Creating" : "Create Deposit"}
-          </Button>
-        </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setStep("form")}>
+                Back
+              </Button>
+              <Button type="button" onClick={confirmCreate} disabled={isPending}>
+                {isPending ? "Creating…" : "Confirm & Create"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+function ConfirmRow({
+  label,
+  value,
+  tone,
+  strong,
+}: {
+  label: string
+  value: string
+  tone?: "incoming"
+  strong?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd
+        className={cn(
+          "font-mono text-foreground",
+          tone === "incoming" && "text-wallet-incoming",
+          strong && "font-semibold",
+        )}
+      >
+        <CcxAmount>{value}</CcxAmount>
+      </dd>
+    </div>
   )
 }
 
@@ -1072,16 +1331,22 @@ function PreviewRow({
   )
 }
 
-type DepositStatus = "matured" | "soon" | "active"
+type DepositStatus = "matured" | "soon" | "active" | "spent" | "withdrawing"
+
+function canWithdrawDeposit(deposit: Deposit) {
+  return deposit.status === "unlocked" && !deposit.withdrawPending
+}
 
 function getDepositStatus(deposit: Deposit): DepositStatus {
-  if (isMatured(deposit)) return "matured"
+  if (deposit.status === "spent") return "spent"
+  if (deposit.withdrawPending) return "withdrawing"
+  if (canWithdrawDeposit(deposit)) return "matured"
   if (deposit.unlocksInDays < 14) return "soon"
   return "active"
 }
 
 function isMatured(deposit: Deposit) {
-  return deposit.progressPct >= 100 || deposit.unlocksInDays <= 0
+  return canWithdrawDeposit(deposit)
 }
 
 function getProgressPct(deposit: Deposit) {
@@ -1089,12 +1354,16 @@ function getProgressPct(deposit: Deposit) {
 }
 
 function getUnlocksLabel(deposit: Deposit, variant: "table" | "timeline") {
-  if (isMatured(deposit)) return variant === "table" ? "Ready" : "Ready now"
+  if (deposit.status === "spent") return "Withdrawn"
+  if (deposit.withdrawPending) return "Pending"
+  if (canWithdrawDeposit(deposit)) return variant === "table" ? "Ready" : "Ready now"
   return `${deposit.unlocksInDays} day${deposit.unlocksInDays === 1 ? "" : "s"}`
 }
 
 function getTimelineDateLabel(deposit: Deposit) {
-  if (isMatured(deposit)) return "Ready now"
+  if (deposit.status === "spent") return "Withdrawn"
+  if (deposit.withdrawPending) return "Withdrawal pending"
+  if (canWithdrawDeposit(deposit)) return "Ready now"
   return `${formatMaturityDate(deposit.unlocksInDays)} - in ${getUnlocksLabel(deposit, "timeline")}`
 }
 
@@ -1109,11 +1378,5 @@ function formatDate(date: Date) {
 function addDays(date: Date, days: number) {
   const nextDate = new Date(date)
   nextDate.setDate(nextDate.getDate() + days)
-  return nextDate
-}
-
-function addMonths(date: Date, months: number) {
-  const nextDate = new Date(date)
-  nextDate.setMonth(nextDate.getMonth() + months)
   return nextDate
 }

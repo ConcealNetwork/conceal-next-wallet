@@ -22,6 +22,14 @@ export const mockDepositService: DepositService = {
       hasPendingDeposit: false,
     }
   },
+  async previewCreateDeposit(input) {
+    await mockDelay()
+    const interestCcx = estimateDepositInterest(input.amount, input.durationMonths)
+    return {
+      interestCcx,
+      indicativeApr: getDepositApr(input.durationMonths),
+    }
+  },
   async createDeposit(input) {
     await mockDelay()
     return {

@@ -7,7 +7,7 @@
  * Sources vendored under public/lib/ (copied from conceal-web-wallet/src/lib/).
  */
 
-import { applyWalletNetworkConfig } from "@/lib/config/network"
+import { applyWalletNetworkConfig } from "@/lib/config/config"
 import { publicAssetPath } from "@/lib/conceal/asset-path"
 
 const CORE_SCRIPT_ORDER = [

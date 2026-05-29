@@ -1,4 +1,4 @@
-import { createWalletNetworkConfig, type WalletNetworkConfig } from "@/lib/config/network"
+import { createWalletNetworkConfig, type WalletNetworkConfig } from "@/lib/config/config"
 import type { Deposit as UiDeposit, Transaction as UiTransaction, TransactionType, WalletInfo } from "@/lib/types"
 import type { Deposit as CoreDeposit, Transaction as CoreTransaction } from "./Transaction"
 import type { Wallet } from "./Wallet"
