@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CcxAmount } from "@/components/wallet/ccx"
 import type { Transaction, TransactionType } from "@/lib/types"
-import { cn, formatCcx, timeAgo, truncateAddress } from "@/lib/utils"
+import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils"
 
 export function PageHeader({
   title,
@@ -276,7 +276,7 @@ export function WalletQrCode({ value, size = 180 }: { value: string; size?: numb
         fgColor="#171513"
         bgColor="#ffffff"
         imageSettings={{
-          src: "/brand/conceal-mark-orange.svg",
+          src: withBasePath("/brand/conceal-mark-orange.svg"),
           height: logo,
           width: logo,
           excavate: true,
@@ -301,7 +301,7 @@ export function EmptyState({
       {illustration ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={illustration}
+          src={withBasePath(illustration)}
           alt=""
           className="size-24 rounded-2xl border border-border object-cover shadow-[0_12px_36px_rgba(0,0,0,0.35)]"
         />

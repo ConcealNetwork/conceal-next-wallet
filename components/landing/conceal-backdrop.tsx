@@ -1,3 +1,5 @@
+import { withBasePath } from "@/lib/utils"
+
 const COIN_MASK =
   "radial-gradient(circle at 50% 49%, #000 42%, rgba(0,0,0,.45) 58%, transparent 70%)"
 
@@ -18,7 +20,7 @@ export function ConcealBackdrop() {
       <div
         className="absolute top-1/2 right-[-12%] aspect-square h-[118vh] w-auto -translate-y-1/2 mix-blend-screen opacity-[0.34]"
         style={{
-          backgroundImage: "url('/brand/conceal-coin.png')",
+          backgroundImage: `url('${withBasePath("/brand/conceal-coin.png")}')`,
           backgroundSize: "contain",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center",

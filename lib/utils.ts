@@ -6,6 +6,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Prefix a root-relative public asset path with the deploy base path (e.g.
+ *  "/conceal-next-wallet" on GitHub Pages). Leaves absolute URLs and data: URIs
+ *  untouched. Use for raw references Next does not prefix automatically —
+ *  `<img src>`, CSS `url()`, QR image settings. */
+export function withBasePath(path: string): string {
+  if (!path.startsWith("/")) return path
+  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`
+}
+
 export const CCX_ATOMIC_UNITS = 1_000_000
 
 export function ccxAmount(ccx: number): CcxAmount {

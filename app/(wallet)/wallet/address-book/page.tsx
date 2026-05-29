@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { CopyButton, EmptyState, PageHeader, SectionCard } from "@/components/wallet/common"
 import { useAddressBook, useCreateAddressEntry } from "@/lib/hooks"
 import type { AddressEntry } from "@/lib/types"
-import { cn, truncateAddress } from "@/lib/utils"
+import { cn, truncateAddress, withBasePath } from "@/lib/utils"
 
 type View = "cards" | "table"
 const VIEW_KEY = "conceal-address-view"
@@ -283,7 +283,7 @@ function ContactAvatar({ entry, className }: { entry: AddressEntry; className?: 
   if (entry.avatar) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={entry.avatar} alt="" className={cn("shrink-0 object-cover", className)} />
+      <img src={withBasePath(entry.avatar)} alt="" className={cn("shrink-0 object-cover", className)} />
     )
   }
   return (

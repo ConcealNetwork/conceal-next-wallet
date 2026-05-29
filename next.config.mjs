@@ -14,6 +14,12 @@ const nextConfig = {
     // next/image optimization needs a server; static export can't provide one.
     unoptimized: true,
   },
+  // Exposed to the client so raw asset references (CSS url(), <img src>, the QR
+  // image setting) can be prefixed with the same subpath — Next only prefixes
+  // next/image, Link and the favicon automatically.
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
 };
 
 export default nextConfig;
