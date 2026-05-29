@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -18,8 +19,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { PageHeader } from "@/components/wallet/common"
-import { useUpdateWalletSettings, useWalletInfo, useWalletSettings } from "@/lib/hooks"
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form"
+import { env } from "@/lib/env"
+import {
+  useOptimizeWallet,
+  useResetAndRescan,
+  useUpdateWalletSettings,
+  useWalletInfo,
+  useWalletSettings,
+} from "@/lib/hooks"
+import type { WalletSettings } from "@/lib/types"
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -46,12 +55,59 @@ export default function SettingsPage() {
   const router = useRouter()
   const settings = useWalletSettings()
   const updateSettings = useUpdateWalletSettings()
+  const optimizeWallet = useOptimizeWallet()
+  const resetAndRescan = useResetAndRescan()
   const wallet = useWalletInfo()
   const disconnect = useWalletDisconnect()
   const current = settings.data
+  const isMock = env.useMockWallet
 
-  function update(input: Parameters<typeof updateSettings.mutate>[0]) {
-    updateSettings.mutate(input, { onSuccess: () => toast.success("Mock settings updated.") })
+  const [creationHeight, setCreationHeight] = useState("")
+  const [scanHeight, setScanHeight] = useState("")
+  const [nodeUrl, setNodeUrl] = useState("")
+
+  useEffect(() => {
+    if (!current) return
+    setCreationHeight(String(current.creationHeight ?? wallet.data?.creationHeight ?? 0))
+    setScanHeight(String(current.scanHeight ?? wallet.data?.currentHeight ?? 0))
+    setNodeUrl(current.nodeUrl)
+  }, [current, wallet.data?.creationHeight, wallet.data?.currentHeight])
+
+  function settingsSavedMessage() {
+    return isMock ? "Mock settings updated." : "Settings updated."
+  }
+
+  function update(input: Partial<WalletSettings>, message = settingsSavedMessage()) {
+    updateSettings.mutate(input, { onSuccess: () => toast.success(message) })
+  }
+
+  function applyHeights() {
+    const parsedCreation = parseInt(creationHeight, 10)
+    const parsedScan = parseInt(scanHeight, 10)
+    if (Number.isNaN(parsedCreation) || Number.isNaN(parsedScan)) {
+      toast.error("Enter valid block heights.")
+      return
+    }
+    update(
+      { creationHeight: parsedCreation, scanHeight: parsedScan },
+      isMock ? "Mock wallet updated." : "Wallet heights updated.",
+    )
+  }
+
+  function handleResetAndRescan() {
+    resetAndRescan.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(isMock ? "Mock rescan started." : "Wallet reset — rescanning from creation height.")
+      },
+      onError: (error) => toast.error(error instanceof Error ? error.message : "Rescan failed."),
+    })
+  }
+
+  function handleOptimize() {
+    optimizeWallet.mutate(undefined, {
+      onSuccess: () => toast.success(isMock ? "Mock optimization complete." : "Wallet optimization complete."),
+      onError: (error) => toast.error(error instanceof Error ? error.message : "Optimization failed."),
+    })
   }
 
   return (
@@ -67,8 +123,13 @@ export default function SettingsPage() {
                 </select>
               </Row>
               <Row label="Wallet optimization" description="Compact transaction outputs to reduce wallet size">
-                <Button type="button" variant="outline" onClick={() => toast.success("Mock optimization complete.")}>
-                  Optimize Now
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={optimizeWallet.isPending}
+                  onClick={handleOptimize}
+                >
+                  {optimizeWallet.isPending ? "Optimizing…" : "Optimize Now"}
                 </Button>
               </Row>
             </Section>
@@ -76,12 +137,25 @@ export default function SettingsPage() {
             {current && (
               <Section title="Node">
                 <Row label="Use custom node" description="Connect to your own Conceal daemon">
-                  <Switch checked={current.useCustomNode} onCheckedChange={(checked) => update({ useCustomNode: checked })} />
+                  <Switch
+                    checked={current.useCustomNode}
+                    onCheckedChange={(checked) => update({ useCustomNode: checked })}
+                  />
                 </Row>
                 <Row label="Node URL" description="The daemon endpoint this wallet syncs against">
                   <div className="flex w-full gap-2 sm:w-auto">
-                    <Input defaultValue={current.nodeUrl} placeholder="https://node.conceal.network:16000/" className="sm:w-72" />
-                    <Button type="button" variant="outline" onClick={() => update({ nodeUrl: current.nodeUrl })}>
+                    <Input
+                      value={nodeUrl}
+                      onChange={(event) => setNodeUrl(event.target.value)}
+                      placeholder="https://explorer.conceal.network/daemon/"
+                      className="sm:w-72"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={updateSettings.isPending}
+                      onClick={() => update({ nodeUrl, useCustomNode: current.useCustomNode })}
+                    >
                       Update
                     </Button>
                   </div>
@@ -91,23 +165,57 @@ export default function SettingsPage() {
 
             {current && (
               <Section title="Wallet">
-                <Row label="Read minor transactions" description="Only needed for solo mining">
-                  <Switch checked={current.readMinorTx} onCheckedChange={(checked) => update({ readMinorTx: checked })} />
+                <Row label="Read miner transactions" description="Include coinbase outputs when syncing — required for solo mining">
+                  <Switch
+                    checked={current.readMinorTx}
+                    disabled={updateSettings.isPending}
+                    onCheckedChange={(checked) => update({ readMinorTx: checked })}
+                  />
                 </Row>
                 <Row label="Block heights" description="Creation height / current synced height">
                   <div className="flex gap-2">
-                    <Input defaultValue={wallet.data?.creationHeight ?? 1971774} className="w-32" aria-label="Creation height" />
-                    <Input defaultValue={wallet.data?.currentHeight ?? 1971337} className="w-32" aria-label="Current height" />
+                    <Input
+                      value={creationHeight}
+                      onChange={(event) => setCreationHeight(event.target.value)}
+                      className="w-32"
+                      aria-label="Creation height"
+                      inputMode="numeric"
+                    />
+                    <Input
+                      value={scanHeight}
+                      onChange={(event) => setScanHeight(event.target.value)}
+                      className="w-32"
+                      aria-label="Current synced height"
+                      inputMode="numeric"
+                    />
                   </div>
                 </Row>
                 <Row label="Maintenance" description="Apply changes, rotate password, or rescan the chain">
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" onClick={() => toast.success("Mock wallet updated.")}>Update</Button>
-                    <Button type="button" variant="outline" onClick={() => router.push("/wallet/change-password")}>Change password</Button>
-                    <Button type="button" variant="outline" onClick={() => toast.success("Mock rescan started.")}>Reset &amp; rescan</Button>
+                    <Button type="button" disabled={updateSettings.isPending} onClick={applyHeights}>
+                      Update
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => router.push("/wallet/change-password")}>
+                      Change password
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={resetAndRescan.isPending}
+                      onClick={handleResetAndRescan}
+                    >
+                      {resetAndRescan.isPending ? "Rescanning…" : "Reset & rescan"}
+                    </Button>
                   </div>
                 </Row>
-                <Row label="Delete wallet" description="Removes this mock wallet session and returns to the open-wallet screen">
+                <Row
+                  label="Delete wallet"
+                  description={
+                    isMock
+                      ? "Removes this mock wallet session and returns to the open-wallet screen"
+                      : "Removes the encrypted wallet from this browser and returns to the open-wallet screen"
+                  }
+                >
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button type="button" variant="destructive">Delete wallet</Button>
@@ -116,12 +224,17 @@ export default function SettingsPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete wallet?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This deletes the current mock wallet session and returns you to the open wallet screen.
+                          {isMock
+                            ? "This deletes the current mock wallet session and returns you to the open wallet screen."
+                            : "This permanently deletes the encrypted wallet stored in this browser."}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={disconnect}>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={disconnect}
+                        >
                           Delete wallet
                         </AlertDialogAction>
                       </AlertDialogFooter>

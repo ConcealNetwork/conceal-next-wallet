@@ -36,8 +36,14 @@ export default function AccountPage() {
   const totals = (transactions.data ?? []).reduce(
     (acc, transaction) => {
       const value = ccxToNumber(transaction.amount)
-      if (transaction.type === "receive") acc.received += value
-      if (transaction.type === "send") acc.sent += value
+      if (
+        transaction.type === "receive" ||
+        transaction.type === "miner" ||
+        transaction.type === "withdrawal"
+      ) {
+        acc.received += value
+      }
+      if (transaction.type === "send" || transaction.type === "fusion") acc.sent += value
       if (transaction.type === "deposit") acc.deposits += value
       return acc
     },
@@ -220,9 +226,11 @@ function TransactionFlowSummary({
 
 const TX_META: Record<TransactionType, { label: string; sign: string; className: string }> = {
   receive: { label: "Receive", sign: "+", className: "text-wallet-incoming" },
+  miner: { label: "Miner", sign: "+", className: "text-wallet-incoming" },
   deposit: { label: "Deposit", sign: "+", className: "text-wallet-deposit" },
   send: { label: "Send", sign: "−", className: "text-wallet-outgoing" },
-  withdrawal: { label: "Withdraw", sign: "−", className: "text-wallet-outgoing" },
+  withdrawal: { label: "Withdraw", sign: "+", className: "text-wallet-incoming" },
+  fusion: { label: "Fusion", sign: "−", className: "text-muted-foreground" },
 }
 
 function RecentActivityList({ transactions }: { transactions: Transaction[] }) {

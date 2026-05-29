@@ -53,7 +53,7 @@ export class WalletOptions {
   checkMinerTx: boolean = false;
   readSpeed: number = 10;
   customNode: boolean = false;
-  nodeUrl: string = "https://node.conceal.network:16000/";
+  nodeUrl: string = "https://explorer.conceal.network/daemon/";
 
   static fromRaw(raw: RawWalletOptions) {
     let options = new WalletOptions();

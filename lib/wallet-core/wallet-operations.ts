@@ -3,7 +3,8 @@ import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init"
 import type { ExportWalletData } from "@/lib/services/wallet.service"
 import type { SendTransactionInput } from "@/lib/services/transaction.service"
 import type { ImportWalletInput } from "@/lib/services/wallet.service"
-import type { Transaction, WalletInfo, NodeStatus } from "@/lib/types"
+import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service"
+import type { Deposit, Transaction, WalletInfo, NodeStatus } from "@/lib/types"
 import { Cn, CnUtils } from "./Cn"
 import { KeysRepository } from "./KeysRepository"
 import { Mnemonic } from "./Mnemonic"
@@ -12,7 +13,15 @@ import { Wallet } from "./Wallet"
 import { WalletRepository } from "./WalletRepository"
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider"
 import { Storage } from "./Storage"
-import { clampImportHeight, listWalletTransactions, mapWalletToInfo } from "./mappers"
+import {
+  clampImportHeight,
+  getWalletDepositConstraints,
+  listWalletDeposits,
+  listWalletTransactions,
+  mapCoreDeposit,
+  mapWalletToInfo,
+} from "./mappers"
+import { Deposit as CoreDeposit } from "./Transaction"
 import {
   disconnectWalletRuntime,
   getCreatedMnemonic,
@@ -300,7 +309,7 @@ export async function sendTransactionOperation(input: SendTransactionInput): Pro
     config.defaultMixin,
     input.message ?? "",
     0,
-    0,
+    "regular",
     0,
   )
 
@@ -321,6 +330,173 @@ export async function sendTransactionOperation(input: SendTransactionInput): Pro
       confirmations: 0,
       paymentId: input.paymentId,
       message: input.message,
+    }
+  )
+}
+
+export async function listDepositsOperation(): Promise<Deposit[]> {
+  await ensureAllWalletLegacyLibs()
+  const wallet = getRuntimeWallet()
+  if (wallet === null) throw new Error("Wallet is not open.")
+  const height = await BlockchainExplorerProvider.getInstance().getHeight()
+  return listWalletDeposits(wallet, height)
+}
+
+export async function getDepositConstraintsOperation() {
+  await ensureAllWalletLegacyLibs()
+  const wallet = getRuntimeWallet()
+  if (wallet === null) throw new Error("Wallet is not open.")
+  const explorer = BlockchainExplorerProvider.getInstance()
+  const height = await explorer.getHeight()
+  return getWalletDepositConstraints(wallet, height)
+}
+
+export async function createDepositOperation(input: CreateDepositInput): Promise<Deposit> {
+  await ensureAllWalletLegacyLibs()
+  const wallet = getRuntimeWallet()
+  if (wallet === null) throw new Error("Wallet is not open.")
+  const explorer = BlockchainExplorerProvider.getInstance()
+  const blockchainHeight = await explorer.getHeight()
+  const currencyDivider = Math.pow(10, config.coinUnitPlaces)
+  const amountCoins = Math.floor(input.amount)
+
+  if (!Number.isFinite(amountCoins) || amountCoins < config.depositMinAmountCoin) {
+    throw new Error(`Deposit amount must be at least ${config.depositMinAmountCoin} CCX.`)
+  }
+
+  const months = Math.floor(input.durationMonths)
+  if (months < config.depositMinTermMonth || months > config.depositMaxTermMonth) {
+    throw new Error(`Deposit term must be between ${config.depositMinTermMonth} and ${config.depositMaxTermMonth} months.`)
+  }
+
+  const termBlocks =
+    months > config.depositMaxTermMonth
+      ? config.depositMaxTermMonth * config.depositMinTermBlock
+      : months * config.depositMinTermBlock
+  const amountAtomic = amountCoins * currencyDivider
+  const coinFee = Number(config.coinFee)
+  const neededAmount = amountAtomic + coinFee
+
+  if (neededAmount > wallet.availableAmount(blockchainHeight)) {
+    throw new Error("Not enough unlocked balance for deposit and network fee.")
+  }
+
+  const destinationAddress = wallet.getPublicAddress()
+  const rawTxData = await TransactionsExplorer.createTx(
+    [{ address: destinationAddress, amount: amountAtomic }],
+    "",
+    wallet,
+    blockchainHeight,
+    (amounts: number[], numberOuts: number) => explorer.getRandomOuts(amounts, numberOuts),
+    async (amount: number, feesAmount: number) => {
+      if (amount + feesAmount > wallet.availableAmount(blockchainHeight)) {
+        throw new Error("Insufficient funds for deposit plus fee.")
+      }
+      if (amount < config.depositMinAmountCoin * currencyDivider) {
+        throw new Error(`Deposit amount must be at least ${config.depositMinAmountCoin} CCX.`)
+      }
+    },
+    config.defaultMixin,
+    "",
+    0,
+    "deposit",
+    termBlocks,
+  )
+
+  await explorer.sendRawTx(rawTxData.raw.raw)
+  wallet.addTxPrivateKeyWithTxHash(rawTxData.raw.hash, rawTxData.raw.prvkey)
+  const watchdog = getRuntimeWatchdog()
+  if (watchdog !== null) watchdog.checkMempool()
+
+  const deposits = listWalletDeposits(wallet, blockchainHeight)
+  const matched = deposits.find((deposit) => deposit.txHash === rawTxData.raw.hash)
+  if (matched) return matched
+
+  const pending = new CoreDeposit()
+  pending.txHash = rawTxData.raw.hash
+  pending.globalOutputIndex = 0
+  pending.amount = amountAtomic
+  pending.interest = 0
+  pending.term = termBlocks
+  pending.blockHeight = 0
+  pending.unlockHeight = blockchainHeight + termBlocks
+  pending.timestamp = Math.floor(Date.now() / 1000)
+  return mapCoreDeposit(pending, blockchainHeight, destinationAddress)
+}
+
+export async function withdrawDepositOperation(input: WithdrawDepositInput): Promise<Transaction> {
+  await ensureAllWalletLegacyLibs()
+  const wallet = getRuntimeWallet()
+  if (wallet === null) throw new Error("Wallet is not open.")
+  const explorer = BlockchainExplorerProvider.getInstance()
+  const blockchainHeight = await explorer.getHeight()
+
+  const coreDeposit = wallet
+    .getDepositsCopy()
+    .find(
+      (deposit) =>
+        deposit.txHash === input.txHash && deposit.globalOutputIndex === input.globalOutputIndex,
+    )
+
+  if (!coreDeposit) {
+    throw new Error("Deposit not found.")
+  }
+  if (coreDeposit.isSpent()) {
+    throw new Error("Deposit has already been withdrawn.")
+  }
+  if (coreDeposit.withdrawPending) {
+    throw new Error("Withdrawal already in progress for this deposit.")
+  }
+  if (coreDeposit.unlockHeight > blockchainHeight) {
+    throw new Error("Deposit is still locked.")
+  }
+
+  let rawTxData: { raw: { hash: string; prvkey: string; raw: string } }
+  try {
+    rawTxData = await TransactionsExplorer.createWithdrawTx(
+      coreDeposit,
+      wallet,
+      blockchainHeight,
+      () => Promise.resolve([]),
+      async (_amount: number, feesAmount: number) => {
+        if (feesAmount > wallet.availableAmount(blockchainHeight)) {
+          throw new Error("Insufficient unlocked balance for withdrawal fee.")
+        }
+        wallet.updateDepositFlags(coreDeposit.txHash, { withdrawPending: true })
+      },
+      config.defaultMixin,
+      "",
+      "",
+      0,
+      "withdraw",
+      coreDeposit.term,
+    )
+  } catch (error) {
+    wallet.updateDepositFlags(coreDeposit.txHash, { withdrawPending: false })
+    throw error
+  }
+
+  try {
+    await explorer.sendRawTx(rawTxData.raw.raw)
+  } catch (error) {
+    wallet.updateDepositFlags(coreDeposit.txHash, { withdrawPending: false })
+    throw error
+  }
+
+  wallet.addTxPrivateKeyWithTxHash(rawTxData.raw.hash, rawTxData.raw.prvkey)
+  const watchdog = getRuntimeWatchdog()
+  if (watchdog !== null) watchdog.checkMempool()
+
+  const txs = listWalletTransactions(wallet, blockchainHeight)
+  return (
+    txs.find((tx) => tx.hash === rawTxData.raw.hash) ?? {
+      id: rawTxData.raw.hash,
+      hash: rawTxData.raw.hash,
+      type: "withdrawal",
+      amount: { atomic: coreDeposit.amount + coreDeposit.interest },
+      address: wallet.getPublicAddress(),
+      timestamp: new Date().toISOString(),
+      confirmations: 0,
     }
   )
 }

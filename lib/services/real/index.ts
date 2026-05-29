@@ -1,7 +1,7 @@
 import { mockAddressBookService } from "@/lib/services/mock/address-book.service"
-import { mockDepositService } from "@/lib/services/mock/deposit.service"
+import { realDepositService } from "@/lib/services/real/deposit.service"
 import { mockMessageService } from "@/lib/services/mock/message.service"
-import { mockSettingsService } from "@/lib/services/mock/settings.service"
+import { realSettingsService } from "@/lib/services/real/settings.service"
 import { realMarketService } from "@/lib/services/real/market.service"
 import { realNetworkService } from "@/lib/services/real/network.service"
 import { realTransactionService } from "@/lib/services/real/transaction.service"
@@ -13,8 +13,8 @@ export const realServices: WalletServices = {
   transactions: realTransactionService,
   market: realMarketService,
   messages: mockMessageService,
-  deposits: mockDepositService,
+  deposits: realDepositService,
   addressBook: mockAddressBookService,
   network: realNetworkService,
-  settings: mockSettingsService,
+  settings: realSettingsService,
 }

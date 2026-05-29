@@ -27,7 +27,13 @@ export type WalletStatTrend = {
   changePct: number
 }
 
-export type TransactionType = "receive" | "send" | "deposit" | "withdrawal"
+export type TransactionType =
+  | "receive"
+  | "send"
+  | "deposit"
+  | "withdrawal"
+  | "fusion"
+  | "miner"
 
 export type Transaction = {
   id: string
@@ -41,16 +47,21 @@ export type Transaction = {
   message?: string
 }
 
+export type DepositStatus = "active" | "unlocked" | "spent"
+
 export type Deposit = {
   id: string
+  txHash: string
+  globalOutputIndex: number
   amount: CcxAmount
-  status: "active" | "unlocked"
+  status: DepositStatus
   durationMonths: number
   apr: number
   interest: CcxAmount
   unlocksInDays: number
   progressPct: number
   address: string
+  withdrawPending?: boolean
 }
 
 export type Message = {
@@ -123,7 +134,10 @@ export type WalletSettings = {
   language: string
   useCustomNode: boolean
   nodeUrl: string
+  /** When true, sync includes coinbase (miner) outputs — required for solo mining rewards. */
   readMinorTx: boolean
   autoLock: boolean
   biometric: boolean
+  creationHeight?: number
+  scanHeight?: number
 }
