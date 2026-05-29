@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCountUp } from "@/lib/hooks/use-count-up"
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types"
-import { ccxToNumber, cn, formatCcx, formatUsd } from "@/lib/utils"
+import { ccxToNumber, cn, formatCcx, formatUsd, walletBalanceUsd } from "@/lib/utils"
 
 type BalanceHeroProps = {
   wallet: WalletInfo
@@ -40,6 +40,8 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   const totalLabel = useCountUp(total, {
     formatter: (value) => formatCcx(value),
   })
+
+  const totalUsd = walletBalanceUsd(wallet.balanceTotal, market.price.value)
 
   const segments: Segment[] = [
     {
@@ -88,7 +90,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               of <span className="font-semibold text-muted-foreground">{totalLabel}</span> total ·{" "}
-              <span className="font-semibold text-muted-foreground">{formatUsd(market.portfolioValueUsd)}</span> USD
+              <span className="font-semibold text-muted-foreground">{formatUsd(totalUsd)}</span> USD
             </p>
           </div>
           <div className="shrink-0 text-left sm:text-right">

@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { PageHeader } from "@/components/wallet/common"
 import { useUpdateWalletSettings, useWalletInfo, useWalletSettings } from "@/lib/hooks"
-import { useWalletSession } from "@/lib/session/wallet-session"
+import { useWalletDisconnect } from "@/components/wallet/open-wallet-form"
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -47,7 +47,7 @@ export default function SettingsPage() {
   const settings = useWalletSettings()
   const updateSettings = useUpdateWalletSettings()
   const wallet = useWalletInfo()
-  const { closeSession } = useWalletSession()
+  const disconnect = useWalletDisconnect()
   const current = settings.data
 
   function update(input: Parameters<typeof updateSettings.mutate>[0]) {
@@ -121,7 +121,7 @@ export default function SettingsPage() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={closeSession}>
+                        <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={disconnect}>
                           Delete wallet
                         </AlertDialogAction>
                       </AlertDialogFooter>

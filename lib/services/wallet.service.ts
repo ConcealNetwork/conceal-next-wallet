@@ -5,10 +5,26 @@ export type CreateWalletInput = {
   password: string
 }
 
-export type ImportWalletInput = {
-  method: "mnemonic" | "keys" | "file" | "qr" | "open"
+export type OpenWalletInput = {
+  password?: string
   label?: string
 }
+
+export type ImportWalletInput =
+  | { method: "mnemonic"; mnemonic: string; password: string; scanHeight?: number; language?: string; label?: string }
+  | {
+      method: "keys"
+      address: string
+      viewOnly: boolean
+      privateViewKey: string
+      privateSpendKey: string
+      password: string
+      scanHeight?: number
+      label?: string
+    }
+  | { method: "file"; file: ArrayBuffer | string; password: string; label?: string }
+  | { method: "qr"; payload: string; password: string; label?: string }
+  | { method: "open"; password: string; label?: string }
 
 export type ExportWalletData = {
   mnemonic: string
@@ -19,9 +35,11 @@ export type ExportWalletData = {
 export interface WalletService {
   getWalletInfo(): Promise<WalletInfo>
   refreshWallet(): Promise<WalletInfo>
-  openWallet(label?: string): Promise<WalletInfo>
+  hasStoredWallet(): Promise<boolean>
+  openWallet(input?: OpenWalletInput): Promise<WalletInfo>
   createWallet(input: CreateWalletInput): Promise<{ wallet: WalletInfo; mnemonic: string }>
   importWallet(input: ImportWalletInput): Promise<WalletInfo>
   exportWallet(): Promise<ExportWalletData>
   changePassword(input: { currentPassword: string; newPassword: string }): Promise<{ ok: true }>
+  disconnect?(): Promise<void>
 }

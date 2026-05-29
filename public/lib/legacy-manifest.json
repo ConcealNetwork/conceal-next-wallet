@@ -1,0 +1,50 @@
+{
+  "syncedAt": "2026-05-29T04:33:26.802Z",
+  "source": "../conceal-web-wallet/src/lib",
+  "core": [
+    "/lib/biginteger.js",
+    "/lib/nacl-fast.min.js",
+    "/lib/nacl-util.min.js"
+  ],
+  "coreConcealjs": "/lib/concealjs/concealjs.js",
+  "extended": [
+    "/lib/base58.js",
+    "/lib/cn_utils_native.js",
+    "/lib/FileSaver.min.js",
+    "/lib/kjua-0.1.1.min.js",
+    "/lib/decoder.min.js"
+  ],
+  "optional": [
+    "/lib/jspdf.min.js"
+  ],
+  "polyfills": [
+    "/lib/polyfills/"
+  ],
+  "workers": [
+    "/workers/wallet-sync-entrypoint.js",
+    "/workers/wallet-sync.bundle.js"
+  ],
+  "legacyWorkers": [
+    "/workers/ParseTransactionsEntrypoint.js",
+    "/workers/ParseTransactions.js",
+    "/workers/TransferProcessingEntrypoint.js",
+    "/workers/TransferProcessing.js"
+  ],
+  "skippedUiLegacy": [
+    "vue.min.js",
+    "vue-i18n.js",
+    "jquery-3.7.1.min.js",
+    "sweetalert2.js",
+    "require.js",
+    "mnemonic.js",
+    "crypto.js",
+    "cn_utils.js",
+    "nacl-fast.js"
+  ],
+  "notes": {
+    "core": "ensureWalletRuntimeLibs() in lib/conceal/init.ts",
+    "extended": "ensureWalletExtendedLibs() — export download, kjua QR, QR import scanner, sync workers",
+    "workers": "WalletWatchdog loads /workers/wallet-sync-entrypoint.js (esbuild bundle + importScripts globals)",
+    "skipped": "Replaced by Next.js, React, sonner, qrcode.react, etc."
+  }
+}

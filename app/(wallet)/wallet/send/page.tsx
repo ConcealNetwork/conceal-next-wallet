@@ -22,6 +22,7 @@ import { CcxAmount } from "@/components/wallet/ccx"
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common"
 import { useCountUp } from "@/lib/hooks/use-count-up"
 import { useMarketData, useSendTransaction, useTransactions, useWalletInfo } from "@/lib/hooks"
+import { walletCopy } from "@/lib/ui/wallet-copy"
 import { ccxToNumber, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils"
 
 const NETWORK_FEE = 0.01
@@ -66,7 +67,7 @@ export default function SendPage() {
     if (!review) return
     send.mutate(review, {
       onSuccess: () => {
-        toast.success("Mock transaction submitted. No CCX was sent.")
+        toast.success(walletCopy.sendSuccess)
         form.reset()
         setReview(null)
       },
@@ -187,7 +188,7 @@ export default function SendPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm send</DialogTitle>
-            <DialogDescription>Review the details below. This is a mock — no CCX will be sent.</DialogDescription>
+            <DialogDescription>{walletCopy.sendConfirm}</DialogDescription>
           </DialogHeader>
           {review ? (
             <div className="space-y-3 text-sm">

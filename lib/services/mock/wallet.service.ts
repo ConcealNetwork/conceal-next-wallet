@@ -13,6 +13,9 @@ export const mockWalletService: WalletService = {
     await mockDelay()
     return clone(mockWalletInfo)
   },
+  async hasStoredWallet() {
+    return false
+  },
   async openWallet() {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay()
@@ -23,9 +26,10 @@ export const mockWalletService: WalletService = {
     await mockDelay()
     return { wallet: clone(mockWalletInfo), mnemonic: mockExportData.mnemonic }
   },
-  async importWallet() {
+  async importWallet(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay()
+    void input
     return clone(mockWalletInfo)
   },
   async exportWallet() {
@@ -37,5 +41,8 @@ export const mockWalletService: WalletService = {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay()
     return { ok: true }
+  },
+  async disconnect() {
+    // no runtime in mock mode
   },
 }

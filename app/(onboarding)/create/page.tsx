@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { SectionCard } from "@/components/wallet/common"
 import { services } from "@/lib/services"
 import { useWalletSession } from "@/lib/session/wallet-session"
+import { walletCopy } from "@/lib/ui/wallet-copy"
 
 const createSchema = z.object({
   name: z.string().min(1, "Wallet name is required"),
@@ -36,7 +37,10 @@ export default function CreateWalletPage() {
 
   return (
     <div className="mx-auto max-w-xl py-12">
-      <SectionCard title="Create Wallet" description="This generates placeholder words only. No real keys are created.">
+      <SectionCard
+        title="Create Wallet"
+        description={walletCopy.createWalletDescription}
+      >
         <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
           <div className="space-y-2">
             <Label>Wallet name</Label>
@@ -48,7 +52,8 @@ export default function CreateWalletPage() {
           </div>
           {mnemonic && (
             <div className="rounded-xl border border-wallet-amber bg-wallet-amber/10 p-4">
-              <p className="text-sm font-semibold text-primary">Placeholder mnemonic</p>
+              <p className="text-sm font-semibold text-primary">{walletCopy.mnemonicTitle}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{walletCopy.mnemonicHint}</p>
               <p className="mt-2 font-mono text-sm text-foreground">{mnemonic}</p>
             </div>
           )}

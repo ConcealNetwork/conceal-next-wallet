@@ -3,10 +3,12 @@
 import { Footer } from "@/components/layout/footer"
 import { Sidebar } from "@/components/layout/sidebar"
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse"
+import { useWalletLiveSync } from "@/lib/hooks"
 import { cn } from "@/lib/utils"
 
 export function WalletShell({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebarCollapse()
+  useWalletLiveSync()
 
   return (
     <div className="text-foreground">

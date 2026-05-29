@@ -1,20 +1,13 @@
-import { ScanLine } from "lucide-react"
-import { MockImportButton } from "@/app/(onboarding)/onboarding-actions"
+"use client"
+
+import { ImportQrForm } from "@/app/(onboarding)/onboarding-actions"
 import { SectionCard } from "@/components/wallet/common"
 
 export default function ImportQrPage() {
   return (
     <div className="mx-auto max-w-xl py-12">
-      <SectionCard title="Import from QR" description="Camera scanning is represented by this placeholder only.">
-        <div className="grid min-h-[240px] place-items-center rounded-xl border border-dashed border-border bg-secondary">
-          <div className="text-center">
-            <ScanLine className="mx-auto size-12 text-muted-foreground" aria-hidden="true" />
-            <p className="mt-3 text-muted-foreground">Scan placeholder</p>
-          </div>
-        </div>
-        <div className="mt-4">
-          <MockImportButton method="qr" />
-        </div>
+      <SectionCard title="Import from QR">
+        <ImportQrForm />
       </SectionCard>
     </div>
   )

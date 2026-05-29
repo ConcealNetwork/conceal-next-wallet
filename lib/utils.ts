@@ -29,6 +29,10 @@ export function ccxToNumber(amount: CcxAmount): number {
   return amount.atomic / CCX_ATOMIC_UNITS
 }
 
+export function walletBalanceUsd(balance: CcxAmount, priceUsd: number): number {
+  return ccxToNumber(balance) * priceUsd
+}
+
 export function formatCcx(amount: CcxAmount | number, decimals = 2): string {
   const value = typeof amount === "number" ? amount : ccxToNumber(amount)
   return `${value.toLocaleString("en-US", {

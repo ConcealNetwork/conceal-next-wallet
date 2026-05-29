@@ -1,7 +1,10 @@
 "use client"
 
+import { useEffect } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { env } from "@/lib/env"
 import { services } from "@/lib/services"
+import { marketQueryOptions, networkQueryOptions } from "@/lib/services/query-options"
 import type { AddressEntryInput } from "@/lib/services/address-book.service"
 import type { CreateDepositInput } from "@/lib/services/deposit.service"
 import type { SendMessageInput } from "@/lib/services/message.service"
@@ -27,8 +30,33 @@ export function useRefreshWallet() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => services.wallet.refreshWallet(),
-    onSuccess: (wallet) => queryClient.setQueryData(queryKeys.wallet, wallet),
+    onSuccess: (wallet) => {
+      queryClient.setQueryData(queryKeys.wallet, wallet)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.network })
+    },
   })
+}
+
+/** Invalidate wallet/tx/network queries while blockchain sync updates the runtime wallet. */
+export function useWalletLiveSync() {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (env.useMockWallet) return
+
+    let unsubscribe: (() => void) | undefined
+
+    void import("@/lib/wallet-core/wallet-sync-notifier").then(({ subscribeWalletSync }) => {
+      unsubscribe = subscribeWalletSync(() => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.wallet })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transactions })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.network })
+      })
+    })
+
+    return () => unsubscribe?.()
+  }, [queryClient])
 }
 
 export function useTransactions() {
@@ -43,7 +71,11 @@ export function useSendTransaction() {
 }
 
 export function useMarketData() {
-  return useQuery({ queryKey: queryKeys.market, queryFn: () => services.market.getMarketData() })
+  return useQuery({
+    queryKey: queryKeys.market,
+    queryFn: () => services.market.getMarketData(),
+    ...marketQueryOptions,
+  })
 }
 
 export function useMessages() {
@@ -71,7 +103,11 @@ export function useCreateAddressEntry() {
 }
 
 export function useNetworkStatus() {
-  return useQuery({ queryKey: queryKeys.network, queryFn: () => services.network.getNodeStatus() })
+  return useQuery({
+    queryKey: queryKeys.network,
+    queryFn: () => services.network.getNodeStatus(),
+    ...networkQueryOptions,
+  })
 }
 
 export function useWalletSettings() {

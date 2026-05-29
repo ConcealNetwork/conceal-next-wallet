@@ -16,7 +16,10 @@ export type WalletInfo = {
   withdrawable: CcxAmount
   trends?: Partial<Record<"balanceTotal" | "available" | "pending" | "lockedDeposits" | "staking" | "withdrawable", WalletStatTrend>>
   creationHeight: number
+  /** Wallet scan height (blocks applied to this wallet). */
   currentHeight: number
+  /** Chain tip from the connected daemon. */
+  networkHeight: number
 }
 
 export type WalletStatTrend = {
@@ -72,6 +75,8 @@ export type MarketData = {
   history: { date: string; price: number }[]
   historyByTimeframe: Record<MarketTimeframe, MarketHistoryPoint[]>
   portfolioValueUsd: UsdAmount
+  /** Live feed source when using real market service. */
+  priceSource?: "coingecko" | "coinpaprika"
 }
 
 export type MarketTimeframe = "24H" | "7D" | "30D" | "90D"

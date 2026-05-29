@@ -39,6 +39,7 @@ export const mockWalletInfo: WalletInfo = {
   },
   creationHeight: 1971774,
   currentHeight: 1971337,
+  networkHeight: 1971337,
 }
 
 export const mockTransactions: Transaction[] = [
