@@ -1,7 +1,7 @@
-import Image from "next/image"
 import { ConcealBackdrop } from "@/components/landing/conceal-backdrop"
 import { LandingActions, NavOpenWalletButton } from "@/components/landing/landing-actions"
 import { LandingBalanceCard } from "@/components/landing/landing-balance-card"
+import { withBasePath } from "@/lib/utils"
 
 const trustPoints = [
   "Untraceable transactions",
@@ -19,7 +19,8 @@ export default function LandingPage() {
         {/* nav */}
         <header className="flex h-[92px] items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src="/brand/conceal-mark.svg" width={25} height={25} alt="Conceal" priority />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={withBasePath("/brand/conceal-mark.svg")} alt="Conceal" className="size-[25px]" />
             <b className="text-base font-semibold">Conceal</b>
           </div>
           <nav className="flex items-center gap-6 sm:gap-8">
