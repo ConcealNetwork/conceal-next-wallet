@@ -24,9 +24,11 @@ describe("wallet components", () => {
   })
 
   it("renders StatCard content", () => {
-    render(<StatCard label="Total Balance" value="1250.50 CCX" detail="Ready" />)
+    // The CCX ticker renders in its own span (brand colour), so the amount
+    // spans two nodes — assert on combined text content.
+    const { container } = render(<StatCard label="Total Balance" value="1250.50 CCX" detail="Ready" />)
     expect(screen.getByText("Total Balance")).toBeInTheDocument()
-    expect(screen.getByText("1250.50 CCX")).toBeInTheDocument()
+    expect(container).toHaveTextContent("1250.50 CCX")
   })
 
   it("colors AmountText by sign or transaction type", () => {
@@ -37,9 +39,11 @@ describe("wallet components", () => {
         <AmountText amount="+2 CCX" type="deposit" />
       </>
     )
-    expect(screen.getByText("+10 CCX")).toHaveClass("text-wallet-incoming")
-    expect(screen.getByText("-5 CCX")).toHaveClass("text-wallet-outgoing")
-    expect(screen.getByText("+2 CCX")).toHaveClass("text-wallet-deposit")
+    // The tone class lives on the amount wrapper; the ticker is a nested span,
+    // so match on the number text node (getByText reads direct text only).
+    expect(screen.getByText("+10", { exact: false })).toHaveClass("text-wallet-incoming")
+    expect(screen.getByText("-5", { exact: false })).toHaveClass("text-wallet-outgoing")
+    expect(screen.getByText("+2", { exact: false })).toHaveClass("text-wallet-deposit")
   })
 
   it("renders a transaction row", () => {
@@ -58,7 +62,7 @@ describe("wallet components", () => {
     )
     expect(screen.getByText("Receive")).toBeInTheDocument()
     expect(screen.getByText(/12 conf/)).toBeInTheDocument()
-    expect(screen.getByText("+100.00 CCX")).toBeInTheDocument()
+    expect(screen.getByText("+100.00", { exact: false })).toBeInTheDocument()
   })
 
   it("changes FilterTabs active item", () => {
