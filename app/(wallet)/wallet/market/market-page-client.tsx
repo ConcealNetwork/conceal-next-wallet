@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { CcxAmount } from "@/components/wallet/ccx"
 import { PageHeader, SectionCard } from "@/components/wallet/common"
 import { useMarketData, useWalletInfo } from "@/lib/hooks"
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
@@ -101,7 +102,7 @@ function PriceHero({ market, walletInfo }: { market: MarketData; walletInfo: Wal
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             Your holdings:{" "}
-            <span className="font-mono font-semibold text-foreground">{formatCcx(walletInfo.balanceTotal)}</span>{" "}
+            <span className="font-mono font-semibold text-foreground"><CcxAmount>{formatCcx(walletInfo.balanceTotal)}</CcxAmount></span>{" "}
             <span aria-hidden="true">≈</span>
             <span className="sr-only">approximately</span>{" "}
             <span className="font-mono font-semibold text-foreground">{holdingsUsdLabel}</span>
@@ -277,7 +278,7 @@ function ValueMetric({
     <div className={TILE} style={tileDelay(index)}>
       <p className="text-sm text-muted-foreground">{label}</p>
       <div>
-        <p className={cn("wrap-break-word font-mono text-2xl font-bold tracking-tight", tone === "amber" ? "text-primary" : "text-foreground")}>{display}</p>
+        <p className={cn("wrap-break-word font-mono text-2xl font-bold tracking-tight", tone === "amber" ? "text-primary" : "text-foreground")}><CcxAmount>{display}</CcxAmount></p>
         <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
       </div>
     </div>

@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { CcxAmount } from "@/components/wallet/ccx"
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common"
 import { useCountUp } from "@/lib/hooks/use-count-up"
 import { useMarketData, useSendTransaction, useTransactions, useWalletInfo } from "@/lib/hooks"
@@ -124,7 +125,7 @@ export default function SendPage() {
 
               <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3 text-sm">
                 <span className="text-muted-foreground">Estimated network fee</span>
-                <span className="font-mono">{formatCcx(NETWORK_FEE)}</span>
+                <span className="font-mono"><CcxAmount>{formatCcx(NETWORK_FEE)}</CcxAmount></span>
               </div>
 
               <Button
@@ -170,7 +171,7 @@ export default function SendPage() {
                         <p className="truncate font-mono text-sm">{truncateAddress(transaction.address)}</p>
                         <p className="text-xs text-muted-foreground">{timeAgo(transaction.timestamp)}</p>
                       </div>
-                      <p className="font-mono text-sm font-semibold text-wallet-outgoing">−{formatCcx(transaction.amount)}</p>
+                      <p className="font-mono text-sm font-semibold text-wallet-outgoing">−<CcxAmount>{formatCcx(transaction.amount)}</CcxAmount></p>
                     </li>
                   ))}
                 </ul>
@@ -217,7 +218,7 @@ function Row({ label, value, mono, strong }: { label: string; value: string; mon
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-muted-foreground">{label}</span>
-      <span className={`${mono ? "font-mono" : ""} ${strong ? "font-semibold text-foreground" : "text-foreground"}`}>{value}</span>
+      <span className={`${mono ? "font-mono" : ""} ${strong ? "font-semibold text-foreground" : "text-foreground"}`}><CcxAmount>{value}</CcxAmount></span>
     </div>
   )
 }

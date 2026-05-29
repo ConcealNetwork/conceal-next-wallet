@@ -5,6 +5,7 @@ import { useMemo, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { CcxAmount } from "@/components/wallet/ccx"
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common"
 import { useDeposits, useTransactions, useWalletInfo } from "@/lib/hooks"
 import { formatCcx, timeAgo, truncateAddress } from "@/lib/utils"
@@ -107,7 +108,7 @@ export default function ReceivePage() {
                         <p className="truncate font-mono text-sm">{truncateAddress(transaction.address)}</p>
                         <p className="text-xs text-muted-foreground">{timeAgo(transaction.timestamp)}</p>
                       </div>
-                      <p className="font-mono text-sm font-semibold text-wallet-incoming">+{formatCcx(transaction.amount)}</p>
+                      <p className="font-mono text-sm font-semibold text-wallet-incoming">+<CcxAmount>{formatCcx(transaction.amount)}</CcxAmount></p>
                     </li>
                   ))}
                 </ul>
@@ -124,7 +125,7 @@ export default function ReceivePage() {
                   {depositHistory.map((deposit) => (
                     <li key={deposit.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                       <span className="text-sm text-muted-foreground">{deposit.durationMonths} months</span>
-                      <span className="font-mono text-sm font-semibold text-wallet-deposit">+{formatCcx(deposit.amount)}</span>
+                      <span className="font-mono text-sm font-semibold text-wallet-deposit">+<CcxAmount>{formatCcx(deposit.amount)}</CcxAmount></span>
                     </li>
                   ))}
                 </ul>

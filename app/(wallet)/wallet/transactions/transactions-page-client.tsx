@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { CcxAmount } from "@/components/wallet/ccx"
 import { CopyButton, EmptyState, FilterTabs, PageHeader, SectionCard } from "@/components/wallet/common"
 import { useTransactions } from "@/lib/hooks"
 import { useCountUp } from "@/lib/hooks/use-count-up"
@@ -202,6 +203,7 @@ export default function TransactionsPageClient() {
               <EmptyState
                 title="No transactions match"
                 description="Adjust the active filter or search query to find another transaction."
+                illustration="/brand/empty/transactions.png"
               />
             )}
           </div>
@@ -273,7 +275,7 @@ function TransactionSummary({
                   <p className="text-xs text-muted-foreground">{segment.label}</p>
                   <p className={cn("mt-1 truncate font-mono text-sm font-semibold", segment.textClassName)}>
                     {segment.prefix}
-                    {formatCcx(segment.value)}
+                    <CcxAmount>{formatCcx(segment.value)}</CcxAmount>
                   </p>
                 </div>
               ))}
@@ -282,7 +284,7 @@ function TransactionSummary({
           <div className="rounded-xl border border-border bg-card p-4 lg:min-w-[230px]">
             <p className="text-sm text-muted-foreground">Net Flow</p>
             <p className={cn("mt-2 wrap-break-word font-mono text-2xl font-bold", netFlow >= 0 ? "text-wallet-incoming" : "text-wallet-outgoing")}>
-              {netFlowLabel}
+              <CcxAmount>{netFlowLabel}</CcxAmount>
             </p>
           </div>
         </div>
@@ -317,7 +319,7 @@ function SummaryMetricCard({
     <div className="flex min-h-[118px] flex-col justify-between rounded-xl border border-border bg-secondary/60 p-4">
       <div>
         <p className="text-sm text-muted-foreground">{label}</p>
-        <p className={cn("mt-3 wrap-break-word font-mono text-2xl font-bold tracking-tight", toneClass)}>{valueLabel}</p>
+        <p className={cn("mt-3 wrap-break-word font-mono text-2xl font-bold tracking-tight", toneClass)}><CcxAmount>{valueLabel}</CcxAmount></p>
       </div>
       <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
     </div>
@@ -398,7 +400,7 @@ function TransactionListRow({
           {meta.label}
         </Badge>
         <span className={cn("font-mono text-base font-semibold", meta.amountClassName)}>
-          {formatSignedAmount(transaction)}
+          <CcxAmount>{formatSignedAmount(transaction)}</CcxAmount>
         </span>
         <span className="hidden text-xs text-muted-foreground sm:block">{meta.label}</span>
       </div>
@@ -442,7 +444,7 @@ function TransactionDetailsDialog({
           <div>
             <p className="text-sm text-muted-foreground">Signed Amount</p>
             <p className={cn("mt-1 font-mono text-3xl font-bold", meta.amountClassName)}>
-              {formatSignedAmount(transaction)}
+              <CcxAmount>{formatSignedAmount(transaction)}</CcxAmount>
             </p>
           </div>
           <StatusPill status={status} />

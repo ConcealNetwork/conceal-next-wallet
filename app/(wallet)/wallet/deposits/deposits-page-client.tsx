@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { CcxAmount } from "@/components/wallet/ccx"
 import { EmptyState, PageHeader, SectionCard } from "@/components/wallet/common"
 import { useCreateDeposit, useDeposits } from "@/lib/hooks"
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
@@ -428,8 +429,8 @@ function ProjectionChart({
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm text-muted-foreground">Projected value to maturity</p>
         <p className="font-mono text-xs text-muted-foreground">
-          {formatCcx(totalLocked)} <span className="text-muted-foreground/60">→</span>{" "}
-          <span className="text-wallet-incoming">{formatCcx(totalAtMaturity)}</span>
+          <CcxAmount>{formatCcx(totalLocked)}</CcxAmount> <span className="text-muted-foreground/60">→</span>{" "}
+          <span className="text-wallet-incoming"><CcxAmount>{formatCcx(totalAtMaturity)}</CcxAmount></span>
         </p>
       </div>
       <div className="mt-3 h-[150px] w-full">
@@ -527,7 +528,7 @@ function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[
                   style={{ backgroundColor: segment.color }}
                   aria-hidden="true"
                 />
-                <span className="font-mono text-foreground">{formatCcx(segment.amount)}</span>
+                <span className="font-mono text-foreground"><CcxAmount>{formatCcx(segment.amount)}</CcxAmount></span>
                 <span className="ml-auto font-mono text-xs text-wallet-incoming">{segment.apr.toFixed(2)}%</span>
               </div>
               <div className="mt-2 flex items-center gap-2 pl-[18px]">
@@ -710,16 +711,16 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
                 style={{ animationDelay: `${120 + index * 40}ms` }}
               >
                 <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-foreground">
-                  {formatCcx(deposit.amount)}
+                  <CcxAmount>{formatCcx(deposit.amount)}</CcxAmount>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-primary">
                   {deposit.apr.toFixed(2)}%
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-wallet-incoming">
-                  +{formatCcx(interest, 4)}
+                  +<CcxAmount>{formatCcx(interest, 4)}</CcxAmount>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-foreground">
-                  {formatCcx(maturityValue, 4)}
+                  <CcxAmount>{formatCcx(maturityValue, 4)}</CcxAmount>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex min-w-[132px] items-center gap-2">
@@ -780,16 +781,16 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 id={`${deposit.id}-timeline-title`} className="font-mono font-semibold text-foreground">
-                    {formatCcx(deposit.amount)}
+                    <CcxAmount>{formatCcx(deposit.amount)}</CcxAmount>
                   </h3>
                   <DepositStatusPill status={status} />
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
                   <span className="font-mono text-primary">{deposit.apr.toFixed(2)}% APR</span>
                   <span aria-hidden="true"> · </span>
-                  <span className="font-mono text-wallet-incoming">+{formatCcx(interest, 4)}</span>
+                  <span className="font-mono text-wallet-incoming">+<CcxAmount>{formatCcx(interest, 4)}</CcxAmount></span>
                   <span aria-hidden="true"> → </span>
-                  <span className="font-mono text-foreground">{formatCcx(maturityValue, 4)}</span>
+                  <span className="font-mono text-foreground"><CcxAmount>{formatCcx(maturityValue, 4)}</CcxAmount></span>
                   <span> at maturity</span>
                 </p>
                 <div className="mt-3 max-w-sm">
@@ -831,7 +832,9 @@ function DepositDetail({
   return (
     <div className="min-w-0 rounded-xl border border-border bg-card p-3">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn("mt-1 truncate font-mono text-sm font-semibold", toneClass)}>{value}</dd>
+      <dd className={cn("mt-1 truncate font-mono text-sm font-semibold", toneClass)}>
+        <CcxAmount>{value}</CcxAmount>
+      </dd>
     </div>
   )
 }
@@ -886,7 +889,10 @@ function AnimatedProgress({
       value={displayValue}
       aria-label="Deposit progress"
       aria-valuetext={label}
-      className={cn("mt-3 h-2.5 bg-background [&>div]:bg-wallet-deposit", className)}
+      className={cn(
+        "mt-3 h-2 bg-secondary [&>div]:bg-linear-to-r [&>div]:from-primary [&>div]:to-[#ffc266]",
+        className
+      )}
     />
   )
 }
@@ -919,6 +925,7 @@ function DepositEmptyState({ onCreate }: { onCreate: () => void }) {
       <EmptyState
         title="No deposits yet"
         description="Create a time-locked deposit to preview APR, maturity date, and projected interest."
+        illustration="/brand/empty/deposits.png"
       />
       <div className="mt-4 flex justify-center">
         <Button type="button" onClick={onCreate} className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100">
@@ -1058,7 +1065,9 @@ function PreviewRow({
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn("mt-1 truncate font-mono text-sm font-semibold", toneClass)}>{value}</dd>
+      <dd className={cn("mt-1 truncate font-mono text-sm font-semibold", toneClass)}>
+        <CcxAmount>{value}</CcxAmount>
+      </dd>
     </div>
   )
 }

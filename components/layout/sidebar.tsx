@@ -16,6 +16,7 @@ import {
   QrCode,
   Send,
   Settings,
+  Wallet,
   WalletCards,
 } from "lucide-react"
 import Link from "next/link"
@@ -66,13 +67,20 @@ function NavLink({ item, collapsed = false }: { item: (typeof mainNav)[number]; 
       href={item.href}
       aria-label={collapsed ? item.label : undefined}
       className={cn(
-        "flex min-h-11 cursor-pointer items-center rounded-xl text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-        collapsed ? "justify-center px-0" : "gap-3 px-4",
+        "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         active && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
       )}
     >
-      <Icon className="size-4" aria-hidden="true" />
-      {!collapsed && <span>{item.label}</span>}
+      <Icon className="size-4 shrink-0" aria-hidden="true" />
+      <span
+        className={cn(
+          "whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none",
+          collapsed && "pointer-events-none opacity-0"
+        )}
+        aria-hidden={collapsed}
+      >
+        {item.label}
+      </span>
     </Link>
   )
 
@@ -100,13 +108,18 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
               type="button"
               variant="ghost"
               aria-label={collapsed ? "Disconnect" : undefined}
-              className={cn(
-                "mt-4 h-11 shrink-0 gap-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
-                collapsed ? "w-full justify-center px-0" : "justify-start px-4"
-              )}
+              className="mt-4 h-11 w-full shrink-0 justify-start gap-3 px-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             >
-              <LogOut className="size-4" aria-hidden="true" />
-              {!collapsed && <span>Disconnect</span>}
+              <LogOut className="size-4 shrink-0" aria-hidden="true" />
+              <span
+                className={cn(
+                  "whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none",
+                  collapsed && "pointer-events-none opacity-0"
+                )}
+                aria-hidden={collapsed}
+              >
+                Disconnect
+              </span>
             </Button>
           </AlertDialogTrigger>
         </TooltipTrigger>
@@ -132,25 +145,23 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
 
 function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
   return (
-    <div className={cn("flex h-full flex-col bg-[hsl(var(--chrome))] py-5", collapsed ? "px-2" : "px-4")}>
-      <div className={cn("mb-8 flex", collapsed ? "justify-center" : "items-center")}>
+    <div className="flex h-full flex-col overflow-hidden bg-[hsl(var(--chrome))] px-3 py-5">
+      <div className="mb-8 flex h-10 items-center">
         <Link
           href="/wallet/account"
-          aria-label={collapsed ? "Conceal Wallet" : undefined}
-          className={cn(
-            "flex cursor-pointer items-center rounded-xl py-1 transition-colors duration-200 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-            collapsed ? "justify-center px-0" : "min-w-0 gap-3 px-2"
-          )}
+          aria-label="Conceal Wallet"
+          className="flex min-h-10 cursor-pointer items-center gap-3 rounded-xl px-3 transition-opacity duration-200 hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <WalletCards className="size-5" aria-hidden="true" />
-          </div>
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="whitespace-nowrap text-lg font-bold text-foreground">Conceal Wallet</p>
-              <p className="text-xs text-muted-foreground">Mock CCX interface</p>
-            </div>
-          )}
+          <Wallet className="size-5 shrink-0 text-primary" aria-hidden="true" />
+          <span
+            className={cn(
+              "whitespace-nowrap text-lg font-bold text-foreground transition-opacity duration-200 motion-reduce:transition-none",
+              collapsed && "pointer-events-none opacity-0"
+            )}
+            aria-hidden={collapsed}
+          >
+            Conceal Wallet
+          </span>
         </Link>
       </div>
       <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
@@ -175,7 +186,7 @@ export function Sidebar() {
     <>
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-30 hidden overflow-visible border-r border-border transition-[width] duration-200 motion-reduce:transition-none lg:block",
+          "fixed inset-y-0 left-0 z-30 hidden overflow-visible border-r border-border transition-[width] duration-300 ease-in-out motion-reduce:transition-none lg:block",
           collapsed ? "w-[64px]" : "w-[260px]"
         )}
       >

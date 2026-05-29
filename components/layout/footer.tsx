@@ -16,7 +16,7 @@ export function Footer({ collapsed = false }: { collapsed?: boolean }) {
     <footer className="border-t border-border bg-[hsl(var(--chrome))] text-sm text-muted-foreground">
       <div
         className={cn(
-          "mx-auto flex w-full flex-col gap-4 px-4 py-6 transition-[max-width] duration-200 motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8",
+          "mx-auto flex w-full flex-col gap-4 px-4 py-6 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8",
           collapsed ? "max-w-[1360px]" : "max-w-[1200px]"
         )}
       >

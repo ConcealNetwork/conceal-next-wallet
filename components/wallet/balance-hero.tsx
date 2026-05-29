@@ -84,7 +84,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
             <p className="text-sm text-muted-foreground">Available · ready to spend</p>
             <p className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]">
               {availableLabel}
-              <span className="ml-2 align-baseline text-xl font-medium text-muted-foreground">CCX</span>
+              <span className="ml-2 align-baseline text-xl font-medium text-primary">CCX</span>
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               of <span className="font-semibold text-muted-foreground">{totalLabel}</span> total ·{" "}

@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowRight, FileKey, KeyRound, QrCode, Upload, Wallet } from "lucide-react"
+import { FileKey, KeyRound, QrCode, Upload } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -8,24 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { services } from "@/lib/services"
 import { useWalletSession } from "@/lib/session/wallet-session"
-
-export function OpenWalletButton() {
-  const router = useRouter()
-  const { openSession } = useWalletSession()
-
-  async function openWallet() {
-    const wallet = await services.wallet.openWallet("mock-wallet")
-    openSession(wallet)
-    router.push("/wallet/account")
-  }
-
-  return (
-    <Button type="button" className="gap-2" onClick={openWallet}>
-      Open Wallet
-      <ArrowRight className="size-4" aria-hidden="true" />
-    </Button>
-  )
-}
 
 const importMethods = [
   { href: "/import/mnemonic", label: "Mnemonic", icon: FileKey, description: "Import placeholder seed words." },
@@ -78,13 +60,5 @@ export function MockImportButton({ method }: { method: "mnemonic" | "keys" | "fi
     <Button type="button" className="w-full" onClick={submit}>
       Open Mock Wallet
     </Button>
-  )
-}
-
-export function WalletIconHeader() {
-  return (
-    <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary text-primary-foreground">
-      <Wallet className="size-7" aria-hidden="true" />
-    </div>
   )
 }

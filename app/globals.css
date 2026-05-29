@@ -2,6 +2,7 @@
 
 @theme static {
   --font-sans: "Geist", "Geist Fallback", Arial, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -92,37 +93,42 @@
   animation: fade-in 520ms ease-out forwards;
 }
 
+/* Frosted-glass surface: translucent warm fill + backdrop blur, a hairline
+   warm border, a 1px top sheen (inset highlight) and a soft drop shadow.
+   Kept identical to the Card base background so the two never conflict when
+   both land on the same element (e.g. SectionCard). */
 @utility wallet-card {
-  @apply rounded-xl border border-border bg-card shadow-[0_18px_70px_rgba(0,0,0,0.22)];
+  @apply rounded-xl border border-border/70 bg-card/70 backdrop-blur-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_18px_60px_rgba(0,0,0,0.32)];
 }
 
 @layer base {
   :root {
     color-scheme: dark;
-    /* Ground-truth tokens sampled from the live Conceal wallet:
-       lifted neutral grey base (#212121), neutral hue (0, not cool blue),
-       pure-orange accent (#FFA500), neutral-700 borders (#404040). */
-    --background: 0 0% 13%; /* #212121 lifted neutral grey */
+    /* Warm "Aurora" palette — derived from the approved landing design.
+       Warm near-black base (~#171513), warm-tinted surfaces and borders,
+       pure-orange accent (#FFA500) preserved. Hue 30–40 at low saturation
+       gives the whole app a warm, premium temperature instead of cool grey. */
+    --background: 30 9% 9%; /* warm near-black ~#171513 */
     --foreground: 0 0% 100%;
-    --card: 0 0% 15%; /* #262626 — marginally lifted from bg for depth */
+    --card: 36 9% 13%; /* warm lifted surface (glass base) ~#241f1c */
     --card-foreground: 0 0% 100%;
-    --popover: 0 0% 15%;
+    --popover: 36 10% 12%;
     --popover-foreground: 0 0% 100%;
     --primary: 39 100% 50%; /* #FFA500 pure orange */
     --primary-foreground: 0 0% 0%;
-    --secondary: 0 0% 18%;
+    --secondary: 34 8% 17%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 64%;
+    --muted: 34 8% 17%;
+    --muted-foreground: 36 7% 64%; /* warm grey */
     --accent: 39 100% 50%;
     --accent-foreground: 0 0% 0%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 25%; /* #404040 neutral-700 */
-    --input: 0 0% 25%;
+    --border: 34 9% 21%; /* warm hairline ~#39332d */
+    --input: 34 9% 21%;
     --ring: 39 100% 50%;
     --radius: 0.75rem;
-    --chrome: 0 0% 11%; /* shared dark chrome surface (sidebar + footer), subtly darker than the body */
+    --chrome: 30 10% 7%; /* darker warm chrome surface (sidebar + footer) */
     --chart-1: 199 89% 48%;
     --chart-2: 160 84% 39%;
     --chart-3: 39 100% 50%;
@@ -139,7 +145,17 @@
   }
 
   body {
-    @apply min-h-screen bg-background text-foreground antialiased;
+    @apply min-h-screen text-foreground antialiased;
+    /* Ambient warm light, fixed to the viewport, so frosted-glass surfaces have
+       something to refract and the whole app shares the landing's atmosphere.
+       Structural wrappers (wallet-shell, layouts) are kept transparent so this
+       shows through the content gutters. */
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(58% 44% at 90% -8%, hsl(39 100% 50% / 0.07), transparent 60%),
+      radial-gradient(52% 40% at -8% 108%, hsl(28 100% 50% / 0.05), transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
 }
 

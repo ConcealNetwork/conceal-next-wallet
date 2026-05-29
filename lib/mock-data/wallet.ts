@@ -266,22 +266,26 @@ export const mockAddressBook: AddressEntry[] = [
     label: "Kraken Exchange",
     address: "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF",
     paymentId: "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099",
+    avatar: "/brand/contacts/kraken.png",
   },
   {
     id: "addr-2",
     label: "Alice",
     address: "ccx7AliceWalletAddr2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKm",
+    avatar: "/brand/contacts/alice.png",
   },
   {
     id: "addr-3",
     label: "Mining Pool",
     address: "ccx7PoolPayoutAddrK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF",
     paymentId: "7f3a44bc99de10ab7654321089abcdef1122334455667788990011223344c11cd",
+    avatar: "/brand/contacts/mining-pool.png",
   },
   {
     id: "addr-4",
     label: "Cold Storage",
     address: "ccx7ColdStoreAddrV2wX5yZ8aB1cD4eF7gH0jK3mNoPqRsTuVwXyZ1234567890aBcDeFgHiJ",
+    avatar: "/brand/contacts/cold-storage.png",
   },
 ]
 

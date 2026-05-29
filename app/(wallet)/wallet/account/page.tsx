@@ -7,6 +7,7 @@ import type { CSSProperties } from "react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BalanceHero, BalanceHeroSkeleton } from "@/components/wallet/balance-hero"
+import { CcxAmount } from "@/components/wallet/ccx"
 import { PageHeader, SectionCard } from "@/components/wallet/common"
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
 import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types"
@@ -190,7 +191,7 @@ function TransactionFlowSummary({
             <p className="text-xs text-muted-foreground">{segment.label}</p>
             <p className={cn("mt-1 truncate font-mono text-base font-semibold", segment.textClassName)}>
               {segment.prefix}
-              {formatCcx(segment.value)}
+              <CcxAmount>{formatCcx(segment.value)}</CcxAmount>
             </p>
           </div>
         ))}
@@ -233,7 +234,7 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
               <div className="flex shrink-0 items-center gap-3">
                 <span className={cn("font-mono text-sm font-medium", meta.className)}>
                   {meta.sign}
-                  {formatCcx(transaction.amount)}
+                  <CcxAmount>{formatCcx(transaction.amount)}</CcxAmount>
                 </span>
                 <span className="hidden w-16 text-right text-xs text-muted-foreground sm:inline">
                   {timeAgo(transaction.timestamp)}
@@ -349,7 +350,7 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Holdings</p>
             <p className="font-mono text-sm font-semibold leading-tight">{formatCcx(holdingsTotal).replace(" CCX", "")}</p>
-            <p className="text-[10px] text-muted-foreground">CCX</p>
+            <p className="text-[10px] text-primary">CCX</p>
           </div>
         </div>
         <div className="flex-1 space-y-2.5">

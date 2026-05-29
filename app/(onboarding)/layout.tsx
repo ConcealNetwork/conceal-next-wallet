@@ -1,15 +1,8 @@
-import { Footer } from "@/components/layout/footer"
 import { OnboardingGuard } from "@/components/layout/guards"
 
+/** The onboarding group only guards the session here. The constrained shell +
+ *  footer now lives in OnboardingShell, applied per-route by /create and
+ *  /import, so the landing page (/) can render full-bleed. */
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <OnboardingGuard>
-      <main className="min-h-screen bg-background px-4 py-8 text-foreground">
-        <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col">
-          <div className="flex-1">{children}</div>
-          <Footer />
-        </div>
-      </main>
-    </OnboardingGuard>
-  )
+  return <OnboardingGuard>{children}</OnboardingGuard>
 }

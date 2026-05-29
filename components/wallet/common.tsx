@@ -6,6 +6,7 @@ import { cloneElement, isValidElement, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CcxAmount } from "@/components/wallet/ccx"
 import type { Transaction, TransactionType } from "@/lib/types"
 import { cn, formatCcx, timeAgo, truncateAddress } from "@/lib/utils"
 
@@ -93,7 +94,7 @@ export function StatCard({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className={cn("mt-3 wrap-break-word text-2xl font-bold tracking-tight", toneClass)}>{value}</p>
+            <p className={cn("mt-3 wrap-break-word text-2xl font-bold tracking-tight", toneClass)}><CcxAmount>{value}</CcxAmount></p>
             <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
           </div>
           {hasTrend ? (
@@ -169,7 +170,11 @@ export function AmountText({ amount, type }: { amount: string; type: Transaction
       : type === "deposit"
         ? "text-wallet-deposit"
         : "text-wallet-incoming"
-  return <span className={cn("font-semibold", color)}>{amount}</span>
+  return (
+    <span className={cn("font-semibold", color)}>
+      <CcxAmount>{amount}</CcxAmount>
+    </span>
+  )
 }
 
 export function FilterTabs({
@@ -259,19 +264,52 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
 }
 
 export function WalletQrCode({ value, size = 180 }: { value: string; size?: number }) {
+  // High error-correction (level H) leaves room to knock out the centre for the
+  // Conceal mark without breaking scannability.
+  const logo = Math.round(size * 0.24)
   return (
     <div className="inline-flex rounded-2xl bg-white p-4">
-      <QRCodeSVG value={value} size={size} fgColor="#0a0a0a" bgColor="#ffffff" />
+      <QRCodeSVG
+        value={value}
+        size={size}
+        level="H"
+        fgColor="#171513"
+        bgColor="#ffffff"
+        imageSettings={{
+          src: "/brand/conceal-mark-orange.svg",
+          height: logo,
+          width: logo,
+          excavate: true,
+        }}
+      />
     </div>
   )
 }
 
-export function EmptyState({ title, description }: { title: string; description: string }) {
+export function EmptyState({
+  title,
+  description,
+  illustration,
+}: {
+  title: string
+  description: string
+  /** Optional branded spot illustration (public path). Falls back to the inbox glyph. */
+  illustration?: string
+}) {
   return (
     <div className="flex min-h-[220px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-secondary/60 p-8 text-center">
-      <div className="grid size-12 place-items-center rounded-xl bg-card text-muted-foreground">
-        <Inbox className="size-5" aria-hidden="true" />
-      </div>
+      {illustration ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={illustration}
+          alt=""
+          className="size-24 rounded-2xl border border-border object-cover shadow-[0_12px_36px_rgba(0,0,0,0.35)]"
+        />
+      ) : (
+        <div className="grid size-12 place-items-center rounded-xl bg-card text-muted-foreground">
+          <Inbox className="size-5" aria-hidden="true" />
+        </div>
+      )}
       <p className="mt-4 font-semibold text-white">{title}</p>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">{description}</p>
     </div>

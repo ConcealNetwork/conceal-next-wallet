@@ -132,7 +132,11 @@ export default function AddressBookPage() {
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <SectionCard>
           {total === 0 ? (
-            <EmptyState title="No addresses saved yet" description="Add your first CCX address to get started." />
+            <EmptyState
+              title="No addresses saved yet"
+              description="Add your first CCX address to get started."
+              illustration="/brand/empty/address-book.png"
+            />
           ) : (
             <>
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -151,19 +155,25 @@ export default function AddressBookPage() {
               ) : view === "cards" ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {entries.map((entry) => (
-                    <div key={entry.id} className="overflow-hidden rounded-2xl border border-border bg-secondary text-center">
-                      <div className="h-16 bg-linear-to-b from-primary/15 to-transparent" />
-                      <ContactAvatar entry={entry} className="mx-auto -mt-12 size-24 rounded-full border-4 border-secondary text-3xl" />
-                      <div className="px-5 pb-5 pt-3">
-                        <p className="truncate font-semibold text-foreground">{entry.label}</p>
-                        <p className="mt-2 inline-block max-w-full truncate rounded-lg border border-border bg-background px-2.5 py-1 font-mono text-xs text-muted-foreground">
-                          {truncateAddress(entry.address, 10, 8)}
-                        </p>
-                        <p className="mt-2 font-mono text-[11px] text-muted-foreground/70">
-                          PID {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
-                        </p>
-                        <div className="mt-4 flex justify-center gap-2">
-                          <CopyButton value={entry.address} label="Copy" />
+                    <div
+                      key={entry.id}
+                      className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 transition-colors duration-200 hover:border-ring/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <ContactAvatar entry={entry} className="size-12 shrink-0 rounded-xl text-lg" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold text-foreground">{entry.label}</p>
+                          <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground/70">
+                            PID {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="truncate rounded-lg border border-border bg-secondary/60 px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
+                        {truncateAddress(entry.address, 12, 10)}
+                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <CopyButton value={entry.address} label="Copy" />
+                        <div className="flex gap-1.5">
                           <Button type="button" variant="outline" size="icon" aria-label={`Edit ${entry.label}`} onClick={() => openEdit(entry)}>
                             <Pencil className="size-4" />
                           </Button>
