@@ -33,11 +33,12 @@ function useOpenWalletContext() {
   return context
 }
 
-/** Renders the unlock dialog once for all landing open-wallet buttons. */
+/** Renders unlock and no-wallet dialogs for all landing open-wallet buttons. */
 export function OpenWalletProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { openSession } = useWalletSession()
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false)
+  const [noWalletDialogOpen, setNoWalletDialogOpen] = useState(false)
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -48,7 +49,7 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
         env.useMockWallet ? {} : { password: passwordValue },
       )
       openSession(wallet)
-      setDialogOpen(false)
+      setUnlockDialogOpen(false)
       setPassword("")
       router.push("/wallet/account")
     } catch (error) {
@@ -66,17 +67,17 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
 
     const hasStored = await services.wallet.hasStoredWallet()
     if (!hasStored) {
-      toast.error("No wallet on this device. Create or import one first.")
+      setNoWalletDialogOpen(true)
       return
     }
 
-    setDialogOpen(true)
+    setUnlockDialogOpen(true)
   }
 
   return (
     <OpenWalletContext.Provider value={{ openWallet }}>
       {children}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={unlockDialogOpen} onOpenChange={setUnlockDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Open wallet</DialogTitle>
@@ -101,7 +102,7 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setUnlockDialogOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
@@ -109,6 +110,30 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={noWalletDialogOpen} onOpenChange={setNoWalletDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>No wallet found</DialogTitle>
+            <DialogDescription>
+              There is no encrypted wallet on this device yet. Import an existing wallet or create a new one.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-3 sm:flex-col sm:space-x-0">
+            <Button asChild className="w-full">
+              <Link href="/import" onClick={() => setNoWalletDialogOpen(false)}>
+                Import wallet
+              </Link>
+            </Button>
+            <Link
+              href="/create"
+              onClick={() => setNoWalletDialogOpen(false)}
+              className="cursor-pointer text-center text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Create a new one →
+            </Link>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </OpenWalletContext.Provider>
