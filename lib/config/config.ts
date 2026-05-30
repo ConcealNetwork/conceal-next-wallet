@@ -3,24 +3,10 @@
  * Applied to `window.config` via `applyWalletNetworkConfig()` after legacy globals load.
  */
 
+import { walletNetworkScalars as walletNetworkScalarsSource } from "./wallet-network-scalars.mjs"
+
 /** Plain-number fields (no JSBigInt) — safe for UI imports and tests. */
-export const walletNetworkScalars = {
-  coinUnitPlaces: 6,
-  coinFeeAtomic: 1000,
-  minimumFeeV2Atomic: 1000,
-  remoteNodeFeeAtomic: 10000,
-  feePerKBAtomic: 1000,
-  dustThresholdAtomic: 10,
-  messageTxAmountAtomic: 100,
-  depositMinAmountCoin: 1,
-  depositMinTermMonth: 1,
-  depositMinTermBlock: 21900,
-  depositMaxTermMonth: 12,
-  depositSmallWithdrawFee: 10,
-  avgBlockTime: 120,
-  maxMessageSize: 260,
-  cryptonoteMemPoolTxLifetimeSeconds: 60 * 60 * 12,
-} as const
+export const walletNetworkScalars = walletNetworkScalarsSource
 
 export const COIN_UNIT_PLACES = walletNetworkScalars.coinUnitPlaces
 export const COIN_FEE_ATOMIC = walletNetworkScalars.coinFeeAtomic

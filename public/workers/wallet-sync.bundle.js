@@ -3429,8 +3429,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
             }).catch(function(e) {
               reject(e);
             });
-          });
-        });
+          }).catch(reject);
+        }).catch(reject);
       });
     }
     static createWithdrawTx(deposit, wallet, blockchainHeight, obtainMixOutsCallback, confirmCallback, mixin = 0, paymentId = "", message = "", ttl = 0, transactionType = "withdraw", term = 0) {
@@ -3725,7 +3725,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.checkMinerTx = false;
       this.readSpeed = 10;
       this.customNode = false;
-      this.nodeUrl = "https://node.conceal.network:16000/";
+      this.nodeUrl = "https://explorer.conceal.network/daemon/";
     }
     static fromRaw(raw) {
       let options = new _WalletOptions();

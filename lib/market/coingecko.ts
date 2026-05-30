@@ -65,7 +65,7 @@ function writeLocal<T>(key: string, envelope: CacheEnvelope<T>) {
   }
 }
 
-function isFresh<T>(envelope: CacheEnvelope<T> | null | undefined, ttlMs: number): envelope is CacheEnvelope<T> {
+function isFresh<T>(envelope: CacheEnvelope<T> | null | undefined, ttlMs: number): boolean {
   return envelope !== null && envelope !== undefined && Date.now() - envelope.fetchedAt < ttlMs
 }
 
@@ -184,11 +184,11 @@ async function fetchLiveSnapshot(): Promise<PriceSnapshot> {
 }
 
 async function loadSnapshot(): Promise<PriceSnapshot> {
-  if (isFresh(memorySnapshot.current, MARKET_SNAPSHOT_TTL_MS)) {
+  if (memorySnapshot.current && isFresh(memorySnapshot.current, MARKET_SNAPSHOT_TTL_MS)) {
     return memorySnapshot.current.data
   }
   const fromLocal = readLocal<PriceSnapshot>(SNAPSHOT_CACHE_KEY)
-  if (isFresh(fromLocal, MARKET_SNAPSHOT_TTL_MS)) {
+  if (fromLocal && isFresh(fromLocal, MARKET_SNAPSHOT_TTL_MS)) {
     memorySnapshot.current = fromLocal
     return fromLocal.data
   }
@@ -231,11 +231,11 @@ function downsampleChart(points: MarketHistoryPoint[], maxPoints: number): Marke
 async function loadChart(range: MarketTimeframe): Promise<MarketHistoryPoint[]> {
   const localKey = `ccx-coingecko-chart-${range}-v1`
   const cached = memoryCharts.get(range)
-  if (isFresh(cached, CHART_TTL_MS)) {
+  if (cached && isFresh(cached, CHART_TTL_MS)) {
     return cached.data
   }
   const fromLocal = readLocal<MarketHistoryPoint[]>(localKey)
-  if (isFresh(fromLocal, CHART_TTL_MS)) {
+  if (fromLocal && isFresh(fromLocal, CHART_TTL_MS)) {
     memoryCharts.set(range, fromLocal)
     return fromLocal.data
   }

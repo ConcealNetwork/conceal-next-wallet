@@ -229,8 +229,13 @@ export function TransactionRow({ transaction }: { transaction: Transaction }) {
     send: "Send",
     deposit: "Deposit",
     withdrawal: "Withdrawal",
+    fusion: "Fusion",
+    miner: "Miner",
   }[transaction.type]
-  const prefix = transaction.type === "send" || transaction.type === "withdrawal" ? "-" : "+"
+  const prefix =
+    transaction.type === "send" || transaction.type === "fusion" || transaction.type === "withdrawal"
+      ? "-"
+      : "+"
 
   return (
     <div className="flex flex-col gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
