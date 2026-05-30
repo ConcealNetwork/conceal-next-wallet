@@ -14,7 +14,6 @@ const root = join(__dirname, "..")
 const legacyRoot = join(root, "..", "conceal-web-wallet", "src")
 const legacyLib = join(legacyRoot, "lib")
 const publicLib = join(root, "public", "lib")
-const publicWorkers = join(root, "public", "workers")
 
 /** Loaded by ensureWalletRuntimeLibs() — required for wallet-core crypto + storage. */
 const CORE_FILES = ["biginteger.js", "nacl-fast.min.js", "nacl-util.min.js"]
@@ -50,13 +49,6 @@ const SKIPPED_UI_LEGACY = [
   "nacl-fast.js",
 ]
 
-const WORKER_FILES = [
-  "ParseTransactionsEntrypoint.js",
-  "ParseTransactions.js",
-  "TransferProcessingEntrypoint.js",
-  "TransferProcessing.js",
-]
-
 function copyFile(name, destDir = publicLib) {
   const src = join(legacyLib, name)
   if (!existsSync(src)) {
@@ -68,7 +60,6 @@ function copyFile(name, destDir = publicLib) {
 }
 
 mkdirSync(publicLib, { recursive: true })
-mkdirSync(publicWorkers, { recursive: true })
 
 for (const file of CORE_FILES) copyFile(file)
 for (const file of EXTENDED_FILES) copyFile(file)
@@ -97,16 +88,6 @@ if (existsSync(legacyConcealjs)) {
   console.log("Copied concealjs/")
 }
 
-for (const file of WORKER_FILES) {
-  const src = join(legacyRoot, "workers", file)
-  if (!existsSync(src)) {
-    console.warn(`Worker file not found, skipped: ${file}`)
-    continue
-  }
-  copyFileSync(src, join(publicWorkers, file))
-  console.log(`Copied workers/${file}`)
-}
-
 const manifest = {
   syncedAt: new Date().toISOString(),
   source: "../conceal-web-wallet/src/lib",
@@ -116,7 +97,6 @@ const manifest = {
   optional: OPTIONAL_FILES.map((f) => `/lib/${f}`),
   polyfills: OPTIONAL_DIRS.map((d) => `/lib/${d}/`),
   workers: ["/workers/wallet-sync-entrypoint.js", "/workers/wallet-sync.bundle.js"],
-  legacyWorkers: WORKER_FILES.map((f) => `/workers/${f}`),
   skippedUiLegacy: SKIPPED_UI_LEGACY,
   notes: {
     core: "ensureWalletRuntimeLibs() in lib/conceal/init.ts",
@@ -128,4 +108,4 @@ const manifest = {
 
 writeFileSync(join(publicLib, "legacy-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`)
 console.log("Wrote public/lib/legacy-manifest.json")
-console.log("Legacy libs synced to public/lib/ and public/workers/")
+console.log("Legacy libs synced to public/lib/")

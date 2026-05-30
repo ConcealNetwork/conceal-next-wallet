@@ -24,12 +24,6 @@
     "/workers/wallet-sync-entrypoint.js",
     "/workers/wallet-sync.bundle.js"
   ],
-  "legacyWorkers": [
-    "/workers/ParseTransactionsEntrypoint.js",
-    "/workers/ParseTransactions.js",
-    "/workers/TransferProcessingEntrypoint.js",
-    "/workers/TransferProcessing.js"
-  ],
   "skippedUiLegacy": [
     "vue.min.js",
     "vue-i18n.js",

@@ -9,19 +9,16 @@ const nextConfig = {
   output: 'export',
   basePath,
   assetPrefix: basePath || undefined,
-  env: {
-    NEXT_PUBLIC_PAGES_BASE_PATH: basePath,
-  },
   trailingSlash: true,
   images: {
     // next/image optimization needs a server; static export can't provide one.
     unoptimized: true,
   },
-  // Exposed to the client so raw asset references (CSS url(), <img src>, the QR
-  // image setting) can be prefixed with the same subpath — Next only prefixes
-  // next/image, Link and the favicon automatically.
+  // Exposed to the client so raw asset references (CSS url(), <img src>, script tags)
+  // can be prefixed with the deploy subpath — Next only prefixes Link/favicon automatically.
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
+    NEXT_PUBLIC_PAGES_BASE_PATH: basePath,
   },
 };
 
