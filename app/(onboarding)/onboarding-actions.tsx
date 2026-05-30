@@ -9,15 +9,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { services } from "@/lib/services"
 import type { ImportWalletInput } from "@/lib/services/wallet.service"
 import { useWalletSession } from "@/lib/session/wallet-session"
+import { MNEMONIC_IMPORT_LANGUAGES, type MnemonicImportLanguageKey } from "@/lib/ui/mnemonic-import-languages"
 import { importFieldsRequired, walletCopy } from "@/lib/ui/wallet-copy"
 
 const importMethods = [
   { href: "/import/mnemonic", label: "Mnemonic", icon: FileKey, description: "Restore from 25-word seed phrase." },
   { href: "/import/keys", label: "Keys", icon: KeyRound, description: "Import spend and view keys." },
-  { href: "/import/file", label: "File", icon: Upload, description: "Open an encrypted .wallet file." },
+  { href: "/import/file", label: "File", icon: Upload, description: "Open an encrypted JSON backup." },
   { href: "/import/qr", label: "QR", icon: QrCode, description: "Import from a wallet QR payload." },
 ]
 
@@ -120,12 +122,27 @@ export function ImportKeysForm() {
   )
 }
 
+function sanitizeImportHeightInput(value: string): string {
+  const digits = value.replace(/\D/g, "")
+  if (digits === "") return ""
+  const parsed = parseInt(digits, 10)
+  return Number.isNaN(parsed) ? "" : String(parsed)
+}
+
+function normalizeImportHeight(value: string): number {
+  const parsed = parseInt(value.replace(/\D/g, ""), 10)
+  if (Number.isNaN(parsed) || parsed < 0) return 0
+  return parsed
+}
+
 export function ImportMnemonicForm() {
   const router = useRouter()
   const { openSession } = useWalletSession()
   const [loading, setLoading] = useState(false)
   const [mnemonic, setMnemonic] = useState("")
   const [password, setPassword] = useState("")
+  const [importHeight, setImportHeight] = useState("0")
+  const [language, setLanguage] = useState<MnemonicImportLanguageKey>("auto")
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -135,7 +152,8 @@ export function ImportMnemonicForm() {
         method: "mnemonic",
         mnemonic,
         password,
-        language: "auto",
+        language,
+        scanHeight: normalizeImportHeight(importHeight),
       })
       openSession(wallet)
       toast.success("Wallet imported.")
@@ -153,6 +171,38 @@ export function ImportMnemonicForm() {
         <Label>Mnemonic</Label>
         <Input value={mnemonic} onChange={(e) => setMnemonic(e.target.value)} required={importFieldsRequired} />
       </div>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2">
+        <Label htmlFor="import-height" className="col-start-1 row-start-1">
+          Import height
+        </Label>
+        <Label htmlFor="mnemonic-language" className="col-start-2 row-start-1">
+          Language
+        </Label>
+        <Input
+          id="import-height"
+          value={importHeight}
+          onChange={(e) => setImportHeight(sanitizeImportHeightInput(e.target.value))}
+          onBlur={() => setImportHeight(String(normalizeImportHeight(importHeight)))}
+          className="col-start-1 row-start-2 w-32"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          aria-label="Import height"
+        />
+        <div className="col-start-2 row-start-2 min-w-0">
+          <Select value={language} onValueChange={(value) => setLanguage(value as MnemonicImportLanguageKey)}>
+            <SelectTrigger id="mnemonic-language" aria-label="Mnemonic language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MNEMONIC_IMPORT_LANGUAGES.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <div className="space-y-2">
         <Label>Encryption password</Label>
         <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
@@ -168,6 +218,29 @@ export function ImportFileForm() {
   const [loading, setLoading] = useState(false)
   const [password, setPassword] = useState("")
   const [file, setFile] = useState<ArrayBuffer | null>(null)
+  const [fileName, setFileName] = useState("")
+
+  async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0]
+    if (!selected) {
+      setFile(null)
+      setFileName("")
+      return
+    }
+
+    try {
+      const buffer = await selected.arrayBuffer()
+      const text = new TextDecoder().decode(buffer).replace(/^\uFEFF/, "").trim()
+      JSON.parse(text)
+      setFile(buffer)
+      setFileName(selected.name)
+    } catch {
+      event.target.value = ""
+      setFile(null)
+      setFileName("")
+      toast.error("The selected file is not valid JSON.")
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -187,16 +260,15 @@ export function ImportFileForm() {
   return (
     <form className="space-y-4" onSubmit={submit}>
       <div className="space-y-2">
-        <Label>Wallet file</Label>
+        <Label htmlFor="wallet-backup-file">JSON backup file</Label>
         <Input
+          id="wallet-backup-file"
           type="file"
-          accept=".json,.wallet,application/json"
-          onChange={async (event) => {
-            const selected = event.target.files?.[0]
-            setFile(selected ? await selected.arrayBuffer() : null)
-          }}
+          accept=".json,application/json"
+          onChange={handleFileSelect}
           required={importFieldsRequired}
         />
+        {fileName ? <p className="text-sm text-muted-foreground">Selected: {fileName}</p> : null}
       </div>
       <div className="space-y-2">
         <Label>File password</Label>
