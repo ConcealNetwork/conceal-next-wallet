@@ -36,6 +36,12 @@ export const walletCopy = {
   depositWithdrawConfirm: env.useMockWallet
     ? "Confirm this mock withdrawal?"
     : "Confirm and broadcast this withdrawal? Principal plus interest will return to your wallet.",
+  messageTtlDisclaimer:
+    "TTL transactions only exist in the mempool and auto-destruct after the selected duration (hours:minutes). They are not mined into blocks, so the amount charged is returned to your wallet.",
+  messageTooLong: "The message is too long. Maximum length is 260 characters.",
+  messageSendSuccess: env.useMockWallet
+    ? "Mock message sent."
+    : "Message submitted to the network.",
 } as const
 
 /** HTML `required` on import fields — relaxed in mock so you can click through quickly. */

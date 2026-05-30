@@ -1,10 +1,12 @@
 // @ts-nocheck
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init"
 import type { ExportWalletData } from "@/lib/services/wallet.service"
+import type { SendMessageInput } from "@/lib/services/message.service"
 import type { SendTransactionInput } from "@/lib/services/transaction.service"
 import type { ImportWalletInput } from "@/lib/services/wallet.service"
 import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service"
-import type { Deposit, Transaction, WalletInfo, NodeStatus } from "@/lib/types"
+import type { Deposit, Message, Transaction, WalletInfo, NodeStatus } from "@/lib/types"
+import { MAX_MESSAGE_SIZE, MESSAGE_TX_AMOUNT_ATOMIC } from "@/lib/config/config"
 import { Cn, CnUtils } from "./Cn"
 import { KeysRepository } from "./KeysRepository"
 import { Mnemonic } from "./Mnemonic"
@@ -18,8 +20,10 @@ import {
   deriveIndicativeDepositApr,
   getWalletDepositConstraints,
   listWalletDeposits,
+  listWalletMessages,
   listWalletTransactions,
   mapCoreDeposit,
+  mapCoreMessage,
   mapWalletToInfo,
 } from "./mappers"
 import { InterestCalculator } from "./Interest"
@@ -336,6 +340,112 @@ export async function sendTransactionOperation(input: SendTransactionInput): Pro
   )
 }
 
+export async function listMessagesOperation(): Promise<Message[]> {
+  await ensureAllWalletLegacyLibs()
+  const wallet = getRuntimeWallet()
+  if (wallet === null) throw new Error("Wallet is not open.")
+  return listWalletMessages(wallet)
+}
+
+export async function sendMessageOperation(input: SendMessageInput): Promise<Message> {
+  await ensureAllWalletLegacyLibs()
+  const wallet = getRuntimeWallet()
+  if (wallet === null) throw new Error("Wallet is not open.")
+
+  const body = input.body.trim()
+  if (!body) throw new Error("Message is required.")
+  if (body.length > MAX_MESSAGE_SIZE) {
+    throw new Error(`Message exceeds maximum length of ${MAX_MESSAGE_SIZE} characters.`)
+  }
+
+  const destinationAddress = input.recipientAddress.trim()
+  if (!destinationAddress) throw new Error("Recipient address is required.")
+  try {
+    Cn.decode_address(destinationAddress)
+  } catch {
+    throw new Error("Invalid recipient address.")
+  }
+
+  const ttlMinutes = input.ttlMinutes ? input.ttlMinutes : 0
+  const ttlForTx = input.ttlUnix ?? 0
+  const explorer = BlockchainExplorerProvider.getInstance()
+  const blockchainHeight = await explorer.getHeight()
+  const amountToSend = MESSAGE_TX_AMOUNT_ATOMIC
+
+  const destinations = [{ address: destinationAddress, amount: amountToSend }]
+  const remoteFeeAddress = await explorer.getSessionNodeFeeAddress()
+  if (remoteFeeAddress !== wallet.getPublicAddress() && ttlMinutes === 0) {
+    destinations.push({
+      address: remoteFeeAddress || config.donationAddress,
+      amount: config.remoteNodeFee,
+    })
+  }
+
+  let rawTxData: { raw: { hash: string; prvkey: string; raw: string }; signed: unknown }
+  try {
+    rawTxData = await TransactionsExplorer.createTx(
+      destinations,
+      "",
+      wallet,
+      blockchainHeight,
+      (amounts: number[], numberOuts: number) => explorer.getRandomOuts(amounts, numberOuts),
+      async (amount, feesAmount) => {
+        const total = amount.add(feesAmount)
+        const available = new JSBigInt(String(wallet.availableAmount(blockchainHeight)))
+        if (total.compare(available) > 0) {
+          throw new Error("Insufficient funds for message transfer and fee.")
+        }
+      },
+      config.defaultMixin,
+      body,
+      ttlForTx,
+    )
+  } catch (error) {
+    throw normalizeWalletOperationError(error, "Failed to create message transaction.")
+  }
+
+  try {
+    await explorer.sendRawTx(rawTxData.raw.raw)
+  } catch (error) {
+    throw normalizeWalletOperationError(error, "Failed to broadcast message transaction.")
+  }
+  wallet.addTxPrivateKeyWithTxHash(rawTxData.raw.hash, rawTxData.raw.prvkey)
+  const watchdog = getRuntimeWatchdog()
+  if (watchdog !== null) watchdog.checkMempool()
+
+  const shortAddress =
+    destinationAddress.length > 16
+      ? `${destinationAddress.slice(0, 8)}…${destinationAddress.slice(-6)}`
+      : destinationAddress
+
+  return {
+    id: rawTxData.raw.hash,
+    direction: "sent",
+    counterpartyName: shortAddress,
+    counterpartyAddress: destinationAddress,
+    body,
+    timestamp: new Date().toISOString(),
+    unread: false,
+  }
+}
+
+export async function markMessageReadOperation(id: string): Promise<Message> {
+  await ensureAllWalletLegacyLibs()
+  const wallet = getRuntimeWallet()
+  if (wallet === null) throw new Error("Wallet is not open.")
+
+  wallet.updateTransactionFlags(id, { messageViewed: true })
+
+  const all = wallet.txsMem.concat(wallet.getTransactionsCopy())
+  const tx = all.find((candidate) => candidate.hash === id)
+  if (!tx) throw new Error("Message transaction not found.")
+
+  const mapped = mapCoreMessage(tx, wallet.getPublicAddress())
+  if (!mapped) throw new Error("Transaction is not a message.")
+
+  return { ...mapped, unread: false }
+}
+
 export async function listDepositsOperation(): Promise<Deposit[]> {
   await ensureAllWalletLegacyLibs()
   const wallet = getRuntimeWallet()
@@ -521,6 +631,19 @@ export async function withdrawDepositOperation(input: WithdrawDepositInput): Pro
       confirmations: 0,
     }
   )
+}
+
+function normalizeWalletOperationError(error: unknown, fallback: string): Error {
+  if (error instanceof Error && error.message) return error
+  if (typeof error === "string" && error) return new Error(error)
+  const original = (error as { originalResponse?: { reason?: string; status?: string } })?.originalResponse
+  if (original?.reason || original?.status) {
+    return new Error(`${fallback} ${original.reason ?? original.status}`)
+  }
+  if (error && typeof error === "object" && "error" in error) {
+    return new Error(`${fallback} ${String((error as { error: unknown }).error)}`)
+  }
+  return new Error(fallback)
 }
 
 export { disconnectWalletRuntime, hasStoredWallet } from "./wallet-runtime"

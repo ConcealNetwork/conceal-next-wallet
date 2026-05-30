@@ -963,7 +963,8 @@ export class TransactionsExplorer {
           " CCX"
       );
 
-      confirmCallback(totalAmountWithoutFee, neededFee).then(function () {
+      confirmCallback(totalAmountWithoutFee, neededFee)
+        .then(function () {
         if (usingOuts_amount.compare(totalAmount) < 0) {
           logDebugMsg(
             "Not enough spendable outputs / balance too low (have " +
@@ -1053,8 +1054,10 @@ export class TransactionsExplorer {
             .catch(function (e) {
               reject(e);
             });
-        });
-      });
+        })
+          .catch(reject);
+      })
+        .catch(reject);
     });
   }
 

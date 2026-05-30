@@ -84,7 +84,15 @@ export function useMessages() {
 }
 
 export function useSendMessage() {
-  return useMutation({ mutationFn: (input: SendMessageInput) => services.messages.sendMessage(input) })
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SendMessageInput) => services.messages.sendMessage(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet })
+    },
+  })
 }
 
 export function useDeposits() {

@@ -1,5 +1,11 @@
 import { createWalletNetworkConfig, type WalletNetworkConfig } from "@/lib/config/config"
-import type { Deposit as UiDeposit, Transaction as UiTransaction, TransactionType, WalletInfo } from "@/lib/types"
+import type {
+  Deposit as UiDeposit,
+  Message as UiMessage,
+  Transaction as UiTransaction,
+  TransactionType,
+  WalletInfo,
+} from "@/lib/types"
 import type { Deposit as CoreDeposit, Transaction as CoreTransaction } from "./Transaction"
 import type { Wallet } from "./Wallet"
 
@@ -80,6 +86,41 @@ export function listWalletTransactions(wallet: Wallet, blockchainHeight: number)
   return wallet.txsMem
     .concat(wallet.getTransactionsCopy().reverse())
     .map((tx) => mapCoreTransaction(tx, blockchainHeight, address))
+}
+
+/** Pending TTL txs store expiry as absolute unix seconds (v1 account/messages pages). */
+export function isMessageTransactionExpired(tx: CoreTransaction): boolean {
+  if (!tx.ttl || tx.ttl <= 0 || tx.blockHeight !== 0) return false
+  return Math.floor(Date.now() / 1000) >= tx.ttl
+}
+
+export function mapCoreMessage(tx: CoreTransaction, _walletAddress: string): UiMessage | null {
+  if (!tx.message) return null
+  if (isMessageTransactionExpired(tx)) return null
+
+  const sent = tx.ins.length > 0
+  const counterpartyAddress = sent ? `sent:${tx.hash}` : `recv:${tx.hash}`
+  const shortHash = tx.hash ? `${tx.hash.slice(0, 8)}…` : "unknown"
+
+  const pendingTtl = tx.blockHeight === 0 && tx.ttl > 0
+
+  return {
+    id: tx.hash || `${tx.timestamp}-${tx.message}`,
+    direction: sent ? "sent" : "received",
+    counterpartyName: sent ? `To ${shortHash}` : `From ${shortHash}`,
+    counterpartyAddress,
+    body: tx.message,
+    timestamp: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : new Date().toISOString(),
+    unread: sent ? false : !tx.messageViewed,
+    ttlExpiresAt: pendingTtl ? tx.ttl : undefined,
+  }
+}
+
+export function listWalletMessages(wallet: Wallet): UiMessage[] {
+  return wallet.txsMem
+    .concat(wallet.getTransactionsCopy().reverse())
+    .map((tx) => mapCoreMessage(tx, wallet.getPublicAddress()))
+    .filter((message): message is UiMessage => message !== null)
 }
 
 /** Indicative APR from principal, accrued interest, and term (for UI labels). */

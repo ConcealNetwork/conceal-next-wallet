@@ -18,6 +18,8 @@ export const walletNetworkScalars = {
   depositMaxTermMonth: 12,
   depositSmallWithdrawFee: 10,
   avgBlockTime: 120,
+  maxMessageSize: 260,
+  cryptonoteMemPoolTxLifetimeSeconds: 60 * 60 * 12,
 } as const
 
 export const COIN_UNIT_PLACES = walletNetworkScalars.coinUnitPlaces
@@ -28,6 +30,9 @@ export const DEPOSIT_MIN_TERM_MONTH = walletNetworkScalars.depositMinTermMonth
 export const DEPOSIT_MAX_TERM_MONTH = walletNetworkScalars.depositMaxTermMonth
 export const DEPOSIT_MIN_TERM_BLOCK = walletNetworkScalars.depositMinTermBlock
 export const AVG_BLOCK_TIME_SECONDS = walletNetworkScalars.avgBlockTime
+export const MAX_MESSAGE_SIZE = walletNetworkScalars.maxMessageSize
+export const MAX_TTL_MINUTES = walletNetworkScalars.cryptonoteMemPoolTxLifetimeSeconds / 60
+export const MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars.messageTxAmountAtomic
 
 type WalletConfigBigInt = {
   new (value: string): { valueOf(): number }
@@ -78,8 +83,8 @@ export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
     optimizeOutputs: 100,
     optimizeThreshold: 100,
     messageTxAmount: new JSBigInt(String(s.messageTxAmountAtomic)),
-    maxMessageSize: 260,
-    cryptonoteMemPoolTxLifetime: 60 * 60 * 12,
+    maxMessageSize: s.maxMessageSize,
+    cryptonoteMemPoolTxLifetime: s.cryptonoteMemPoolTxLifetimeSeconds,
     fusionTxMinInOutCountRatio: 4,
     maxFusionOutputs: 8,
 

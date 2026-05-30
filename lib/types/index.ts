@@ -72,6 +72,8 @@ export type Message = {
   body: string
   timestamp: string
   unread: boolean
+  /** Mempool TTL expiry (unix seconds); set when blockHeight === 0 and tx.ttl > 0. */
+  ttlExpiresAt?: number
 }
 
 export type MarketData = {

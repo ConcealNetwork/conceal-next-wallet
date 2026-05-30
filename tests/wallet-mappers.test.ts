@@ -3,7 +3,9 @@ import { createWalletNetworkConfig, walletNetworkScalars } from "@/lib/config/co
 import {
   clampImportHeight,
   deriveIndicativeDepositApr,
+  isMessageTransactionExpired,
   mapCoreDeposit,
+  mapCoreMessage,
   mapCoreTransaction,
   resolveTransactionDisplayAmount,
   resolveTransactionType,
@@ -131,5 +133,34 @@ describe("wallet mappers", () => {
     const spent = mapCoreDeposit(deposit, deposit.unlockHeight + 10, walletAddress, network)
     expect(spent.status).toBe("spent")
     expect(spent.unlocksInDays).toBe(0)
+  })
+
+  it("maps message txs and filters expired TTL mempool messages", () => {
+    const walletAddress = "ccx7WalletAddressExample"
+    const received = makeTx({ hash: "recv-1", ins: [], outs: [out(100)] })
+    received.message = "Hello"
+    received.messageViewed = false
+
+    const sent = makeTx({ hash: "sent-1", ins: [input(100)], outs: [] })
+    sent.message = "Hi back"
+
+    const expired = makeTx({ hash: "ttl-1", ins: [], outs: [out(100)] })
+    expired.message = "TTL note"
+    expired.blockHeight = 0
+    expired.ttl = Math.floor(Date.now() / 1000) - 10
+
+    const receivedMsg = mapCoreMessage(received, walletAddress)
+    expect(receivedMsg?.direction).toBe("received")
+    expect(receivedMsg?.unread).toBe(true)
+    expect(receivedMsg?.ttlExpiresAt).toBeUndefined()
+
+    const pendingTtl = makeTx({ hash: "ttl-pending", ins: [], outs: [out(100)] })
+    pendingTtl.message = "TTL pending"
+    pendingTtl.blockHeight = 0
+    pendingTtl.ttl = Math.floor(Date.now() / 1000) + 3600
+    expect(mapCoreMessage(pendingTtl, walletAddress)?.ttlExpiresAt).toBe(pendingTtl.ttl)
+    expect(mapCoreMessage(sent, walletAddress)?.direction).toBe("sent")
+    expect(mapCoreMessage(expired, walletAddress)).toBeNull()
+    expect(isMessageTransactionExpired(expired)).toBe(true)
   })
 })
