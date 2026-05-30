@@ -12,7 +12,7 @@ import { PageHeader, SectionCard } from "@/components/wallet/common"
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
 import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types"
 import { useDeposits, useMarketData, useRefreshWallet, useTransactions, useWalletInfo } from "@/lib/hooks"
-import { ccxToNumber, cn, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils"
+import { ccxToNumber, cn, formatCcx, formatUsd, timeAgo, truncateAddress, walletBalanceUsd } from "@/lib/utils"
 
 const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false })
 const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false })
@@ -26,12 +26,24 @@ export default function AccountPage() {
   const deposits = useDeposits()
   const refresh = useRefreshWallet()
   const info = wallet.data
+  const isSyncing =
+    info !== undefined && info.networkHeight > 0 && info.currentHeight < info.networkHeight - 1
+  const syncPct =
+    info && info.networkHeight > 0
+      ? Math.min(100, Math.round((info.currentHeight / info.networkHeight) * 100))
+      : 0
 
   const totals = (transactions.data ?? []).reduce(
     (acc, transaction) => {
       const value = ccxToNumber(transaction.amount)
-      if (transaction.type === "receive") acc.received += value
-      if (transaction.type === "send") acc.sent += value
+      if (
+        transaction.type === "receive" ||
+        transaction.type === "miner" ||
+        transaction.type === "withdrawal"
+      ) {
+        acc.received += value
+      }
+      if (transaction.type === "send" || transaction.type === "fusion") acc.sent += value
       if (transaction.type === "deposit") acc.deposits += value
       return acc
     },
@@ -55,6 +67,15 @@ export default function AccountPage() {
           </Button>
         }
       />
+      {isSyncing && info && (
+        <div
+          className="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground"
+          role="status"
+        >
+          Syncing blockchain… block {info.currentHeight.toLocaleString()} / {info.networkHeight.toLocaleString()} (
+          {syncPct}%)
+        </div>
+      )}
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         {info && market.data && deposits.data ? (
           <BalanceHero wallet={info} market={market.data} deposits={deposits.data} />
@@ -205,9 +226,11 @@ function TransactionFlowSummary({
 
 const TX_META: Record<TransactionType, { label: string; sign: string; className: string }> = {
   receive: { label: "Receive", sign: "+", className: "text-wallet-incoming" },
+  miner: { label: "Miner", sign: "+", className: "text-wallet-incoming" },
   deposit: { label: "Deposit", sign: "+", className: "text-wallet-deposit" },
   send: { label: "Send", sign: "−", className: "text-wallet-outgoing" },
-  withdrawal: { label: "Withdraw", sign: "−", className: "text-wallet-outgoing" },
+  withdrawal: { label: "Withdraw", sign: "+", className: "text-wallet-incoming" },
+  fusion: { label: "Fusion", sign: "−", className: "text-muted-foreground" },
 }
 
 function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
@@ -254,6 +277,7 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
   const locked = ccxToNumber(walletInfo.lockedDeposits)
   const staking = ccxToNumber(walletInfo.staking)
   const holdingsTotal = available + locked + staking
+  const portfolioUsd = walletBalanceUsd(walletInfo.balanceTotal, market.price.value)
   const marketPriceLabel = useCountUp(market.price.value, {
     formatter: (value) => formatUsd(value, 3),
   })
@@ -370,7 +394,7 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
       <div className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
         <div>
           <p className="text-xs text-muted-foreground">Portfolio Value</p>
-          <p className="mt-1 font-mono text-base font-semibold">{formatUsd(market.portfolioValueUsd)}</p>
+          <p className="mt-1 font-mono text-base font-semibold">{formatUsd(portfolioUsd)}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">24h Volume</p>

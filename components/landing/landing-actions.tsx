@@ -1,30 +1,129 @@
 "use client"
 
 import Link from "next/link"
+import { createContext, useContext, useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { env } from "@/lib/env"
 import { services } from "@/lib/services"
 import { useWalletSession } from "@/lib/session/wallet-session"
 
-function useOpenWallet() {
-  const router = useRouter()
-  const { openSession } = useWalletSession()
-
-  return async function openWallet() {
-    const wallet = await services.wallet.openWallet("mock-wallet")
-    openSession(wallet)
-    router.push("/wallet/account")
-  }
+type OpenWalletContextValue = {
+  openWallet: () => Promise<void>
 }
 
-/** Primary hero CTAs: open the mock wallet, or go create a new one. */
+const OpenWalletContext = createContext<OpenWalletContextValue | null>(null)
+
+function useOpenWalletContext() {
+  const context = useContext(OpenWalletContext)
+  if (!context) {
+    throw new Error("Open wallet controls must be used inside OpenWalletProvider")
+  }
+  return context
+}
+
+/** Renders the unlock dialog once for all landing open-wallet buttons. */
+export function OpenWalletProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  const { openSession } = useWalletSession()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function unlock(passwordValue?: string) {
+    setLoading(true)
+    try {
+      const wallet = await services.wallet.openWallet(
+        env.useMockWallet ? {} : { password: passwordValue },
+      )
+      openSession(wallet)
+      setDialogOpen(false)
+      setPassword("")
+      router.push("/wallet/account")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to open wallet.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function openWallet() {
+    if (env.useMockWallet) {
+      await unlock()
+      return
+    }
+
+    const hasStored = await services.wallet.hasStoredWallet()
+    if (!hasStored) {
+      toast.error("No wallet on this device. Create or import one first.")
+      return
+    }
+
+    setDialogOpen(true)
+  }
+
+  return (
+    <OpenWalletContext.Provider value={{ openWallet }}>
+      {children}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Open wallet</DialogTitle>
+            <DialogDescription>Enter your encryption password to unlock the wallet on this device.</DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void unlock(password)
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="landing-open-password">Password</Label>
+              <Input
+                id="landing-open-password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Opening…" : "Open Wallet"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </OpenWalletContext.Provider>
+  )
+}
+
+/** Primary hero CTAs: open the wallet, or go create a new one. */
 export function LandingActions() {
-  const openWallet = useOpenWallet()
+  const { openWallet } = useOpenWalletContext()
 
   return (
     <div className="mt-11 flex flex-wrap items-center gap-x-7 gap-y-4">
       <button
         type="button"
-        onClick={openWallet}
+        onClick={() => void openWallet()}
         className="cursor-pointer rounded-full bg-primary px-7 py-4 text-[15px] font-semibold text-primary-foreground transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(255,165,0,0.3)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       >
         Open your wallet
@@ -41,12 +140,12 @@ export function LandingActions() {
 
 /** Compact "Open Wallet" pill used in the landing nav. */
 export function NavOpenWalletButton() {
-  const openWallet = useOpenWallet()
+  const { openWallet } = useOpenWalletContext()
 
   return (
     <button
       type="button"
-      onClick={openWallet}
+      onClick={() => void openWallet()}
       className="cursor-pointer rounded-full border border-border px-[17px] py-[9px] text-sm font-medium text-foreground transition-colors duration-200 hover:border-primary hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
     >
       Open Wallet

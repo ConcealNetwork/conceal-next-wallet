@@ -1,14 +1,19 @@
+import { env } from "@/lib/env"
 import { mockServices } from "@/lib/services/mock"
 import type { WalletServices } from "@/lib/services/types"
 
-export function getWalletServices(): WalletServices {
-  const useMock = process.env.NEXT_PUBLIC_USE_MOCK !== "false"
+let cachedRealServices: WalletServices | null = null
 
-  if (!useMock) {
+export function getWalletServices(): WalletServices {
+  if (env.useMockWallet) {
     return mockServices
   }
-
-  return mockServices
+  if (!cachedRealServices) {
+    // Lazy load so mock mode / tests never pull wallet-core at module init.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    cachedRealServices = require("@/lib/services/real").realServices as WalletServices
+  }
+  return cachedRealServices
 }
 
 export const services = getWalletServices()

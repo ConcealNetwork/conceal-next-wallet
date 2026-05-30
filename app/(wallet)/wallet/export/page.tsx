@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { CopyButton, PageHeader, SectionCard } from "@/components/wallet/common"
 import { services } from "@/lib/services"
 import type { ExportWalletData } from "@/lib/services/wallet.service"
+import { walletCopy } from "@/lib/ui/wallet-copy"
 
 export default function ExportPage() {
   const [data, setData] = useState<ExportWalletData | null>(null)
@@ -23,10 +24,8 @@ export default function ExportPage() {
     <>
       <PageHeader title="Export" subtitle="Back up placeholder wallet material" />
       <Alert className="mb-6 animate-rise-in border-wallet-amber bg-wallet-amber/10 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
-        <AlertTitle>Mock-only export data</AlertTitle>
-        <AlertDescription>
-          These strings are placeholders. This app does not generate, derive, validate, store, or reveal real wallet keys.
-        </AlertDescription>
+        <AlertTitle>{walletCopy.exportAlertTitle}</AlertTitle>
+        <AlertDescription>{walletCopy.exportAlertBody}</AlertDescription>
       </Alert>
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
       <SectionCard title="Backup Data">

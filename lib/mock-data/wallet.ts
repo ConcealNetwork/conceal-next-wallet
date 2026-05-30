@@ -39,6 +39,7 @@ export const mockWalletInfo: WalletInfo = {
   },
   creationHeight: 1971774,
   currentHeight: 1971337,
+  networkHeight: 1971337,
 }
 
 export const mockTransactions: Transaction[] = [
@@ -129,6 +130,8 @@ export const mockTransactions: Transaction[] = [
 export const mockDeposits: Deposit[] = [
   {
     id: "dep-001",
+    txHash: "3d7bb0e693ad5d9de58a05cc97ea9b2c5b0d45c4ad8e8f5b6f98c9f04cb7df35",
+    globalOutputIndex: 0,
     amount: ccxAmount(250),
     status: "active",
     durationMonths: 12,
@@ -140,10 +143,12 @@ export const mockDeposits: Deposit[] = [
   },
   {
     id: "dep-002",
+    txHash: "276585050412d162479ef0c0c789b192e28baa3574d5e4fc3bca749d5e92de45",
+    globalOutputIndex: 1,
     amount: ccxAmount(500),
     status: "active",
-    durationMonths: 24,
-    apr: 5.4,
+    durationMonths: 12,
+    apr: 4.6,
     interest: ccxAmount(54),
     unlocksInDays: 221,
     progressPct: 29,
@@ -290,7 +295,7 @@ export const mockAddressBook: AddressEntry[] = [
 ]
 
 export const mockNodeStatus: NodeStatus = {
-  url: "https://node.conceal.network:16000/",
+  url: "https://explorer.conceal.network/daemon/",
   height: 1971337,
   networkHeight: 1971337,
   peers: 18,
@@ -315,7 +320,7 @@ export const mockNodeStatus: NodeStatus = {
 export const mockSettings: WalletSettings = {
   language: "English",
   useCustomNode: false,
-  nodeUrl: "https://node.conceal.network:16000/",
+  nodeUrl: "https://explorer.conceal.network/daemon/",
   readMinorTx: false,
   autoLock: true,
   biometric: false,

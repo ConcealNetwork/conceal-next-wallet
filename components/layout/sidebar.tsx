@@ -37,7 +37,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse"
 import { cn } from "@/lib/utils"
-import { useWalletSession } from "@/lib/session/wallet-session"
+import { useWalletDisconnect } from "@/components/wallet/open-wallet-form"
 
 const mainNav = [
   { href: "/wallet/account", label: "Account", icon: Home },
@@ -97,7 +97,7 @@ function NavLink({ item, collapsed = false }: { item: (typeof mainNav)[number]; 
 }
 
 function DisconnectButton({ collapsed }: { collapsed: boolean }) {
-  const { closeSession } = useWalletSession()
+  const disconnect = useWalletDisconnect()
 
   return (
     <AlertDialog>
@@ -134,7 +134,7 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={closeSession}>
+          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={disconnect}>
             Disconnect
           </AlertDialogAction>
         </AlertDialogFooter>

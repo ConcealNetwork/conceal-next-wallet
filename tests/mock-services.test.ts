@@ -33,7 +33,7 @@ describe("mock services", () => {
       services.wallet.refreshWallet(),
       services.wallet.openWallet(),
       services.wallet.createWallet({ name: "Mock", password: "password123" }),
-      services.wallet.importWallet({ method: "mnemonic" }),
+      services.wallet.importWallet({ method: "mnemonic", mnemonic: "mock", password: "password123" }),
       services.wallet.exportWallet(),
       services.wallet.changePassword({ currentPassword: "password123", newPassword: "password456" }),
       services.transactions.listTransactions(),

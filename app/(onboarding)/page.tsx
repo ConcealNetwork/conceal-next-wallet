@@ -1,5 +1,5 @@
 import { ConcealBackdrop } from "@/components/landing/conceal-backdrop"
-import { LandingActions, NavOpenWalletButton } from "@/components/landing/landing-actions"
+import { LandingActions, NavOpenWalletButton, OpenWalletProvider } from "@/components/landing/landing-actions"
 import { LandingBalanceCard } from "@/components/landing/landing-balance-card"
 import { withBasePath } from "@/lib/utils"
 
@@ -12,6 +12,7 @@ const trustPoints = [
 
 export default function LandingPage() {
   return (
+    <OpenWalletProvider>
     <main className="relative min-h-screen overflow-x-hidden text-foreground">
       <ConcealBackdrop />
 
@@ -81,5 +82,6 @@ export default function LandingPage() {
         </footer>
       </div>
     </main>
+    </OpenWalletProvider>
   )
 }

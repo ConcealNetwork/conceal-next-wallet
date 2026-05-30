@@ -20,7 +20,7 @@ export function Footer({ collapsed = false }: { collapsed?: boolean }) {
           collapsed ? "max-w-[1360px]" : "max-w-[1200px]"
         )}
       >
-        <p>© 2018–2025 Conceal.Network</p>
+        <p>© 2018–2026 Conceal.Network</p>
         <nav className="flex flex-wrap gap-x-5 gap-y-2">
           {footerLinks.map((link) => (
             <Link

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PageHeader, SectionCard } from "@/components/wallet/common"
 import { services } from "@/lib/services"
+import { walletCopy } from "@/lib/ui/wallet-copy"
 import { cn } from "@/lib/utils"
 
 const passwordSchema = z
@@ -56,9 +57,13 @@ export default function ChangePasswordPage() {
   const score = strength(newPassword)
 
   async function submit(values: PasswordForm) {
-    await services.wallet.changePassword(values)
-    toast.success("Mock password changed.")
-    router.push("/wallet/settings")
+    try {
+      await services.wallet.changePassword(values)
+      toast.success(walletCopy.passwordChanged)
+      router.push("/wallet/settings")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to change password.")
+    }
   }
 
   return (

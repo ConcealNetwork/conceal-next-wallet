@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { env } from "@/lib/env"
 import type { WalletInfo } from "@/lib/types"
 
 type WalletStatus = "locked" | "open"
@@ -30,32 +31,28 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
   const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
-    function applySession(nextSession: PersistedSession) {
-      setStatus(nextSession.status)
-      setWalletInfo(nextSession.walletInfo)
-    }
-
-    function applyHydrated() {
-      setIsHydrated(true)
-    }
-
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as PersistedSession
-        applySession(parsed)
-      } catch {
-        window.localStorage.removeItem(STORAGE_KEY)
+    if (env.persistWalletSession) {
+      const stored = window.localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as PersistedSession
+          setStatus(parsed.status)
+          setWalletInfo(parsed.walletInfo)
+        } catch {
+          window.localStorage.removeItem(STORAGE_KEY)
+        }
       }
     }
-    applyHydrated()
+    setIsHydrated(true)
   }, [])
 
   const openSession = useCallback((nextWalletInfo: WalletInfo) => {
-    const nextSession: PersistedSession = { status: "open", walletInfo: nextWalletInfo }
     setStatus("open")
     setWalletInfo(nextWalletInfo)
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
+    if (env.persistWalletSession) {
+      const nextSession: PersistedSession = { status: "open", walletInfo: nextWalletInfo }
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
+    }
   }, [])
 
   const closeSession = useCallback(() => {
@@ -67,7 +64,7 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
 
   const value = useMemo(
     () => ({ status, walletInfo, isHydrated, openSession, closeSession }),
-    [closeSession, isHydrated, openSession, status, walletInfo]
+    [closeSession, isHydrated, openSession, status, walletInfo],
   )
 
   return <WalletSessionContext.Provider value={value}>{children}</WalletSessionContext.Provider>

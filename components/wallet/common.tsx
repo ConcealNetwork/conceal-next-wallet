@@ -165,11 +165,13 @@ function InlineSparkline({ values, className }: { values: number[]; className?: 
 
 export function AmountText({ amount, type }: { amount: string; type: TransactionType | "positive" | "negative" }) {
   const color =
-    type === "send" || type === "withdrawal" || type === "negative"
+    type === "send" || type === "negative"
       ? "text-wallet-outgoing"
-      : type === "deposit"
-        ? "text-wallet-deposit"
-        : "text-wallet-incoming"
+      : type === "fusion"
+        ? "text-muted-foreground"
+        : type === "deposit"
+          ? "text-wallet-deposit"
+          : "text-wallet-incoming"
   return (
     <span className={cn("font-semibold", color)}>
       <CcxAmount>{amount}</CcxAmount>

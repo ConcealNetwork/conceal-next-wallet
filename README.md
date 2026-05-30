@@ -1,16 +1,38 @@
-# Conceal Next Wallet Mockup
+# Conceal Next Wallet
 
-This is a Next.js 14 App Router recreation of the Conceal CCX wallet mockup.
+Next.js App Router recreation of the Conceal CCX wallet, with a typed service layer and optional real browser wallet backend.
 
-## Mock-only safety warning
+## Modes
 
-This project is a UI mockup with mock data only. It does not generate, derive, validate, store, import, export, or transmit real wallet keys, seeds, mnemonics, transactions, or RPC calls. Do not use it with real CCX funds. Any production wallet must add genuine key security, cryptography, storage, and backend wallet handling separately.
+| Mode | Env | Behavior |
+|------|-----|----------|
+| Mock (default) | unset or `NEXT_PUBLIC_USE_MOCK=true` | UI mock data only — safe for design/E2E |
+| Real wallet | `NEXT_PUBLIC_USE_MOCK=false` | Legacy v1 engine (`lib/wallet-core`) + public daemons |
 
 ## Run
 
 ```bash
 npm install
+npm run sync:legacy-libs   # copy v1 browser scripts to public/lib/
+npm run dev                # mock mode
+```
+
+Real wallet locally (copy `.env.example` → `.env.local`, or inline for one-off runs):
+
+```bash
+cp .env.example .env.local   # sets NEXT_PUBLIC_USE_MOCK=false
 npm run dev
+```
+
+```bash
+NEXT_PUBLIC_USE_MOCK=false npm run dev
+```
+
+Refresh vendored crypto after updating `conceal-lib-js`:
+
+```bash
+npm run concealjs:prebuild
+npm run sync:legacy-libs
 ```
 
 ## Verify
@@ -19,18 +41,27 @@ npm run dev
 npm run build
 npm run lint
 npm test
+npx playwright install chromium   # first time only
 npm run test:e2e
 ```
 
-## Backend wiring guide
+Production static export (GitHub Pages uses this in CI):
 
-The UI talks to typed services only. Interfaces live in `lib/services/*.service.ts`, mock implementations live in `lib/services/mock`, and the single swap point is `lib/services/index.ts`.
+```bash
+NEXT_PUBLIC_USE_MOCK=false PAGES_BASE_PATH=/conceal-next-wallet npm run build
+```
 
-To wire a real backend:
+## Backend wiring
 
-1. Implement the interfaces in `lib/services` with real wallet/RPC calls in a new folder such as `lib/services/real`.
-2. Preserve the same method signatures and return the domain models from `lib/types`.
-3. Change only `lib/services/index.ts` so `getWalletServices()` returns the real service bundle when `NEXT_PUBLIC_USE_MOCK=false`.
-4. Keep key generation, seed handling, and secret storage outside this mock UI until a proper audited wallet backend exists.
+The UI talks to typed services only:
 
-Every mock service method includes a `// TODO(backend)` marker showing where the real implementation boundary belongs.
+- Interfaces: `lib/services/*.service.ts`
+- Mocks: `lib/services/mock`
+- Real: `lib/services/real` → `lib/wallet-core` + `lib/conceal/init.ts`
+- Swap: `lib/env.ts` (`NEXT_PUBLIC_USE_MOCK` in `.env.local`) → `lib/services/index.ts`
+
+Legacy browser globals manifest: `public/lib/legacy-manifest.json`
+
+## Safety
+
+Real mode stores an encrypted wallet in IndexedDB (v1-compatible `"wallet"` key). Keys are not persisted in React session state across reloads — unlock again after refresh. Use at your own risk until audited.

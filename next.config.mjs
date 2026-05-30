@@ -9,6 +9,9 @@ const nextConfig = {
   output: 'export',
   basePath,
   assetPrefix: basePath || undefined,
+  env: {
+    NEXT_PUBLIC_PAGES_BASE_PATH: basePath,
+  },
   trailingSlash: true,
   images: {
     // next/image optimization needs a server; static export can't provide one.

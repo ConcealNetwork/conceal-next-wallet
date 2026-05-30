@@ -1,7 +1,17 @@
 "use client"
 
 import type { LucideIcon } from "lucide-react"
-import { ArrowDownLeft, ArrowUpFromLine, ArrowUpRight, CalendarClock, Hash, Lock, Search } from "lucide-react"
+import {
+  ArrowDownLeft,
+  ArrowUpFromLine,
+  ArrowUpRight,
+  CalendarClock,
+  Combine,
+  Hash,
+  Lock,
+  Pickaxe,
+  Search,
+} from "lucide-react"
 import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -66,9 +76,23 @@ const transactionMeta: Record<
   withdrawal: {
     label: "Withdrawal",
     icon: ArrowUpFromLine,
+    sign: "+",
+    amountClassName: "text-wallet-incoming",
+    chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
+  },
+  fusion: {
+    label: "Fusion",
+    icon: Combine,
     sign: "−",
-    amountClassName: "text-wallet-outgoing",
-    chipClassName: "bg-wallet-outgoing/10 text-wallet-outgoing",
+    amountClassName: "text-muted-foreground",
+    chipClassName: "bg-secondary text-muted-foreground",
+  },
+  miner: {
+    label: "Miner",
+    icon: Pickaxe,
+    sign: "+",
+    amountClassName: "text-wallet-incoming",
+    chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
   },
 }
 
@@ -80,15 +104,16 @@ export default function TransactionsPageClient() {
   const [selected, setSelected] = useState<Transaction | null>(null)
 
   const filtered = useMemo(() => {
-    const typeForTab: Record<string, string | null> = {
+    const typeForTab: Record<string, TransactionType[] | null> = {
       All: null,
-      Received: "receive",
-      Sent: "send",
-      Deposits: "deposit",
-      Withdrawals: "withdrawal",
+      Received: ["receive", "miner", "withdrawal"],
+      Sent: ["send", "fusion"],
+      Deposits: ["deposit"],
+      Withdrawals: ["withdrawal"],
     }
     return data.filter((transaction) => {
-      const matchesTab = !typeForTab[active] || transaction.type === typeForTab[active]
+      const tabTypes = typeForTab[active]
+      const matchesTab = !tabTypes || tabTypes.includes(transaction.type)
       const searchTarget = [
         transaction.address,
         transaction.hash,
@@ -127,8 +152,8 @@ export default function TransactionsPageClient() {
   const totals = useMemo(() => data.reduce(
     (acc, transaction) => {
       const value = ccxToNumber(transaction.amount)
-      if (transaction.type === "receive") acc.received += value
-      if (transaction.type === "send") acc.sent += value
+      if (transaction.type === "receive" || transaction.type === "miner") acc.received += value
+      if (transaction.type === "send" || transaction.type === "fusion") acc.sent += value
       if (transaction.type === "deposit") acc.deposits += value
       if (transaction.type === "withdrawal") acc.withdrawals += value
       return acc

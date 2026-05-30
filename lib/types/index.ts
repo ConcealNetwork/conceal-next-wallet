@@ -16,7 +16,10 @@ export type WalletInfo = {
   withdrawable: CcxAmount
   trends?: Partial<Record<"balanceTotal" | "available" | "pending" | "lockedDeposits" | "staking" | "withdrawable", WalletStatTrend>>
   creationHeight: number
+  /** Wallet scan height (blocks applied to this wallet). */
   currentHeight: number
+  /** Chain tip from the connected daemon. */
+  networkHeight: number
 }
 
 export type WalletStatTrend = {
@@ -24,7 +27,13 @@ export type WalletStatTrend = {
   changePct: number
 }
 
-export type TransactionType = "receive" | "send" | "deposit" | "withdrawal"
+export type TransactionType =
+  | "receive"
+  | "send"
+  | "deposit"
+  | "withdrawal"
+  | "fusion"
+  | "miner"
 
 export type Transaction = {
   id: string
@@ -38,16 +47,21 @@ export type Transaction = {
   message?: string
 }
 
+export type DepositStatus = "active" | "unlocked" | "spent"
+
 export type Deposit = {
   id: string
+  txHash: string
+  globalOutputIndex: number
   amount: CcxAmount
-  status: "active" | "unlocked"
+  status: DepositStatus
   durationMonths: number
   apr: number
   interest: CcxAmount
   unlocksInDays: number
   progressPct: number
   address: string
+  withdrawPending?: boolean
 }
 
 export type Message = {
@@ -58,6 +72,8 @@ export type Message = {
   body: string
   timestamp: string
   unread: boolean
+  /** Mempool TTL expiry (unix seconds); set when blockHeight === 0 and tx.ttl > 0. */
+  ttlExpiresAt?: number
 }
 
 export type MarketData = {
@@ -72,6 +88,8 @@ export type MarketData = {
   history: { date: string; price: number }[]
   historyByTimeframe: Record<MarketTimeframe, MarketHistoryPoint[]>
   portfolioValueUsd: UsdAmount
+  /** Live feed source when using real market service. */
+  priceSource?: "coingecko" | "coinpaprika"
 }
 
 export type MarketTimeframe = "24H" | "7D" | "30D" | "90D"
@@ -118,7 +136,10 @@ export type WalletSettings = {
   language: string
   useCustomNode: boolean
   nodeUrl: string
+  /** When true, sync includes coinbase (miner) outputs — required for solo mining rewards. */
   readMinorTx: boolean
   autoLock: boolean
   biometric: boolean
+  creationHeight?: number
+  scanHeight?: number
 }

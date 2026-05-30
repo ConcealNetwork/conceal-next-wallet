@@ -3,12 +3,15 @@
 import { RefreshCw } from "lucide-react"
 import dynamic from "next/dynamic"
 import { useMemo, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CcxAmount } from "@/components/wallet/ccx"
 import { PageHeader, SectionCard } from "@/components/wallet/common"
-import { useMarketData, useWalletInfo } from "@/lib/hooks"
+import { queryKeys, useMarketData, useWalletInfo } from "@/lib/hooks"
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
+import { marketHistoryQueryOptions } from "@/lib/services/query-options"
+import { services } from "@/lib/services"
 import type { MarketData, MarketHistoryPoint, MarketTimeframe, WalletInfo } from "@/lib/types"
 import { ccxToNumber, cn, formatCcx, formatUsd } from "@/lib/utils"
 
@@ -27,7 +30,13 @@ export default function MarketPage() {
   const market = useMarketData()
   const wallet = useWalletInfo()
   const data = market.data
-  const chartData = data?.historyByTimeframe[activeRange] ?? []
+  const historyQuery = useQuery({
+    queryKey: [...queryKeys.market, "history", activeRange],
+    queryFn: () => services.market.getPriceHistory(activeRange),
+    enabled: Boolean(data),
+    ...marketHistoryQueryOptions,
+  })
+  const chartData = historyQuery.data ?? data?.historyByTimeframe[activeRange] ?? []
 
   return (
     <>
