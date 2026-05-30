@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Emit public/config.js for sync workers (self.config — workers cannot see window.config).
- * Scalar fee fields are imported from lib/config/config.ts.
+ * Scalar fee fields are imported from lib/config/wallet-network-scalars.mjs.
  */
 import { writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const outPath = join(__dirname, "..", "public", "config.js")
-const localConfigPath = join(__dirname, "..", "lib", "config", "config.ts")
+const scalarsPath = join(__dirname, "..", "lib", "config", "wallet-network-scalars.mjs")
 
-const { walletNetworkScalars } = await import(localConfigPath)
+const { walletNetworkScalars } = await import(scalarsPath)
 const s = walletNetworkScalars
 
 function buildPrettyAmounts() {
