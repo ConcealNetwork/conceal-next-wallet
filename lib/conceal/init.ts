@@ -37,12 +37,13 @@ function loadScript(src: string): Promise<void> {
       return
     }
 
+    const resolved = publicAssetPath(src)
     const script = document.createElement("script")
-    script.src = publicAssetPath(src)
+    script.src = resolved
     script.async = false
     script.dataset.walletLib = src
     script.onload = () => resolve()
-    script.onerror = () => reject(new Error(`Failed to load wallet script: ${src}`))
+    script.onerror = () => reject(new Error(`Failed to load wallet script: ${resolved}`))
     document.head.appendChild(script)
   })
 }

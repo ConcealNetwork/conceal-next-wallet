@@ -24,40 +24,122 @@ interface StorageInterface {
   clear(): Promise<void>;
 }
 
+class LocalStorageBackend implements StorageInterface {
+  setItem(key: string, value: string): Promise<void> {
+    window.localStorage.setItem(key, value);
+    return Promise.resolve();
+  }
+
+  getItem(key: string, defaultValue: any = null): Promise<string | any> {
+    const value = window.localStorage.getItem(key);
+    if (value === null) return Promise.resolve(defaultValue);
+    return Promise.resolve(value);
+  }
+
+  keys(): Promise<string[]> {
+    const keys: string[] = [];
+    for (let i = 0; i < window.localStorage.length; ++i) {
+      const k = window.localStorage.key(i);
+      if (k !== null) keys.push(k);
+    }
+    return Promise.resolve(keys);
+  }
+
+  remove(key: string): Promise<void> {
+    window.localStorage.removeItem(key);
+    return Promise.resolve();
+  }
+
+  clear(): Promise<void> {
+    window.localStorage.clear();
+    return Promise.resolve();
+  }
+}
+
 class IndexedDBStorage implements StorageInterface {
-  private db: any;
+  private db: IDBDatabase | null = null;
   private readonly dbName = "mydb";
   private readonly storeName = "storage";
-  private ready: Promise<void>;
+  /** Bump when schema changes (v2 ensures object store exists). */
+  private readonly dbVersion = 2;
+  private ready: Promise<void> = Promise.resolve();
 
   constructor() {
-    this.ready = new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(this.dbName);
+    this.ready = this.openDatabase();
+  }
+
+  private openDatabase(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (typeof indexedDB === "undefined") {
+        reject(new Error("IndexedDB is not available"));
+        return;
+      }
+
+      const request = indexedDB.open(this.dbName, this.dbVersion);
+
       request.onupgradeneeded = (event) => {
-        this.db = (event.target as IDBOpenDBRequest).result;
-        this.db.createObjectStore(this.storeName, { keyPath: "key" });
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: "key" });
+        }
       };
+
       request.onsuccess = (event) => {
         this.db = (event.target as IDBOpenDBRequest).result;
+        this.db.onversionchange = () => {
+          this.db?.close();
+          this.db = null;
+        };
         resolve();
       };
-      request.onerror = (event) => {
-        reject((event.target as IDBOpenDBRequest).error);
+
+      request.onerror = () => {
+        reject(request.error ?? new Error("IndexedDB open failed"));
+      };
+
+      request.onblocked = () => {
+        reject(new Error("IndexedDB open blocked — close other tabs using this wallet"));
       };
     });
   }
 
+  private async ensureDb(): Promise<IDBDatabase> {
+    try {
+      await this.ready;
+    } catch {
+      this.ready = this.openDatabase();
+      await this.ready;
+    }
+
+    if (!this.db) {
+      this.ready = this.openDatabase();
+      await this.ready;
+    }
+
+    if (!this.db) {
+      throw new Error("IndexedDB database is not available");
+    }
+
+    return this.db;
+  }
+
   async setItem(key: string, value: string): Promise<void> {
-    await this.ready;
-    const transaction = this.db.transaction(this.storeName, "readwrite");
-    const store = transaction.objectStore(this.storeName);
-    await store.put({ key, value });
+    const db = await this.ensureDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(this.storeName, "readwrite");
+      const store = transaction.objectStore(this.storeName);
+      const request = store.put({ key, value });
+
+      request.onerror = () => reject(request.error ?? new Error("IndexedDB setItem failed"));
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB setItem failed"));
+    });
   }
 
   async getItem(key: string, defaultValue: any = null): Promise<string | any> {
-    await this.ready;
+    const db = await this.ensureDb();
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(this.storeName, "readonly");
+      const transaction = db.transaction(this.storeName, "readonly");
       const store = transaction.objectStore(this.storeName);
       const request = store.get(key);
 
@@ -65,59 +147,101 @@ class IndexedDBStorage implements StorageInterface {
         const result = request.result ? request.result.value : defaultValue;
         resolve(result);
       };
-      request.onerror = (event: any) => {
-        reject((event.target as IDBRequest).error);
-      };
+      request.onerror = () => reject(request.error ?? new Error("IndexedDB getItem failed"));
     });
   }
 
   async keys(): Promise<string[]> {
-    await this.ready;
-    const transaction = this.db.transaction(this.storeName, "readonly");
-    const store = transaction.objectStore(this.storeName);
-    const keys = await store.getAllKeys();
-    return keys;
+    const db = await this.ensureDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(this.storeName, "readonly");
+      const store = transaction.objectStore(this.storeName);
+      const request = store.getAllKeys();
+
+      request.onsuccess = () => resolve(request.result as string[]);
+      request.onerror = () => reject(request.error ?? new Error("IndexedDB keys failed"));
+    });
   }
 
   async remove(key: string): Promise<void> {
-    await this.ready;
-    const transaction = this.db.transaction(this.storeName, "readwrite");
-    const store = transaction.objectStore(this.storeName);
-    await store.delete(key);
+    const db = await this.ensureDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(this.storeName, "readwrite");
+      const store = transaction.objectStore(this.storeName);
+      const request = store.delete(key);
+
+      request.onerror = () => reject(request.error ?? new Error("IndexedDB remove failed"));
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB remove failed"));
+    });
   }
 
   async clear(): Promise<void> {
-    await this.ready;
-    const transaction = this.db.transaction(this.storeName, "readwrite");
-    const store = transaction.objectStore(this.storeName);
-    await store.clear();
+    const db = await this.ensureDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(this.storeName, "readwrite");
+      const store = transaction.objectStore(this.storeName);
+      const request = store.clear();
+
+      request.onerror = () => reject(request.error ?? new Error("IndexedDB clear failed"));
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB clear failed"));
+    });
+  }
+}
+
+let storageBackend: StorageInterface | null = null;
+
+function resolveStorage(): StorageInterface {
+  if (storageBackend) return storageBackend;
+
+  if (typeof window === "undefined") {
+    throw new Error("Storage is only available in the browser");
+  }
+
+  if (typeof indexedDB !== "undefined") {
+    storageBackend = new IndexedDBStorage();
+  } else {
+    storageBackend = new LocalStorageBackend();
+  }
+
+  return storageBackend;
+}
+
+async function withStorage<T>(operation: (storage: StorageInterface) => Promise<T>): Promise<T> {
+  try {
+    return await operation(resolveStorage());
+  } catch (error) {
+    if (typeof window !== "undefined" && !(storageBackend instanceof LocalStorageBackend)) {
+      storageBackend = new LocalStorageBackend();
+      return operation(storageBackend);
+    }
+    throw error;
   }
 }
 
 export class Storage {
-  static _storage: StorageInterface = new IndexedDBStorage();
-
   static clear(): Promise<void> {
-    return Storage._storage.clear();
+    return withStorage((storage) => storage.clear());
   }
 
   static getItem(key: string, defaultValue: any = null): Promise<any> {
-    return Storage._storage.getItem(key, defaultValue);
+    return withStorage((storage) => storage.getItem(key, defaultValue));
   }
 
   static keys(): Promise<string[]> {
-    return Storage._storage.keys();
+    return withStorage((storage) => storage.keys());
   }
 
   static remove(key: string): Promise<void> {
-    return Storage._storage.remove(key);
+    return withStorage((storage) => storage.remove(key));
   }
 
   static removeItem(key: string): Promise<void> {
-    return Storage._storage.remove(key);
+    return withStorage((storage) => storage.remove(key));
   }
 
   static setItem(key: string, value: any): Promise<void> {
-    return Storage._storage.setItem(key, value);
+    return withStorage((storage) => storage.setItem(key, value));
   }
 }
