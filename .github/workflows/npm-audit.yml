@@ -29,8 +29,8 @@ jobs:
 
       - name: Typecheck
         continue-on-error: true
-        run: npm run check:types
+        run: npm run types
 
       - name: Biome
         continue-on-error: true
-        run: npm run check:biome -- --reporter=github
+        run: npm run lint -- --reporter=github
