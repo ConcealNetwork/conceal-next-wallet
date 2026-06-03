@@ -1,47 +1,47 @@
-"use client"
+"use client";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useCountUp } from "@/lib/hooks/use-count-up"
-import type { Deposit, MarketData, WalletInfo } from "@/lib/types"
-import { ccxToNumber, cn, formatCcx, formatUsd, walletBalanceUsd } from "@/lib/utils"
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCountUp } from "@/lib/hooks/use-count-up";
+import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
+import { ccxToNumber, cn, formatCcx, formatUsd, walletBalanceUsd } from "@/lib/utils";
 
 type BalanceHeroProps = {
-  wallet: WalletInfo
-  market: MarketData
-  deposits: Deposit[]
-}
+  wallet: WalletInfo;
+  market: MarketData;
+  deposits: Deposit[];
+};
 
 type Segment = {
-  label: string
-  value: number
-  pct: number
-  dotClassName: string
-  barClassName: string
-  note: string
-}
+  label: string;
+  value: number;
+  pct: number;
+  dotClassName: string;
+  barClassName: string;
+  note: string;
+};
 
 export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
-  const available = ccxToNumber(wallet.available)
-  const total = ccxToNumber(wallet.balanceTotal)
-  const pending = ccxToNumber(wallet.pending)
-  const locked = ccxToNumber(wallet.lockedDeposits)
-  const staking = ccxToNumber(wallet.staking)
-  const activeDeposits = deposits.filter((deposit) => deposit.status === "active")
+  const available = ccxToNumber(wallet.available);
+  const total = ccxToNumber(wallet.balanceTotal);
+  const pending = ccxToNumber(wallet.pending);
+  const locked = ccxToNumber(wallet.lockedDeposits);
+  const staking = ccxToNumber(wallet.staking);
+  const activeDeposits = deposits.filter((deposit) => deposit.status === "active");
   const soonestUnlockDays = activeDeposits.length
     ? Math.min(...activeDeposits.map((deposit) => deposit.unlocksInDays))
-    : null
-  const stakingApr = getRepresentativeApr(activeDeposits)
-  const availablePct = getPct(available, total)
-  const changeLabel = `${market.change24hPct.toFixed(2)}%`
+    : null;
+  const stakingApr = getRepresentativeApr(activeDeposits);
+  const availablePct = getPct(available, total);
+  const changeLabel = `${market.change24hPct.toFixed(2)}%`;
   const availableLabel = useCountUp(available, {
     formatter: (value) => formatCcx(value).replace(" CCX", ""),
-  })
+  });
   const totalLabel = useCountUp(total, {
     formatter: (value) => formatCcx(value),
-  })
+  });
 
-  const totalUsd = walletBalanceUsd(wallet.balanceTotal, market.price.value)
+  const totalUsd = walletBalanceUsd(wallet.balanceTotal, market.price.value);
 
   const segments: Segment[] = [
     {
@@ -76,7 +76,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
       barClassName: "bg-wallet-incoming",
       note: stakingApr === null ? "earning" : `earning · ${formatApr(stakingApr)} APR`,
     },
-  ]
+  ];
 
   return (
     <Card className="wallet-card">
@@ -101,11 +101,17 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
               <span aria-hidden="true">▲</span>
               {changeLabel}
             </span>
-            <BalanceSparkline values={wallet.trends?.balanceTotal?.trend ?? []} className="mt-3 h-[50px] w-full sm:w-60" />
+            <BalanceSparkline
+              values={wallet.trends?.balanceTotal?.trend ?? []}
+              className="mt-3 h-[50px] w-full sm:w-60"
+            />
           </div>
         </div>
 
-        <div className="mt-6 flex h-3.5 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+        <div
+          className="mt-6 flex h-3.5 overflow-hidden rounded-full bg-secondary"
+          aria-hidden="true"
+        >
           {segments.map((segment, index) => (
             <span
               key={segment.label}
@@ -115,24 +121,36 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
           ))}
         </div>
         <p className="sr-only">
-          Balance composition: {segments.map((segment) => `${segment.label} ${formatCcx(segment.value)}, ${Math.round(segment.pct)} percent`).join("; ")}.
+          Balance composition:{" "}
+          {segments
+            .map(
+              (segment) =>
+                `${segment.label} ${formatCcx(segment.value)}, ${Math.round(segment.pct)} percent`,
+            )
+            .join("; ")}
+          .
         </p>
 
         <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-4">
           {segments.map((segment) => (
             <div key={segment.label} className="min-w-0">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className={cn("size-2.5 shrink-0 rounded-[3px]", segment.dotClassName)} aria-hidden="true" />
+                <span
+                  className={cn("size-2.5 shrink-0 rounded-[3px]", segment.dotClassName)}
+                  aria-hidden="true"
+                />
                 <span>{segment.label}</span>
               </div>
-              <p className="mt-2 truncate font-mono text-lg font-bold text-white">{formatCcx(segment.value).replace(" CCX", "")}</p>
+              <p className="mt-2 truncate font-mono text-lg font-bold text-white">
+                {formatCcx(segment.value).replace(" CCX", "")}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">{segment.note}</p>
             </div>
           ))}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export function BalanceHeroSkeleton() {
@@ -162,25 +180,25 @@ export function BalanceHeroSkeleton() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function BalanceSparkline({ values, className }: { values: number[]; className?: string }) {
-  const width = 240
-  const height = 50
-  const trend = values.length > 1 ? values : [0, 0]
-  const min = Math.min(...trend)
-  const max = Math.max(...trend)
-  const range = max - min || 1
-  const step = width / (trend.length - 1)
+  const width = 240;
+  const height = 50;
+  const trend = values.length > 1 ? values : [0, 0];
+  const min = Math.min(...trend);
+  const max = Math.max(...trend);
+  const range = max - min || 1;
+  const step = width / (trend.length - 1);
   const points = trend
     .map((value, index) => {
-      const x = index * step
-      const y = height - ((value - min) / range) * (height - 10) - 5
-      return `${x.toFixed(2)},${y.toFixed(2)}`
+      const x = index * step;
+      const y = height - ((value - min) / range) * (height - 10) - 5;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
     })
-    .join(" ")
-  const areaPoints = `0,${height} ${points} ${width},${height}`
+    .join(" ");
+  const areaPoints = `0,${height} ${points} ${width},${height}`;
 
   return (
     <svg
@@ -202,20 +220,23 @@ function BalanceSparkline({ values, className }: { values: number[]; className?:
         vectorEffect="non-scaling-stroke"
       />
     </svg>
-  )
+  );
 }
 
 function getPct(value: number, total: number) {
-  return total > 0 ? (value / total) * 100 : 0
+  return total > 0 ? (value / total) * 100 : 0;
 }
 
 function getRepresentativeApr(deposits: Deposit[]) {
-  const totalAmount = deposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0)
-  if (totalAmount <= 0) return null
+  const totalAmount = deposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0);
+  if (totalAmount <= 0) return null;
 
-  return deposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount) * deposit.apr, 0) / totalAmount
+  return (
+    deposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount) * deposit.apr, 0) /
+    totalAmount
+  );
 }
 
 function formatApr(value: number) {
-  return `${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}%`
+  return `${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
 }

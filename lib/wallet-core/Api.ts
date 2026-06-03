@@ -36,7 +36,13 @@ export class Api {
 
   constructor() {}
 
-  importWalletFromKeys(publicAddress: string, viewOnly: boolean, privateViewKey: string, privateSpendKey: string, password: string) {
+  importWalletFromKeys(
+    publicAddress: string,
+    viewOnly: boolean,
+    privateViewKey: string,
+    privateSpendKey: string,
+    password: string,
+  ) {
     let self = this;
     blockchainExplorer.getHeight().then(function (currentHeight) {
       let newWallet = new Wallet();
@@ -163,7 +169,10 @@ export class Api {
       let amount = parseFloat(amountToSend);
       if (destinationAddress !== null) {
         //todo use BigInteger
-        if (amount * Math.pow(10, config.coinUnitPlaces) > wallet.availableAmount(blockchainHeight)) {
+        if (
+          amount * Math.pow(10, config.coinUnitPlaces) >
+          wallet.availableAmount(blockchainHeight)
+        ) {
           console.log("Amount higher than the funds");
           return;
         }
@@ -187,9 +196,12 @@ export class Api {
 
             return new Promise<void>(function (resolve, reject) {});
           },
-          mixinToSendWith
+          mixinToSendWith,
         )
-          .then(function (rawTxData: { raw: { hash: string; prvkey: string; raw: string }; signed: any }) {
+          .then(function (rawTxData: {
+            raw: { hash: string; prvkey: string; raw: string };
+            signed: any;
+          }) {
             blockchainExplorer
               .sendRawTx(rawTxData.raw.raw)
               .then(function () {
@@ -197,7 +209,9 @@ export class Api {
                 wallet.addTxPrivateKeyWithTxHash(rawTxData.raw.hash, rawTxData.raw.prvkey);
 
                 //force a mempool check so the user is up to date
-                let watchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(WalletWatchdog.name);
+                let watchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
+                  WalletWatchdog.name,
+                );
                 if (watchdog !== null) watchdog.checkMempool();
               })
               .catch(function (data: any) {
@@ -207,7 +221,8 @@ export class Api {
           .catch(function (error: any) {
             //console.log(error);
             if (error && error !== "") {
-              if (typeof error === "string") console.log("Generic error while sending funds: ", error);
+              if (typeof error === "string")
+                console.log("Generic error while sending funds: ", error);
               else console.log("Generic error while sending funds: ", JSON.stringify(error));
             }
           });
@@ -227,8 +242,12 @@ export class Api {
   getTxDetails(transaction: Transaction) {
     let wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
 
-    let explorerUrlHash = config.testnet ? config.testnetExplorerUrlHash : config.mainnetExplorerUrlHash;
-    let explorerUrlBlock = config.testnet ? config.testnetExplorerUrlBlock : config.mainnetExplorerUrlBlock;
+    let explorerUrlHash = config.testnet
+      ? config.testnetExplorerUrlHash
+      : config.mainnetExplorerUrlHash;
+    let explorerUrlBlock = config.testnet
+      ? config.testnetExplorerUrlBlock
+      : config.mainnetExplorerUrlBlock;
     let fees = 0;
     if (transaction.getAmount() < 0) fees = transaction.fees / Math.pow(10, config.coinUnitPlaces);
 

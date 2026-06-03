@@ -64,7 +64,13 @@ import { MathUtil } from "./MathUtil";
 import { JSChaCha8 } from "./ChaCha8";
 import { Cn, CnTransactions } from "./Cn";
 import { RawDaemon_Transaction, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
-import { Transaction, TransactionData, Deposit, TransactionIn, TransactionOut } from "./Transaction";
+import {
+  Transaction,
+  TransactionData,
+  Deposit,
+  TransactionIn,
+  TransactionOut,
+} from "./Transaction";
 import { InterestCalculator } from "./Interest";
 import { Currency } from "./Currency";
 import { decode as varintDecode } from "./Varint";
@@ -130,7 +136,11 @@ export class TransactionsExplorer {
         let extraSize = 0;
         let startOffset = 0;
 
-        if (extra[0] === TX_EXTRA_NONCE || extra[0] === TX_EXTRA_MERGE_MINING_TAG || extra[0] === TX_EXTRA_MYSTERIOUS_MINERGATE_TAG) {
+        if (
+          extra[0] === TX_EXTRA_NONCE ||
+          extra[0] === TX_EXTRA_MERGE_MINING_TAG ||
+          extra[0] === TX_EXTRA_MYSTERIOUS_MINERGATE_TAG
+        ) {
           extraSize = extra[1];
           startOffset = 2;
         } else if (extra[0] === TX_EXTRA_TAG_PUBKEY) {
@@ -262,7 +272,7 @@ export class TransactionsExplorer {
     try {
       const owned = concealjs.transactions.ownsTx(
         TransactionsExplorer.toTxScanInput(rawTransaction),
-        TransactionsExplorer.toTxScanContext(wallet)
+        TransactionsExplorer.toTxScanContext(wallet),
       );
       if (owned) {
         logDebugMsg("Found our tx...");
@@ -281,7 +291,7 @@ export class TransactionsExplorer {
   static screenShardForOwnedHashes(
     rawTransactions: RawDaemon_Transaction[],
     wallet: Wallet,
-    readMinersTx: boolean
+    readMinersTx: boolean,
   ): string[] {
     const candidates: RawDaemon_Transaction[] = [];
 
@@ -322,7 +332,12 @@ export class TransactionsExplorer {
     return hashes;
   }
 
-  static decryptMessage(index: number, txPubKey: string, recepientSecretSpendKey: string, rawMessage: string): string | any {
+  static decryptMessage(
+    index: number,
+    txPubKey: string,
+    recepientSecretSpendKey: string,
+    rawMessage: string,
+  ): string | any {
     let decryptedMessage: string = "";
     let mlen: number = rawMessage.length / 2;
 
@@ -472,7 +487,11 @@ export class TransactionsExplorer {
       }
 
       let output_idx_in_tx = iOut;
-      let generated_tx_pubkey = concealjs.crypto.derive_public_key(derivation, output_idx_in_tx, wallet.keys.pub.spend);
+      let generated_tx_pubkey = concealjs.crypto.derive_public_key(
+        derivation,
+        output_idx_in_tx,
+        wallet.keys.pub.spend,
+      );
 
       // check if generated public key matches the current output's key
       let mine_output: boolean = false;
@@ -502,12 +521,16 @@ export class TransactionsExplorer {
 
           if (out.target.data && out.target.data.term) {
             let deposit = new Deposit();
-            if (typeof rawTransaction.height !== "undefined") deposit.blockHeight = rawTransaction.height;
+            if (typeof rawTransaction.height !== "undefined")
+              deposit.blockHeight = rawTransaction.height;
             if (typeof rawTransaction.hash !== "undefined") deposit.txHash = rawTransaction.hash;
             if (typeof rawTransaction.ts !== "undefined") deposit.timestamp = rawTransaction.ts;
             deposit.amount = transactionOut.amount;
             deposit.term = out.target.data.term;
-            if (rawTransaction.output_indexes && typeof rawTransaction.output_indexes[iOut] !== "undefined") {
+            if (
+              rawTransaction.output_indexes &&
+              typeof rawTransaction.output_indexes[iOut] !== "undefined"
+            ) {
               deposit.globalOutputIndex = rawTransaction.output_indexes[iOut];
             } else {
               deposit.globalOutputIndex = output_idx_in_tx;
@@ -519,7 +542,11 @@ export class TransactionsExplorer {
             }
             deposit.txPubKey = tx_pub_key; // Reuse the already extracted transaction public key
             // Calculate the interest for this deposit
-            deposit.interest = InterestCalculator.calculateInterest(deposit.amount, deposit.term, deposit.blockHeight);
+            deposit.interest = InterestCalculator.calculateInterest(
+              deposit.amount,
+              deposit.term,
+              deposit.blockHeight,
+            );
             deposits.push(deposit);
           }
         }
@@ -540,7 +567,7 @@ export class TransactionsExplorer {
             },
             tx_pub_key,
             output_idx_in_tx,
-            derivation
+            derivation,
           );
 
           transactionOut.keyImage = m_key_image.key_image;
@@ -575,10 +602,14 @@ export class TransactionsExplorer {
               if (vin.type == "03") {
                 if (vin.value && vin.value.term) {
                   let withdrawal = new Deposit();
-                  withdrawal.globalOutputIndex = vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
-                  if (typeof rawTransaction.height !== "undefined") withdrawal.blockHeight = rawTransaction.height;
-                  if (typeof rawTransaction.hash !== "undefined") withdrawal.txHash = rawTransaction.hash;
-                  if (typeof rawTransaction.ts !== "undefined") withdrawal.timestamp = rawTransaction.ts;
+                  withdrawal.globalOutputIndex =
+                    vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
+                  if (typeof rawTransaction.height !== "undefined")
+                    withdrawal.blockHeight = rawTransaction.height;
+                  if (typeof rawTransaction.hash !== "undefined")
+                    withdrawal.txHash = rawTransaction.hash;
+                  if (typeof rawTransaction.ts !== "undefined")
+                    withdrawal.timestamp = rawTransaction.ts;
                   withdrawal.term = vin.value && vin.value.term ? vin.value.term : 0;
                   withdrawal.amount = transactionIn.amount;
                   withdrawals.push(withdrawal);
@@ -606,9 +637,11 @@ export class TransactionsExplorer {
           let withdrawal = new Deposit();
           if (typeof rawTransaction.ts !== "undefined") withdrawal.timestamp = rawTransaction.ts;
           if (typeof rawTransaction.hash !== "undefined") withdrawal.txHash = rawTransaction.hash;
-          if (typeof rawTransaction.height !== "undefined") withdrawal.blockHeight = rawTransaction.height;
+          if (typeof rawTransaction.height !== "undefined")
+            withdrawal.blockHeight = rawTransaction.height;
           if (vin.value && vin.value.amount) withdrawal.amount = parseInt(vin.value?.amount);
-          withdrawal.globalOutputIndex = vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
+          withdrawal.globalOutputIndex =
+            vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
           withdrawal.term = vin.value && vin.value.term ? vin.value.term : 0;
           withdrawals.push(withdrawal);
           wasAdded = true;
@@ -657,7 +690,8 @@ export class TransactionsExplorer {
       transactionData = new TransactionData();
       transaction = new Transaction();
 
-      if (typeof rawTransaction.height !== "undefined") transaction.blockHeight = rawTransaction.height;
+      if (typeof rawTransaction.height !== "undefined")
+        transaction.blockHeight = rawTransaction.height;
       if (typeof rawTransaction.ts !== "undefined") transaction.timestamp = rawTransaction.ts;
       if (typeof rawTransaction.hash !== "undefined") transaction.hash = rawTransaction.hash;
 
@@ -665,7 +699,11 @@ export class TransactionsExplorer {
 
       if (paymentId !== null) transaction.paymentId = paymentId;
       if (encryptedPaymentId !== null) {
-        transaction.paymentId = Cn.decrypt_payment_id(encryptedPaymentId, tx_pub_key, wallet.keys.priv.view);
+        transaction.paymentId = Cn.decrypt_payment_id(
+          encryptedPaymentId,
+          tx_pub_key,
+          wallet.keys.priv.view,
+        );
       }
 
       if (rawTransaction.vin[0].type === "ff") {
@@ -677,7 +715,8 @@ export class TransactionsExplorer {
       transaction.fusion =
         rawTransaction.vin.length > Currency.fusionTxMinInputCount &&
         rawTransaction.vout.length <= config.maxFusionOutputs &&
-        rawTransaction.vin.length / rawTransaction.vout.length > config.fusionTxMinInOutCountRatio &&
+        rawTransaction.vin.length / rawTransaction.vout.length >
+          config.fusionTxMinInOutCountRatio &&
         rawTransaction.vin.some((vin) => vin.type != "03") &&
         rawTransaction.vout.some((vout) => vout.target.type != "03") &&
         (transaction.fees === 0 || transaction.fees === parseInt(config.minimumFee_V2));
@@ -694,7 +733,12 @@ export class TransactionsExplorer {
       if (rawMessage !== "") {
         // decode message
         try {
-          let message: string = this.decryptMessage(extraIndex, tx_pub_key, wallet.keys.priv.spend, rawMessage);
+          let message: string = this.decryptMessage(
+            extraIndex,
+            tx_pub_key,
+            wallet.keys.priv.spend,
+            rawMessage,
+          );
           transaction.message = message;
         } catch (e) {
           console.error("ERROR IN DECRYPTING MESSAGE: ", e);
@@ -777,7 +821,7 @@ export class TransactionsExplorer {
     message: string,
     ttl: number,
     transactionType: string,
-    term: number
+    term: number,
   ): Promise<{
     raw: { hash: string; prvkey: string; raw: string };
     signed: any;
@@ -840,7 +884,7 @@ export class TransactionsExplorer {
           messageTo,
           ttl,
           transactionType,
-          term
+          term,
         );
 
         logDebugMsg("signed tx: ", signed);
@@ -865,7 +909,7 @@ export class TransactionsExplorer {
     message: string = "",
     ttl: number = 0,
     transactionType: string = "regular",
-    term: number = 0
+    term: number = 0,
   ): Promise<{
     raw: { hash: string; prvkey: string; raw: string };
     signed: any;
@@ -931,13 +975,16 @@ export class TransactionsExplorer {
         paymentId = userPaymentId;
       }
 
-      let unspentOuts: RawOutForTx[] = TransactionsExplorer.formatWalletOutsForTx(wallet, blockchainHeight);
+      let unspentOuts: RawOutForTx[] = TransactionsExplorer.formatWalletOutsForTx(
+        wallet,
+        blockchainHeight,
+      );
 
       let usingOuts: RawOutForTx[] = [];
       let usingOuts_amount = new JSBigInt(0);
       let unusedOuts = unspentOuts.slice(0);
 
-      let totalAmount = totalAmountWithoutFee.add(neededFee) /*.add(chargeAmount)*/;
+      let totalAmount = totalAmountWithoutFee.add(neededFee); /*.add(chargeAmount)*/
       //selecting outputs to fit the desired amount (totalAmount);
       function pop_random_value(list: any[]) {
         let idx = Math.floor(MathUtil.randomFloat() * list.length);
@@ -960,38 +1007,43 @@ export class TransactionsExplorer {
           totalAmountWithoutFee +
           " with fees of " +
           neededFee / Math.pow(10, config.coinUnitPlaces) +
-          " CCX"
+          " CCX",
       );
 
       confirmCallback(totalAmountWithoutFee, neededFee)
         .then(function () {
-        if (usingOuts_amount.compare(totalAmount) < 0) {
-          logDebugMsg(
-            "Not enough spendable outputs / balance too low (have " +
-              Cn.formatMoneyFull(usingOuts_amount) +
-              " but need " +
-              Cn.formatMoneyFull(totalAmount) +
-              " (estimated fee " +
-              Cn.formatMoneyFull(neededFee) +
-              " CCX included)"
-          );
-          // return;
-          reject({ error: "balance_too_low" });
-          return;
-        } else if (usingOuts_amount.compare(totalAmount) > 0) {
-          let changeAmount = usingOuts_amount.subtract(totalAmount);
-          if (ttl > 0) {
-            changeAmount = changeAmount.add(neededFee);
+          if (usingOuts_amount.compare(totalAmount) < 0) {
+            logDebugMsg(
+              "Not enough spendable outputs / balance too low (have " +
+                Cn.formatMoneyFull(usingOuts_amount) +
+                " but need " +
+                Cn.formatMoneyFull(totalAmount) +
+                " (estimated fee " +
+                Cn.formatMoneyFull(neededFee) +
+                " CCX included)",
+            );
+            // return;
+            reject({ error: "balance_too_low" });
+            return;
+          } else if (usingOuts_amount.compare(totalAmount) > 0) {
+            let changeAmount = usingOuts_amount.subtract(totalAmount);
+            if (ttl > 0) {
+              changeAmount = changeAmount.add(neededFee);
+            }
+            //add entire change for rct
+            logDebugMsg(
+              "1) Sending change of " +
+                Cn.formatMoneySymbol(changeAmount) +
+                " to " +
+                wallet.getPublicAddress(),
+            );
+            dsts.push({
+              address: wallet.getPublicAddress(),
+              amount: changeAmount,
+            });
           }
-          //add entire change for rct
-          logDebugMsg("1) Sending change of " + Cn.formatMoneySymbol(changeAmount) + " to " + wallet.getPublicAddress());
-          dsts.push({
-            address: wallet.getPublicAddress(),
-            amount: changeAmount,
-          });
-        }
 
-        /* Not applicable for CCX
+          /* Not applicable for CCX
 
              else if (usingOuts_amount.compare(totalAmount) === 0) {
 
@@ -1006,57 +1058,70 @@ export class TransactionsExplorer {
          }
          */
 
-        logDebugMsg("destinations", dsts);
+          logDebugMsg("destinations", dsts);
 
-        let amounts: number[] = [];
-        for (let l = 0; l < usingOuts.length; l++) {
-          amounts.push(usingOuts[l].amount);
-        }
-        let nbOutsNeeded: number = mixin + 1;
-
-        // Request nbOutsNeeded mixouts for each output (including duplicates)
-        let nbOutsRequested: number = nbOutsNeeded + 3; // Request 3 more to account for potentialduplicates
-        obtainMixOutsCallback(amounts, nbOutsRequested).then(function (lotsMixOuts: any[]) {
-          logDebugMsg("------------------------------mix_outs");
-          logDebugMsg("amounts", amounts);
-          logDebugMsg("lots_mix_outs", lotsMixOuts);
-          // 1. Check for duplicates and remove them
-          const removedDuplicateMixOuts = TransactionsExplorer.removeDuplicateMixOuts(lotsMixOuts);
-
-          // 2. Shuffle and select exactly nbOutsNeeded mixouts per amount
-          const selectedMixOuts = TransactionsExplorer.selectMixOuts(removedDuplicateMixOuts, usingOuts, nbOutsNeeded);
-
-          // 3. Validate that we have enough mixouts for each input
-          const validation = TransactionsExplorer.validateMixOutsForInputs(usingOuts, selectedMixOuts, mixin);
-          if (!validation.valid) {
-            reject(new Error(validation.reason));
-            return;
+          let amounts: number[] = [];
+          for (let l = 0; l < usingOuts.length; l++) {
+            amounts.push(usingOuts[l].amount);
           }
+          let nbOutsNeeded: number = mixin + 1;
 
-          TransactionsExplorer.createRawTx(
-            dsts,
-            wallet,
-            false,
-            usingOuts,
-            pid_encrypt,
-            selectedMixOuts,
-            mixin,
-            neededFee,
-            paymentId,
-            message,
-            ttl,
-            transactionType,
-            term
-          )
-            .then(function (data: { raw: { hash: string; prvkey: string; raw: string }; signed: any }) {
-              resolve(data);
+          // Request nbOutsNeeded mixouts for each output (including duplicates)
+          let nbOutsRequested: number = nbOutsNeeded + 3; // Request 3 more to account for potentialduplicates
+          obtainMixOutsCallback(amounts, nbOutsRequested)
+            .then(function (lotsMixOuts: any[]) {
+              logDebugMsg("------------------------------mix_outs");
+              logDebugMsg("amounts", amounts);
+              logDebugMsg("lots_mix_outs", lotsMixOuts);
+              // 1. Check for duplicates and remove them
+              const removedDuplicateMixOuts =
+                TransactionsExplorer.removeDuplicateMixOuts(lotsMixOuts);
+
+              // 2. Shuffle and select exactly nbOutsNeeded mixouts per amount
+              const selectedMixOuts = TransactionsExplorer.selectMixOuts(
+                removedDuplicateMixOuts,
+                usingOuts,
+                nbOutsNeeded,
+              );
+
+              // 3. Validate that we have enough mixouts for each input
+              const validation = TransactionsExplorer.validateMixOutsForInputs(
+                usingOuts,
+                selectedMixOuts,
+                mixin,
+              );
+              if (!validation.valid) {
+                reject(new Error(validation.reason));
+                return;
+              }
+
+              TransactionsExplorer.createRawTx(
+                dsts,
+                wallet,
+                false,
+                usingOuts,
+                pid_encrypt,
+                selectedMixOuts,
+                mixin,
+                neededFee,
+                paymentId,
+                message,
+                ttl,
+                transactionType,
+                term,
+              )
+                .then(function (data: {
+                  raw: { hash: string; prvkey: string; raw: string };
+                  signed: any;
+                }) {
+                  resolve(data);
+                })
+                .catch(function (e) {
+                  reject(e);
+                });
             })
-            .catch(function (e) {
-              reject(e);
-            });
+            .catch(reject);
         })
-          .catch(reject);
-      })
         .catch(reject);
     });
   }
@@ -1072,7 +1137,7 @@ export class TransactionsExplorer {
     message: string = "",
     ttl: number = 0,
     transactionType: string = "withdraw",
-    term: number = 0
+    term: number = 0,
   ): Promise<{
     raw: { hash: string; prvkey: string; raw: string };
     signed: any;
@@ -1125,7 +1190,12 @@ export class TransactionsExplorer {
           let changeAmount = totalAmountWithoutFee.subtract(neededFee);
           let dsts: { address: string; amount: number }[] = [];
 
-          logDebugMsg("Sending withdrawn amount of " + Cn.formatMoneySymbol(changeAmount) + " to " + wallet.getPublicAddress());
+          logDebugMsg(
+            "Sending withdrawn amount of " +
+              Cn.formatMoneySymbol(changeAmount) +
+              " to " +
+              wallet.getPublicAddress(),
+          );
           dsts.push({
             address: wallet.getPublicAddress(),
             amount: changeAmount,
@@ -1158,9 +1228,12 @@ export class TransactionsExplorer {
                 message,
                 ttl,
                 "withdraw",
-                deposit.term
+                deposit.term,
               )
-                .then(function (data: { raw: { hash: string; prvkey: string; raw: string }; signed: any }) {
+                .then(function (data: {
+                  raw: { hash: string; prvkey: string; raw: string };
+                  signed: any;
+                }) {
                   resolve(data);
                 })
                 .catch(function (e) {
@@ -1184,7 +1257,7 @@ export class TransactionsExplorer {
   static validateMixOutsForInputs(
     usingOuts: RawOutForTx[],
     mixOuts: any[], // Full mix_outs structure from daemon
-    mixin: number
+    mixin: number,
   ): { valid: boolean; reason: string } {
     // Check that we have one mixout group per output
     if (mixOuts.length !== usingOuts.length) {
@@ -1238,11 +1311,13 @@ export class TransactionsExplorer {
 
       if (mixOutGroup && mixOutGroup.amount === out.amount && mixOutGroup.outs.length > 0) {
         // Filter out already used global indices to ensure uniqueness
-        const availableMixouts = mixOutGroup.outs.filter((mixout: any) => !usedGlobalIndices.has(mixout.global_index));
+        const availableMixouts = mixOutGroup.outs.filter(
+          (mixout: any) => !usedGlobalIndices.has(mixout.global_index),
+        );
 
         if (availableMixouts.length < nbOutsNeeded) {
           console.log(
-            `Warning: Not enough unique mixouts for output ${i} (amount ${out.amount}). Need ${nbOutsNeeded}, have ${availableMixouts.length}`
+            `Warning: Not enough unique mixouts for output ${i} (amount ${out.amount}). Need ${nbOutsNeeded}, have ${availableMixouts.length}`,
           );
         }
 
@@ -1323,7 +1398,9 @@ export class TransactionsExplorer {
 
         // Remove this global index from the object with MORE mixouts
         // This leaves the duplicate in the object with fewer mixouts
-        mixOuts[objectToRemoveFrom].outs = mixOuts[objectToRemoveFrom].outs.filter((mixout: any) => mixout.global_index !== globalIndex);
+        mixOuts[objectToRemoveFrom].outs = mixOuts[objectToRemoveFrom].outs.filter(
+          (mixout: any) => mixout.global_index !== globalIndex,
+        );
       }
     }
 

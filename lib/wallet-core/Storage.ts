@@ -132,7 +132,8 @@ class IndexedDBStorage implements StorageInterface {
 
       request.onerror = () => reject(request.error ?? new Error("IndexedDB setItem failed"));
       transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB setItem failed"));
+      transaction.onerror = () =>
+        reject(transaction.error ?? new Error("IndexedDB setItem failed"));
     });
   }
 

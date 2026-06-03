@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { usePathname, useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useWalletSession } from "@/lib/session/wallet-session"
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useWalletSession } from "@/lib/session/wallet-session";
 
 function RouteLoading({ label }: { label: string }) {
   return (
@@ -19,40 +19,45 @@ function RouteLoading({ label }: { label: string }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export function WalletGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const { status, isHydrated } = useWalletSession()
+  const router = useRouter();
+  const { status, isHydrated } = useWalletSession();
 
   useEffect(() => {
     if (isHydrated && status !== "open") {
-      router.replace("/")
+      router.replace("/");
     }
-  }, [isHydrated, router, status])
+  }, [isHydrated, router, status]);
 
   if (!isHydrated || status !== "open") {
-    return <RouteLoading label="Loading wallet..." />
+    return <RouteLoading label="Loading wallet..." />;
   }
 
-  return children
+  return children;
 }
 
 export function OnboardingGuard({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { status, isHydrated } = useWalletSession()
+  const pathname = usePathname();
+  const router = useRouter();
+  const { status, isHydrated } = useWalletSession();
 
   useEffect(() => {
-    if (isHydrated && status === "open" && !pathname.startsWith("/terms") && !pathname.startsWith("/privacy")) {
-      router.replace("/wallet/account")
+    if (
+      isHydrated &&
+      status === "open" &&
+      !pathname.startsWith("/terms") &&
+      !pathname.startsWith("/privacy")
+    ) {
+      router.replace("/wallet/account");
     }
-  }, [isHydrated, pathname, router, status])
+  }, [isHydrated, pathname, router, status]);
 
   if (!isHydrated) {
-    return <RouteLoading label="Loading..." />
+    return <RouteLoading label="Loading..." />;
   }
 
-  return children
+  return children;
 }

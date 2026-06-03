@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,33 +13,45 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { PageHeader } from "@/components/wallet/common"
-import { useWalletDisconnect } from "@/components/wallet/open-wallet-form"
-import { env } from "@/lib/env"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { PageHeader } from "@/components/wallet/common";
+import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
+import { env } from "@/lib/env";
 import {
   useOptimizeWallet,
   useResetAndRescan,
   useUpdateWalletSettings,
   useWalletInfo,
   useWalletSettings,
-} from "@/lib/hooks"
-import type { WalletSettings } from "@/lib/types"
+} from "@/lib/hooks";
+import type { SyncSpeed, WalletSettings } from "@/lib/types";
+import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
+import { cn } from "@/lib/utils";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="py-4 first:pt-0 last:pb-0">
-      <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h2>
+      <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h2>
       <div>{children}</div>
     </section>
-  )
+  );
 }
 
-function Row({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
+function Row({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-3 border-t border-border py-4 first:border-t-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
@@ -48,66 +60,101 @@ function Row({ label, description, children }: { label: string; description?: st
       </div>
       <div className="shrink-0">{children}</div>
     </div>
-  )
+  );
+}
+
+function SyncSpeedSelector({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: SyncSpeed;
+  disabled?: boolean;
+  onChange: (speed: SyncSpeed) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Wallet sync speed">
+      {SYNC_SPEED_OPTIONS.map((speed) => (
+        <button
+          key={speed}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(speed)}
+          aria-pressed={value === speed}
+          className={cn(
+            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm font-semibold capitalize text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:active:scale-100 motion-reduce:transition-none",
+            value === speed &&
+              "border-primary bg-primary text-primary-foreground hover:text-primary-foreground",
+          )}
+        >
+          {SYNC_SPEED_LABELS[speed]}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export default function SettingsPage() {
-  const router = useRouter()
-  const settings = useWalletSettings()
-  const updateSettings = useUpdateWalletSettings()
-  const optimizeWallet = useOptimizeWallet()
-  const resetAndRescan = useResetAndRescan()
-  const wallet = useWalletInfo()
-  const disconnect = useWalletDisconnect()
-  const current = settings.data
-  const isMock = env.useMockWallet
+  const router = useRouter();
+  const settings = useWalletSettings();
+  const updateSettings = useUpdateWalletSettings();
+  const optimizeWallet = useOptimizeWallet();
+  const resetAndRescan = useResetAndRescan();
+  const wallet = useWalletInfo();
+  const disconnect = useWalletDisconnect();
+  const current = settings.data;
+  const isMock = env.useMockWallet;
 
-  const [creationHeight, setCreationHeight] = useState("")
-  const [scanHeight, setScanHeight] = useState("")
-  const [nodeUrl, setNodeUrl] = useState("")
+  const [creationHeight, setCreationHeight] = useState("");
+  const [scanHeight, setScanHeight] = useState("");
+  const [nodeUrl, setNodeUrl] = useState("");
 
   useEffect(() => {
-    if (!current) return
-    setCreationHeight(String(current.creationHeight ?? wallet.data?.creationHeight ?? 0))
-    setScanHeight(String(current.scanHeight ?? wallet.data?.currentHeight ?? 0))
-    setNodeUrl(current.nodeUrl)
-  }, [current, wallet.data?.creationHeight, wallet.data?.currentHeight])
+    if (!current) return;
+    setCreationHeight(String(current.creationHeight ?? wallet.data?.creationHeight ?? 0));
+    setScanHeight(String(current.scanHeight ?? wallet.data?.currentHeight ?? 0));
+    setNodeUrl(current.nodeUrl);
+  }, [current, wallet.data?.creationHeight, wallet.data?.currentHeight]);
 
   function settingsSavedMessage() {
-    return isMock ? "Mock settings updated." : "Settings updated."
+    return isMock ? "Mock settings updated." : "Settings updated.";
   }
 
   function update(input: Partial<WalletSettings>, message = settingsSavedMessage()) {
-    updateSettings.mutate(input, { onSuccess: () => toast.success(message) })
+    updateSettings.mutate(input, { onSuccess: () => toast.success(message) });
   }
 
   function applyHeights() {
-    const parsedCreation = parseInt(creationHeight, 10)
-    const parsedScan = parseInt(scanHeight, 10)
+    const parsedCreation = parseInt(creationHeight, 10);
+    const parsedScan = parseInt(scanHeight, 10);
     if (Number.isNaN(parsedCreation) || Number.isNaN(parsedScan)) {
-      toast.error("Enter valid block heights.")
-      return
+      toast.error("Enter valid block heights.");
+      return;
     }
     update(
       { creationHeight: parsedCreation, scanHeight: parsedScan },
       isMock ? "Mock wallet updated." : "Wallet heights updated.",
-    )
+    );
   }
 
   function handleResetAndRescan() {
     resetAndRescan.mutate(undefined, {
       onSuccess: () => {
-        toast.success(isMock ? "Mock rescan started." : "Wallet reset — rescanning from creation height.")
+        toast.success(
+          isMock ? "Mock rescan started." : "Wallet reset — rescanning from creation height.",
+        );
       },
-      onError: (error) => toast.error(error instanceof Error ? error.message : "Rescan failed."),
-    })
+      onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Rescan failed."),
+    });
   }
 
   function handleOptimize() {
     optimizeWallet.mutate(undefined, {
-      onSuccess: () => toast.success(isMock ? "Mock optimization complete." : "Wallet optimization complete."),
-      onError: (error) => toast.error(error instanceof Error ? error.message : "Optimization failed."),
-    })
+      onSuccess: () =>
+        toast.success(isMock ? "Mock optimization complete." : "Wallet optimization complete."),
+      onError: (error: unknown) =>
+        toast.error(error instanceof Error ? error.message : "Optimization failed."),
+    });
   }
 
   return (
@@ -122,7 +169,10 @@ export default function SettingsPage() {
                   <option>English</option>
                 </select>
               </Row>
-              <Row label="Wallet optimization" description="Compact transaction outputs to reduce wallet size">
+              <Row
+                label="Wallet optimization"
+                description="Compact transaction outputs to reduce wallet size"
+              >
                 <Button
                   type="button"
                   variant="outline"
@@ -139,7 +189,7 @@ export default function SettingsPage() {
                 <Row label="Use custom node" description="Connect to your own Conceal daemon">
                   <Switch
                     checked={current.useCustomNode}
-                    onCheckedChange={(checked) => update({ useCustomNode: checked })}
+                    onCheckedChange={(checked: boolean) => update({ useCustomNode: checked })}
                   />
                 </Row>
                 <Row label="Node URL" description="The daemon endpoint this wallet syncs against">
@@ -165,11 +215,24 @@ export default function SettingsPage() {
 
             {current && (
               <Section title="Wallet">
-                <Row label="Read miner transactions" description="Include coinbase outputs when syncing — required for solo mining">
+                <Row
+                  label="Sync speed"
+                  description="Higher speeds use more CPU and network resources while scanning blocks"
+                >
+                  <SyncSpeedSelector
+                    value={current.syncSpeed}
+                    disabled={updateSettings.isPending}
+                    onChange={(syncSpeed) => update({ syncSpeed })}
+                  />
+                </Row>
+                <Row
+                  label="Read miner transactions"
+                  description="Include coinbase outputs when syncing — required for solo mining"
+                >
                   <Switch
                     checked={current.readMinorTx}
                     disabled={updateSettings.isPending}
-                    onCheckedChange={(checked) => update({ readMinorTx: checked })}
+                    onCheckedChange={(checked: boolean) => update({ readMinorTx: checked })}
                   />
                 </Row>
                 <Row label="Block heights" description="Creation height / current synced height">
@@ -190,13 +253,17 @@ export default function SettingsPage() {
                     />
                   </div>
                 </Row>
-                <Row label="Maintenance" description="Apply changes, rotate password, or rescan the chain">
+                <Row
+                  label="Maintenance"
+                  description="Apply height changes or rescan the chain"
+                >
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" disabled={updateSettings.isPending} onClick={applyHeights}>
+                    <Button
+                      type="button"
+                      disabled={updateSettings.isPending}
+                      onClick={applyHeights}
+                    >
                       Update
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => router.push("/wallet/change-password")}>
-                      Change password
                     </Button>
                     <Button
                       type="button"
@@ -218,7 +285,9 @@ export default function SettingsPage() {
                 >
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button type="button" variant="destructive">Delete wallet</Button>
+                      <Button type="button" variant="destructive">
+                        Delete wallet
+                      </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
@@ -247,13 +316,26 @@ export default function SettingsPage() {
             {current && (
               <Section title="Security">
                 <Row label="Auto-lock wallet" description="Lock automatically after inactivity">
-                  <Switch checked={current.autoLock} onCheckedChange={(checked) => update({ autoLock: checked })} />
+                  <Switch
+                    checked={current.autoLock}
+                    onCheckedChange={(checked: boolean) => update({ autoLock: checked })}
+                  />
                 </Row>
-                <Row label="Biometric authentication" description="Unlock with biometrics where available">
-                  <Switch checked={current.biometric} onCheckedChange={(checked) => update({ biometric: checked })} />
+                <Row
+                  label="Biometric authentication"
+                  description="Unlock with biometrics where available"
+                >
+                  <Switch
+                    checked={current.biometric}
+                    onCheckedChange={(checked: boolean) => update({ biometric: checked })}
+                  />
                 </Row>
                 <Row label="Password" description="Change the local wallet password">
-                  <Button type="button" variant="outline" onClick={() => router.push("/wallet/change-password")}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/wallet/change-password")}
+                  >
                     Change Password
                   </Button>
                 </Row>
@@ -263,5 +345,5 @@ export default function SettingsPage() {
         </Card>
       </div>
     </>
-  )
+  );
 }

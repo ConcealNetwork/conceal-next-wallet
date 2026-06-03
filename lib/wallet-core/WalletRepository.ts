@@ -23,7 +23,7 @@ import { Storage } from "./Storage";
 import { CoinUri } from "./CoinUri";
 
 function encodeUtf8(value: string): Uint8Array {
-  return new TextEncoder().encode(value)
+  return new TextEncoder().encode(value);
 }
 
 export class WalletRepository {
@@ -64,7 +64,10 @@ export class WalletRepository {
     });
   }
 
-  static decodeWithPassword(rawWallet: RawWallet | RawFullyEncryptedWallet, password: string): Wallet | null {
+  static decodeWithPassword(
+    rawWallet: RawWallet | RawFullyEncryptedWallet,
+    password: string,
+  ): Wallet | null {
     if (password.length > 32) password = password.substr(0, 32);
     if (password.length < 32) {
       password = ("00000000000000000000000000000000" + password).slice(-32);
@@ -110,7 +113,7 @@ export class WalletRepository {
     if (decodedRawWallet !== null) {
       let wallet = Wallet.loadFromRaw(decodedRawWallet);
       if (!wallet.keys?.pub?.spend) {
-        const normalized = KeysRepository.normalizeKeys(wallet.keys)
+        const normalized = KeysRepository.normalizeKeys(wallet.keys);
         if (normalized === null) return null;
         wallet.keys = normalized;
       }
@@ -178,9 +181,13 @@ export class WalletRepository {
       wallet.getPublicAddress(),
       wallet.keys.priv.spend,
       wallet.keys.priv.view,
-      wallet.creationHeight
+      wallet.creationHeight,
     );
-    let coinWalletUriM = CoinUri.encodeWalletKeys(wallet.getPublicAddress(), wallet.keys.priv.spend, wallet.keys.priv.view);
+    let coinWalletUriM = CoinUri.encodeWalletKeys(
+      wallet.getPublicAddress(),
+      wallet.keys.priv.spend,
+      wallet.keys.priv.view,
+    );
 
     let publicQrCode = kjua({
       render: "canvas",
@@ -317,7 +324,9 @@ export class WalletRepository {
       let ctx = c.getContext("2d");
 
       // First logo (vertical)
-      let verticalLogo: ImageBitmap | null = <ImageBitmap | null>document.getElementById("verticalLogo");
+      let verticalLogo: ImageBitmap | null = <ImageBitmap | null>(
+        document.getElementById("verticalLogo")
+      );
       if (ctx !== null && verticalLogo !== null) {
         c.width = verticalLogo.width;
         c.height = verticalLogo.height;

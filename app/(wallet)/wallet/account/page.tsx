@@ -1,54 +1,71 @@
-"use client"
+"use client";
 
-import { RefreshCw } from "lucide-react"
-import dynamic from "next/dynamic"
-import Link from "next/link"
-import type { CSSProperties } from "react"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { BalanceHero, BalanceHeroSkeleton } from "@/components/wallet/balance-hero"
-import { CcxAmount } from "@/components/wallet/ccx"
-import { PageHeader, SectionCard } from "@/components/wallet/common"
-import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
-import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types"
-import { useDeposits, useMarketData, useRefreshWallet, useTransactions, useWalletInfo } from "@/lib/hooks"
-import { ccxToNumber, cn, formatCcx, formatUsd, timeAgo, truncateAddress, walletBalanceUsd } from "@/lib/utils"
+import { RefreshCw } from "lucide-react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import type { CSSProperties } from "react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BalanceHero, BalanceHeroSkeleton } from "@/components/wallet/balance-hero";
+import { CcxAmount } from "@/components/wallet/ccx";
+import { PageHeader, SectionCard } from "@/components/wallet/common";
+import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
+import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types";
+import {
+  useDeposits,
+  useMarketData,
+  useRefreshWallet,
+  useTransactions,
+  useWalletInfo,
+} from "@/lib/hooks";
+import {
+  ccxToNumber,
+  cn,
+  formatCcx,
+  formatUsd,
+  timeAgo,
+  truncateAddress,
+  walletBalanceUsd,
+} from "@/lib/utils";
 
-const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false })
-const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false })
-const ResponsiveContainer = dynamic(() => import("recharts").then((mod) => mod.ResponsiveContainer), { ssr: false })
-const Tooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), { ssr: false })
+const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false });
+const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false });
+const ResponsiveContainer = dynamic(
+  () => import("recharts").then((mod) => mod.ResponsiveContainer),
+  { ssr: false },
+);
+const Tooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), { ssr: false });
 
 export default function AccountPage() {
-  const wallet = useWalletInfo()
-  const transactions = useTransactions()
-  const market = useMarketData()
-  const deposits = useDeposits()
-  const refresh = useRefreshWallet()
-  const info = wallet.data
+  const wallet = useWalletInfo();
+  const transactions = useTransactions();
+  const market = useMarketData();
+  const deposits = useDeposits();
+  const refresh = useRefreshWallet();
+  const info = wallet.data;
   const isSyncing =
-    info !== undefined && info.networkHeight > 0 && info.currentHeight < info.networkHeight - 1
+    info !== undefined && info.networkHeight > 0 && info.currentHeight < info.networkHeight - 1;
   const syncPct =
     info && info.networkHeight > 0
       ? Math.min(100, Math.round((info.currentHeight / info.networkHeight) * 100))
-      : 0
+      : 0;
 
   const totals = (transactions.data ?? []).reduce(
     (acc, transaction) => {
-      const value = ccxToNumber(transaction.amount)
+      const value = ccxToNumber(transaction.amount);
       if (
         transaction.type === "receive" ||
         transaction.type === "miner" ||
         transaction.type === "withdrawal"
       ) {
-        acc.received += value
+        acc.received += value;
       }
-      if (transaction.type === "send" || transaction.type === "fusion") acc.sent += value
-      if (transaction.type === "deposit") acc.deposits += value
-      return acc
+      if (transaction.type === "send" || transaction.type === "fusion") acc.sent += value;
+      if (transaction.type === "deposit") acc.deposits += value;
+      return acc;
     },
-    { received: 0, sent: 0, deposits: 0 }
-  )
+    { received: 0, sent: 0, deposits: 0 },
+  );
 
   return (
     <>
@@ -62,7 +79,13 @@ export default function AccountPage() {
             disabled={refresh.isPending}
             className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
           >
-            <RefreshCw className={cn("size-4", refresh.isPending && "animate-spin motion-reduce:animate-none")} aria-hidden="true" />
+            <RefreshCw
+              className={cn(
+                "size-4",
+                refresh.isPending && "animate-spin motion-reduce:animate-none",
+              )}
+              aria-hidden="true"
+            />
             {refresh.isPending ? "Refreshing" : "Refresh"}
           </Button>
         }
@@ -72,8 +95,8 @@ export default function AccountPage() {
           className="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground"
           role="status"
         >
-          Syncing blockchain… block {info.currentHeight.toLocaleString()} / {info.networkHeight.toLocaleString()} (
-          {syncPct}%)
+          Syncing blockchain… block {info.currentHeight.toLocaleString()} /{" "}
+          {info.networkHeight.toLocaleString()} ({syncPct}%)
         </div>
       )}
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
@@ -163,7 +186,7 @@ export default function AccountPage() {
         </div>
       </div>
     </>
-  )
+  );
 }
 
 function TransactionFlowSummary({
@@ -173,25 +196,40 @@ function TransactionFlowSummary({
   transactionCount,
   lastActivity,
 }: {
-  received: number
-  sent: number
-  deposits: number
-  transactionCount: number
-  lastActivity: string
+  received: number;
+  sent: number;
+  deposits: number;
+  transactionCount: number;
+  lastActivity: string;
 }) {
-  const total = received + sent + deposits
+  const total = received + sent + deposits;
   const segments = [
-    { label: "In", value: received, className: "bg-wallet-incoming", textClassName: "text-wallet-incoming", prefix: "+" },
-    { label: "Out", value: sent, className: "bg-wallet-outgoing", textClassName: "text-wallet-outgoing", prefix: "" },
-    { label: "Deposits", value: deposits, className: "bg-wallet-deposit", textClassName: "text-wallet-deposit", prefix: "+" },
-  ]
+    {
+      label: "In",
+      value: received,
+      className: "bg-wallet-incoming",
+      textClassName: "text-wallet-incoming",
+      prefix: "+",
+    },
+    {
+      label: "Out",
+      value: sent,
+      className: "bg-wallet-outgoing",
+      textClassName: "text-wallet-outgoing",
+      prefix: "",
+    },
+    {
+      label: "Deposits",
+      value: deposits,
+      className: "bg-wallet-deposit",
+      textClassName: "text-wallet-deposit",
+      prefix: "+",
+    },
+  ];
 
   return (
     <div>
-      <div
-        className="flex h-3 overflow-hidden rounded-full bg-secondary"
-        aria-hidden="true"
-      >
+      <div className="flex h-3 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
         {segments.map((segment, index) => (
           <span
             key={segment.label}
@@ -204,13 +242,19 @@ function TransactionFlowSummary({
         ))}
       </div>
       <p className="sr-only">
-        Transaction flow: {formatCcx(received)} received, {formatCcx(sent)} sent, {formatCcx(deposits)} deposits.
+        Transaction flow: {formatCcx(received)} received, {formatCcx(sent)} sent,{" "}
+        {formatCcx(deposits)} deposits.
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {segments.map((segment) => (
           <div key={segment.label} className="min-w-0">
             <p className="text-xs text-muted-foreground">{segment.label}</p>
-            <p className={cn("mt-1 truncate font-mono text-base font-semibold", segment.textClassName)}>
+            <p
+              className={cn(
+                "mt-1 truncate font-mono text-base font-semibold",
+                segment.textClassName,
+              )}
+            >
               {segment.prefix}
               <CcxAmount>{formatCcx(segment.value)}</CcxAmount>
             </p>
@@ -221,7 +265,7 @@ function TransactionFlowSummary({
         {transactionCount} transactions · last activity {lastActivity}
       </p>
     </div>
-  )
+  );
 }
 
 const TX_META: Record<TransactionType, { label: string; sign: string; className: string }> = {
@@ -231,15 +275,17 @@ const TX_META: Record<TransactionType, { label: string; sign: string; className:
   send: { label: "Send", sign: "−", className: "text-wallet-outgoing" },
   withdrawal: { label: "Withdraw", sign: "+", className: "text-wallet-incoming" },
   fusion: { label: "Fusion", sign: "−", className: "text-muted-foreground" },
-}
+};
 
 function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
   return (
     <div className="mt-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recent Activity</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Recent Activity
+      </p>
       <ul className="mt-1 divide-y divide-border">
         {transactions.map((transaction, index) => {
-          const meta = TX_META[transaction.type]
+          const meta = TX_META[transaction.type];
           return (
             <li
               key={transaction.id}
@@ -264,29 +310,53 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
                 </span>
               </div>
             </li>
-          )
+          );
         })}
       </ul>
     </div>
-  )
+  );
 }
 
-function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walletInfo: WalletInfo }) {
-  const prefersReducedMotion = usePrefersReducedMotion()
-  const available = ccxToNumber(walletInfo.available)
-  const locked = ccxToNumber(walletInfo.lockedDeposits)
-  const staking = ccxToNumber(walletInfo.staking)
-  const holdingsTotal = available + locked + staking
-  const portfolioUsd = walletBalanceUsd(walletInfo.balanceTotal, market.price.value)
+function MarketSummaryHybrid({
+  market,
+  walletInfo,
+}: {
+  market: MarketData;
+  walletInfo: WalletInfo;
+}) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const available = ccxToNumber(walletInfo.available);
+  const locked = ccxToNumber(walletInfo.lockedDeposits);
+  const staking = ccxToNumber(walletInfo.staking);
+  const holdingsTotal = available + locked + staking;
+  const portfolioUsd = walletBalanceUsd(walletInfo.balanceTotal, market.price.value);
   const marketPriceLabel = useCountUp(market.price.value, {
     formatter: (value) => formatUsd(value, 3),
-  })
+  });
   const segments = [
-    { label: "Available", value: available, className: "text-primary", stroke: "hsl(var(--primary))", dotClassName: "bg-primary" },
-    { label: "Locked", value: locked, className: "text-wallet-deposit", stroke: "hsl(var(--chart-1))", dotClassName: "bg-wallet-deposit" },
-    { label: "Staking", value: staking, className: "text-wallet-incoming", stroke: "hsl(var(--chart-2))", dotClassName: "bg-wallet-incoming" },
-  ]
-  let offset = 25
+    {
+      label: "Available",
+      value: available,
+      className: "text-primary",
+      stroke: "hsl(var(--primary))",
+      dotClassName: "bg-primary",
+    },
+    {
+      label: "Locked",
+      value: locked,
+      className: "text-wallet-deposit",
+      stroke: "hsl(var(--chart-1))",
+      dotClassName: "bg-wallet-deposit",
+    },
+    {
+      label: "Staking",
+      value: staking,
+      className: "text-wallet-incoming",
+      stroke: "hsl(var(--chart-2))",
+      dotClassName: "bg-wallet-incoming",
+    },
+  ];
+  let offset = 25;
 
   return (
     <div>
@@ -341,11 +411,18 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
         <div className="relative size-[120px] shrink-0">
           <svg className="size-[120px]" viewBox="0 0 42 42" aria-hidden="true">
-            <circle cx="21" cy="21" r="15.9" fill="none" stroke="hsl(var(--secondary))" strokeWidth="4.5" />
+            <circle
+              cx="21"
+              cy="21"
+              r="15.9"
+              fill="none"
+              stroke="hsl(var(--secondary))"
+              strokeWidth="4.5"
+            />
             {segments.map((segment, index) => {
-              const pct = holdingsTotal > 0 ? (segment.value / holdingsTotal) * 100 : 0
-              const dashOffset = offset
-              offset -= pct
+              const pct = holdingsTotal > 0 ? (segment.value / holdingsTotal) * 100 : 0;
+              const dashOffset = offset;
+              offset -= pct;
               return (
                 <circle
                   key={segment.label}
@@ -368,26 +445,35 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
                     } as CSSProperties
                   }
                 />
-              )
+              );
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Holdings</p>
-            <p className="font-mono text-sm font-semibold leading-tight">{formatCcx(holdingsTotal).replace(" CCX", "")}</p>
+            <p className="font-mono text-sm font-semibold leading-tight">
+              {formatCcx(holdingsTotal).replace(" CCX", "")}
+            </p>
             <p className="text-[10px] text-primary">CCX</p>
           </div>
         </div>
         <div className="flex-1 space-y-2.5">
           {segments.map((segment) => {
-            const pct = holdingsTotal > 0 ? (segment.value / holdingsTotal) * 100 : 0
+            const pct = holdingsTotal > 0 ? (segment.value / holdingsTotal) * 100 : 0;
             return (
               <div key={segment.label} className="flex items-center gap-2 text-sm">
-                <span className={cn("size-2.5 shrink-0 rounded-[3px]", segment.dotClassName)} aria-hidden="true" />
+                <span
+                  className={cn("size-2.5 shrink-0 rounded-[3px]", segment.dotClassName)}
+                  aria-hidden="true"
+                />
                 <span>{segment.label}</span>
-                <span className="ml-auto font-mono text-muted-foreground">{formatCcx(segment.value).replace(" CCX", "")}</span>
-                <span className="w-10 text-right font-mono text-muted-foreground">{Math.round(pct)}%</span>
+                <span className="ml-auto font-mono text-muted-foreground">
+                  {formatCcx(segment.value).replace(" CCX", "")}
+                </span>
+                <span className="w-10 text-right font-mono text-muted-foreground">
+                  {Math.round(pct)}%
+                </span>
               </div>
-            )
+            );
           })}
         </div>
       </div>
@@ -402,5 +488,5 @@ function MarketSummaryHybrid({ market, walletInfo }: { market: MarketData; walle
         </div>
       </div>
     </div>
-  )
+  );
 }

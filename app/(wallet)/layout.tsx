@@ -1,6 +1,6 @@
-import { WalletGuard } from "@/components/layout/guards"
-import { SidebarCollapseProvider } from "@/components/layout/sidebar-collapse"
-import { WalletShell } from "@/components/layout/wallet-shell"
+import { WalletGuard } from "@/components/layout/guards";
+import { SidebarCollapseProvider } from "@/components/layout/sidebar-collapse";
+import { WalletShell } from "@/components/layout/wallet-shell";
 
 export default function WalletLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,5 +9,5 @@ export default function WalletLayout({ children }: { children: React.ReactNode }
         <WalletShell>{children}</WalletShell>
       </SidebarCollapseProvider>
     </WalletGuard>
-  )
+  );
 }

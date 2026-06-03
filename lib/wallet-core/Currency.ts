@@ -46,7 +46,7 @@ export class Currency {
   public static isAmountApplicableInFusionTransactionInput = (
     amount: number,
     threshold: number,
-    height: number
+    height: number,
   ): { applicable: boolean; amountPowerOfTen?: number } => {
     if (amount >= threshold) {
       return { applicable: false };
@@ -75,10 +75,15 @@ export class Currency {
    * @param mixinCount The number of mixins per input
    * @returns The approximate maximum number of inputs that can fit
    */
-  public static getApproximateMaximumInputCount = (transactionSize: number, outputCount: number, mixinCount: number): number => {
+  public static getApproximateMaximumInputCount = (
+    transactionSize: number,
+    outputCount: number,
+    mixinCount: number,
+  ): number => {
     // Calculate sizes of different transaction components
     const outputsSize = outputCount * (OUTPUT_TAG_SIZE + OUTPUT_KEY_SIZE + AMOUNT_SIZE);
-    const headerSize = TRANSACTION_VERSION_SIZE + TRANSACTION_UNLOCK_TIME_SIZE + EXTRA_TAG_SIZE + PUBLIC_KEY_SIZE;
+    const headerSize =
+      TRANSACTION_VERSION_SIZE + TRANSACTION_UNLOCK_TIME_SIZE + EXTRA_TAG_SIZE + PUBLIC_KEY_SIZE;
     const inputSize =
       INPUT_TAG_SIZE +
       AMOUNT_SIZE +
@@ -92,10 +97,15 @@ export class Currency {
     return Math.floor((transactionSize - headerSize - outputsSize) / inputSize);
   };
 
-  public static getApproximateTransactionSize = (inputCount: number, outputCount: number, mixinCount: number): number => {
+  public static getApproximateTransactionSize = (
+    inputCount: number,
+    outputCount: number,
+    mixinCount: number,
+  ): number => {
     // Calculate sizes of different transaction components
     const outputsSize = outputCount * (OUTPUT_TAG_SIZE + OUTPUT_KEY_SIZE + AMOUNT_SIZE);
-    const headerSize = TRANSACTION_VERSION_SIZE + TRANSACTION_UNLOCK_TIME_SIZE + EXTRA_TAG_SIZE + PUBLIC_KEY_SIZE;
+    const headerSize =
+      TRANSACTION_VERSION_SIZE + TRANSACTION_UNLOCK_TIME_SIZE + EXTRA_TAG_SIZE + PUBLIC_KEY_SIZE;
     const inputSize =
       INPUT_TAG_SIZE +
       AMOUNT_SIZE +

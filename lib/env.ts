@@ -4,9 +4,9 @@
  * Copy `.env.example` → `.env.local` and set `NEXT_PUBLIC_USE_MOCK=false` for the real wallet.
  */
 function readUseMockWallet(): boolean {
-  const raw = process.env.NEXT_PUBLIC_USE_MOCK
-  if (raw === undefined || raw === "") return true
-  return raw !== "false"
+  const raw = process.env.NEXT_PUBLIC_USE_MOCK;
+  if (raw === undefined || raw === "") return true;
+  return raw !== "false";
 }
 
 export const env = {
@@ -14,4 +14,4 @@ export const env = {
   useMockWallet: readUseMockWallet(),
   /** Mock mode persists UI session in localStorage; real mode does not store keys in session. */
   persistWalletSession: readUseMockWallet(),
-} as const
+} as const;

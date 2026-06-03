@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   BarChart3,
@@ -18,9 +18,9 @@ import {
   Settings,
   Wallet,
   WalletCards,
-} from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,13 +31,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useSidebarCollapse } from "@/components/layout/sidebar-collapse"
-import { cn } from "@/lib/utils"
-import { useWalletDisconnect } from "@/components/wallet/open-wallet-form"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
+import { cn } from "@/lib/utils";
+import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
 
 const mainNav = [
   { href: "/wallet/account", label: "Account", icon: Home },
@@ -48,19 +48,25 @@ const mainNav = [
   { href: "/wallet/messages", label: "Messages", icon: Mail },
   { href: "/wallet/deposits", label: "Deposits", icon: Coins },
   { href: "/wallet/address-book", label: "Address Book", icon: BookOpen },
-]
+];
 
 const bottomNav = [
   { href: "/wallet/settings", label: "Settings", icon: Settings },
   { href: "/wallet/export", label: "Export", icon: Download },
   { href: "/wallet/network", label: "Network", icon: Network },
   { href: "/wallet/donate", label: "Donate", icon: Gift },
-]
+];
 
-function NavLink({ item, collapsed = false }: { item: (typeof mainNav)[number]; collapsed?: boolean }) {
-  const pathname = usePathname()
-  const Icon = item.icon
-  const active = pathname === item.href
+function NavLink({
+  item,
+  collapsed = false,
+}: {
+  item: (typeof mainNav)[number];
+  collapsed?: boolean;
+}) {
+  const pathname = usePathname();
+  const Icon = item.icon;
+  const active = pathname === item.href;
 
   const link = (
     <Link
@@ -68,24 +74,25 @@ function NavLink({ item, collapsed = false }: { item: (typeof mainNav)[number]; 
       aria-label={collapsed ? item.label : undefined}
       className={cn(
         "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-        active && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+        active &&
+          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
       )}
     >
       <Icon className="size-4 shrink-0" aria-hidden="true" />
       <span
         className={cn(
           "whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none",
-          collapsed && "pointer-events-none opacity-0"
+          collapsed && "pointer-events-none opacity-0",
         )}
         aria-hidden={collapsed}
       >
         {item.label}
       </span>
     </Link>
-  )
+  );
 
   if (!collapsed) {
-    return link
+    return link;
   }
 
   return (
@@ -93,11 +100,11 @@ function NavLink({ item, collapsed = false }: { item: (typeof mainNav)[number]; 
       <TooltipTrigger asChild>{link}</TooltipTrigger>
       <TooltipContent side="right">{item.label}</TooltipContent>
     </Tooltip>
-  )
+  );
 }
 
 function DisconnectButton({ collapsed }: { collapsed: boolean }) {
-  const disconnect = useWalletDisconnect()
+  const disconnect = useWalletDisconnect();
 
   return (
     <AlertDialog>
@@ -114,7 +121,7 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
               <span
                 className={cn(
                   "whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none",
-                  collapsed && "pointer-events-none opacity-0"
+                  collapsed && "pointer-events-none opacity-0",
                 )}
                 aria-hidden={collapsed}
               >
@@ -134,13 +141,16 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={disconnect}>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={disconnect}
+          >
             Disconnect
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }
 
 function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
@@ -156,7 +166,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
           <span
             className={cn(
               "whitespace-nowrap text-lg font-bold text-foreground transition-opacity duration-200 motion-reduce:transition-none",
-              collapsed && "pointer-events-none opacity-0"
+              collapsed && "pointer-events-none opacity-0",
             )}
             aria-hidden={collapsed}
           >
@@ -175,19 +185,19 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
       </nav>
       <DisconnectButton collapsed={collapsed} />
     </div>
-  )
+  );
 }
 
 export function Sidebar() {
-  const { collapsed, toggle } = useSidebarCollapse()
-  const EdgeToggleIcon = collapsed ? ChevronRight : ChevronLeft
+  const { collapsed, toggle } = useSidebarCollapse();
+  const EdgeToggleIcon = collapsed ? ChevronRight : ChevronLeft;
 
   return (
     <>
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-30 hidden overflow-visible border-r border-border transition-[width] duration-300 ease-in-out motion-reduce:transition-none lg:block",
-          collapsed ? "w-[64px]" : "w-[260px]"
+          collapsed ? "w-[64px]" : "w-[260px]",
         )}
       >
         <TooltipProvider>
@@ -217,5 +227,5 @@ export function Sidebar() {
         <p className="ml-3 text-base font-semibold">Conceal Wallet</p>
       </div>
     </>
-  )
+  );
 }

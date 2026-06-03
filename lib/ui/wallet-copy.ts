@@ -1,4 +1,4 @@
-import { env } from "@/lib/env"
+import { env } from "@/lib/env";
 
 /** User-facing strings that differ between mock and real wallet builds. */
 export const walletCopy = {
@@ -42,7 +42,7 @@ export const walletCopy = {
   messageSendSuccess: env.useMockWallet
     ? "Mock message sent."
     : "Message submitted to the network.",
-} as const
+} as const;
 
 /** HTML `required` on import fields — relaxed in mock so you can click through quickly. */
-export const importFieldsRequired = !env.useMockWallet
+export const importFieldsRequired = !env.useMockWallet;

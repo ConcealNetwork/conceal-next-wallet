@@ -56,7 +56,7 @@ export class Nfc {
         function (error: any) {
           if (error === "NFC_DISABLED") {
           } else alert(JSON.stringify(error));
-        }
+        },
       );
     }
   }
@@ -104,7 +104,7 @@ export class Nfc {
               // 	reject(Nfc.ERROR_NO_NFC);
               // }else
               reject(Nfc.ERROR_NO_NFC);
-            }
+            },
           );
       });
     }
@@ -141,7 +141,7 @@ export class Nfc {
           function (data: any) {
             alert("share ko:" + JSON.stringify(data));
             reject();
-          }
+          },
         );
       } else reject("not_supported");
     });
@@ -151,7 +151,7 @@ export class Nfc {
     if (window.nfc) {
       window.nfc.unshare(
         function () {},
-        function () {}
+        function () {},
       );
     }
   }
@@ -171,7 +171,10 @@ export class Nfc {
   private writeNdefOnTag() {
     if (window.nfc && window.ndef && this._pendingNdef) {
       if (this._pendingNdef.lang === "") this._pendingNdef.lang = "en";
-      let nativeNdef: NativeNfcEventNdef = window.ndef.textRecord(this._pendingNdef.content, this._pendingNdef.lang);
+      let nativeNdef: NativeNfcEventNdef = window.ndef.textRecord(
+        this._pendingNdef.content,
+        this._pendingNdef.lang,
+      );
 
       window.nfc.write(
         [nativeNdef],
@@ -182,7 +185,7 @@ export class Nfc {
           let error = "unknown";
           if (data.indexOf("Tag capacity") !== -1) error = "tag_capacity";
           if (this._pendingNdefPromiseReject) this._pendingNdefPromiseReject(error);
-        }
+        },
       );
     }
     this._pendingNdef = null;

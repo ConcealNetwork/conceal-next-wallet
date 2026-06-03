@@ -145,7 +145,8 @@ class QRReader {
   stop() {
     this.active = false;
     if (this.webcam !== null) {
-      if (this.webcam.srcObject !== null && this.webcam.srcObject instanceof MediaStream) this.webcam.srcObject.getVideoTracks()[0].stop();
+      if (this.webcam.srcObject !== null && this.webcam.srcObject instanceof MediaStream)
+        this.webcam.srcObject.getVideoTracks()[0].stop();
       this.webcam.srcObject = null;
     }
   }
@@ -168,7 +169,13 @@ class QRReader {
       }
       lastFrameTime = now;
 
-      if (self.ctx === null || self.webcam === null || self.canvas === null || self.decoder === null) return;
+      if (
+        self.ctx === null ||
+        self.webcam === null ||
+        self.canvas === null ||
+        self.decoder === null
+      )
+        return;
 
       try {
         // Draw the video frame to the canvas
@@ -180,7 +187,17 @@ class QRReader {
         const sy = (videoHeight - size) / 2;
 
         // Draw the centered square from the video to the square canvas
-        self.ctx.drawImage(self.webcam, sx, sy, size, size, 0, 0, self.canvas.width, self.canvas.height);
+        self.ctx.drawImage(
+          self.webcam,
+          sx,
+          sy,
+          size,
+          size,
+          0,
+          0,
+          self.canvas.width,
+          self.canvas.height,
+        );
         let imgData = self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height);
 
         if (imgData.data) {

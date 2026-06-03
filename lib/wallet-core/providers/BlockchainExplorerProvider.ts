@@ -22,14 +22,14 @@ import { BlockchainExplorer } from "../blockchain/BlockchainExplorer";
 import { BlockchainExplorerRpcDaemon } from "../blockchain/BlockchainExplorerRPCDaemon";
 
 export class BlockchainExplorerProvider {
-
-	static getInstance() : BlockchainExplorer {
-		let blockchainExplorer : BlockchainExplorer = DependencyInjectorInstance().getInstance(Constants.BLOCKCHAIN_EXPLORER);
-		if(blockchainExplorer === null) {
-			blockchainExplorer = new BlockchainExplorerRpcDaemon();
-			DependencyInjectorInstance().register(Constants.BLOCKCHAIN_EXPLORER, blockchainExplorer);
-		}
-		return blockchainExplorer;
-	}
-
+  static getInstance(): BlockchainExplorer {
+    let blockchainExplorer: BlockchainExplorer = DependencyInjectorInstance().getInstance(
+      Constants.BLOCKCHAIN_EXPLORER,
+    );
+    if (blockchainExplorer === null) {
+      blockchainExplorer = new BlockchainExplorerRpcDaemon();
+      DependencyInjectorInstance().register(Constants.BLOCKCHAIN_EXPLORER, blockchainExplorer);
+    }
+    return blockchainExplorer;
+  }
 }

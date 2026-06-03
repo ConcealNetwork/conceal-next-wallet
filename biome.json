@@ -1,0 +1,150 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "app/**",
+      "components/**",
+      "lib/**",
+      "scripts/**",
+      "tests/**",
+      "e2e/**",
+      "types/**",
+      "!public",
+      "!lib/conceal/concealjs",
+      "!!out",
+      "!!.next"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "recommended": true,
+        "noLabelWithoutControl": "warn",
+        "noSvgWithoutTitle": "warn",
+        "useAriaPropsSupportedByRole": "warn",
+        "useSemanticElements": "warn"
+      },
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "useExhaustiveDependencies": "warn",
+        "useHookAtTopLevel": "warn",
+        "useParseIntRadix": "warn",
+        "noInnerDeclarations": "warn",
+        "noSwitchDeclarations": "warn",
+        "noUnreachable": "warn"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn",
+        "noImplicitAnyLet": "warn",
+        "noAssignInExpressions": "warn",
+        "noAsyncPromiseExecutor": "warn",
+        "useIterableCallbackReturn": "warn"
+      },
+      "style": {
+        "noNonNullAssertion": "warn",
+        "useConst": "warn",
+        "useExponentiationOperator": "warn",
+        "useTemplate": "warn"
+      },
+      "complexity": {
+        "recommended": true,
+        "noUselessConstructor": "warn",
+        "noUselessThisAlias": "warn",
+        "useLiteralKeys": "warn",
+        "noStaticOnlyClass": "warn",
+        "noBannedTypes": "warn",
+        "noCommaOperator": "warn"
+      },
+      "performance": {
+        "noImgElement": "off",
+        "noAccumulatingSpread": "warn"
+      },
+      "security": {
+        "recommended": true,
+        "noDangerouslySetInnerHtml": "warn"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["lib/wallet-core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useExponentiationOperator": "off",
+            "useTemplate": "off",
+            "useConst": "warn",
+            "noNonNullAssertion": "warn"
+          },
+          "complexity": {
+            "noForEach": "off",
+            "noUselessConstructor": "off",
+            "noUselessThisAlias": "off",
+            "useLiteralKeys": "off",
+            "noStaticOnlyClass": "off",
+            "noBannedTypes": "off",
+            "noCommaOperator": "off"
+          },
+          "correctness": {
+            "useParseIntRadix": "off",
+            "noInnerDeclarations": "off",
+            "noSwitchDeclarations": "off",
+            "noUnreachable": "off"
+          },
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noDoubleEquals": "warn",
+            "noImplicitAnyLet": "off",
+            "noAssignInExpressions": "off",
+            "noAsyncPromiseExecutor": "off",
+            "useIterableCallbackReturn": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["types/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ]
+}

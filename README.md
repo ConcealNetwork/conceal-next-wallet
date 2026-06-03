@@ -39,11 +39,19 @@ npm run sync:legacy-libs
 
 ```bash
 npm run build
+npm run types
 npm run lint
+npm run format            # optional: auto-format scoped files
 npm test
 npx playwright install chromium   # first time only
 npm run test:e2e
 ```
+
+CI runs a non-blocking quality workflow (`.github/workflows/npm-audit.yml`): `npm audit`, typecheck, and Biome — all report-only.
+
+## Dependency policy
+
+Project [`.npmrc`](.npmrc) sets `min-release-age=7`, which blocks package versions published in the last 7 days on **`npm install`** / **`npm update`**. It does **not** apply to **`npm ci`** (lockfile is installed verbatim). Requires npm 11+ (Node 24).
 
 Production static export (GitHub Pages uses this in CI):
 

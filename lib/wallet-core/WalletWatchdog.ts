@@ -119,7 +119,10 @@ class BlockList {
     this.chainHeight = 0;
     this.watchdog = watchdog;
     this.txQueue = new TxQueue(wallet, (blockNumber: number) => {
-      this.wallet.lastHeight = Math.min(this.chainHeight, Math.max(this.wallet.lastHeight, blockNumber));
+      this.wallet.lastHeight = Math.min(
+        this.chainHeight,
+        Math.max(this.wallet.lastHeight, blockNumber),
+      );
       this.watchdog.setLastBlockLoadingFromApply(blockNumber);
       this.watchdog.checkMempool();
       this.watchdog.notifyTxQueueDrain();
@@ -162,7 +165,11 @@ class BlockList {
     return true;
   };
 
-  setFetchedTransactions = (startBlock: number, endBlock: number, transactions: RawDaemon_Transaction[]) => {
+  setFetchedTransactions = (
+    startBlock: number,
+    endBlock: number,
+    transactions: RawDaemon_Transaction[],
+  ) => {
     for (let i = 0; i < this.blocks.length; ++i) {
       if (this.blocks[i].startBlock === startBlock && this.blocks[i].endBlock === endBlock) {
         this.blocks[i].fetched = true;
@@ -322,7 +329,12 @@ class ParseWorker {
   private countProcessed: number;
   private parseTxCallback: ParseTxCallback;
 
-  constructor(wallet: Wallet, watchdog: WalletWatchdog, blockList: BlockList, parseTxCallback: ParseTxCallback) {
+  constructor(
+    wallet: Wallet,
+    watchdog: WalletWatchdog,
+    blockList: BlockList,
+    parseTxCallback: ParseTxCallback,
+  ) {
     this.parseTxCallback = parseTxCallback;
     this.blockList = blockList;
     this.watchdog = watchdog;
@@ -357,7 +369,11 @@ class ParseWorker {
           this.setIsWorking(false);
           this.parseTxCallback();
         } else if (message.type === "processed") {
-          this.blockList.finishBlockRange(message.startBlock, message.maxHeight, message.transactions);
+          this.blockList.finishBlockRange(
+            message.startBlock,
+            message.maxHeight,
+            message.transactions,
+          );
           this.setIsWorking(false);
           this.parseTxCallback();
         }
@@ -411,7 +427,7 @@ class SyncWorker {
 
   fetchBlocks = (
     startBlock: number,
-    endBlock: number
+    endBlock: number,
   ): Promise<{ transactions: RawDaemon_Transaction[]; lastBlock: number; startBlock: number }> => {
     this.isWorking = true;
 
@@ -419,7 +435,7 @@ class SyncWorker {
       this.prefetchSlotIndex,
       startBlock,
       endBlock,
-      this.wallet.options.checkMinerTx
+      this.wallet.options.checkMinerTx,
     );
 
     return fetchPromise
@@ -465,8 +481,10 @@ export class WalletWatchdog {
     console.log("WalletWatchdog");
     // by default we use all cores but limited up to config.maxWorkerCores
     this.maxCpuCores = Math.min(
-      window.navigator.hardwareConcurrency ? Math.max(window.navigator.hardwareConcurrency - 1, 1) : 1,
-      config.maxWorkerCores
+      window.navigator.hardwareConcurrency
+        ? Math.max(window.navigator.hardwareConcurrency - 1, 1)
+        : 1,
+      config.maxWorkerCores,
     );
 
     this.wallet = wallet;
@@ -474,7 +492,9 @@ export class WalletWatchdog {
     this.blockList = new BlockList(wallet, this);
 
     for (let i = 0; i < config.maxPrefetchParallel; ++i) {
-      this.filterWorkers.push(new ParseWorker(this.wallet, this, this.blockList, this.tryScheduleFilter));
+      this.filterWorkers.push(
+        new ParseWorker(this.wallet, this, this.blockList, this.tryScheduleFilter),
+      );
       this.syncWorkers.push(new SyncWorker(this.explorer, this.wallet, i));
     }
 
@@ -487,7 +507,11 @@ export class WalletWatchdog {
     if (this.wallet.options.readSpeed == 10) {
       this.remoteNodes = Math.min(config.maxPrefetchParallel, poolSize, config.maxRemoteNodes);
     } else if (this.wallet.options.readSpeed == 50) {
-      this.remoteNodes = Math.min(Math.max(1, Math.floor(poolSize / 2)), config.maxPrefetchParallel, config.maxRemoteNodes);
+      this.remoteNodes = Math.min(
+        Math.max(1, Math.floor(poolSize / 2)),
+        config.maxPrefetchParallel,
+        config.maxRemoteNodes,
+      );
     } else if (this.wallet.options.readSpeed == 100) {
       this.remoteNodes = 1;
     } else {
@@ -516,7 +540,7 @@ export class WalletWatchdog {
         () => {
           this.checkMempool();
         },
-        (config.avgBlockTime / 4) * 1000
+        (config.avgBlockTime / 4) * 1000,
       );
     }
     this.checkMempool();
@@ -681,7 +705,10 @@ export class WalletWatchdog {
   };
 
   private isTxQueueFull = (incomingTxCount: number = 0): boolean => {
-    return this.queuedTxCount() + incomingTxCount > config.maxTxQueueHigh || this.blockList.getSize() >= config.maxTxQueuePackets;
+    return (
+      this.queuedTxCount() + incomingTxCount > config.maxTxQueueHigh ||
+      this.blockList.getSize() >= config.maxTxQueuePackets
+    );
   };
 
   private waitForQueueCapacity = async (incomingTxCount: number = 0): Promise<void> => {
@@ -704,7 +731,10 @@ export class WalletWatchdog {
   };
 
   private isTxQueueBelowLowWatermark = (): boolean => {
-    return this.queuedTxCount() <= config.maxTxQueueLow && this.blockList.getSize() <= this.getTxQueuePacketsLowWatermark();
+    return (
+      this.queuedTxCount() <= config.maxTxQueueLow &&
+      this.blockList.getSize() <= this.getTxQueuePacketsLowWatermark()
+    );
   };
 
   notifyTxQueueDrain = (): void => {
@@ -766,7 +796,11 @@ export class WalletWatchdog {
     return true;
   };
 
-  private onBlockRangeFetched = (startBlock: number, endBlock: number, transactions: RawDaemon_Transaction[]): void => {
+  private onBlockRangeFetched = (
+    startBlock: number,
+    endBlock: number,
+    transactions: RawDaemon_Transaction[],
+  ): void => {
     this.blockList.setFetchedTransactions(startBlock, endBlock, transactions);
     this.tryScheduleFilter();
   };
@@ -815,7 +849,12 @@ export class WalletWatchdog {
 
           // backpressure: avoid scheduling new fetches while the tx FIFO is at high watermark
           if (self.isTxQueueFull(0)) {
-            logDebugMsg(`Tx FIFO at high watermark`, self.blockList.getSize(), self.queuedTxCount(), config.maxTxQueueHigh);
+            logDebugMsg(
+              `Tx FIFO at high watermark`,
+              self.blockList.getSize(),
+              self.queuedTxCount(),
+              config.maxTxQueueHigh,
+            );
             await self.waitForQueueCapacity(0);
             continue;
           }
@@ -899,13 +938,29 @@ export class WalletWatchdog {
             // try to fetch the block range with a currently selected sync worker
             freeWorker
               .fetchBlocks(startBlock, endBlock)
-              .then((blockData: { transactions: RawDaemon_Transaction[]; lastBlock: number; startBlock: number }) => {
-                self.onBlockRangeFetched(blockData.startBlock, blockData.lastBlock, blockData.transactions);
-              })
-              .catch((blockData: { transactions: RawDaemon_Transaction[]; lastBlock: number; startBlock: number }) => {
-                self.blockList.markIdleBlockRange(blockData.lastBlock);
-                self.tryScheduleFilter();
-              });
+              .then(
+                (blockData: {
+                  transactions: RawDaemon_Transaction[];
+                  lastBlock: number;
+                  startBlock: number;
+                }) => {
+                  self.onBlockRangeFetched(
+                    blockData.startBlock,
+                    blockData.lastBlock,
+                    blockData.transactions,
+                  );
+                },
+              )
+              .catch(
+                (blockData: {
+                  transactions: RawDaemon_Transaction[];
+                  lastBlock: number;
+                  startBlock: number;
+                }) => {
+                  self.blockList.markIdleBlockRange(blockData.lastBlock);
+                  self.tryScheduleFilter();
+                },
+              );
           } else {
             self.tryScheduleFilter();
             await new Promise((r) => setTimeout(r, 500));

@@ -38,8 +38,6 @@ export class WalletWorker {
     let self: any = this;
     wallet.addObserver(Observable.EVENT_MODIFIED, function () {
       if (self.intervalSave === 0)
-        // biome-ignore lint
-        // biome-ignore format
         self.intervalSave = setTimeout(function () {
           self.save();
           self.intervalSave = 0;
@@ -70,8 +68,16 @@ export class AppState {
 
   static disconnect() {
     let wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
-    let walletWorker: WalletWorker = DependencyInjectorInstance().getInstance(WalletWorker.name, "default", false);
-    let walletWatchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(WalletWatchdog.name, "default", false);
+    let walletWorker: WalletWorker = DependencyInjectorInstance().getInstance(
+      WalletWorker.name,
+      "default",
+      false,
+    );
+    let walletWatchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
+      WalletWatchdog.name,
+      "default",
+      false,
+    );
 
     if (walletWatchdog !== null) {
       walletWatchdog.stop();
@@ -133,7 +139,11 @@ export class AppState {
                   });
 
                   const savePassword = result.value;
-                  const memoryWallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
+                  const memoryWallet = DependencyInjectorInstance().getInstance(
+                    Wallet.name,
+                    "default",
+                    false,
+                  );
 
                   if (memoryWallet === null) {
                     // Migration and wallet loading logic
@@ -179,7 +189,12 @@ export class AppState {
 }
 
 // Helper functions to improve readability
-function handleWalletLoading(wallet: Wallet, savePassword: string, resolve: () => void, redirectToHome: boolean): void {
+function handleWalletLoading(
+  wallet: Wallet,
+  savePassword: string,
+  resolve: () => void,
+  redirectToHome: boolean,
+): void {
   wallet.recalculateIfNotViewOnly();
   updateWalletTransactions(wallet);
   swal.close();
@@ -217,7 +232,11 @@ function updateWalletTransactions(wallet: Wallet): void {
     const blockchainExplorer: BlockchainExplorer = BlockchainExplorerProvider.getInstance();
 
     const promisesBlocks = blockchainHeightToRescan.map((height) =>
-      blockchainExplorer.getTransactionsForBlocks(parseInt(height), parseInt(height), wallet.options.checkMinerTx)
+      blockchainExplorer.getTransactionsForBlocks(
+        parseInt(height),
+        parseInt(height),
+        wallet.options.checkMinerTx,
+      ),
     );
 
     Promise.all(promisesBlocks)

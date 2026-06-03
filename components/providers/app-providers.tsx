@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { Toaster } from "sonner"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { WalletQueryProvider } from "@/lib/hooks/query-provider"
-import { WalletSessionProvider } from "@/lib/session/wallet-session"
+import { Toaster } from "sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { WalletQueryProvider } from "@/lib/hooks/query-provider";
+import { WalletSessionProvider } from "@/lib/session/wallet-session";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -11,9 +11,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <WalletSessionProvider>
         <TooltipProvider>
           {children}
-          <Toaster richColors position="top-right" toastOptions={{ className: "bg-popover text-popover-foreground" }} />
+          <Toaster
+            richColors
+            position="top-right"
+            toastOptions={{ className: "bg-popover text-popover-foreground" }}
+          />
         </TooltipProvider>
       </WalletSessionProvider>
     </WalletQueryProvider>
-  )
+  );
 }

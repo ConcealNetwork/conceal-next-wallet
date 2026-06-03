@@ -1,6 +1,6 @@
-import Link from "next/link"
+import Link from "next/link";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const footerLinks = [
   { href: "/terms", label: "Terms" },
@@ -9,7 +9,7 @@ const footerLinks = [
   { href: "/wallet/donate", label: "Donate" },
   { href: "/wallet/network", label: "Network Stats" },
   { href: "https://github.com/ConcealNetwork", label: "GitHub" },
-]
+];
 
 export function Footer({ collapsed = false }: { collapsed?: boolean }) {
   return (
@@ -17,7 +17,7 @@ export function Footer({ collapsed = false }: { collapsed?: boolean }) {
       <div
         className={cn(
           "mx-auto flex w-full flex-col gap-4 px-4 py-6 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8",
-          collapsed ? "max-w-[1360px]" : "max-w-[1200px]"
+          collapsed ? "max-w-[1360px]" : "max-w-[1200px]",
         )}
       >
         <p>© 2018–2026 Conceal.Network</p>
@@ -34,5 +34,5 @@ export function Footer({ collapsed = false }: { collapsed?: boolean }) {
         </nav>
       </div>
     </footer>
-  )
+  );
 }

@@ -1,16 +1,16 @@
-import { mockMessages } from "@/lib/mock-data/wallet"
-import { clone, mockDelay } from "@/lib/services/mock/helpers"
-import type { MessageService } from "@/lib/services/message.service"
+import { mockMessages } from "@/lib/mock-data/wallet";
+import { clone, mockDelay } from "@/lib/services/mock/helpers";
+import type { MessageService } from "@/lib/services/message.service";
 
 export const mockMessageService: MessageService = {
   async listMessages() {
     // TODO(backend): replace with real Conceal RPC/walletd call
-    await mockDelay()
-    return clone(mockMessages)
+    await mockDelay();
+    return clone(mockMessages);
   },
   async sendMessage(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call
-    await mockDelay()
+    await mockDelay();
     return {
       id: `msg-mock-${Date.now()}`,
       direction: "sent",
@@ -19,11 +19,11 @@ export const mockMessageService: MessageService = {
       body: input.body,
       timestamp: new Date().toISOString(),
       unread: false,
-    }
+    };
   },
   async markRead(id) {
     // TODO(backend): replace with real Conceal RPC/walletd call
-    await mockDelay()
-    return clone(mockMessages.find((message) => message.id === id) ?? mockMessages[0])
+    await mockDelay();
+    return clone(mockMessages.find((message) => message.id === id) ?? mockMessages[0]);
   },
-}
+};

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { CalendarClock, LayoutGrid, Lock, Plus, Table2, Unlock } from "lucide-react"
-import dynamic from "next/dynamic"
-import { useEffect, useId, useMemo, useState } from "react"
-import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { CalendarClock, LayoutGrid, Lock, Plus, Table2, Unlock } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useEffect, useId, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,36 +13,55 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CcxAmount } from "@/components/wallet/ccx"
-import { EmptyState, PageHeader, SectionCard } from "@/components/wallet/common"
-import { useCreateDeposit, useDepositConstraints, useDepositPreview, useDeposits, useWithdrawDeposit } from "@/lib/hooks"
-import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CcxAmount } from "@/components/wallet/ccx";
+import { EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
+import {
+  useCreateDeposit,
+  useDepositConstraints,
+  useDepositPreview,
+  useDeposits,
+  useWithdrawDeposit,
+} from "@/lib/hooks";
+import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import {
   COIN_FEE_ATOMIC,
   COIN_UNIT_PLACES,
   DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC,
-} from "@/lib/config/config"
+} from "@/lib/config/config";
 import {
   DEPOSIT_DURATION_OPTIONS,
   estimateDepositUnlockDays,
-} from "@/lib/services/deposit.service"
-import type { CreateDepositInput } from "@/lib/services/deposit.service"
-import type { Deposit } from "@/lib/types"
-import { walletCopy } from "@/lib/ui/wallet-copy"
-import { ccxToNumber, cn, formatCcx, truncateAddress } from "@/lib/utils"
+} from "@/lib/services/deposit.service";
+import type { CreateDepositInput } from "@/lib/services/deposit.service";
+import type { Deposit } from "@/lib/types";
+import { walletCopy } from "@/lib/ui/wallet-copy";
+import { ccxToNumber, cn, formatCcx, truncateAddress } from "@/lib/utils";
 
-const ResponsiveContainer = dynamic(() => import("recharts").then((mod) => mod.ResponsiveContainer), { ssr: false })
-const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false })
-const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false })
-const ReferenceLine = dynamic(() => import("recharts").then((mod) => mod.ReferenceLine), { ssr: false })
-const RechartsTooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), { ssr: false })
-const XAxis = dynamic(() => import("recharts").then((mod) => mod.XAxis), { ssr: false })
-const YAxis = dynamic(() => import("recharts").then((mod) => mod.YAxis), { ssr: false })
+const ResponsiveContainer = dynamic(
+  () => import("recharts").then((mod) => mod.ResponsiveContainer),
+  { ssr: false },
+);
+const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false });
+const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false });
+const ReferenceLine = dynamic(() => import("recharts").then((mod) => mod.ReferenceLine), {
+  ssr: false,
+});
+const RechartsTooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), {
+  ssr: false,
+});
+const XAxis = dynamic(() => import("recharts").then((mod) => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import("recharts").then((mod) => mod.YAxis), { ssr: false });
 
 // Deposit-series colors drawn from the shared chart token palette (see app/globals.css).
 const DEPOSIT_SERIES_COLORS = [
@@ -50,55 +69,52 @@ const DEPOSIT_SERIES_COLORS = [
   "hsl(var(--chart-5))",
   "hsl(var(--chart-3))",
   "hsl(var(--chart-2))",
-]
-const PROJECTION_SAMPLES = 28
+];
+const PROJECTION_SAMPLES = 28;
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
   year: "numeric",
-})
+});
 
-type DepositView = "cards" | "table" | "timeline"
+type DepositView = "cards" | "table" | "timeline";
 
-const DEPOSITS_VIEW_KEY = "conceal-deposits-view"
+const DEPOSITS_VIEW_KEY = "conceal-deposits-view";
 
 export default function DepositsPageClient() {
-  const { data = [] } = useDeposits()
-  const constraints = useDepositConstraints()
-  const createDeposit = useCreateDeposit()
-  const [open, setOpen] = useState(false)
-  const [view, setView] = useState<DepositView>("cards")
+  const { data = [] } = useDeposits();
+  const constraints = useDepositConstraints();
+  const createDeposit = useCreateDeposit();
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<DepositView>("cards");
 
-  const openDeposits = useMemo(
-    () => data.filter((deposit) => deposit.status !== "spent"),
-    [data],
-  )
+  const openDeposits = useMemo(() => data.filter((deposit) => deposit.status !== "spent"), [data]);
 
   const withdrawnDeposits = useMemo(
     () => data.filter((deposit) => deposit.status === "spent"),
     [data],
-  )
+  );
 
   const sortedDeposits = useMemo(() => {
-    const open = openDeposits.toSorted((a, b) => a.unlocksInDays - b.unlocksInDays)
-    return [...open, ...withdrawnDeposits]
-  }, [openDeposits, withdrawnDeposits])
+    const open = openDeposits.toSorted((a, b) => a.unlocksInDays - b.unlocksInDays);
+    return [...open, ...withdrawnDeposits];
+  }, [openDeposits, withdrawnDeposits]);
 
-  const createDisabled = constraints.data?.isDepositDisabled ?? false
+  const createDisabled = constraints.data?.isDepositDisabled ?? false;
 
   useEffect(() => {
     function applyStoredView(next: DepositView) {
-      setView(next)
+      setView(next);
     }
 
-    const stored = window.localStorage.getItem(DEPOSITS_VIEW_KEY)
-    if (stored === "cards" || stored === "table" || stored === "timeline") applyStoredView(stored)
-  }, [])
+    const stored = window.localStorage.getItem(DEPOSITS_VIEW_KEY);
+    if (stored === "cards" || stored === "table" || stored === "timeline") applyStoredView(stored);
+  }, []);
 
   function chooseView(next: DepositView) {
-    setView(next)
-    window.localStorage.setItem(DEPOSITS_VIEW_KEY, next)
+    setView(next);
+    window.localStorage.setItem(DEPOSITS_VIEW_KEY, next);
   }
 
   return (
@@ -157,17 +173,13 @@ export default function DepositsPageClient() {
                       openDeposits.length > 0
                         ? `${openDeposits.length} open position${openDeposits.length === 1 ? "" : "s"}`
                         : null,
-                      withdrawnDeposits.length > 0
-                        ? `${withdrawnDeposits.length} withdrawn`
-                        : null,
+                      withdrawnDeposits.length > 0 ? `${withdrawnDeposits.length} withdrawn` : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
               </p>
             </div>
-            {data.length > 0 ? (
-              <DepositViewSwitcher value={view} onChange={chooseView} />
-            ) : null}
+            {data.length > 0 ? <DepositViewSwitcher value={view} onChange={chooseView} /> : null}
           </div>
           {data.length > 0 ? (
             <DepositsView deposits={sortedDeposits} view={view} />
@@ -185,67 +197,77 @@ export default function DepositsPageClient() {
         onCreate={(input) => {
           createDeposit.mutate(input, {
             onSuccess: () => {
-              toast.success(walletCopy.depositCreateSuccess)
-              setOpen(false)
+              toast.success(walletCopy.depositCreateSuccess);
+              setOpen(false);
             },
             onError: (error) => {
-              toast.error(error instanceof Error ? error.message : "Failed to create deposit.")
+              toast.error(error instanceof Error ? error.message : "Failed to create deposit.");
             },
-          })
+          });
         }}
       />
     </>
-  )
+  );
 }
 
 type DepositSegment = {
-  id: string
-  amount: number
-  apr: number
-  unlocksInDays: number
-  progressPct: number
-  color: string
-}
+  id: string;
+  amount: number;
+  apr: number;
+  unlocksInDays: number;
+  progressPct: number;
+  color: string;
+};
 
-type ProjectionPoint = { day: number; value: number }
+type ProjectionPoint = { day: number; value: number };
 
 // Projects total deposit value forward from today to the furthest maturity, accruing
 // each deposit's interest linearly across its own remaining lock period.
 function buildProjection(deposits: Deposit[], maxDays: number): ProjectionPoint[] {
-  if (deposits.length === 0 || maxDays <= 0) return []
-  const points: ProjectionPoint[] = []
+  if (deposits.length === 0 || maxDays <= 0) return [];
+  const points: ProjectionPoint[] = [];
   for (let sample = 0; sample <= PROJECTION_SAMPLES; sample += 1) {
-    const day = (maxDays * sample) / PROJECTION_SAMPLES
-    let value = 0
+    const day = (maxDays * sample) / PROJECTION_SAMPLES;
+    let value = 0;
     for (const deposit of deposits) {
-      const principal = ccxToNumber(deposit.amount)
-      const interest = ccxToNumber(deposit.interest)
-      const durationDays = Math.max(deposit.durationMonths * 30, 1)
-      const elapsedDays = durationDays - deposit.unlocksInDays
-      const fraction = Math.min(Math.max((elapsedDays + day) / durationDays, 0), 1)
-      value += principal + interest * fraction
+      const principal = ccxToNumber(deposit.amount);
+      const interest = ccxToNumber(deposit.interest);
+      const durationDays = Math.max(deposit.durationMonths * 30, 1);
+      const elapsedDays = durationDays - deposit.unlocksInDays;
+      const fraction = Math.min(Math.max((elapsedDays + day) / durationDays, 0), 1);
+      value += principal + interest * fraction;
     }
-    points.push({ day: Math.round(day), value: Number(value.toFixed(4)) })
+    points.push({ day: Math.round(day), value: Number(value.toFixed(4)) });
   }
-  return points
+  return points;
 }
 
 function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
   const activeDeposits = useMemo(
     () => deposits.filter((deposit) => deposit.status === "active"),
     [deposits],
-  )
-  const totalLocked = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0)
-  const totalInterest = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.interest), 0)
-  const totalAtMaturity = totalLocked + totalInterest
-  const weightedApr = totalLocked > 0
-    ? activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount) * deposit.apr, 0) / totalLocked
-    : 0
+  );
+  const totalLocked = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0);
+  const totalInterest = activeDeposits.reduce(
+    (sum, deposit) => sum + ccxToNumber(deposit.interest),
+    0,
+  );
+  const totalAtMaturity = totalLocked + totalInterest;
+  const weightedApr =
+    totalLocked > 0
+      ? activeDeposits.reduce(
+          (sum, deposit) => sum + ccxToNumber(deposit.amount) * deposit.apr,
+          0,
+        ) / totalLocked
+      : 0;
   const nextUnlock = activeDeposits.reduce<Deposit | null>((soonest, deposit) => {
-    if (!soonest || deposit.unlocksInDays < soonest.unlocksInDays) return deposit
-    return soonest
-  }, null)
-  const maxUnlock = activeDeposits.reduce((max, deposit) => Math.max(max, deposit.unlocksInDays), 0)
+    if (!soonest || deposit.unlocksInDays < soonest.unlocksInDays) return deposit;
+    return soonest;
+  }, null);
+  const maxUnlock = activeDeposits.reduce(
+    (max, deposit) => Math.max(max, deposit.unlocksInDays),
+    0,
+  );
 
   const segments = useMemo<DepositSegment[]>(
     () =>
@@ -257,11 +279,14 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
         progressPct: deposit.progressPct,
         color: DEPOSIT_SERIES_COLORS[index % DEPOSIT_SERIES_COLORS.length],
       })),
-    [activeDeposits]
-  )
-  const projection = useMemo(() => buildProjection(activeDeposits, maxUnlock), [activeDeposits, maxUnlock])
-  const maxAmount = segments.reduce((max, segment) => Math.max(max, segment.amount), 0)
-  const maxApr = segments.reduce((max, segment) => Math.max(max, segment.apr), 0)
+    [activeDeposits],
+  );
+  const projection = useMemo(
+    () => buildProjection(activeDeposits, maxUnlock),
+    [activeDeposits, maxUnlock],
+  );
+  const maxAmount = segments.reduce((max, segment) => Math.max(max, segment.amount), 0);
+  const maxApr = segments.reduce((max, segment) => Math.max(max, segment.apr), 0);
 
   return (
     <div className="space-y-4">
@@ -291,7 +316,9 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           detail="Projected return"
           tone="amber"
           index={2}
-          chart={<MiniArea values={projection.map((point) => point.value)} color="hsl(var(--primary))" />}
+          chart={
+            <MiniArea values={projection.map((point) => point.value)} color="hsl(var(--primary))" />
+          }
         />
         <SummaryCard
           label="Weighted Avg APR"
@@ -306,7 +333,11 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           label="Next Unlock"
           value={nextUnlock?.unlocksInDays ?? 0}
           formatter={(value) => (nextUnlock ? `${Math.round(value)} days` : "None")}
-          detail={nextUnlock ? `Matures ${formatMaturityDate(nextUnlock.unlocksInDays)}` : "No active deposits"}
+          detail={
+            nextUnlock
+              ? `Matures ${formatMaturityDate(nextUnlock.unlocksInDays)}`
+              : "No active deposits"
+          }
           tone="default"
           index={4}
           chart={<ProgressRing pct={nextUnlock?.progressPct ?? 0} />}
@@ -326,7 +357,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 function SummaryCard({
@@ -338,21 +369,21 @@ function SummaryCard({
   index,
   chart,
 }: {
-  label: string
-  value: number
-  formatter: (value: number) => string
-  detail: string
-  tone: "default" | "incoming" | "deposit" | "amber"
-  index: number
-  chart: React.ReactNode
+  label: string;
+  value: number;
+  formatter: (value: number) => string;
+  detail: string;
+  tone: "default" | "incoming" | "deposit" | "amber";
+  index: number;
+  chart: React.ReactNode;
 }) {
-  const valueLabel = useCountUp(value, { formatter })
+  const valueLabel = useCountUp(value, { formatter });
   const toneClass = {
     default: "text-foreground",
     incoming: "text-wallet-incoming",
     deposit: "text-wallet-deposit",
     amber: "text-primary",
-  }[tone]
+  }[tone];
 
   return (
     <div
@@ -360,16 +391,23 @@ function SummaryCard({
       style={{ animationDelay: `${120 + index * 40}ms` }}
     >
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={cn("mt-2 wrap-break-word font-mono text-2xl font-bold tracking-tight", toneClass)}>{valueLabel}</p>
+      <p
+        className={cn(
+          "mt-2 wrap-break-word font-mono text-2xl font-bold tracking-tight",
+          toneClass,
+        )}
+      >
+        {valueLabel}
+      </p>
       <div className="mt-auto pt-4">{chart}</div>
       <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
     </div>
-  )
+  );
 }
 
 function CompositionBar({ segments, total }: { segments: DepositSegment[]; total: number }) {
   if (segments.length === 0 || total <= 0) {
-    return <div className="h-2.5 w-full rounded-full bg-border/60" />
+    return <div className="h-2.5 w-full rounded-full bg-border/60" />;
   }
   return (
     <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
@@ -377,37 +415,47 @@ function CompositionBar({ segments, total }: { segments: DepositSegment[]; total
         <div
           key={segment.id}
           className="h-full first:rounded-l-full last:rounded-r-full"
-          style={{ flexBasis: `${(segment.amount / total) * 100}%`, backgroundColor: segment.color }}
+          style={{
+            flexBasis: `${(segment.amount / total) * 100}%`,
+            backgroundColor: segment.color,
+          }}
         />
       ))}
     </div>
-  )
+  );
 }
 
 function AmountBars({ segments, max }: { segments: DepositSegment[]; max: number }) {
-  if (segments.length === 0 || max <= 0) return <div className="h-9" />
+  if (segments.length === 0 || max <= 0) return <div className="h-9" />;
   return (
     <div className="flex h-9 items-end gap-1.5" aria-hidden="true">
       {segments.map((segment) => (
         <div
           key={segment.id}
           className="min-h-[4px] flex-1 rounded-sm"
-          style={{ height: `${Math.max((segment.amount / max) * 100, 8)}%`, backgroundColor: segment.color }}
+          style={{
+            height: `${Math.max((segment.amount / max) * 100, 8)}%`,
+            backgroundColor: segment.color,
+          }}
         />
       ))}
     </div>
-  )
+  );
 }
 
 function MiniArea({ values, color }: { values: number[]; color: string }) {
-  const gradientId = useId()
-  if (values.length < 2) return <div className="h-9" />
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = max - min || 1
-  const stepX = 100 / (values.length - 1)
-  const coords = values.map((value, index) => [index * stepX, 32 - ((value - min) / span) * 28] as const)
-  const line = coords.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ")
+  const gradientId = useId();
+  if (values.length < 2) return <div className="h-9" />;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const stepX = 100 / (values.length - 1);
+  const coords = values.map(
+    (value, index) => [index * stepX, 32 - ((value - min) / span) * 28] as const,
+  );
+  const line = coords
+    .map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`)
+    .join(" ");
   return (
     <svg viewBox="0 0 100 34" preserveAspectRatio="none" className="h-9 w-full" aria-hidden="true">
       <defs>
@@ -417,13 +465,27 @@ function MiniArea({ values, color }: { values: number[]; color: string }) {
         </linearGradient>
       </defs>
       <path d={`${line} L100,34 L0,34 Z`} fill={`url(#${gradientId})`} />
-      <path d={line} fill="none" stroke={color} strokeWidth={1.6} vectorEffect="non-scaling-stroke" />
+      <path
+        d={line}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.6}
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
-  )
+  );
 }
 
-function AprBars({ segments, max, weighted }: { segments: DepositSegment[]; max: number; weighted: number }) {
-  if (segments.length === 0 || max <= 0) return <div className="h-9" />
+function AprBars({
+  segments,
+  max,
+  weighted,
+}: {
+  segments: DepositSegment[];
+  max: number;
+  weighted: number;
+}) {
+  if (segments.length === 0 || max <= 0) return <div className="h-9" />;
   return (
     <div className="relative flex h-9 items-end gap-2" aria-hidden="true">
       {segments.map((segment) => (
@@ -438,14 +500,14 @@ function AprBars({ segments, max, weighted }: { segments: DepositSegment[]; max:
         style={{ bottom: `${(weighted / max) * 100}%` }}
       />
     </div>
-  )
+  );
 }
 
 function ProgressRing({ pct }: { pct: number }) {
-  const clamped = Math.min(Math.max(pct, 0), 100)
-  const radius = 18
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference * (1 - clamped / 100)
+  const clamped = Math.min(Math.max(pct, 0), 100);
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - clamped / 100);
   return (
     <svg viewBox="0 0 44 44" className="h-11 w-11" aria-hidden="true">
       <circle cx="22" cy="22" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="5" />
@@ -465,7 +527,7 @@ function ProgressRing({ pct }: { pct: number }) {
         {`${Math.round(clamped)}%`}
       </text>
     </svg>
-  )
+  );
 }
 
 function ProjectionChart({
@@ -475,19 +537,22 @@ function ProjectionChart({
   nextUnlock,
   maxUnlock,
 }: {
-  projection: ProjectionPoint[]
-  totalLocked: number
-  totalAtMaturity: number
-  nextUnlock: Deposit | null
-  maxUnlock: number
+  projection: ProjectionPoint[];
+  totalLocked: number;
+  totalAtMaturity: number;
+  nextUnlock: Deposit | null;
+  maxUnlock: number;
 }) {
   return (
     <div className="rounded-xl border border-border bg-secondary/60 p-4">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm text-muted-foreground">Projected value to maturity</p>
         <p className="font-mono text-xs text-muted-foreground">
-          <CcxAmount>{formatCcx(totalLocked)}</CcxAmount> <span className="text-muted-foreground/60">→</span>{" "}
-          <span className="text-wallet-incoming"><CcxAmount>{formatCcx(totalAtMaturity)}</CcxAmount></span>
+          <CcxAmount>{formatCcx(totalLocked)}</CcxAmount>{" "}
+          <span className="text-muted-foreground/60">→</span>{" "}
+          <span className="text-wallet-incoming">
+            <CcxAmount>{formatCcx(totalAtMaturity)}</CcxAmount>
+          </span>
         </p>
       </div>
       <div className="mt-3 h-[150px] w-full">
@@ -502,7 +567,11 @@ function ProjectionChart({
             <XAxis dataKey="day" type="number" domain={[0, maxUnlock]} hide />
             <YAxis domain={["dataMin", "dataMax"]} hide />
             {nextUnlock ? (
-              <ReferenceLine x={nextUnlock.unlocksInDays} stroke="hsl(var(--wallet-deposit))" strokeDasharray="4 4" />
+              <ReferenceLine
+                x={nextUnlock.unlocksInDays}
+                stroke="hsl(var(--wallet-deposit))"
+                strokeDasharray="4 4"
+              />
             ) : null}
             <RechartsTooltip
               cursor={{ stroke: "hsl(var(--border))" }}
@@ -528,21 +597,32 @@ function ProjectionChart({
       </div>
       <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
         <span>Today</span>
-        {nextUnlock ? <span className="text-wallet-deposit">{nextUnlock.unlocksInDays}d · first unlock</span> : null}
+        {nextUnlock ? (
+          <span className="text-wallet-deposit">{nextUnlock.unlocksInDays}d · first unlock</span>
+        ) : null}
         <span>{maxUnlock}d · maturity</span>
       </div>
     </div>
-  )
+  );
 }
 
-function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[]; totalLocked: number }) {
-  const radius = 40
-  const circumference = 2 * Math.PI * radius
-  const arcs = segments.reduce<{ segment: DepositSegment; fraction: number; start: number }[]>((current, segment) => {
-    const start = current.reduce((sum, arc) => sum + arc.fraction, 0)
-    const fraction = totalLocked > 0 ? segment.amount / totalLocked : 0
-    return [...current, { segment, fraction, start }]
-  }, [])
+function CompositionDonut({
+  segments,
+  totalLocked,
+}: {
+  segments: DepositSegment[];
+  totalLocked: number;
+}) {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const arcs = segments.reduce<{ segment: DepositSegment; fraction: number; start: number }[]>(
+    (current, segment) => {
+      const start = current.reduce((sum, arc) => sum + arc.fraction, 0);
+      const fraction = totalLocked > 0 ? segment.amount / totalLocked : 0;
+      return [...current, { segment, fraction, start }];
+    },
+    [],
+  );
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-border bg-secondary/60 p-4">
@@ -550,10 +630,17 @@ function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[
       <div className="mt-3 flex flex-1 items-center gap-5">
         <div className="relative h-[128px] w-[128px] shrink-0">
           <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
-            <circle cx="50" cy="50" r={radius} fill="none" stroke="hsl(var(--border) / 0.4)" strokeWidth="15" />
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              fill="none"
+              stroke="hsl(var(--border) / 0.4)"
+              strokeWidth="15"
+            />
             {arcs.map(({ segment, fraction, start }) => {
-              const gap = arcs.length > 1 ? 1.5 : 0
-              const dash = Math.max(fraction * circumference - gap, 0)
+              const gap = arcs.length > 1 ? 1.5 : 0;
+              const dash = Math.max(fraction * circumference - gap, 0);
               return (
                 <circle
                   key={segment.id}
@@ -566,7 +653,7 @@ function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[
                   strokeDasharray={`${dash} ${circumference - dash}`}
                   strokeDashoffset={-start * circumference}
                 />
-              )
+              );
             })}
           </svg>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -585,8 +672,12 @@ function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[
                   style={{ backgroundColor: segment.color }}
                   aria-hidden="true"
                 />
-                <span className="font-mono text-foreground"><CcxAmount>{formatCcx(segment.amount)}</CcxAmount></span>
-                <span className="ml-auto font-mono text-xs text-wallet-incoming">{segment.apr.toFixed(2)}%</span>
+                <span className="font-mono text-foreground">
+                  <CcxAmount>{formatCcx(segment.amount)}</CcxAmount>
+                </span>
+                <span className="ml-auto font-mono text-xs text-wallet-incoming">
+                  {segment.apr.toFixed(2)}%
+                </span>
               </div>
               <div className="mt-2 flex items-center gap-2 pl-[18px]">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/50">
@@ -598,36 +689,46 @@ function CompositionDonut({ segments, totalLocked }: { segments: DepositSegment[
                     }}
                   />
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground/70">unlocks {segment.unlocksInDays}d</span>
+                <span className="shrink-0 text-xs text-muted-foreground/70">
+                  unlocks {segment.unlocksInDays}d
+                </span>
               </div>
             </li>
           ))}
         </ul>
       </div>
     </div>
-  )
+  );
 }
 
 function DepositViewSwitcher({
   value,
   onChange,
 }: {
-  value: DepositView
-  onChange: (view: DepositView) => void
+  value: DepositView;
+  onChange: (view: DepositView) => void;
 }) {
   return (
-    <div className="inline-flex rounded-xl border border-border p-1" role="group" aria-label="Deposit view">
+    <div
+      className="inline-flex rounded-xl border border-border p-1"
+      role="group"
+      aria-label="Deposit view"
+    >
       <DepositViewToggle active={value === "cards"} onClick={() => onChange("cards")} label="Cards">
         <LayoutGrid className="size-4" aria-hidden="true" />
       </DepositViewToggle>
       <DepositViewToggle active={value === "table"} onClick={() => onChange("table")} label="Table">
         <Table2 className="size-4" aria-hidden="true" />
       </DepositViewToggle>
-      <DepositViewToggle active={value === "timeline"} onClick={() => onChange("timeline")} label="Timeline">
+      <DepositViewToggle
+        active={value === "timeline"}
+        onClick={() => onChange("timeline")}
+        label="Timeline"
+      >
         <CalendarClock className="size-4" aria-hidden="true" />
       </DepositViewToggle>
     </div>
-  )
+  );
 }
 
 function DepositViewToggle({
@@ -636,10 +737,10 @@ function DepositViewToggle({
   label,
   children,
 }: {
-  active: boolean
-  onClick: () => void
-  label: string
-  children: React.ReactNode
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
 }) {
   return (
     <button
@@ -648,18 +749,20 @@ function DepositViewToggle({
       aria-pressed={active}
       className={cn(
         "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-        active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
       {children}
       {label}
     </button>
-  )
+  );
 }
 
 function DepositsView({ deposits, view }: { deposits: Deposit[]; view: DepositView }) {
-  if (view === "table") return <DepositsTable deposits={deposits} />
-  if (view === "timeline") return <DepositsTimeline deposits={deposits} />
+  if (view === "table") return <DepositsTable deposits={deposits} />;
+  if (view === "timeline") return <DepositsTimeline deposits={deposits} />;
 
   return (
     <div className="grid gap-4">
@@ -667,17 +770,17 @@ function DepositsView({ deposits, view }: { deposits: Deposit[]; view: DepositVi
         <DepositCard key={deposit.id} deposit={deposit} index={index} />
       ))}
     </div>
-  )
+  );
 }
 
 function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
-  const status = getDepositStatus(deposit)
-  const isWithdrawn = deposit.status === "spent"
-  const Icon = isWithdrawn || status === "matured" ? Unlock : Lock
-  const principal = ccxToNumber(deposit.amount)
-  const interest = ccxToNumber(deposit.interest)
-  const maturityValue = principal + interest
-  const maturityDate = formatMaturityDate(deposit.unlocksInDays)
+  const status = getDepositStatus(deposit);
+  const isWithdrawn = deposit.status === "spent";
+  const Icon = isWithdrawn || status === "matured" ? Unlock : Lock;
+  const principal = ccxToNumber(deposit.amount);
+  const interest = ccxToNumber(deposit.interest);
+  const maturityValue = principal + interest;
+  const maturityDate = formatMaturityDate(deposit.unlocksInDays);
 
   return (
     <article
@@ -727,8 +830,16 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
       <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <DepositDetail label="Principal" value={formatCcx(deposit.amount)} tone="deposit" />
         <DepositDetail label="APR" value={`${deposit.apr.toFixed(2)}%`} tone="amber" />
-        <DepositDetail label="Est. Interest" value={formatCcx(deposit.interest, 4)} tone="incoming" />
-        <DepositDetail label="Value at Maturity" value={formatCcx(maturityValue, 4)} tone="default" />
+        <DepositDetail
+          label="Est. Interest"
+          value={formatCcx(deposit.interest, 4)}
+          tone="incoming"
+        />
+        <DepositDetail
+          label="Value at Maturity"
+          value={formatCcx(maturityValue, 4)}
+          tone="default"
+        />
         <DepositDetail label="Duration" value={`${deposit.durationMonths} months`} tone="default" />
       </dl>
 
@@ -736,13 +847,18 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
         <div className="mt-5 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm font-medium text-muted-foreground">Deposit Progress</p>
-            <p className="font-mono text-sm font-semibold text-foreground">{Math.min(deposit.progressPct, 100)}% complete</p>
+            <p className="font-mono text-sm font-semibold text-foreground">
+              {Math.min(deposit.progressPct, 100)}% complete
+            </p>
           </div>
-          <AnimatedProgress value={deposit.progressPct} label={`${Math.min(deposit.progressPct, 100)} percent complete`} />
+          <AnimatedProgress
+            value={deposit.progressPct}
+            label={`${Math.min(deposit.progressPct, 100)} percent complete`}
+          />
         </div>
       ) : null}
     </article>
-  )
+  );
 }
 
 function DepositsTable({ deposits }: { deposits: Deposit[] }) {
@@ -763,10 +879,10 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
         </thead>
         <tbody>
           {deposits.map((deposit, index) => {
-            const interest = ccxToNumber(deposit.interest)
-            const maturityValue = ccxToNumber(deposit.amount) + interest
-            const status = getDepositStatus(deposit)
-            const progress = getProgressPct(deposit)
+            const interest = ccxToNumber(deposit.interest);
+            const maturityValue = ccxToNumber(deposit.amount) + interest;
+            const status = getDepositStatus(deposit);
+            const progress = getProgressPct(deposit);
 
             return (
               <tr
@@ -796,7 +912,7 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
                       label={`${progress} percent complete`}
                       className={cn(
                         "mt-0 h-1.5 min-w-[88px] bg-secondary",
-                        status === "matured" ? "[&>div]:bg-wallet-incoming" : "[&>div]:bg-primary"
+                        status === "matured" ? "[&>div]:bg-wallet-incoming" : "[&>div]:bg-primary",
                       )}
                     />
                     <span className="font-mono text-xs text-muted-foreground">{progress}%</span>
@@ -812,22 +928,22 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
                   <DepositWithdrawButton deposit={deposit} />
                 </td>
               </tr>
-            )
+            );
           })}
         </tbody>
       </table>
     </div>
-  )
+  );
 }
 
 function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
   return (
     <div className="relative pl-7 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-px before:bg-border">
       {deposits.map((deposit, index) => {
-        const interest = ccxToNumber(deposit.interest)
-        const maturityValue = ccxToNumber(deposit.amount) + interest
-        const status = getDepositStatus(deposit)
-        const progress = getProgressPct(deposit)
+        const interest = ccxToNumber(deposit.interest);
+        const maturityValue = ccxToNumber(deposit.amount) + interest;
+        const status = getDepositStatus(deposit);
+        const progress = getProgressPct(deposit);
 
         return (
           <article
@@ -852,7 +968,10 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
             <div className="mt-2 flex flex-col gap-3 rounded-xl border border-border bg-secondary/60 p-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 id={`${deposit.id}-timeline-title`} className="font-mono font-semibold text-foreground">
+                  <h3
+                    id={`${deposit.id}-timeline-title`}
+                    className="font-mono font-semibold text-foreground"
+                  >
                     <CcxAmount>{formatCcx(deposit.amount)}</CcxAmount>
                   </h3>
                   <DepositStatusPill status={status} />
@@ -860,9 +979,13 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
                 <p className="mt-2 text-sm text-muted-foreground">
                   <span className="font-mono text-primary">{deposit.apr.toFixed(2)}% APR</span>
                   <span aria-hidden="true"> · </span>
-                  <span className="font-mono text-wallet-incoming">+<CcxAmount>{formatCcx(interest, 4)}</CcxAmount></span>
+                  <span className="font-mono text-wallet-incoming">
+                    +<CcxAmount>{formatCcx(interest, 4)}</CcxAmount>
+                  </span>
                   <span aria-hidden="true"> → </span>
-                  <span className="font-mono text-foreground"><CcxAmount>{formatCcx(maturityValue, 4)}</CcxAmount></span>
+                  <span className="font-mono text-foreground">
+                    <CcxAmount>{formatCcx(maturityValue, 4)}</CcxAmount>
+                  </span>
                   <span> at maturity</span>
                 </p>
                 <div className="mt-3 max-w-sm">
@@ -871,7 +994,7 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
                     label={`${progress} percent complete`}
                     className={cn(
                       "mt-0 h-2 bg-card",
-                      status === "matured" ? "[&>div]:bg-wallet-incoming" : "[&>div]:bg-primary"
+                      status === "matured" ? "[&>div]:bg-wallet-incoming" : "[&>div]:bg-primary",
                     )}
                   />
                 </div>
@@ -879,10 +1002,10 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
               {canWithdrawDeposit(deposit) ? <DepositWithdrawButton deposit={deposit} /> : null}
             </div>
           </article>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 function DepositDetail({
@@ -890,16 +1013,16 @@ function DepositDetail({
   value,
   tone,
 }: {
-  label: string
-  value: string
-  tone: "default" | "incoming" | "deposit" | "amber"
+  label: string;
+  value: string;
+  tone: "default" | "incoming" | "deposit" | "amber";
 }) {
   const toneClass = {
     default: "text-foreground",
     incoming: "text-wallet-incoming",
     deposit: "text-wallet-deposit",
     amber: "text-primary",
-  }[tone]
+  }[tone];
 
   return (
     <div className="min-w-0 rounded-xl border border-border bg-card p-3">
@@ -908,37 +1031,37 @@ function DepositDetail({
         <CcxAmount>{value}</CcxAmount>
       </dd>
     </div>
-  )
+  );
 }
 
 function DepositWithdrawButton({
   deposit,
   size = "xs",
 }: {
-  deposit: Deposit
-  size?: "default" | "xs"
+  deposit: Deposit;
+  size?: "default" | "xs";
 }) {
-  const withdraw = useWithdrawDeposit()
-  const [open, setOpen] = useState(false)
-  const canWithdraw = canWithdrawDeposit(deposit)
-  const principal = ccxToNumber(deposit.amount)
-  const interest = ccxToNumber(deposit.interest)
-  const withdrawFee = DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES)
-  const netReceive = principal + interest - withdrawFee
+  const withdraw = useWithdrawDeposit();
+  const [open, setOpen] = useState(false);
+  const canWithdraw = canWithdrawDeposit(deposit);
+  const principal = ccxToNumber(deposit.amount);
+  const interest = ccxToNumber(deposit.interest);
+  const withdrawFee = DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES);
+  const netReceive = principal + interest - withdrawFee;
 
   function confirmWithdraw() {
     withdraw.mutate(
       { txHash: deposit.txHash, globalOutputIndex: deposit.globalOutputIndex },
       {
         onSuccess: () => {
-          toast.success(walletCopy.depositWithdrawSuccess)
-          setOpen(false)
+          toast.success(walletCopy.depositWithdrawSuccess);
+          setOpen(false);
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : "Withdrawal failed.")
+          toast.error(error instanceof Error ? error.message : "Withdrawal failed.");
         },
       },
-    )
+    );
   }
 
   if (deposit.status === "spent") {
@@ -946,7 +1069,7 @@ function DepositWithdrawButton({
       <Badge variant="secondary" className="min-h-8 px-2.5 text-muted-foreground">
         Withdrawn
       </Badge>
-    )
+    );
   }
 
   return (
@@ -986,7 +1109,7 @@ function DepositWithdrawButton({
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
 
 function AnimatedProgress({
@@ -994,27 +1117,27 @@ function AnimatedProgress({
   label,
   className,
 }: {
-  value: number
-  label: string
-  className?: string
+  value: number;
+  label: string;
+  className?: string;
 }) {
-  const prefersReducedMotion = usePrefersReducedMotion()
-  const [displayValue, setDisplayValue] = useState(prefersReducedMotion ? value : 0)
-  const clampedValue = Math.min(Math.max(value, 0), 100)
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [displayValue, setDisplayValue] = useState(prefersReducedMotion ? value : 0);
+  const clampedValue = Math.min(Math.max(value, 0), 100);
 
   useEffect(() => {
     function applyDisplayValue(next: number) {
-      setDisplayValue(next)
+      setDisplayValue(next);
     }
 
     if (prefersReducedMotion) {
-      applyDisplayValue(clampedValue)
-      return
+      applyDisplayValue(clampedValue);
+      return;
     }
 
-    const frame = window.requestAnimationFrame(() => applyDisplayValue(clampedValue))
-    return () => window.cancelAnimationFrame(frame)
-  }, [clampedValue, prefersReducedMotion])
+    const frame = window.requestAnimationFrame(() => applyDisplayValue(clampedValue));
+    return () => window.cancelAnimationFrame(frame);
+  }, [clampedValue, prefersReducedMotion]);
 
   return (
     <Progress
@@ -1023,10 +1146,10 @@ function AnimatedProgress({
       aria-valuetext={label}
       className={cn(
         "mt-3 h-2 bg-secondary [&>div]:bg-linear-to-r [&>div]:from-primary [&>div]:to-[#ffc266]",
-        className
+        className,
       )}
     />
-  )
+  );
 }
 
 function DepositStatusPill({ status }: { status: DepositStatus }) {
@@ -1036,7 +1159,7 @@ function DepositStatusPill({ status }: { status: DepositStatus }) {
     active: "Active",
     spent: "Withdrawn",
     withdrawing: "Withdrawing",
-  }[status]
+  }[status];
 
   return (
     <Badge
@@ -1052,15 +1175,15 @@ function DepositStatusPill({ status }: { status: DepositStatus }) {
     >
       {label}
     </Badge>
-  )
+  );
 }
 
 function DepositEmptyState({
   onCreate,
   createDisabled,
 }: {
-  onCreate: () => void
-  createDisabled?: boolean
+  onCreate: () => void;
+  createDisabled?: boolean;
 }) {
   return (
     <div>
@@ -1081,7 +1204,7 @@ function DepositEmptyState({
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 function CreateDepositDialog({
@@ -1091,57 +1214,63 @@ function CreateDepositDialog({
   onOpenChange,
   onCreate,
 }: {
-  open: boolean
-  isPending: boolean
+  open: boolean;
+  isPending: boolean;
   constraints?: {
-    maxDepositAmount: number
-    isDepositDisabled: boolean
-  }
-  onOpenChange: (open: boolean) => void
-  onCreate: (input: CreateDepositInput) => void
+    maxDepositAmount: number;
+    isDepositDisabled: boolean;
+  };
+  onOpenChange: (open: boolean) => void;
+  onCreate: (input: CreateDepositInput) => void;
 }) {
-  const [amount, setAmount] = useState("100")
-  const [duration, setDuration] = useState("12")
-  const [amountError, setAmountError] = useState("")
-  const [step, setStep] = useState<"form" | "confirm">("form")
-  const durationMonths = Number(duration)
-  const amountValue = Math.floor(Number(amount))
-  const maxAmount = constraints?.maxDepositAmount ?? 0
+  const [amount, setAmount] = useState("100");
+  const [duration, setDuration] = useState("12");
+  const [amountError, setAmountError] = useState("");
+  const [step, setStep] = useState<"form" | "confirm">("form");
+  const durationMonths = Number(duration);
+  const amountValue = Math.floor(Number(amount));
+  const maxAmount = constraints?.maxDepositAmount ?? 0;
   const amountIsValid =
-    Number.isFinite(amountValue) && amountValue >= 1 && (maxAmount <= 0 || amountValue <= maxAmount)
-  const preview = useDepositPreview(amountValue, durationMonths, open && step === "form" && amountIsValid)
-  const previewInterest = preview.data?.interestCcx ?? 0
-  const previewApr = preview.data?.indicativeApr ?? 0
-  const createFee = COIN_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES)
-  const maturityDate = formatDate(addDays(new Date(), estimateDepositUnlockDays(durationMonths)))
+    Number.isFinite(amountValue) &&
+    amountValue >= 1 &&
+    (maxAmount <= 0 || amountValue <= maxAmount);
+  const preview = useDepositPreview(
+    amountValue,
+    durationMonths,
+    open && step === "form" && amountIsValid,
+  );
+  const previewInterest = preview.data?.interestCcx ?? 0;
+  const previewApr = preview.data?.indicativeApr ?? 0;
+  const createFee = COIN_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES);
+  const maturityDate = formatDate(addDays(new Date(), estimateDepositUnlockDays(durationMonths)));
 
   useEffect(() => {
-    if (!open) setStep("form")
-  }, [open])
+    if (!open) setStep("form");
+  }, [open]);
 
   function submitForm() {
     if (!Number.isFinite(amountValue) || amountValue < 1) {
-      setAmountError("Enter a whole CCX amount of at least 1.")
-      return
+      setAmountError("Enter a whole CCX amount of at least 1.");
+      return;
     }
     if (maxAmount > 0 && amountValue > maxAmount) {
-      setAmountError(`Maximum deposit is ${maxAmount.toLocaleString("en-US")} CCX.`)
-      return
+      setAmountError(`Maximum deposit is ${maxAmount.toLocaleString("en-US")} CCX.`);
+      return;
     }
-    setAmountError("")
-    setStep("confirm")
+    setAmountError("");
+    setStep("confirm");
   }
 
   function confirmCreate() {
-    onCreate({ amount: amountValue, durationMonths })
+    onCreate({ amount: amountValue, durationMonths });
   }
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        onOpenChange(next)
-        if (!next) setStep("form")
+        onOpenChange(next);
+        if (!next) setStep("form");
       }}
     >
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg">
@@ -1150,7 +1279,8 @@ function CreateDepositDialog({
             <DialogHeader>
               <DialogTitle>Create New Deposit</DialogTitle>
               <DialogDescription>
-                Lock CCX for {durationMonths} month{durationMonths === 1 ? "" : "s"} and earn interest at term.
+                Lock CCX for {durationMonths} month{durationMonths === 1 ? "" : "s"} and earn
+                interest at term.
               </DialogDescription>
             </DialogHeader>
 
@@ -1162,8 +1292,8 @@ function CreateDepositDialog({
                     id="deposit-amount"
                     value={amount}
                     onChange={(event) => {
-                      setAmount(event.target.value.replace(/[^\d]/g, ""))
-                      if (amountError) setAmountError("")
+                      setAmount(event.target.value.replace(/[^\d]/g, ""));
+                      if (amountError) setAmountError("");
                     }}
                     type="text"
                     inputMode="numeric"
@@ -1255,8 +1385,15 @@ function CreateDepositDialog({
             </DialogHeader>
             <dl className="space-y-2 text-sm">
               <ConfirmRow label="Amount" value={formatCcx(amountValue)} />
-              <ConfirmRow label="Term" value={`${durationMonths} month${durationMonths === 1 ? "" : "s"}`} />
-              <ConfirmRow label="Est. interest" value={formatCcx(previewInterest, 4)} tone="incoming" />
+              <ConfirmRow
+                label="Term"
+                value={`${durationMonths} month${durationMonths === 1 ? "" : "s"}`}
+              />
+              <ConfirmRow
+                label="Est. interest"
+                value={formatCcx(previewInterest, 4)}
+                tone="incoming"
+              />
               <ConfirmRow label="Network fee" value={formatCcx(createFee, 6)} />
               <ConfirmRow
                 label="Total debit"
@@ -1276,7 +1413,7 @@ function CreateDepositDialog({
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function ConfirmRow({
@@ -1285,10 +1422,10 @@ function ConfirmRow({
   tone,
   strong,
 }: {
-  label: string
-  value: string
-  tone?: "incoming"
-  strong?: boolean
+  label: string;
+  value: string;
+  tone?: "incoming";
+  strong?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between gap-4">
@@ -1303,7 +1440,7 @@ function ConfirmRow({
         <CcxAmount>{value}</CcxAmount>
       </dd>
     </div>
-  )
+  );
 }
 
 function PreviewRow({
@@ -1311,15 +1448,15 @@ function PreviewRow({
   value,
   tone = "default",
 }: {
-  label: string
-  value: string
-  tone?: "default" | "incoming" | "deposit"
+  label: string;
+  value: string;
+  tone?: "default" | "incoming" | "deposit";
 }) {
   const toneClass = {
     default: "text-foreground",
     incoming: "text-wallet-incoming",
     deposit: "text-wallet-deposit",
-  }[tone]
+  }[tone];
 
   return (
     <div className="min-w-0">
@@ -1328,55 +1465,55 @@ function PreviewRow({
         <CcxAmount>{value}</CcxAmount>
       </dd>
     </div>
-  )
+  );
 }
 
-type DepositStatus = "matured" | "soon" | "active" | "spent" | "withdrawing"
+type DepositStatus = "matured" | "soon" | "active" | "spent" | "withdrawing";
 
 function canWithdrawDeposit(deposit: Deposit) {
-  return deposit.status === "unlocked" && !deposit.withdrawPending
+  return deposit.status === "unlocked" && !deposit.withdrawPending;
 }
 
 function getDepositStatus(deposit: Deposit): DepositStatus {
-  if (deposit.status === "spent") return "spent"
-  if (deposit.withdrawPending) return "withdrawing"
-  if (canWithdrawDeposit(deposit)) return "matured"
-  if (deposit.unlocksInDays < 14) return "soon"
-  return "active"
+  if (deposit.status === "spent") return "spent";
+  if (deposit.withdrawPending) return "withdrawing";
+  if (canWithdrawDeposit(deposit)) return "matured";
+  if (deposit.unlocksInDays < 14) return "soon";
+  return "active";
 }
 
 function isMatured(deposit: Deposit) {
-  return canWithdrawDeposit(deposit)
+  return canWithdrawDeposit(deposit);
 }
 
 function getProgressPct(deposit: Deposit) {
-  return Math.min(Math.max(deposit.progressPct, 0), 100)
+  return Math.min(Math.max(deposit.progressPct, 0), 100);
 }
 
 function getUnlocksLabel(deposit: Deposit, variant: "table" | "timeline") {
-  if (deposit.status === "spent") return "Withdrawn"
-  if (deposit.withdrawPending) return "Pending"
-  if (canWithdrawDeposit(deposit)) return variant === "table" ? "Ready" : "Ready now"
-  return `${deposit.unlocksInDays} day${deposit.unlocksInDays === 1 ? "" : "s"}`
+  if (deposit.status === "spent") return "Withdrawn";
+  if (deposit.withdrawPending) return "Pending";
+  if (canWithdrawDeposit(deposit)) return variant === "table" ? "Ready" : "Ready now";
+  return `${deposit.unlocksInDays} day${deposit.unlocksInDays === 1 ? "" : "s"}`;
 }
 
 function getTimelineDateLabel(deposit: Deposit) {
-  if (deposit.status === "spent") return "Withdrawn"
-  if (deposit.withdrawPending) return "Withdrawal pending"
-  if (canWithdrawDeposit(deposit)) return "Ready now"
-  return `${formatMaturityDate(deposit.unlocksInDays)} - in ${getUnlocksLabel(deposit, "timeline")}`
+  if (deposit.status === "spent") return "Withdrawn";
+  if (deposit.withdrawPending) return "Withdrawal pending";
+  if (canWithdrawDeposit(deposit)) return "Ready now";
+  return `${formatMaturityDate(deposit.unlocksInDays)} - in ${getUnlocksLabel(deposit, "timeline")}`;
 }
 
 function formatMaturityDate(unlocksInDays: number) {
-  return formatDate(addDays(new Date(), unlocksInDays))
+  return formatDate(addDays(new Date(), unlocksInDays));
 }
 
 function formatDate(date: Date) {
-  return dateFormatter.format(date)
+  return dateFormatter.format(date);
 }
 
 function addDays(date: Date, days: number) {
-  const nextDate = new Date(date)
-  nextDate.setDate(nextDate.getDate() + days)
-  return nextDate
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
 }

@@ -51,7 +51,7 @@ export type RawWalletOptions = {
 
 export class WalletOptions {
   checkMinerTx: boolean = false;
-  readSpeed: number = 10;
+  readSpeed: number = 50;
   customNode: boolean = false;
   nodeUrl: string = "https://explorer.conceal.network/daemon/";
 
@@ -215,10 +215,12 @@ export class Wallet extends Observable {
     if (typeof raw.options !== "undefined") wallet._options = WalletOptions.fromRaw(raw.options);
     if (typeof raw.txPrivateKeys !== "undefined") wallet.txPrivateKeys = raw.txPrivateKeys;
 
-    if (typeof raw.coinAddressPrefix !== "undefined") wallet.coinAddressPrefix = raw.coinAddressPrefix;
+    if (typeof raw.coinAddressPrefix !== "undefined")
+      wallet.coinAddressPrefix = raw.coinAddressPrefix;
     else wallet.coinAddressPrefix = config.addressPrefix;
 
-    if (typeof raw.coinAddressPrefix !== "undefined") wallet.coinAddressPrefix = raw.coinAddressPrefix;
+    if (typeof raw.coinAddressPrefix !== "undefined")
+      wallet.coinAddressPrefix = raw.coinAddressPrefix;
     else wallet.coinAddressPrefix = config.addressPrefix;
 
     wallet.recalculateKeyImages();
@@ -278,7 +280,8 @@ export class Wallet extends Observable {
               // Preserve fusion flag when replacing
               transaction.fusion = this.transactions[tr].fusion;
               // Preserve messageViewed flag when replacing
-              transaction.messageViewed = this.transactions[tr].messageViewed || transaction.messageViewed;
+              transaction.messageViewed =
+                this.transactions[tr].messageViewed || transaction.messageViewed;
               this.keyLookupMap.set(transaction.txPubKey, transaction);
               this.txLookupMap.set(transaction.hash, transaction);
               this.transactions[tr] = transaction;
@@ -311,7 +314,10 @@ export class Wallet extends Observable {
    * Update a flag on an existing transaction by txPubKey or hash.
    * Only updates the specified fields, does not replace the transaction object.
    */
-  updateTransactionFlags = (txPubKeyOrHash: string, flags: Partial<Pick<Transaction, "fusion" | "messageViewed">>) => {
+  updateTransactionFlags = (
+    txPubKeyOrHash: string,
+    flags: Partial<Pick<Transaction, "fusion" | "messageViewed">>,
+  ) => {
     let tx = this.findWithTxPubKey(txPubKeyOrHash) || this.findWithTxHash(txPubKeyOrHash);
     if (tx) {
       if (typeof flags.fusion !== "undefined") tx.fusion = flags.fusion;
@@ -349,10 +355,16 @@ export class Wallet extends Observable {
     this.notify();
   };
 
-  updateDepositFlags = (txHashOrPubKey: string, flags: Partial<Pick<Deposit, "withdrawPending">>) => {
-    let deposit = this.deposits.find((d) => d.txHash === txHashOrPubKey || d.txPubKey === txHashOrPubKey);
+  updateDepositFlags = (
+    txHashOrPubKey: string,
+    flags: Partial<Pick<Deposit, "withdrawPending">>,
+  ) => {
+    let deposit = this.deposits.find(
+      (d) => d.txHash === txHashOrPubKey || d.txPubKey === txHashOrPubKey,
+    );
     if (deposit) {
-      if (typeof flags.withdrawPending !== "undefined") deposit.withdrawPending = flags.withdrawPending;
+      if (typeof flags.withdrawPending !== "undefined")
+        deposit.withdrawPending = flags.withdrawPending;
       this.signalChanged();
       this.notify();
       return true;
@@ -411,7 +423,10 @@ export class Wallet extends Observable {
     // 4. Update withdrawals array - fallback to amount & outputIndex if needed
     if (!foundMatchWithdrawal) {
       for (let i = 0; i < this.withdrawals.length; ++i) {
-        if (this.withdrawals[i].amount === withdrawal.amount && this.withdrawals[i].globalOutputIndex === withdrawal.globalOutputIndex) {
+        if (
+          this.withdrawals[i].amount === withdrawal.amount &&
+          this.withdrawals[i].globalOutputIndex === withdrawal.globalOutputIndex
+        ) {
           this.withdrawals[i] = withdrawal;
           foundMatchWithdrawal = true;
           break;
@@ -491,7 +506,11 @@ export class Wallet extends Observable {
     this.signalChanged();
   };
 
-  addTxPrivateKeyWithTxHashAndFusion = (txHash: string, txPrivKey: string, fusion: boolean): void => {
+  addTxPrivateKeyWithTxHashAndFusion = (
+    txHash: string,
+    txPrivKey: string,
+    fusion: boolean,
+  ): void => {
     this.txPrivateKeys[txHash] = txPrivKey;
     const tx = this.transactions.find((tx) => tx.hash === txHash);
     if (tx) tx.fusion = fusion;
@@ -651,7 +670,9 @@ export class Wallet extends Observable {
   };
 
   // Calculate total future interest (from both locked and unlocked deposits)
-  futureDepositInterest = (currHeight: number): { spent: number; locked: number; unlocked: number; total: number } => {
+  futureDepositInterest = (
+    currHeight: number,
+  ): { spent: number; locked: number; unlocked: number; total: number } => {
     let futureLockedInterest = 0;
     let futureUnlockedInterest = 0;
     let spentInterest = 0;
@@ -731,7 +752,7 @@ export class Wallet extends Observable {
                 },
                 tx.txPubKey,
                 out.outputIdx,
-                derivation
+                derivation,
               );
 
               out.keyImage = m_key_image.key_image;
@@ -784,17 +805,27 @@ export class Wallet extends Observable {
    * @param blockchainHeight The current blockchain height.
    * @returns { unspentOutsCount: number, fusionReadyCount: number }
    */
-  estimateFusionReadyness = (threshold: number, blockchainHeight: number): { unspentOutsCount: number; fusionReadyCount: number } => {
+  estimateFusionReadyness = (
+    threshold: number,
+    blockchainHeight: number,
+  ): { unspentOutsCount: number; fusionReadyCount: number } => {
     // Number of buckets: 20 (uint64_t has 19 digits + 1)
     const NUM_BUCKETS = 20;
     const bucketSizes = new Array<number>(NUM_BUCKETS).fill(0);
 
     // Use unspent outputs only
-    let unspentOuts: RawOutForTx[] = TransactionsExplorer.formatWalletOutsForTx(this, blockchainHeight);
+    let unspentOuts: RawOutForTx[] = TransactionsExplorer.formatWalletOutsForTx(
+      this,
+      blockchainHeight,
+    );
     let unspentOutsCount = unspentOuts.length;
 
     for (const out of unspentOuts) {
-      const result = Currency.isAmountApplicableInFusionTransactionInput(out.amount, threshold, blockchainHeight);
+      const result = Currency.isAmountApplicableInFusionTransactionInput(
+        out.amount,
+        threshold,
+        blockchainHeight,
+      );
       if (result.applicable && typeof result.amountPowerOfTen === "number") {
         if (result.amountPowerOfTen < NUM_BUCKETS) {
           bucketSizes[result.amountPowerOfTen]++;
@@ -819,18 +850,25 @@ export class Wallet extends Observable {
     threshold: number,
     blockchainHeight: number,
     minInputCount: number = Currency.fusionTxMinInputCount,
-    maxInputCount: number
+    maxInputCount: number,
   ): RawOutForTx[] => {
     const NUM_BUCKETS = 20;
     const bucketSizes = new Array<number>(NUM_BUCKETS).fill(0);
 
     // Use unspent outputs only
-    let unspentOuts: RawOutForTx[] = TransactionsExplorer.formatWalletOutsForTx(this, blockchainHeight);
+    let unspentOuts: RawOutForTx[] = TransactionsExplorer.formatWalletOutsForTx(
+      this,
+      blockchainHeight,
+    );
     let allFusionReadyOuts: RawOutForTx[] = [];
 
     // First pass: collect all fusion-ready outputs and count bucket sizes
     for (let out of unspentOuts) {
-      let result = Currency.isAmountApplicableInFusionTransactionInput(out.amount, threshold, blockchainHeight);
+      let result = Currency.isAmountApplicableInFusionTransactionInput(
+        out.amount,
+        threshold,
+        blockchainHeight,
+      );
       if (result.applicable) {
         allFusionReadyOuts.push(out);
         const powerOfTen = result.amountPowerOfTen || 0;
@@ -849,7 +887,9 @@ export class Wallet extends Observable {
     }
 
     // Find first bucket with enough inputs
-    let selectedBucket = shuffledBucketNumbers.find((bucket) => bucketSizes[bucket] >= minInputCount);
+    let selectedBucket = shuffledBucketNumbers.find(
+      (bucket) => bucketSizes[bucket] >= minInputCount,
+    );
     if (selectedBucket === undefined) {
       return [];
     }
@@ -862,7 +902,9 @@ export class Wallet extends Observable {
     let upperBound = selectedBucket === NUM_BUCKETS - 1 ? Number.MAX_SAFE_INTEGER : lowerBound * 10;
 
     // Select outputs within bounds
-    let selectedOuts = allFusionReadyOuts.filter((out) => out.amount >= lowerBound && out.amount < upperBound);
+    let selectedOuts = allFusionReadyOuts.filter(
+      (out) => out.amount >= lowerBound && out.amount < upperBound,
+    );
     // Ensure we have enough outputs for fusion
     if (selectedOuts.length < minInputCount) {
       return [];
@@ -885,7 +927,10 @@ export class Wallet extends Observable {
   };
 
   optimizationNeeded = (blockchainHeight: number, threshold: number): IOptimizeInfo => {
-    let unspentOuts: RawOutForTx[] = TransactionsExplorer.formatWalletOutsForTx(this, blockchainHeight);
+    let unspentOuts: RawOutForTx[] = TransactionsExplorer.formatWalletOutsForTx(
+      this,
+      blockchainHeight,
+    );
     let unspentOutsCount = unspentOuts.length;
     let isNeeded = false;
     if (unspentOutsCount < config.optimizeOutputs) {
@@ -921,7 +966,7 @@ export class Wallet extends Observable {
     blockchainHeight: number,
     threshold: number,
     blockchainExplorer: BlockchainExplorer,
-    obtainMixOutsCallback: (amounts: number[], numberOuts: number) => Promise<RawDaemon_Out[]>
+    obtainMixOutsCallback: (amounts: number[], numberOuts: number) => Promise<RawDaemon_Out[]>,
   ) => {
     return new Promise<number>(async (resolve, reject) => {
       try {
@@ -938,7 +983,7 @@ export class Wallet extends Observable {
         let estimateFusionInputsCount = Currency.getApproximateMaximumInputCount(
           Currency.fusionTxMaxSize,
           MAX_FUSION_OUTPUTS,
-          config.defaultMixin
+          config.defaultMixin,
         );
         if (estimateFusionInputsCount < Currency.fusionTxMinInputCount) {
           throw new Error("Mixin count is too big");
@@ -947,7 +992,7 @@ export class Wallet extends Observable {
           threshold,
           blockchainHeight,
           Currency.fusionTxMinInputCount,
-          estimateFusionInputsCount
+          estimateFusionInputsCount,
         );
         if (fusionInputs.length < Currency.fusionTxMinInputCount) {
           throw new Error("Nothing to optimize");
@@ -995,14 +1040,21 @@ export class Wallet extends Observable {
             "",
             0,
             "regular",
-            0
+            0,
           );
 
-          transactionSize = Currency.getApproximateTransactionSize(data.signed.vin.length, data.signed.vout.length, config.defaultMixin);
+          transactionSize = Currency.getApproximateTransactionSize(
+            data.signed.vin.length,
+            data.signed.vout.length,
+            config.defaultMixin,
+          );
           fusionTransaction = data;
 
           round++;
-        } while (transactionSize > Currency.fusionTxMaxSize && fusionInputs.length >= Currency.fusionTxMinInputCount);
+        } while (
+          transactionSize > Currency.fusionTxMaxSize &&
+          fusionInputs.length >= Currency.fusionTxMinInputCount
+        );
 
         // Final validation
         if (fusionInputs.length < Currency.fusionTxMinInputCount) {
@@ -1022,7 +1074,11 @@ export class Wallet extends Observable {
           .sendRawTx(fusionTransaction.raw.raw)
           .then(() => {
             // Save the transaction private key
-            this.addTxPrivateKeyWithTxHashAndFusion(fusionTransaction.raw.hash, fusionTransaction.raw.prvkey, true);
+            this.addTxPrivateKeyWithTxHashAndFusion(
+              fusionTransaction.raw.hash,
+              fusionTransaction.raw.prvkey,
+              true,
+            );
 
             return swal({
               type: "success",

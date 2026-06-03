@@ -1670,7 +1670,7 @@ export class MnemonicLang {
         "unseen",
         "weapon",
         "weary",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("english", "en", 3, [
@@ -3300,7 +3300,7 @@ export class MnemonicLang {
         "zombie",
         "zones",
         "zoom",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("spanish", "es", 4, [
@@ -4930,7 +4930,7 @@ export class MnemonicLang {
         "risa",
         "ritmo",
         "rito",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("portuguese", "pt", 3, [
@@ -6560,7 +6560,7 @@ export class MnemonicLang {
         "zeloso",
         "zenite",
         "zumbi",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("japanese", "ja", 4, [
@@ -8190,7 +8190,7 @@ export class MnemonicLang {
         "ひさん",
         "びじゅつかん",
         "ひしょ",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("french", "fr", 4, [
@@ -9820,7 +9820,7 @@ export class MnemonicLang {
         "zinc",
         "zone",
         "zoom",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("german", "de", 4, [
@@ -11450,7 +11450,7 @@ export class MnemonicLang {
         "Zündung",
         "Zweck",
         "Zyklop",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("italian", "it", 4, [
@@ -13080,7 +13080,7 @@ export class MnemonicLang {
         "zolfo",
         "zombie",
         "zucchero",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("dutch", "nl", 4, [
@@ -14710,7 +14710,7 @@ export class MnemonicLang {
         "zwiep",
         "zwijmel",
         "zworen",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("chinese", "zh", 1, [
@@ -16340,7 +16340,7 @@ export class MnemonicLang {
         "秒",
         "浙",
         "貌",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("russian", "ru", 4, [
@@ -17970,7 +17970,7 @@ export class MnemonicLang {
         "яхта",
         "ячейка",
         "ящик",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("lojban", "", 4, [
@@ -19600,7 +19600,7 @@ export class MnemonicLang {
         "noltruti'u",
         "samtci",
         "snaxa'a",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("esperanto", "", 4, [
@@ -21230,7 +21230,7 @@ export class MnemonicLang {
         "zorgi",
         "zukino",
         "zumilo",
-      ])
+      ]),
     );
     langs.push(
       new MnemonicLang("ukrainian", "uk", 4, [
@@ -22860,7 +22860,7 @@ export class MnemonicLang {
         "ґвалт",
         "ґрунт",
         "ґуля",
-      ])
+      ]),
     );
     return langs;
   }

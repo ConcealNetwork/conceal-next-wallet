@@ -62,7 +62,10 @@ export class InterestCalculator {
     }
 
     // Check if this is a V3 deposit (monthly term)
-    if (term % this.DEPOSIT_MIN_TERM_V3 === 0 && lockHeight > (config.depositHeightV3 || this.DEPOSIT_HEIGHT_V3)) {
+    if (
+      term % this.DEPOSIT_MIN_TERM_V3 === 0 &&
+      lockHeight > (config.depositHeightV3 || this.DEPOSIT_HEIGHT_V3)
+    ) {
       return this.calculateInterestV3(amount, term);
     }
 

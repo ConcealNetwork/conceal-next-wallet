@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { ImportFileForm } from "@/app/(onboarding)/onboarding-actions"
-import { SectionCard } from "@/components/wallet/common"
+import { ImportFileForm } from "@/app/(onboarding)/onboarding-actions";
+import { SectionCard } from "@/components/wallet/common";
 
 export default function ImportFilePage() {
   return (
@@ -10,5 +10,5 @@ export default function ImportFilePage() {
         <ImportFileForm />
       </SectionCard>
     </div>
-  )
+  );
 }

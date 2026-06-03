@@ -61,5 +61,5 @@ export function LandingBalanceCard() {
         </div>
       </div>
     </div>
-  )
+  );
 }

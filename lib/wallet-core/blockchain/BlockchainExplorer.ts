@@ -87,7 +87,11 @@ export interface BlockchainExplorer {
 
   getTransactionPool(): Promise<RawDaemon_Transaction[]>;
 
-  getTransactionsForBlocks(startBlock: number, endBlock: number, includeMinerTx: boolean): Promise<RawDaemon_Transaction[]>;
+  getTransactionsForBlocks(
+    startBlock: number,
+    endBlock: number,
+    includeMinerTx: boolean,
+  ): Promise<RawDaemon_Transaction[]>;
 
   getPrefetchNodePoolSize(): number;
 
@@ -95,7 +99,7 @@ export interface BlockchainExplorer {
     prefetchSlot: number,
     startBlock: number,
     endBlock: number,
-    includeMinerTx: boolean
+    includeMinerTx: boolean,
   ): Promise<RawDaemon_Transaction[]>;
 
   sendRawTx(rawTx: string): Promise<any>;

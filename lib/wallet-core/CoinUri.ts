@@ -90,7 +90,7 @@ export class CoinUri {
     paymentId: string | null = null,
     amount: string | null = null,
     recipientName: string | null = null,
-    description: string | null = null
+    description: string | null = null,
   ): string {
     let encoded = address; //legacy this.coinTxPrefix + address;
     if (address.length !== this.coinAddressLength) throw "invalid_address_length";
@@ -175,7 +175,7 @@ export class CoinUri {
     viewKey: string | null = null,
     height: number | null = null,
     encryptMethod: string | null = null,
-    nonce: string | null = null
+    nonce: string | null = null,
   ) {
     let encoded = this.coinWalletPrefix + address;
     if (address.length !== this.coinAddressLength) throw "invalid_address_length";

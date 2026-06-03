@@ -70,7 +70,7 @@ class NativeStorageWrap implements StorageInterface {
           },
           function (error: NativeNativeStorageError) {
             reject();
-          }
+          },
         );
       else reject();
     });
@@ -87,7 +87,7 @@ class NativeStorageWrap implements StorageInterface {
           function (error: NativeNativeStorageError) {
             if (error.code === 2) resolve(defaultValue);
             reject();
-          }
+          },
         );
       else reject();
     });
@@ -102,7 +102,7 @@ class NativeStorageWrap implements StorageInterface {
           },
           function (error: NativeNativeStorageError) {
             reject();
-          }
+          },
         );
       else reject();
     });
@@ -119,7 +119,7 @@ class NativeStorageWrap implements StorageInterface {
           function (error: NativeNativeStorageError) {
             if (error.code === 2 || error.code === 3 || error.code === 4) resolve();
             reject();
-          }
+          },
         );
       else reject();
     });
@@ -134,7 +134,7 @@ class NativeStorageWrap implements StorageInterface {
           },
           function (error: NativeNativeStorageError) {
             reject();
-          }
+          },
         );
       else reject();
     });
