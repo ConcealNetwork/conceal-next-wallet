@@ -43,6 +43,7 @@ import {
   useNewMessagesSinceOpen,
 } from "@/lib/hooks/use-new-messages-since-open";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 
 const mainNav = [
   { href: "/wallet/account", label: "Account", icon: Home },
@@ -159,9 +160,7 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Disconnect wallet?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This clears the current mock wallet session and returns you to the open wallet screen.
-          </AlertDialogDescription>
+          <AlertDialogDescription>{walletCopy.disconnectConfirm}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>

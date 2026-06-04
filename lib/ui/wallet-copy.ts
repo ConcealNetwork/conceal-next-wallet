@@ -48,6 +48,9 @@ export const walletCopy = {
   messageSendSuccess: env.useMockWallet
     ? "Mock message sent."
     : "Message submitted to the network.",
+  disconnectConfirm: env.useMockWallet
+    ? "This clears the current mock wallet session and returns you to the open wallet screen."
+    : "This locks the wallet and returns you to the open wallet screen. Your encrypted wallet stays on this device.",
 } as const;
 
 /** HTML `required` on import fields — relaxed in mock so you can click through quickly. */
