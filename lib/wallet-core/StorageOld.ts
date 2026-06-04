@@ -32,15 +32,15 @@ class LocalStorage implements StorageInterface {
   }
 
   getItem(key: string, defaultValue: any = null): Promise<string | any> {
-    let value = window.localStorage.getItem(key);
+    const value = window.localStorage.getItem(key);
     if (value === null) return Promise.resolve(defaultValue);
     return Promise.resolve(value);
   }
 
   keys(): Promise<string[]> {
-    let keys: string[] = [];
+    const keys: string[] = [];
     for (let i = 0; i < window.localStorage.length; ++i) {
-      let k = window.localStorage.key(i);
+      const k = window.localStorage.key(i);
       if (k !== null) keys.push(k);
     }
 
@@ -60,81 +60,81 @@ class LocalStorage implements StorageInterface {
 
 class NativeStorageWrap implements StorageInterface {
   setItem(key: string, value: any): Promise<void> {
-    return new Promise<void>(function (resolve, reject) {
+    return new Promise<void>((resolve, reject) => {
       if (window.NativeStorage)
         window.NativeStorage.setItem(
           key,
           value,
-          function () {
+          () => {
             resolve();
           },
-          function (error: NativeNativeStorageError) {
+          (error: NativeNativeStorageError) => {
             reject();
-          }
+          },
         );
       else reject();
     });
   }
 
   getItem(key: string, defaultValue: any = null): Promise<any> {
-    return new Promise<any>(function (resolve, reject) {
+    return new Promise<any>((resolve, reject) => {
       if (window.NativeStorage)
         window.NativeStorage.getItem(
           key,
-          function () {
+          () => {
             resolve(true);
           },
-          function (error: NativeNativeStorageError) {
+          (error: NativeNativeStorageError) => {
             if (error.code === 2) resolve(defaultValue);
             reject();
-          }
+          },
         );
       else reject();
     });
   }
 
   keys(): Promise<string[]> {
-    return new Promise<string[]>(function (resolve, reject) {
+    return new Promise<string[]>((resolve, reject) => {
       if (window.NativeStorage)
         window.NativeStorage.keys(
-          function (keys: string[]) {
+          (keys: string[]) => {
             resolve(keys);
           },
-          function (error: NativeNativeStorageError) {
+          (error: NativeNativeStorageError) => {
             reject();
-          }
+          },
         );
       else reject();
     });
   }
 
   remove(key: string): Promise<void> {
-    return new Promise<void>(function (resolve, reject) {
+    return new Promise<void>((resolve, reject) => {
       if (window.NativeStorage)
         window.NativeStorage.remove(
           key,
-          function () {
+          () => {
             resolve();
           },
-          function (error: NativeNativeStorageError) {
+          (error: NativeNativeStorageError) => {
             if (error.code === 2 || error.code === 3 || error.code === 4) resolve();
             reject();
-          }
+          },
         );
       else reject();
     });
   }
 
   clear(): Promise<void> {
-    return new Promise<void>(function (resolve, reject) {
+    return new Promise<void>((resolve, reject) => {
       if (window.NativeStorage)
         window.NativeStorage.clear(
-          function () {
+          () => {
             resolve();
           },
-          function (error: NativeNativeStorageError) {
+          (error: NativeNativeStorageError) => {
             reject();
-          }
+          },
         );
       else reject();
     });

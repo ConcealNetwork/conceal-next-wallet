@@ -41,8 +41,8 @@ class QRReader {
 
     if (!this.support()) return false;
 
-    let streaming = false;
-    let self = this;
+    const streaming = false;
+    const self = this;
 
     this.webcam = document.querySelector("#cameraVideoFluxForDelivery");
 
@@ -90,7 +90,7 @@ class QRReader {
 
       navigator.mediaDevices
         .getUserMedia(enhancedConstraints)
-        .then(function (stream) {
+        .then((stream) => {
           if (self.webcam !== null) {
             self.webcam.srcObject = stream;
             // Set video element properties for better quality
@@ -98,17 +98,17 @@ class QRReader {
             self.webcam.setAttribute("autoplay", "true");
           }
         })
-        .catch(function (err) {
+        .catch((err) => {
           showErrorMsg(err);
         });
     }
 
     navigator.mediaDevices
       .enumerateDevices()
-      .then(function (devices) {
-        let supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
-        let device = devices.filter(function (device) {
-          let deviceLabel = device.label.split(",")[1];
+      .then((devices) => {
+        const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
+        const device = devices.filter((device) => {
+          const deviceLabel = device.label.split(",")[1];
           if (device.kind == "videoinput") {
             return device;
           }
@@ -125,7 +125,7 @@ class QRReader {
           startCapture({ video: true });
         }
       })
-      .catch(function (error) {
+      .catch((error) => {
         showErrorMsg(error);
       });
 
@@ -145,14 +145,15 @@ class QRReader {
   stop() {
     this.active = false;
     if (this.webcam !== null) {
-      if (this.webcam.srcObject !== null && this.webcam.srcObject instanceof MediaStream) this.webcam.srcObject.getVideoTracks()[0].stop();
+      if (this.webcam.srcObject !== null && this.webcam.srcObject instanceof MediaStream)
+        this.webcam.srcObject.getVideoTracks()[0].stop();
       this.webcam.srcObject = null;
     }
   }
 
   scan(callback: Function) {
     if (this.decoder === null) return;
-    let self = this;
+    const self = this;
 
     // Add frame rate control for better performance
     let lastFrameTime = 0;
@@ -168,7 +169,13 @@ class QRReader {
       }
       lastFrameTime = now;
 
-      if (self.ctx === null || self.webcam === null || self.canvas === null || self.decoder === null) return;
+      if (
+        self.ctx === null ||
+        self.webcam === null ||
+        self.canvas === null ||
+        self.decoder === null
+      )
+        return;
 
       try {
         // Draw the video frame to the canvas
@@ -180,8 +187,18 @@ class QRReader {
         const sy = (videoHeight - size) / 2;
 
         // Draw the centered square from the video to the square canvas
-        self.ctx.drawImage(self.webcam, sx, sy, size, size, 0, 0, self.canvas.width, self.canvas.height);
-        let imgData = self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height);
+        self.ctx.drawImage(
+          self.webcam,
+          sx,
+          sy,
+          size,
+          size,
+          0,
+          0,
+          self.canvas.width,
+          self.canvas.height,
+        );
+        const imgData = self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height);
 
         if (imgData.data) {
           self.decoder.postMessage(imgData);
@@ -201,9 +218,9 @@ class QRReader {
 
     this.active = true;
     this.setCanvas();
-    this.decoder.onmessage = function (event) {
+    this.decoder.onmessage = (event) => {
       if (event.data.length > 0) {
-        let qrid = event.data[0][2];
+        const qrid = event.data[0][2];
         self.active = false;
         callback(qrid);
       }

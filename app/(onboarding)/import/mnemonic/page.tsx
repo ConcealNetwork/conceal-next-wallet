@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { ImportMnemonicForm } from "@/app/(onboarding)/onboarding-actions"
-import { SectionCard } from "@/components/wallet/common"
+import { ImportMnemonicForm } from "@/app/(onboarding)/onboarding-actions";
+import { SectionCard } from "@/components/wallet/common";
 
 export default function ImportMnemonicPage() {
   return (
@@ -10,5 +10,5 @@ export default function ImportMnemonicPage() {
         <ImportMnemonicForm />
       </SectionCard>
     </div>
-  )
+  );
 }

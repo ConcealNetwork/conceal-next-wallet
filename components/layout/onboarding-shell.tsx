@@ -1,4 +1,4 @@
-import { Footer } from "@/components/layout/footer"
+import { Footer } from "@/components/layout/footer";
 
 /** Constrained shell + legal footer for the onboarding form routes
  *  (/create, /import). The landing page (/) opts out of this so it can render
@@ -11,5 +11,5 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
         <Footer />
       </div>
     </main>
-  )
+  );
 }

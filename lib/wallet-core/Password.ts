@@ -18,10 +18,10 @@
 
 export class Password {
   static checkPasswordConstraints(password: string, raiseError: boolean = true) {
-    let anUpperCase = /[A-Z]/;
-    let aLowerCase = /[a-z]/;
-    let aNumber = /[0-9]/;
-    let aSpecial = /[!|@|'|"|#|$|%|^|&|*|(|)|-|_]/;
+    const anUpperCase = /[A-Z]/;
+    const aLowerCase = /[a-z]/;
+    const aNumber = /[0-9]/;
+    const aSpecial = /[!|@|'|"|#|$|%|^|&|*|(|)|-|_]/;
 
     let numUpper = 0;
     let numLower = 0;

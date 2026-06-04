@@ -1,30 +1,43 @@
-import { createWalletNetworkConfig, type WalletNetworkConfig } from "@/lib/config/config"
+import { createWalletNetworkConfig, type WalletNetworkConfig } from "@/lib/config/config";
+import {
+  MESSAGE_TX_AMOUNT_ATOMIC,
+  SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC,
+  SENT_MESSAGE_AMOUNT_SELF_ATOMIC,
+} from "@/lib/config/config";
 import type {
+  AddressEntry,
   Deposit as UiDeposit,
   Message as UiMessage,
   Transaction as UiTransaction,
   TransactionType,
   WalletInfo,
-} from "@/lib/types"
-import type { Deposit as CoreDeposit, Transaction as CoreTransaction } from "./Transaction"
-import type { Wallet } from "./Wallet"
+} from "@/lib/types";
+import { addressIsValid, normalizePaymentId } from "@/lib/validation/ccx";
+import type { Deposit as CoreDeposit, Transaction as CoreTransaction } from "./Transaction";
+import type { RawAddressEntry, Wallet } from "./Wallet";
+import {
+  listWalletMessagesFromUI,
+  mapTransactionToMessageUI,
+  messageUIToApiMessage,
+} from "./MessageUI";
+import type { RawSentMessageRecord } from "./sent-messages";
 
 export function clampImportHeight(scanHeight: number | undefined, currentHeight: number): number {
-  let height = scanHeight ?? 0
-  if (Number.isNaN(height) || height < 0) height = 0
-  if (height >= currentHeight) height = currentHeight - 1
-  height -= 10
-  if (height < 0) height = 0
-  if (height > currentHeight) height = currentHeight
-  return height
+  let height = scanHeight ?? 0;
+  if (Number.isNaN(height) || height < 0) height = 0;
+  if (height >= currentHeight) height = currentHeight - 1;
+  height -= 10;
+  if (height < 0) height = 0;
+  if (height > currentHeight) height = currentHeight;
+  return height;
 }
 
 export function mapWalletToInfo(wallet: Wallet, networkHeight: number): WalletInfo {
-  const walletHeight = Math.max(0, Number(wallet.lastHeight))
-  const available = wallet.availableAmount(networkHeight)
-  const locked = wallet.lockedDeposits(networkHeight)
-  const withdrawable = wallet.unlockedDeposits(networkHeight)
-  const pending = Math.max(0, wallet.availableAmount(-1) - available)
+  const walletHeight = Math.max(0, Number(wallet.lastHeight));
+  const available = wallet.availableAmount(networkHeight);
+  const locked = wallet.lockedDeposits(networkHeight);
+  const withdrawable = wallet.unlockedDeposits(networkHeight);
+  const pending = Math.max(0, wallet.availableAmount(-1) - available);
 
   return {
     address: wallet.getPublicAddress(),
@@ -37,90 +50,245 @@ export function mapWalletToInfo(wallet: Wallet, networkHeight: number): WalletIn
     creationHeight: wallet.creationHeight,
     currentHeight: walletHeight,
     networkHeight,
+  };
+}
+
+function getTxAmount(tx: CoreTransaction): number {
+  return Math.abs(tx.getAmount());
+}
+
+function isSentMessageAmount(amount: number): boolean {
+  return amount === SENT_MESSAGE_AMOUNT_SELF_ATOMIC || amount === SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC;
+}
+
+function isOutgoingTx(tx: CoreTransaction): boolean {
+  return tx.getAmount() < 0 || tx.ins.length > 0;
+}
+
+/** Incoming message: wallet received the 0.0001 CCX envelope. */
+export function hasMessageEnvelopeIn(tx: CoreTransaction): boolean {
+  return tx.outs.some((out) => out.type !== "03" && out.amount === MESSAGE_TX_AMOUNT_ATOMIC);
+}
+
+export function isMessageIn(tx: CoreTransaction): boolean {
+  if (!tx.message) return false;
+  return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC;
+}
+
+export function isMessageOut(tx: CoreTransaction): boolean {
+  if (!isOutgoingTx(tx)) return false;
+  if (isSentMessageAmount(getTxAmount(tx))) return true;
+  // Stamped when sending via sendMessageOperation (survives sync before body decrypt).
+  if (tx.remoteAddress !== "") return true;
+  return false;
+}
+
+export function isWalletMessageTx(tx: CoreTransaction): boolean {
+  return isMessageIn(tx) || isMessageOut(tx);
+}
+
+export function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amount">): boolean {
+  if (!transaction.message) return false;
+  return Math.abs(transaction.amount.atomic) === MESSAGE_TX_AMOUNT_ATOMIC;
+}
+
+export function isUiMessageOut(
+  transaction: Pick<UiTransaction, "type" | "message" | "amount" | "outgoing">,
+): boolean {
+  if (transaction.type === "message" && transaction.outgoing) return true;
+  const amount = Math.abs(transaction.amount.atomic);
+  if (isSentMessageAmount(amount)) return true;
+  if (
+    transaction.type === "send" &&
+    transaction.message &&
+    amount <= SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC
+  ) {
+    return true;
   }
+  return false;
+}
+
+/** Effective type for UI (icon, tabs, labels). */
+export function resolveUiTransactionType(transaction: UiTransaction): TransactionType {
+  if (isUiMessageOut(transaction) || isUiMessageIn(transaction)) return "message";
+  return transaction.type;
 }
 
 /** Classify a synced core transaction for the UI (matches Transaction.ts getters). */
 export function resolveTransactionType(tx: CoreTransaction): TransactionType {
-  if (tx.isDeposit) return "deposit"
-  if (tx.isWithdrawal) return "withdrawal"
-  if (tx.isFusion) return "fusion"
-  if (tx.isCoinbase()) return "miner"
-  return tx.getAmount() < 0 ? "send" : "receive"
+  if (tx.isDeposit) return "deposit";
+  if (tx.isWithdrawal) return "withdrawal";
+  if (tx.isFusion) return "fusion";
+  if (isWalletMessageTx(tx)) return "message";
+  if (tx.isCoinbase()) return "miner";
+  return tx.getAmount() < 0 ? "send" : "receive";
 }
 
 /** Atomic amount shown in lists; fusion may net to zero — fall back to fee. */
-export function resolveTransactionDisplayAmount(tx: CoreTransaction, type: TransactionType): number {
-  const net = tx.getAmount()
-  const absolute = Math.abs(net)
+export function resolveTransactionDisplayAmount(
+  tx: CoreTransaction,
+  type: TransactionType,
+): number {
+  const net = tx.getAmount();
+  const absolute = Math.abs(net);
   if (type === "fusion" && absolute === 0) {
-    return Math.abs(tx.fees ?? 0)
+    return Math.abs(tx.fees ?? 0);
   }
-  return absolute
+  if (type === "message" && isMessageOut(tx)) {
+    return getTxAmount(tx);
+  }
+  return absolute;
 }
 
-export function mapCoreTransaction(tx: CoreTransaction, blockchainHeight: number, walletAddress: string): UiTransaction {
-  const type = resolveTransactionType(tx)
-  const displayAtomic = resolveTransactionDisplayAmount(tx, type)
-  const confirmations =
-    tx.blockHeight === 0 ? 0 : Math.max(0, blockchainHeight - tx.blockHeight)
+export function mapCoreTransaction(
+  tx: CoreTransaction,
+  blockchainHeight: number,
+  walletAddress: string,
+): UiTransaction {
+  const messageOut = isMessageOut(tx);
+  const messageIn = isMessageIn(tx);
+  const type = messageOut || messageIn ? "message" : resolveTransactionType(tx);
+  const displayAtomic = resolveTransactionDisplayAmount(tx, type);
+  const confirmations = tx.blockHeight === 0 ? 0 : Math.max(0, blockchainHeight - tx.blockHeight);
 
-  const address =
-    type === "send" ? "" : walletAddress
+  const address = type === "send" ? "" : walletAddress;
 
   return {
     id: tx.hash || `${tx.timestamp}-${displayAtomic}-${type}`,
     hash: tx.hash,
     type,
     amount: { atomic: displayAtomic },
-    address,
-    timestamp: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : new Date().toISOString(),
+    address: messageOut && tx.remoteAddress ? tx.remoteAddress : address,
+    timestamp: tx.timestamp
+      ? new Date(tx.timestamp * 1000).toISOString()
+      : new Date().toISOString(),
     confirmations,
     paymentId: tx.paymentId || undefined,
     message: tx.message || undefined,
-  }
+    ...(messageOut ? { outgoing: true } : {}),
+  };
 }
 
 export function listWalletTransactions(wallet: Wallet, blockchainHeight: number): UiTransaction[] {
-  const address = wallet.getPublicAddress()
-  return wallet.txsMem
-    .concat(wallet.getTransactionsCopy().reverse())
-    .map((tx) => mapCoreTransaction(tx, blockchainHeight, address))
+  const address = wallet.getPublicAddress();
+  return wallet.txsMem.concat(wallet.getTransactionsCopy().reverse()).map((tx) => {
+    wallet.hydrateSentMessageBody(tx);
+    return mapCoreTransaction(tx, blockchainHeight, address);
+  });
 }
 
 /** Pending TTL txs store expiry as absolute unix seconds (v1 account/messages pages). */
 export function isMessageTransactionExpired(tx: CoreTransaction): boolean {
-  if (!tx.ttl || tx.ttl <= 0 || tx.blockHeight !== 0) return false
-  return Math.floor(Date.now() / 1000) >= tx.ttl
+  if (!tx.ttl || tx.ttl <= 0 || tx.blockHeight !== 0) return false;
+  return Math.floor(Date.now() / 1000) >= tx.ttl;
 }
 
-export function mapCoreMessage(tx: CoreTransaction, _walletAddress: string): UiMessage | null {
-  if (!tx.message) return null
-  if (isMessageTransactionExpired(tx)) return null
+export function buildMessageThreadKey(address: string, paymentId?: string): string {
+  return `${address.trim()}:${normalizePaymentId(paymentId)}`;
+}
 
-  const sent = tx.ins.length > 0
-  const counterpartyAddress = sent ? `sent:${tx.hash}` : `recv:${tx.hash}`
-  const shortHash = tx.hash ? `${tx.hash.slice(0, 8)}…` : "unknown"
-
-  const pendingTtl = tx.blockHeight === 0 && tx.ttl > 0
-
-  return {
-    id: tx.hash || `${tx.timestamp}-${tx.message}`,
-    direction: sent ? "sent" : "received",
-    counterpartyName: sent ? `To ${shortHash}` : `From ${shortHash}`,
-    counterpartyAddress,
-    body: tx.message,
-    timestamp: tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : new Date().toISOString(),
-    unread: sent ? false : !tx.messageViewed,
-    ttlExpiresAt: pendingTtl ? tx.ttl : undefined,
+export function resolveThreadKeyFromMeta(
+  addressBook: RawAddressEntry[],
+  counterpartyAddress: string,
+  paymentId?: string,
+): string {
+  if (paymentId) {
+    const contact = findAddressBookContact(addressBook, {
+      paymentId,
+      address: addressIsValid(counterpartyAddress) ? counterpartyAddress : undefined,
+    });
+    if (contact) {
+      return buildMessageThreadKey(contact.address, paymentId);
+    }
   }
+  if (addressIsValid(counterpartyAddress)) {
+    return buildMessageThreadKey(counterpartyAddress, paymentId);
+  }
+  return buildMessageThreadKey(counterpartyAddress, paymentId);
+}
+
+export function findAddressBookContact(
+  addressBook: RawAddressEntry[],
+  options: { paymentId?: string; address?: string },
+): RawAddressEntry | undefined {
+  const normalizedPid = normalizePaymentId(options.paymentId);
+  if (normalizedPid) {
+    const byPid = addressBook.find(
+      (entry) => normalizePaymentId(entry.paymentId) === normalizedPid,
+    );
+    if (byPid) return byPid;
+  }
+  if (options.address) {
+    return addressBook.find((entry) => entry.address === options.address);
+  }
+  return undefined;
+}
+
+export function resolveMessageCounterparty(
+  tx: CoreTransaction,
+  sent: boolean,
+  addressBook: RawAddressEntry[],
+): { address: string; name: string } {
+  const paymentId = tx.paymentId || undefined;
+  const contact = findAddressBookContact(addressBook, {
+    paymentId,
+    address: sent ? tx.remoteAddress || undefined : undefined,
+  });
+
+  if (sent) {
+    const address = tx.remoteAddress || contact?.address || `sent:${tx.hash}`;
+    const name =
+      contact?.label ??
+      (tx.remoteAddress ? truncateDisplayAddress(tx.remoteAddress) : `To ${tx.hash.slice(0, 8)}…`);
+    return { address, name };
+  }
+
+  const address = contact?.address ?? (paymentId ? `recv:${paymentId}` : `recv:${tx.hash}`);
+  const name =
+    contact?.label ??
+    (paymentId ? `PID ${paymentId.slice(0, 8)}…` : `From ${tx.hash.slice(0, 8)}…`);
+  return { address, name };
+}
+
+function truncateDisplayAddress(address: string): string {
+  return address.length > 16 ? `${address.slice(0, 8)}…${address.slice(-6)}` : address;
+}
+
+export function mapCoreMessage(
+  tx: CoreTransaction,
+  _walletAddress: string,
+  addressBook: RawAddressEntry[] = [],
+  sentRecord?: RawSentMessageRecord,
+): UiMessage | null {
+  const row = mapTransactionToMessageUI(tx, sentRecord);
+  if (!row) return null;
+  return messageUIToApiMessage(row, addressBook);
 }
 
 export function listWalletMessages(wallet: Wallet): UiMessage[] {
-  return wallet.txsMem
-    .concat(wallet.getTransactionsCopy().reverse())
-    .map((tx) => mapCoreMessage(tx, wallet.getPublicAddress()))
-    .filter((message): message is UiMessage => message !== null)
+  return listWalletMessagesFromUI(wallet);
+}
+
+export function compareMessagesChronological(
+  a: Pick<UiMessage, "blockHeight" | "timestamp" | "direction" | "id">,
+  b: Pick<UiMessage, "blockHeight" | "timestamp" | "direction" | "id">,
+): number {
+  if (a.blockHeight !== b.blockHeight) return a.blockHeight - b.blockHeight;
+
+  const timeA = new Date(a.timestamp).getTime();
+  const timeB = new Date(b.timestamp).getTime();
+  if (timeA !== timeB) return timeA - timeB;
+
+  // Same block & second: show incoming before outgoing (reply follows original).
+  if (a.direction !== b.direction) {
+    return a.direction === "received" ? -1 : 1;
+  }
+
+  return a.id.localeCompare(b.id);
+}
+
+export function sortMessagesByHeight(messages: UiMessage[]): UiMessage[] {
+  return [...messages].sort(compareMessagesChronological);
 }
 
 /** Indicative APR from principal, accrued interest, and term (for UI labels). */
@@ -130,12 +298,12 @@ export function deriveIndicativeDepositApr(
   termBlocks: number,
   network: WalletNetworkConfig = createWalletNetworkConfig(),
 ): number {
-  const months = termBlocks / network.depositMinTermBlock
-  if (months <= 0 || amountAtomic <= 0) return 0
-  const divider = Math.pow(10, network.coinUnitPlaces)
-  const principal = amountAtomic / divider
-  const interest = interestAtomic / divider
-  return (interest / principal / (months / 12)) * 100
+  const months = termBlocks / network.depositMinTermBlock;
+  if (months <= 0 || amountAtomic <= 0) return 0;
+  const divider = Math.pow(10, network.coinUnitPlaces);
+  const principal = amountAtomic / divider;
+  const interest = interestAtomic / divider;
+  return (interest / principal / (months / 12)) * 100;
 }
 
 export function mapCoreDeposit(
@@ -144,18 +312,15 @@ export function mapCoreDeposit(
   walletAddress: string,
   network: WalletNetworkConfig = createWalletNetworkConfig(),
 ): UiDeposit {
-  const coreStatus = deposit.getStatus(blockchainHeight)
+  const coreStatus = deposit.getStatus(blockchainHeight);
   const status =
-    coreStatus === "Locked" ? "active" : coreStatus === "Unlocked" ? "unlocked" : "spent"
-  const blocksRemaining = Math.max(0, deposit.unlockHeight - blockchainHeight)
-  const unlocksInDays = Math.ceil((blocksRemaining * network.avgBlockTime) / 86400)
-  const elapsedBlocks = Math.max(0, blockchainHeight - deposit.blockHeight)
+    coreStatus === "Locked" ? "active" : coreStatus === "Unlocked" ? "unlocked" : "spent";
+  const blocksRemaining = Math.max(0, deposit.unlockHeight - blockchainHeight);
+  const unlocksInDays = Math.ceil((blocksRemaining * network.avgBlockTime) / 86400);
+  const elapsedBlocks = Math.max(0, blockchainHeight - deposit.blockHeight);
   const progressPct =
-    deposit.term > 0 ? Math.min(100, Math.round((elapsedBlocks / deposit.term) * 100)) : 100
-  const durationMonths = Math.max(
-    1,
-    Math.round(deposit.term / network.depositMinTermBlock),
-  )
+    deposit.term > 0 ? Math.min(100, Math.round((elapsedBlocks / deposit.term) * 100)) : 100;
+  const durationMonths = Math.max(1, Math.round(deposit.term / network.depositMinTermBlock));
 
   return {
     id: `${deposit.txHash}:${deposit.globalOutputIndex}`,
@@ -170,15 +335,15 @@ export function mapCoreDeposit(
     progressPct: status === "spent" ? 100 : progressPct,
     address: walletAddress,
     withdrawPending: deposit.withdrawPending || undefined,
-  }
+  };
 }
 
 export function listWalletDeposits(wallet: Wallet, blockchainHeight: number): UiDeposit[] {
-  const address = wallet.getPublicAddress()
+  const address = wallet.getPublicAddress();
   return wallet
     .getDepositsCopy()
     .reverse()
-    .map((deposit) => mapCoreDeposit(deposit, blockchainHeight, address))
+    .map((deposit) => mapCoreDeposit(deposit, blockchainHeight, address));
 }
 
 export function getWalletDepositConstraints(
@@ -186,17 +351,17 @@ export function getWalletDepositConstraints(
   networkHeight: number,
   network: WalletNetworkConfig = createWalletNetworkConfig(),
 ) {
-  const walletHeight = Math.max(0, Number(wallet.lastHeight))
-  const currencyDivider = Math.pow(10, network.coinUnitPlaces)
-  const coinFee = Number(network.coinFee)
-  const unlocked = wallet.availableAmount(networkHeight)
-  const maxDepositAmount = Math.floor((unlocked - coinFee) / currencyDivider)
-  const isWalletSyncing = walletHeight + 2 < networkHeight
+  const walletHeight = Math.max(0, Number(wallet.lastHeight));
+  const currencyDivider = Math.pow(10, network.coinUnitPlaces);
+  const coinFee = Number(network.coinFee);
+  const unlocked = wallet.availableAmount(networkHeight);
+  const maxDepositAmount = Math.floor((unlocked - coinFee) / currencyDivider);
+  const isWalletSyncing = walletHeight + 2 < networkHeight;
 
   return {
     maxDepositAmount,
     isDepositDisabled: isWalletSyncing || maxDepositAmount < network.depositMinAmountCoin,
     isWalletSyncing,
     hasPendingDeposit: wallet.hasPendingDeposit,
-  }
+  };
 }

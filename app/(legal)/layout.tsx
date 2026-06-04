@@ -1,4 +1,4 @@
-import { Footer } from "@/components/layout/footer"
+import { Footer } from "@/components/layout/footer";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,5 +8,5 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         <Footer />
       </div>
     </main>
-  )
+  );
 }

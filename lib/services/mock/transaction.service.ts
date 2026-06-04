@@ -1,17 +1,17 @@
-import { mockTransactions } from "@/lib/mock-data/wallet"
-import { ccxAmount } from "@/lib/utils"
-import { clone, mockDelay } from "@/lib/services/mock/helpers"
-import type { TransactionService } from "@/lib/services/transaction.service"
+import { mockTransactions } from "@/lib/mock-data/wallet";
+import { ccxAmount } from "@/lib/utils";
+import { clone, mockDelay } from "@/lib/services/mock/helpers";
+import type { TransactionService } from "@/lib/services/transaction.service";
 
 export const mockTransactionService: TransactionService = {
   async listTransactions() {
     // TODO(backend): replace with real Conceal RPC/walletd call
-    await mockDelay()
-    return clone(mockTransactions)
+    await mockDelay();
+    return clone(mockTransactions);
   },
   async sendTransaction(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call
-    await mockDelay()
+    await mockDelay();
     return {
       id: "tx-mock-submit",
       // TODO(backend): replace mock hash with the walletd transaction hash.
@@ -23,6 +23,6 @@ export const mockTransactionService: TransactionService = {
       confirmations: 0,
       paymentId: input.paymentId,
       message: input.message,
-    }
+    };
   },
-}
+};

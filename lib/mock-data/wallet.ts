@@ -9,11 +9,11 @@ import type {
   Transaction,
   WalletInfo,
   WalletSettings,
-} from "@/lib/types"
-import { ccxAmount, usdAmount } from "@/lib/utils"
+} from "@/lib/types";
+import { ccxAmount, usdAmount } from "@/lib/utils";
 
 export const MOCK_ADDRESS =
-  "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m"
+  "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m";
 
 export const mockWalletInfo: WalletInfo = {
   address: MOCK_ADDRESS,
@@ -40,7 +40,7 @@ export const mockWalletInfo: WalletInfo = {
   creationHeight: 1971774,
   currentHeight: 1971337,
   networkHeight: 1971337,
-}
+};
 
 export const mockTransactions: Transaction[] = [
   {
@@ -125,7 +125,7 @@ export const mockTransactions: Transaction[] = [
     timestamp: "2026-04-22T22:05:00.000Z",
     confirmations: 1280,
   },
-]
+];
 
 export const mockDeposits: Deposit[] = [
   {
@@ -154,58 +154,80 @@ export const mockDeposits: Deposit[] = [
     progressPct: 29,
     address: MOCK_ADDRESS,
   },
-]
+];
 
 export const mockMessages: Message[] = [
   {
     id: "msg-001",
     direction: "received",
-    counterpartyName: "Nora",
-    counterpartyAddress: "ccx7NoraMessageAddressT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
+    counterpartyName: "Kraken Exchange",
+    counterpartyAddress:
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo",
     body: "Payment received. Thanks for the quick settlement.",
+    hasBody: true,
     timestamp: "2026-05-22T00:55:00.000Z",
     unread: true,
+    paymentIdFrom: "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099",
+    paymentIdTo: null,
+    blockHeight: 1971200,
+    threadKey:
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099",
   },
   {
     id: "msg-002",
-    direction: "received",
-    counterpartyName: "Liam",
-    counterpartyAddress: "ccx7LiamMessageAddressT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
-    body: "Can you confirm the payment ID for the deposit?",
+    direction: "sent",
+    counterpartyName: "Kraken Exchange",
+    counterpartyAddress:
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo",
+    body: "Confirming the deposit reference now.",
+    hasBody: true,
+    sentTo: "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo",
     timestamp: "2026-05-21T21:30:00.000Z",
-    unread: true,
+    unread: false,
+    paymentIdFrom: null,
+    paymentIdTo: "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099",
+    blockHeight: 1971180,
+    threadKey:
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099",
   },
   {
     id: "msg-003",
-    direction: "sent",
-    counterpartyName: "Maya",
-    counterpartyAddress: "ccx7MayaMessageAddressT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
-    body: "Sent the CCX transfer and attached a short memo.",
-    timestamp: "2026-05-20T13:15:00.000Z",
-    unread: false,
+    direction: "received",
+    counterpartyName: "Alice",
+    counterpartyAddress:
+      "ccx7AliceWalletAddr2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQ",
+    body: "Can you confirm the payment ID for the deposit?",
+    hasBody: true,
+    timestamp: "2026-05-21T18:00:00.000Z",
+    unread: true,
+    paymentIdFrom: null,
+    paymentIdTo: null,
+    blockHeight: 1971100,
+    threadKey:
+      "ccx7AliceWalletAddr2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQ:",
   },
-]
+];
 
-const MARKET_PRICE_USD = 0.045
-const CIRCULATING_SUPPLY_CCX = 6_456_200
+const MARKET_PRICE_USD = 0.045;
+const CIRCULATING_SUPPLY_CCX = 6_456_200;
 const TIMEFRAME_POINT_COUNT: Record<MarketTimeframe, number> = {
   "24H": 25,
   "7D": 8,
   "30D": 31,
   "90D": 91,
-}
+};
 const TIMEFRAME_DRIFT: Record<MarketTimeframe, number> = {
   "24H": 0.0012,
   "7D": 0.0035,
   "30D": 0.008,
   "90D": 0.013,
-}
+};
 const TIMEFRAME_WAVE: Record<MarketTimeframe, number> = {
   "24H": 0.00055,
   "7D": 0.001,
   "30D": 0.0015,
   "90D": 0.0024,
-}
+};
 
 function formatMockHistoryLabel(date: Date, range: MarketTimeframe) {
   if (range === "24H") {
@@ -213,34 +235,38 @@ function formatMockHistoryLabel(date: Date, range: MarketTimeframe) {
       hour: "numeric",
       hour12: false,
       timeZone: "UTC",
-    })
+    });
   }
 
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "2-digit",
     timeZone: "UTC",
-  })
+  });
 }
 
 function generateMockPriceHistory(range: MarketTimeframe): MarketHistoryPoint[] {
-  const pointCount = TIMEFRAME_POINT_COUNT[range]
-  const anchor = new Date("2026-05-22T12:00:00.000Z")
-  const stepMs = range === "24H" ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000
-  const drift = TIMEFRAME_DRIFT[range]
-  const wave = TIMEFRAME_WAVE[range]
+  const pointCount = TIMEFRAME_POINT_COUNT[range];
+  const anchor = new Date("2026-05-22T12:00:00.000Z");
+  const stepMs = range === "24H" ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  const drift = TIMEFRAME_DRIFT[range];
+  const wave = TIMEFRAME_WAVE[range];
 
   return Array.from({ length: pointCount }, (_, index) => {
-    const progress = pointCount === 1 ? 1 : index / (pointCount - 1)
-    const date = new Date(anchor.getTime() - (pointCount - 1 - index) * stepMs)
-    const waveOffset = Math.sin(index * 1.21 + range.length) * wave + Math.cos(index * 0.47) * wave * 0.45
-    const price = index === pointCount - 1 ? MARKET_PRICE_USD : MARKET_PRICE_USD - drift * (1 - progress) + waveOffset
+    const progress = pointCount === 1 ? 1 : index / (pointCount - 1);
+    const date = new Date(anchor.getTime() - (pointCount - 1 - index) * stepMs);
+    const waveOffset =
+      Math.sin(index * 1.21 + range.length) * wave + Math.cos(index * 0.47) * wave * 0.45;
+    const price =
+      index === pointCount - 1
+        ? MARKET_PRICE_USD
+        : MARKET_PRICE_USD - drift * (1 - progress) + waveOffset;
 
     return {
       date: formatMockHistoryLabel(date, range),
       price: Number(Math.max(price, 0.001).toFixed(6)),
-    }
-  })
+    };
+  });
 }
 
 export const mockMarketHistoryByTimeframe: Record<MarketTimeframe, MarketHistoryPoint[]> = {
@@ -248,7 +274,7 @@ export const mockMarketHistoryByTimeframe: Record<MarketTimeframe, MarketHistory
   "7D": generateMockPriceHistory("7D"),
   "30D": generateMockPriceHistory("30D"),
   "90D": generateMockPriceHistory("90D"),
-}
+};
 
 export const mockMarketData: MarketData = {
   price: usdAmount(MARKET_PRICE_USD),
@@ -262,37 +288,37 @@ export const mockMarketData: MarketData = {
   portfolioValueUsd: usdAmount(56.2725),
   history: mockMarketHistoryByTimeframe["30D"],
   historyByTimeframe: mockMarketHistoryByTimeframe,
-}
+};
 
 export const mockAddressBook: AddressEntry[] = [
-  // TODO(backend): replace with real saved addresses from the wallet store
   {
     id: "addr-1",
     label: "Kraken Exchange",
-    address: "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF",
+    address: "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo",
     paymentId: "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099",
-    avatar: "/brand/contacts/kraken.png",
+    avatar: "kraken",
   },
   {
     id: "addr-2",
     label: "Alice",
-    address: "ccx7AliceWalletAddr2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKm",
-    avatar: "/brand/contacts/alice.png",
+    address: "ccx7AliceWalletAddr2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQ",
+    avatar: "alice",
   },
   {
     id: "addr-3",
     label: "Mining Pool",
-    address: "ccx7PoolPayoutAddrK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF",
+    address:
+      "ccx7PoolPayoutAddrK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNoP",
     paymentId: "7f3a44bc99de10ab7654321089abcdef1122334455667788990011223344c11cd",
-    avatar: "/brand/contacts/mining-pool.png",
+    avatar: "mining-pool",
   },
   {
     id: "addr-4",
     label: "Cold Storage",
-    address: "ccx7ColdStoreAddrV2wX5yZ8aB1cD4eF7gH0jK3mNoPqRsTuVwXyZ1234567890aBcDeFgHiJ",
-    avatar: "/brand/contacts/cold-storage.png",
+    address: "ccx7ColdStoreAddrV2wX5yZ8aB1cD4eF7gH0jK3mNoPqRsTuVwXyZ1234567890aBcDeFgHiJkLmNoPq",
+    avatar: "cold-storage",
   },
-]
+];
 
 export const mockNodeStatus: NodeStatus = {
   url: "https://explorer.conceal.network/daemon/",
@@ -315,20 +341,21 @@ export const mockNodeStatus: NodeStatus = {
   hashrateHistory: [10.21, 10.38, 10.29, 10.62, 10.55, 10.71, 10.64, 10.7],
   peersHistory: [14, 15, 14, 16, 17, 16, 18, 18],
   blockTimeHistory: [124, 117, 121, 113, 119, 110, 122, 118],
-}
+};
 
 export const mockSettings: WalletSettings = {
   language: "English",
   useCustomNode: false,
   nodeUrl: "https://explorer.conceal.network/daemon/",
+  syncSpeed: "medium",
   readMinorTx: false,
   autoLock: true,
   biometric: false,
-}
+};
 
 export const mockExportData = {
   mnemonic:
     "mock amber orbit velvet zero carbon river lunar basic sample wallet conceal never real crypto placeholder safe display only",
   spendKey: "mock-spend-key-placeholder-not-real-".padEnd(98, "x"),
   viewKey: "mock-view-key-placeholder-not-real-".padEnd(98, "y"),
-}
+};

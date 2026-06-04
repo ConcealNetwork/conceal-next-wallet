@@ -27,7 +27,6 @@ export class Nfc {
   public static ERROR_NO_NFC = "no_nfc";
 
   private _nativeNfc: boolean = false;
-  private _nativeNfcListening: boolean = false;
   private _pendingNdef: NdefMessageText | null = null;
   private _pendingNdefPromiseResolve: Function | null = null;
   private _pendingNdefPromiseReject: Function | null = null;
@@ -38,10 +37,10 @@ export class Nfc {
       window.nfc.addNdefListener(
         (event: NativeNfcEvent) => {
           if (event.tag.ndefMessage && window.ndef && window.util) {
-            for (let record of event.tag.ndefMessage) {
-              let ndef: NdefMessage | null = this.parseNdefMessage(record);
+            for (const record of event.tag.ndefMessage) {
+              const ndef: NdefMessage | null = this.parseNdefMessage(record);
               if (ndef !== null)
-                for (let callback of this._ndefCallbacks) {
+                for (const callback of this._ndefCallbacks) {
                   callback(ndef);
                 }
             }
@@ -50,26 +49,22 @@ export class Nfc {
             this.writeNdefOnTag();
           }
         },
-        (data: any) => {
-          this._nativeNfcListening = true;
-        },
-        function (error: any) {
+        () => {},
+        (error: any) => {
           if (error === "NFC_DISABLED") {
           } else alert(JSON.stringify(error));
-        }
+        },
       );
     }
   }
 
-  private registerListener() {}
-
   private parseNdefMessage(record: NativeNfcEventNdef): NdefMessage | null {
-    let payload = record.payload.slice();
+    const payload = record.payload.slice();
     if (window.ndef && window.util)
       if (record.tnf === window.ndef.TNF_WELL_KNOWN) {
-        let langLength = payload.splice(0, 1)[0];
-        let lang = window.util.bytesToString(payload.splice(0, langLength));
-        let text = window.util.bytesToString(payload);
+        const langLength = payload.splice(0, 1)[0];
+        const lang = window.util.bytesToString(payload.splice(0, langLength));
+        const text = window.util.bytesToString(payload);
         return {
           text: {
             lang: lang,
@@ -87,24 +82,24 @@ export class Nfc {
 
   public get writableNfc(): boolean {
     //TODO return true on andorid only
-    return this._nativeNfc ? true : false;
+    return Boolean(this._nativeNfc);
   }
 
   public get enabled(): Promise<void> {
     if (window.nfc) {
-      return new Promise<void>(function (resolve, reject) {
+      return new Promise<void>((resolve, reject) => {
         if (window.nfc)
           window.nfc.enabled(
-            function () {
+            () => {
               resolve();
             },
-            function (error: any) {
+            (error: any) => {
               alert(error + " " + (<any>window.nfc).NO_NFC);
               // if(window.nfc && error === window.nfc).NO_NFC){
               // 	reject(Nfc.ERROR_NO_NFC);
               // }else
               reject(Nfc.ERROR_NO_NFC);
-            }
+            },
           );
       });
     }
@@ -131,17 +126,20 @@ export class Nfc {
     return new Promise<void>((resolve, reject) => {
       if (window.nfc && window.ndef) {
         if (message.lang === "") message.lang = "en";
-        let nativeNdef: NativeNfcEventNdef = window.ndef.textRecord(message.content, message.lang);
+        const nativeNdef: NativeNfcEventNdef = window.ndef.textRecord(
+          message.content,
+          message.lang,
+        );
         window.nfc.share(
           [nativeNdef],
-          function (data: any) {
+          (data: any) => {
             alert("share ok:" + JSON.stringify(data));
             resolve();
           },
-          function (data: any) {
+          (data: any) => {
             alert("share ko:" + JSON.stringify(data));
             reject();
-          }
+          },
         );
       } else reject("not_supported");
     });
@@ -150,8 +148,8 @@ export class Nfc {
   public unshareNdef() {
     if (window.nfc) {
       window.nfc.unshare(
-        function () {},
-        function () {}
+        () => {},
+        () => {},
       );
     }
   }
@@ -171,18 +169,21 @@ export class Nfc {
   private writeNdefOnTag() {
     if (window.nfc && window.ndef && this._pendingNdef) {
       if (this._pendingNdef.lang === "") this._pendingNdef.lang = "en";
-      let nativeNdef: NativeNfcEventNdef = window.ndef.textRecord(this._pendingNdef.content, this._pendingNdef.lang);
+      const nativeNdef: NativeNfcEventNdef = window.ndef.textRecord(
+        this._pendingNdef.content,
+        this._pendingNdef.lang,
+      );
 
       window.nfc.write(
         [nativeNdef],
-        (data: any) => {
+        () => {
           if (this._pendingNdefPromiseResolve) this._pendingNdefPromiseResolve();
         },
         (data: string) => {
           let error = "unknown";
           if (data.indexOf("Tag capacity") !== -1) error = "tag_capacity";
           if (this._pendingNdefPromiseReject) this._pendingNdefPromiseReject(error);
-        }
+        },
       );
     }
     this._pendingNdef = null;

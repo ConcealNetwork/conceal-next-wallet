@@ -15,6 +15,6 @@ export const MNEMONIC_IMPORT_LANGUAGES = [
   { key: "russian", label: "Russian" },
   { key: "spanish", label: "Spanish" },
   { key: "ukrainian", label: "Ukrainian" },
-] as const
+] as const;
 
-export type MnemonicImportLanguageKey = (typeof MNEMONIC_IMPORT_LANGUAGES)[number]["key"]
+export type MnemonicImportLanguageKey = (typeof MNEMONIC_IMPORT_LANGUAGES)[number]["key"];

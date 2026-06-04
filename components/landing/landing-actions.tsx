@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { createContext, useContext, useState } from "react"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { createContext, useContext, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,66 +12,66 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { env } from "@/lib/env"
-import { services } from "@/lib/services"
-import { useWalletSession } from "@/lib/session/wallet-session"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { env } from "@/lib/env";
+import { services } from "@/lib/services";
+import { useWalletSession } from "@/lib/session/wallet-session";
 
 type OpenWalletContextValue = {
-  openWallet: () => Promise<void>
-}
+  openWallet: () => Promise<void>;
+};
 
-const OpenWalletContext = createContext<OpenWalletContextValue | null>(null)
+const OpenWalletContext = createContext<OpenWalletContextValue | null>(null);
 
 function useOpenWalletContext() {
-  const context = useContext(OpenWalletContext)
+  const context = useContext(OpenWalletContext);
   if (!context) {
-    throw new Error("Open wallet controls must be used inside OpenWalletProvider")
+    throw new Error("Open wallet controls must be used inside OpenWalletProvider");
   }
-  return context
+  return context;
 }
 
 /** Renders unlock and no-wallet dialogs for all landing open-wallet buttons. */
 export function OpenWalletProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const { openSession } = useWalletSession()
-  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false)
-  const [noWalletDialogOpen, setNoWalletDialogOpen] = useState(false)
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const { openSession } = useWalletSession();
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [noWalletDialogOpen, setNoWalletDialogOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function unlock(passwordValue?: string) {
-    setLoading(true)
+    setLoading(true);
     try {
       const wallet = await services.wallet.openWallet(
         env.useMockWallet ? {} : { password: passwordValue },
-      )
-      openSession(wallet)
-      setUnlockDialogOpen(false)
-      setPassword("")
-      router.push("/wallet/account")
+      );
+      openSession(wallet);
+      setUnlockDialogOpen(false);
+      setPassword("");
+      router.push("/wallet/account");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to open wallet.")
+      toast.error(error instanceof Error ? error.message : "Failed to open wallet.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   async function openWallet() {
     if (env.useMockWallet) {
-      await unlock()
-      return
+      await unlock();
+      return;
     }
 
-    const hasStored = await services.wallet.hasStoredWallet()
+    const hasStored = await services.wallet.hasStoredWallet();
     if (!hasStored) {
-      setNoWalletDialogOpen(true)
-      return
+      setNoWalletDialogOpen(true);
+      return;
     }
 
-    setUnlockDialogOpen(true)
+    setUnlockDialogOpen(true);
   }
 
   return (
@@ -81,13 +81,15 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Open wallet</DialogTitle>
-            <DialogDescription>Enter your encryption password to unlock the wallet on this device.</DialogDescription>
+            <DialogDescription>
+              Enter your encryption password to unlock the wallet on this device.
+            </DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
             onSubmit={(event) => {
-              event.preventDefault()
-              void unlock(password)
+              event.preventDefault();
+              void unlock(password);
             }}
           >
             <div className="space-y-2">
@@ -117,7 +119,8 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
           <DialogHeader>
             <DialogTitle>No wallet found</DialogTitle>
             <DialogDescription>
-              There is no encrypted wallet on this device yet. Import an existing wallet or create a new one.
+              There is no encrypted wallet on this device yet. Import an existing wallet or create a
+              new one.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-3 sm:flex-col sm:space-x-0">
@@ -137,12 +140,12 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
         </DialogContent>
       </Dialog>
     </OpenWalletContext.Provider>
-  )
+  );
 }
 
 /** Primary hero CTAs: open the wallet, or go create a new one. */
 export function LandingActions() {
-  const { openWallet } = useOpenWalletContext()
+  const { openWallet } = useOpenWalletContext();
 
   return (
     <div className="mt-11 flex flex-wrap items-center gap-x-7 gap-y-4">
@@ -160,12 +163,12 @@ export function LandingActions() {
         Create a new one →
       </Link>
     </div>
-  )
+  );
 }
 
 /** Compact "Open Wallet" pill used in the landing nav. */
 export function NavOpenWalletButton() {
-  const { openWallet } = useOpenWalletContext()
+  const { openWallet } = useOpenWalletContext();
 
   return (
     <button
@@ -175,5 +178,5 @@ export function NavOpenWalletButton() {
     >
       Open Wallet
     </button>
-  )
+  );
 }

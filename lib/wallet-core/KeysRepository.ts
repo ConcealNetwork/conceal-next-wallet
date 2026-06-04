@@ -32,8 +32,8 @@ export type UserKeys = {
 
 export class KeysRepository {
   static fromPriv(spend: string, view: string): UserKeys {
-    let pubView = CnUtils.sec_key_to_pub(view);
-    let pubSpend = CnUtils.sec_key_to_pub(spend);
+    const pubView = CnUtils.sec_key_to_pub(view);
+    const pubSpend = CnUtils.sec_key_to_pub(spend);
     return {
       pub: {
         view: pubView,
@@ -48,9 +48,9 @@ export class KeysRepository {
 
   /** Ensure v1 UserKeys shape (pub + priv); rebuild pub keys from priv when missing. */
   static normalizeKeys(keys: unknown): UserKeys | null {
-    const shape = analyzeKeysShape(keys)
-    if (shape.kind === "ready") return shape.keys
-    if (shape.kind === "derive_pub") return KeysRepository.fromPriv(shape.spend, shape.view)
-    return null
+    const shape = analyzeKeysShape(keys);
+    if (shape.kind === "ready") return shape.keys;
+    if (shape.kind === "derive_pub") return KeysRepository.fromPriv(shape.spend, shape.view);
+    return null;
   }
 }

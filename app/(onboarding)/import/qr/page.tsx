@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { ImportQrForm } from "@/app/(onboarding)/onboarding-actions"
-import { SectionCard } from "@/components/wallet/common"
+import { ImportQrForm } from "@/app/(onboarding)/onboarding-actions";
+import { SectionCard } from "@/components/wallet/common";
 
 export default function ImportQrPage() {
   return (
@@ -10,5 +10,5 @@ export default function ImportQrPage() {
         <ImportQrForm />
       </SectionCard>
     </div>
-  )
+  );
 }

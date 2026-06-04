@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import type { LucideIcon } from "lucide-react"
+import type { LucideIcon } from "lucide-react";
 import {
   ArrowDownLeft,
   ArrowUpFromLine,
@@ -9,47 +9,61 @@ import {
   Combine,
   Hash,
   Lock,
+  Mail,
   Pickaxe,
   Search,
-} from "lucide-react"
-import { useMemo, useState } from "react"
-import { Badge } from "@/components/ui/badge"
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CcxAmount } from "@/components/wallet/ccx"
-import { CopyButton, EmptyState, FilterTabs, PageHeader, SectionCard } from "@/components/wallet/common"
-import { useTransactions } from "@/lib/hooks"
-import { useCountUp } from "@/lib/hooks/use-count-up"
-import type { Transaction, TransactionType } from "@/lib/types"
-import { ccxToNumber, cn, formatCcx, timeAgo, truncateAddress } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CcxAmount } from "@/components/wallet/ccx";
+import {
+  CopyButton,
+  EmptyState,
+  FilterTabs,
+  PageHeader,
+  SectionCard,
+} from "@/components/wallet/common";
+import { useTransactions } from "@/lib/hooks";
+import { useCountUp } from "@/lib/hooks/use-count-up";
+import type { Transaction, TransactionType } from "@/lib/types";
+import { isUiMessageIn, isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
+import { ccxToNumber, cn, formatCcx, timeAgo, truncateAddress } from "@/lib/utils";
 
-const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals"]
-const pageSizes = ["10", "25", "50"]
+const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals"];
+const pageSizes = ["10", "25", "50"];
 
-type TransactionStatus = "Confirmed" | "Pending"
-type DateGroup = "Today" | "Yesterday" | "This Week" | "Earlier"
+type TransactionStatus = "Confirmed" | "Pending";
+type DateGroup = "Today" | "Yesterday" | "This Week" | "Earlier";
 
-const dateGroups: DateGroup[] = ["Today", "Yesterday", "This Week", "Earlier"]
+const dateGroups: DateGroup[] = ["Today", "Yesterday", "This Week", "Earlier"];
 const timestampFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeStyle: "short",
-})
+});
 
 const transactionMeta: Record<
   TransactionType,
   {
-    label: string
-    icon: LucideIcon
-    sign: "+" | "−"
-    amountClassName: string
-    chipClassName: string
+    label: string;
+    icon: LucideIcon;
+    sign: "+" | "−";
+    amountClassName: string;
+    chipClassName: string;
   }
 > = {
   receive: {
@@ -94,79 +108,90 @@ const transactionMeta: Record<
     amountClassName: "text-wallet-incoming",
     chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
   },
-}
+  message: {
+    label: "Message",
+    icon: Mail,
+    sign: "+",
+    amountClassName: "text-primary",
+    chipClassName: "bg-primary/10 text-primary",
+  },
+};
 
 export default function TransactionsPageClient() {
-  const { data = [] } = useTransactions()
-  const [active, setActive] = useState("All")
-  const [search, setSearch] = useState("")
-  const [pageSize, setPageSize] = useState("10")
-  const [selected, setSelected] = useState<Transaction | null>(null)
+  const { data = [] } = useTransactions();
+  const [active, setActive] = useState("All");
+  const [search, setSearch] = useState("");
+  const [pageSize, setPageSize] = useState("10");
+  const [selected, setSelected] = useState<Transaction | null>(null);
 
   const filtered = useMemo(() => {
-    const typeForTab: Record<string, TransactionType[] | null> = {
-      All: null,
-      Received: ["receive", "miner", "withdrawal"],
-      Sent: ["send", "fusion"],
-      Deposits: ["deposit"],
-      Withdrawals: ["withdrawal"],
-    }
-    return data.filter((transaction) => {
-      const tabTypes = typeForTab[active]
-      const matchesTab = !tabTypes || tabTypes.includes(transaction.type)
-      const searchTarget = [
-        transaction.address,
-        transaction.hash,
-        transaction.type,
-        transaction.paymentId,
-        transaction.message,
-        formatCcx(transaction.amount),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-      const matchesSearch = searchTarget.includes(search.trim().toLowerCase())
-      return matchesTab && matchesSearch
-    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }, [active, data, search])
+    return data
+      .filter((transaction) => {
+        const matchesTab = transactionMatchesTab(transaction, active);
+        const searchTarget = [
+          transaction.address,
+          transaction.hash,
+          transaction.type,
+          transaction.paymentId,
+          transaction.message,
+          formatCcx(transaction.amount),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const matchesSearch = searchTarget.includes(search.trim().toLowerCase());
+        return matchesTab && matchesSearch;
+      })
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [active, data, search]);
 
   const visibleTransactions = useMemo(
     () => filtered.slice(0, Number(pageSize)),
-    [filtered, pageSize]
-  )
+    [filtered, pageSize],
+  );
 
   const groupedTransactions = useMemo(() => {
-    const groups = new Map<DateGroup, Transaction[]>(dateGroups.map((label) => [label, []]))
+    const groups = new Map<DateGroup, Transaction[]>(dateGroups.map((label) => [label, []]));
 
     for (const transaction of visibleTransactions) {
-      groups.get(groupTransactionDate(transaction.timestamp))?.push(transaction)
+      groups.get(groupTransactionDate(transaction.timestamp))?.push(transaction);
     }
 
-    return dateGroups.reduce<Array<{ label: DateGroup; transactions: Transaction[] }>>((acc, label) => {
-      const transactions = groups.get(label) ?? []
-      if (transactions.length > 0) acc.push({ label, transactions })
-      return acc
-    }, [])
-  }, [visibleTransactions])
+    return dateGroups.reduce<Array<{ label: DateGroup; transactions: Transaction[] }>>(
+      (acc, label) => {
+        const transactions = groups.get(label) ?? [];
+        if (transactions.length > 0) acc.push({ label, transactions });
+        return acc;
+      },
+      [],
+    );
+  }, [visibleTransactions]);
 
-  const totals = useMemo(() => data.reduce(
-    (acc, transaction) => {
-      const value = ccxToNumber(transaction.amount)
-      if (transaction.type === "receive" || transaction.type === "miner") acc.received += value
-      if (transaction.type === "send" || transaction.type === "fusion") acc.sent += value
-      if (transaction.type === "deposit") acc.deposits += value
-      if (transaction.type === "withdrawal") acc.withdrawals += value
-      return acc
-    },
-    { received: 0, sent: 0, deposits: 0, withdrawals: 0 }
-  ), [data])
+  const totals = useMemo(
+    () =>
+      data.reduce(
+        (acc, transaction) => {
+          const value = ccxToNumber(transaction.amount);
+          if (transaction.type === "receive" || transaction.type === "miner") acc.received += value;
+          if (transaction.type === "send" || transaction.type === "fusion") acc.sent += value;
+          if (transaction.type === "deposit") acc.deposits += value;
+          if (transaction.type === "withdrawal") acc.withdrawals += value;
+          return acc;
+        },
+        { received: 0, sent: 0, deposits: 0, withdrawals: 0 },
+      ),
+    [data],
+  );
 
-  const outflow = totals.sent + totals.withdrawals
-  const netFlow = totals.received + totals.deposits - outflow
+  const outflow = totals.sent + totals.withdrawals;
+  const netFlow = totals.received + totals.deposits - outflow;
 
   return (
     <>
-      <PageHeader title="Transaction History" subtitle="Complete transaction history for your wallet" />
+      <PageHeader
+        title="Transaction History"
+        subtitle="Complete transaction history for your wallet"
+      />
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <SectionCard title="Summary" description="Wallet flow across all transactions">
           <TransactionSummary
@@ -180,7 +205,10 @@ export default function TransactionsPageClient() {
       </div>
       <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative max-w-md flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Search
+            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -234,9 +262,12 @@ export default function TransactionsPageClient() {
           </div>
         </SectionCard>
       </div>
-      <TransactionDetailsDialog transaction={selected} onOpenChange={(open) => !open && setSelected(null)} />
+      <TransactionDetailsDialog
+        transaction={selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+      />
     </>
-  )
+  );
 }
 
 function TransactionSummary({
@@ -246,40 +277,81 @@ function TransactionSummary({
   netFlow,
   transactionCount,
 }: {
-  received: number
-  sent: number
-  deposits: number
-  netFlow: number
-  transactionCount: number
+  received: number;
+  sent: number;
+  deposits: number;
+  netFlow: number;
+  transactionCount: number;
 }) {
-  const totalFlow = received + sent + deposits
+  const totalFlow = received + sent + deposits;
   const flowSegments = [
-    { label: "In", value: received, className: "bg-wallet-incoming", textClassName: "text-wallet-incoming", prefix: "+" },
-    { label: "Out", value: sent, className: "bg-wallet-outgoing", textClassName: "text-wallet-outgoing", prefix: "−" },
-    { label: "Deposits", value: deposits, className: "bg-wallet-deposit", textClassName: "text-wallet-deposit", prefix: "+" },
-  ]
+    {
+      label: "In",
+      value: received,
+      className: "bg-wallet-incoming",
+      textClassName: "text-wallet-incoming",
+      prefix: "+",
+    },
+    {
+      label: "Out",
+      value: sent,
+      className: "bg-wallet-outgoing",
+      textClassName: "text-wallet-outgoing",
+      prefix: "−",
+    },
+    {
+      label: "Deposits",
+      value: deposits,
+      className: "bg-wallet-deposit",
+      textClassName: "text-wallet-deposit",
+      prefix: "+",
+    },
+  ];
   const netFlowLabel = useCountUp(netFlow, {
     formatter: (value) => `${value >= 0 ? "+" : "−"}${formatCcx(Math.abs(value))}`,
-  })
+  });
   const transactionCountLabel = useCountUp(transactionCount, {
     formatter: (value) => Math.round(value).toLocaleString("en-US"),
-  })
+  });
 
   return (
     <div className="space-y-5">
       <div className="grid auto-rows-fr gap-4 md:grid-cols-3">
-        <SummaryMetricCard label="Total Received" value={received} prefix="+" detail="Incoming transfers" tone="incoming" />
-        <SummaryMetricCard label="Total Sent" value={sent} prefix="−" detail="Transfers and withdrawals" tone="outgoing" />
-        <SummaryMetricCard label="Total Deposits" value={deposits} prefix="+" detail="Locked deposits" tone="deposit" />
+        <SummaryMetricCard
+          label="Total Received"
+          value={received}
+          prefix="+"
+          detail="Incoming transfers"
+          tone="incoming"
+        />
+        <SummaryMetricCard
+          label="Total Sent"
+          value={sent}
+          prefix="−"
+          detail="Transfers and withdrawals"
+          tone="outgoing"
+        />
+        <SummaryMetricCard
+          label="Total Deposits"
+          value={deposits}
+          prefix="+"
+          detail="Locked deposits"
+          tone="deposit"
+        />
       </div>
       <div className="rounded-xl border border-border bg-secondary/60 p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-4">
               <p className="text-sm font-medium text-muted-foreground">Flow Mix</p>
-              <p className="font-mono text-sm text-muted-foreground">{transactionCountLabel} transactions</p>
+              <p className="font-mono text-sm text-muted-foreground">
+                {transactionCountLabel} transactions
+              </p>
             </div>
-            <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-background" aria-hidden="true">
+            <div
+              className="mt-3 flex h-3 overflow-hidden rounded-full bg-background"
+              aria-hidden="true"
+            >
               {flowSegments.map((segment, index) => (
                 <span
                   key={segment.label}
@@ -292,13 +364,19 @@ function TransactionSummary({
               ))}
             </div>
             <p className="sr-only">
-              Flow mix: {formatCcx(received)} received, {formatCcx(sent)} sent, {formatCcx(deposits)} deposits.
+              Flow mix: {formatCcx(received)} received, {formatCcx(sent)} sent,{" "}
+              {formatCcx(deposits)} deposits.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {flowSegments.map((segment) => (
                 <div key={segment.label} className="min-w-0">
                   <p className="text-xs text-muted-foreground">{segment.label}</p>
-                  <p className={cn("mt-1 truncate font-mono text-sm font-semibold", segment.textClassName)}>
+                  <p
+                    className={cn(
+                      "mt-1 truncate font-mono text-sm font-semibold",
+                      segment.textClassName,
+                    )}
+                  >
                     {segment.prefix}
                     <CcxAmount>{formatCcx(segment.value)}</CcxAmount>
                   </p>
@@ -308,14 +386,19 @@ function TransactionSummary({
           </div>
           <div className="rounded-xl border border-border bg-card p-4 lg:min-w-[230px]">
             <p className="text-sm text-muted-foreground">Net Flow</p>
-            <p className={cn("mt-2 wrap-break-word font-mono text-2xl font-bold", netFlow >= 0 ? "text-wallet-incoming" : "text-wallet-outgoing")}>
+            <p
+              className={cn(
+                "mt-2 wrap-break-word font-mono text-2xl font-bold",
+                netFlow >= 0 ? "text-wallet-incoming" : "text-wallet-outgoing",
+              )}
+            >
               <CcxAmount>{netFlowLabel}</CcxAmount>
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function SummaryMetricCard({
@@ -325,30 +408,37 @@ function SummaryMetricCard({
   detail,
   tone,
 }: {
-  label: string
-  value: number
-  prefix: "+" | "−"
-  detail: string
-  tone: "incoming" | "outgoing" | "deposit"
+  label: string;
+  value: number;
+  prefix: "+" | "−";
+  detail: string;
+  tone: "incoming" | "outgoing" | "deposit";
 }) {
   const valueLabel = useCountUp(value, {
     formatter: (countedValue) => `${prefix}${formatCcx(countedValue)}`,
-  })
+  });
   const toneClass = {
     incoming: "text-wallet-incoming",
     outgoing: "text-wallet-outgoing",
     deposit: "text-wallet-deposit",
-  }[tone]
+  }[tone];
 
   return (
     <div className="flex min-h-[118px] flex-col justify-between rounded-xl border border-border bg-secondary/60 p-4">
       <div>
         <p className="text-sm text-muted-foreground">{label}</p>
-        <p className={cn("mt-3 wrap-break-word font-mono text-2xl font-bold tracking-tight", toneClass)}><CcxAmount>{valueLabel}</CcxAmount></p>
+        <p
+          className={cn(
+            "mt-3 wrap-break-word font-mono text-2xl font-bold tracking-tight",
+            toneClass,
+          )}
+        >
+          <CcxAmount>{valueLabel}</CcxAmount>
+        </p>
       </div>
       <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
     </div>
-  )
+  );
 }
 
 function TransactionDateGroup({
@@ -356,9 +446,9 @@ function TransactionDateGroup({
   groupIndex,
   onSelect,
 }: {
-  group: { label: DateGroup; transactions: Transaction[] }
-  groupIndex: number
-  onSelect: (transaction: Transaction) => void
+  group: { label: DateGroup; transactions: Transaction[] };
+  groupIndex: number;
+  onSelect: (transaction: Transaction) => void;
 }) {
   return (
     <section aria-labelledby={`transactions-${group.label.replace(/\s/g, "-").toLowerCase()}`}>
@@ -383,19 +473,19 @@ function TransactionDateGroup({
         ))}
       </ul>
     </section>
-  )
+  );
 }
 
 function TransactionListRow({
   transaction,
   onSelect,
 }: {
-  transaction: Transaction
-  onSelect: (transaction: Transaction) => void
+  transaction: Transaction;
+  onSelect: (transaction: Transaction) => void;
 }) {
-  const meta = transactionMeta[transaction.type]
-  const status = getTransactionStatus(transaction.confirmations)
-  const Icon = meta.icon
+  const meta = transactionMeta[resolveUiTransactionType(transaction)];
+  const status = getTransactionStatus(transaction.confirmations);
+  const Icon = meta.icon;
 
   return (
     <button
@@ -405,7 +495,10 @@ function TransactionListRow({
       aria-label={`${meta.label} transaction for ${formatSignedAmount(transaction)} from ${timeAgo(transaction.timestamp)}`}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", meta.chipClassName)} aria-hidden="true">
+        <span
+          className={cn("grid size-10 shrink-0 place-items-center rounded-xl", meta.chipClassName)}
+          aria-hidden="true"
+        >
           <Icon className="size-5" />
         </span>
         <div className="min-w-0">
@@ -430,30 +523,36 @@ function TransactionListRow({
         <span className="hidden text-xs text-muted-foreground sm:block">{meta.label}</span>
       </div>
     </button>
-  )
+  );
 }
 
 function TransactionDetailsDialog({
   transaction,
   onOpenChange,
 }: {
-  transaction: Transaction | null
-  onOpenChange: (open: boolean) => void
+  transaction: Transaction | null;
+  onOpenChange: (open: boolean) => void;
 }) {
   if (!transaction) {
-    return null
+    return null;
   }
 
-  const meta = transactionMeta[transaction.type]
-  const status = getTransactionStatus(transaction.confirmations)
-  const Icon = meta.icon
+  const meta = transactionMeta[resolveUiTransactionType(transaction)];
+  const status = getTransactionStatus(transaction.confirmations);
+  const Icon = meta.icon;
 
   return (
     <Dialog open={Boolean(transaction)} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <div className="flex items-start gap-3 pr-8">
-            <span className={cn("grid size-11 shrink-0 place-items-center rounded-xl", meta.chipClassName)} aria-hidden="true">
+            <span
+              className={cn(
+                "grid size-11 shrink-0 place-items-center rounded-xl",
+                meta.chipClassName,
+              )}
+              aria-hidden="true"
+            >
               <Icon className="size-5" />
             </span>
             <div>
@@ -477,8 +576,15 @@ function TransactionDetailsDialog({
 
         <dl className="grid gap-3">
           <DetailRow label="Type" value={meta.label} />
-          <DetailRow label="Timestamp" value={formatTimestamp(transaction.timestamp)} icon={CalendarClock} />
-          <DetailRow label="Confirmations" value={transaction.confirmations.toLocaleString("en-US")} />
+          <DetailRow
+            label="Timestamp"
+            value={formatTimestamp(transaction.timestamp)}
+            icon={CalendarClock}
+          />
+          <DetailRow
+            label="Confirmations"
+            value={transaction.confirmations.toLocaleString("en-US")}
+          />
           <DetailRow label="Status" value={status} />
           <DetailRow label="Payment ID" value={transaction.paymentId ?? "Not provided"} />
           <DetailRow label="Message" value={transaction.message ?? "Not provided"} />
@@ -489,14 +595,16 @@ function TransactionDetailsDialog({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm text-muted-foreground">Full Address</p>
-              <p className="mt-2 break-all font-mono text-sm text-foreground">{transaction.address}</p>
+              <p className="mt-2 break-all font-mono text-sm text-foreground">
+                {transaction.address}
+              </p>
             </div>
             <CopyButton value={transaction.address} label="Copy address" />
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function DetailRow({
@@ -505,10 +613,10 @@ function DetailRow({
   icon: Icon,
   mono,
 }: {
-  label: string
-  value: string
-  icon?: LucideIcon
-  mono?: boolean
+  label: string;
+  value: string;
+  icon?: LucideIcon;
+  mono?: boolean;
 }) {
   return (
     <div className="grid gap-1 rounded-xl border border-border bg-secondary/60 p-3 sm:grid-cols-[140px_1fr] sm:gap-4">
@@ -516,52 +624,84 @@ function DetailRow({
         {Icon ? <Icon className="size-4" aria-hidden="true" /> : null}
         {label}
       </dt>
-      <dd className={cn("min-w-0 wrap-break-word text-sm text-foreground", mono && "break-all font-mono")}>{value}</dd>
+      <dd
+        className={cn(
+          "min-w-0 wrap-break-word text-sm text-foreground",
+          mono && "break-all font-mono",
+        )}
+      >
+        {value}
+      </dd>
     </div>
-  )
+  );
 }
 
 function StatusPill({ status }: { status: TransactionStatus }) {
-  const confirmed = status === "Confirmed"
+  const confirmed = status === "Confirmed";
 
   return (
     <span
       className={cn(
         "inline-flex min-h-7 items-center rounded-full px-2.5 py-1 text-xs font-semibold",
-        confirmed ? "bg-wallet-incoming/10 text-wallet-incoming" : "bg-primary/10 text-primary"
+        confirmed ? "bg-wallet-incoming/10 text-wallet-incoming" : "bg-primary/10 text-primary",
       )}
     >
       {status}
     </span>
-  )
+  );
 }
 
 function getTransactionStatus(confirmations: number): TransactionStatus {
-  return confirmations >= 10 ? "Confirmed" : "Pending"
+  return confirmations >= 10 ? "Confirmed" : "Pending";
 }
 
 function formatSignedAmount(transaction: Transaction) {
-  const meta = transactionMeta[transaction.type]
-  return `${meta.sign}${formatCcx(transaction.amount)}`
+  const effectiveType = resolveUiTransactionType(transaction);
+  const meta = transactionMeta[effectiveType];
+  const sign = effectiveType === "message" && isUiMessageOut(transaction) ? "−" : meta.sign;
+  return `${sign}${formatCcx(transaction.amount)}`;
+}
+
+function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
+  const effectiveType = resolveUiTransactionType(transaction);
+  switch (tab) {
+    case "All":
+      return true;
+    case "Received":
+      return (
+        effectiveType === "receive" ||
+        effectiveType === "miner" ||
+        effectiveType === "withdrawal" ||
+        isUiMessageIn(transaction)
+      );
+    case "Sent":
+      return effectiveType === "send" || effectiveType === "fusion" || isUiMessageOut(transaction);
+    case "Deposits":
+      return transaction.type === "deposit";
+    case "Withdrawals":
+      return transaction.type === "withdrawal";
+    default:
+      return true;
+  }
 }
 
 function formatTimestamp(timestamp: string) {
-  return timestampFormatter.format(new Date(timestamp))
+  return timestampFormatter.format(new Date(timestamp));
 }
 
 function groupTransactionDate(timestamp: string): DateGroup {
-  const transactionDate = new Date(timestamp)
-  const now = new Date()
-  const todayStart = startOfLocalDay(now)
-  const transactionStart = startOfLocalDay(transactionDate)
-  const dayDifference = Math.floor((todayStart - transactionStart) / 86_400_000)
+  const transactionDate = new Date(timestamp);
+  const now = new Date();
+  const todayStart = startOfLocalDay(now);
+  const transactionStart = startOfLocalDay(transactionDate);
+  const dayDifference = Math.floor((todayStart - transactionStart) / 86_400_000);
 
-  if (dayDifference <= 0) return "Today"
-  if (dayDifference === 1) return "Yesterday"
-  if (dayDifference < 7) return "This Week"
-  return "Earlier"
+  if (dayDifference <= 0) return "Today";
+  if (dayDifference === 1) return "Yesterday";
+  if (dayDifference < 7) return "This Week";
+  return "Earlier";
 }
 
 function startOfLocalDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }

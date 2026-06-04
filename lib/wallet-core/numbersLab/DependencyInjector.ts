@@ -9,111 +9,105 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Context} from "./Context";
+import { Context } from "./Context";
 
-export class DependencyInjector{
+export class DependencyInjector {
+  static debug = true;
 
-    static debug = true;
+  values: any = {};
 
-    values:any = {};
+  getInstance(name: string, subname: string = "default", createIfPossible: boolean = true): any {
+    if (typeof this.values[name + "-" + subname] != "undefined")
+      return this.values[name + "-" + subname];
+    if (createIfPossible) return this.returnBest(name, subname);
+    return null;
+  }
 
-    getInstance(name:string, subname:string='default', createIfPossible:boolean=true):any{
-        if(typeof this.values[name+'-'+subname] != 'undefined')
-            return this.values[name+'-'+subname];
-        if(createIfPossible)
-            return this.returnBest(name, subname);
-        return null;
+  register(name: string, object: any, subname: string = "default"): any {
+    this.values[name + "-" + subname] = object;
+  }
+
+  returnBest(name: string, subname: string): any {
+    const found: any = this.searchFromRequireJs(name);
+    //console.log(name, subname,found);
+    if (found != null) {
+      this.register(name, new found(), subname);
     }
+    return this.getInstance(name, subname, false);
+  }
 
-    register(name:string, object:any, subname:string='default'):any{
-        this.values[name+'-'+subname] = object;
+  searchFromRequireJs(name: string) {
+    // v2 uses ESM imports; RequireJS is not loaded in the browser.
+    const req = typeof window !== "undefined" ? (<any>window).require : undefined;
+    if (!req?.s?.contexts?._?.defined) {
+      return null;
     }
+    const loaded = req.s.contexts._.defined;
+    let dependency = null;
 
-    returnBest(name:string, subname:string):any{
-        let found : any = this.searchFromRequireJs(name);
-        //console.log(name, subname,found);
-        if(found != null){
-            this.register(name, new found(), subname);
+    //console.log(loaded);
+
+    for (const containerName in loaded) {
+      const container = loaded[containerName];
+      //console.log('type', typeof container, container, container[name]);
+      if (typeof container[name] != "undefined") {
+        if (!DependencyInjector.debug) return container[name];
+        else {
+          if (dependency != null) {
+            //console.log('%c/!\\ Dependency injector : Multiple Classes Have the same name !! Conflict when resolving dependencies', 'background: white;color: red');
+          }
         }
-        return this.getInstance(name, subname, false);
-    }
-
-    searchFromRequireJs(name:string){
-        // v2 uses ESM imports; RequireJS is not loaded in the browser.
-        const req = typeof window !== "undefined" ? (<any>window).require : undefined;
-        if (!req?.s?.contexts?._?.defined) {
-            return null;
+        dependency = container[name];
+      } else {
+        //console.log('default->', typeof container['default']);
+        if (
+          typeof container["default"] === "function" ||
+          typeof container["default"] === "object"
+        ) {
+          if (container["default"].name === name) {
+            if (!DependencyInjector.debug) return container["default"];
+            else {
+              if (dependency != null) {
+                //console.log('%c/!\\ Dependency injector : Multiple Classes Have the same name !! Conflict when resolving dependencies', 'background: white;color: red');
+              }
+            }
+            dependency = container["default"];
+          }
         }
-        let loaded = req.s.contexts._.defined;
-        let dependency = null;
-
-        //console.log(loaded);
-
-        for(let containerName in loaded){
-            let container = loaded[containerName];
-            //console.log('type', typeof container, container, container[name]);
-            if(typeof container[name] != 'undefined') {
-                if(!DependencyInjector.debug)
-                    return container[name];
-                else{
-                    if(dependency != null){
-                        //console.log('%c/!\\ Dependency injector : Multiple Classes Have the same name !! Conflict when resolving dependencies', 'background: white;color: red');
-                    }
-                }
-                dependency = container[name];
-            }else{
-				//console.log('default->', typeof container['default']);
-				if(
-					typeof container['default'] === 'function' ||
-					typeof container['default'] === 'object'
-				){
-            		if(container['default'].name === name){
-						if(!DependencyInjector.debug)
-							return container['default'];
-						else{
-							if(dependency != null){
-								//console.log('%c/!\\ Dependency injector : Multiple Classes Have the same name !! Conflict when resolving dependencies', 'background: white;color: red');
-							}
-						}
-						dependency = container['default'];
-					}
-				}
-			}
-        }
-        return dependency;
+      }
     }
-
+    return dependency;
+  }
 }
 
-export function DependencyInjectorInstance() : DependencyInjector{
-	if(
-		typeof Context.getGlobalContext()['di'] === 'undefined' ||
-		Context.getGlobalContext()['di'] === null
-	){
-		let Inj : DependencyInjector = new DependencyInjector();
-		Context.getGlobalContext()['di'] = Inj;
-		//console.log('register');
-	}
-	return Context.getGlobalContext()['di'];
+export function DependencyInjectorInstance(): DependencyInjector {
+  if (
+    typeof Context.getGlobalContext()["di"] === "undefined" ||
+    Context.getGlobalContext()["di"] === null
+  ) {
+    const Inj: DependencyInjector = new DependencyInjector();
+    Context.getGlobalContext()["di"] = Inj;
+    //console.log('register');
+  }
+  return Context.getGlobalContext()["di"];
 }
-
 
 export function Autowire(...keys: string[]) {
-    // Inj.need(keys[0]);
-    return function(target: any, key: string) {
-        // property getter
-        let getter = function () {
-			let Inj : DependencyInjector = DependencyInjectorInstance();
-            //console.log(Get: ${key} => ${_val});
-            let subname = keys.length > 1 ? keys[1] : 'default';
-            return Inj.getInstance(keys[0],subname);
-        };
+  // Inj.need(keys[0]);
+  return (target: any, key: string) => {
+    // property getter
+    const getter = () => {
+      const Inj: DependencyInjector = DependencyInjectorInstance();
+      //console.log(Get: ${key} => ${_val});
+      const subname = keys.length > 1 ? keys[1] : "default";
+      return Inj.getInstance(keys[0], subname);
+    };
 
-        // Delete property.
-        if (delete target[key]) {
-            Object.defineProperty(target, key, {
-                get: getter
-            });
-        }
+    // Delete property.
+    if (delete target[key]) {
+      Object.defineProperty(target, key, {
+        get: getter,
+      });
     }
+  };
 }

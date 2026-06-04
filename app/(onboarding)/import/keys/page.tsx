@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { ImportKeysForm } from "@/app/(onboarding)/onboarding-actions"
-import { SectionCard } from "@/components/wallet/common"
+import { ImportKeysForm } from "@/app/(onboarding)/onboarding-actions";
+import { SectionCard } from "@/components/wallet/common";
 
 export default function ImportKeysPage() {
   return (
@@ -10,5 +10,5 @@ export default function ImportKeysPage() {
         <ImportKeysForm />
       </SectionCard>
     </div>
-  )
+  );
 }

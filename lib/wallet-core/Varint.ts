@@ -22,7 +22,11 @@ const MSBALL = ~REST;
 const INT = Math.pow(2, 31);
 const TWO_POWER_SEVEN = Math.pow(2, 7);
 
-export const encode = function (num: number, out: number[] | Uint8Array = [], offset = 0): number[] | Uint8Array {
+export const encode = ((
+  num: number,
+  out: number[] | Uint8Array = [],
+  offset = 0,
+): number[] | Uint8Array => {
   if (Number.MAX_SAFE_INTEGER && num > Number.MAX_SAFE_INTEGER) {
     encode.bytes = 0;
     throw new RangeError("Could not encode varint");
@@ -42,9 +46,11 @@ export const encode = function (num: number, out: number[] | Uint8Array = [], of
   encode.bytes = offset - oldOffset + 1;
 
   return out;
-} as ((num: number, out?: number[] | Uint8Array, offset?: number) => number[] | Uint8Array) & { bytes: number };
+}) as ((num: number, out?: number[] | Uint8Array, offset?: number) => number[] | Uint8Array) & {
+  bytes: number;
+};
 
-export const decode = function (buf: ArrayLike<number>, offset = 0): number {
+export const decode = ((buf: ArrayLike<number>, offset = 0): number => {
   let res = 0,
     shift = 1,
     counter = offset,
@@ -64,4 +70,4 @@ export const decode = function (buf: ArrayLike<number>, offset = 0): number {
   decode.bytes = counter - offset;
 
   return res;
-} as ((buf: ArrayLike<number>, offset?: number) => number) & { bytes: number };
+}) as ((buf: ArrayLike<number>, offset?: number) => number) & { bytes: number };

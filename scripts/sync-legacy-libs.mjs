@@ -5,18 +5,18 @@
  * Run after updating the legacy wallet repo:
  *   npm run sync:legacy-libs
  */
-import { copyFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { copyFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const root = join(__dirname, "..")
-const legacyRoot = join(root, "..", "conceal-web-wallet", "src")
-const legacyLib = join(legacyRoot, "lib")
-const publicLib = join(root, "public", "lib")
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = join(__dirname, "..");
+const legacyRoot = join(root, "..", "conceal-web-wallet", "src");
+const legacyLib = join(legacyRoot, "lib");
+const publicLib = join(root, "public", "lib");
 
 /** Loaded by ensureWalletRuntimeLibs() — required for wallet-core crypto + storage. */
-const CORE_FILES = ["biginteger.js", "nacl-fast.min.js", "nacl-util.min.js"]
+const CORE_FILES = ["biginteger.js", "nacl-fast.min.js", "nacl-util.min.js"];
 
 /** Loaded on demand via ensureWalletExtendedLibs() when export/QR/workers run. */
 const EXTENDED_FILES = [
@@ -25,16 +25,16 @@ const EXTENDED_FILES = [
   "FileSaver.min.js",
   "kjua-0.1.1.min.js",
   "decoder.min.js",
-]
+];
 
 /** Required by wallet-sync-entrypoint.js importScripts (v1 worker parity). */
-const WORKER_LIB_FILES = ["require.js", "crypto.js", "sha3.js", "nacl-fast.js"]
+const WORKER_LIB_FILES = ["require.js", "crypto.js", "sha3.js", "nacl-fast.js"];
 
 /** Legacy polyfills — optional; modern browsers usually skip these. */
-const OPTIONAL_DIRS = ["polyfills"]
+const OPTIONAL_DIRS = ["polyfills"];
 
 /** Synced for reference / future PDF export; not loaded by default. */
-const OPTIONAL_FILES = ["jspdf.min.js"]
+const OPTIONAL_FILES = ["jspdf.min.js"];
 
 /** Vue/jQuery/RequireJS stack — replaced by Next/React; listed only for parity. */
 const SKIPPED_UI_LEGACY = [
@@ -47,45 +47,45 @@ const SKIPPED_UI_LEGACY = [
   "crypto.js",
   "cn_utils.js",
   "nacl-fast.js",
-]
+];
 
 function copyFile(name, destDir = publicLib) {
-  const src = join(legacyLib, name)
+  const src = join(legacyLib, name);
   if (!existsSync(src)) {
-    console.error(`Missing legacy file: ${src}`)
-    process.exit(1)
+    console.error(`Missing legacy file: ${src}`);
+    process.exit(1);
   }
-  copyFileSync(src, join(destDir, name))
-  console.log(`Copied ${name}`)
+  copyFileSync(src, join(destDir, name));
+  console.log(`Copied ${name}`);
 }
 
-mkdirSync(publicLib, { recursive: true })
+mkdirSync(publicLib, { recursive: true });
 
-for (const file of CORE_FILES) copyFile(file)
-for (const file of EXTENDED_FILES) copyFile(file)
+for (const file of CORE_FILES) copyFile(file);
+for (const file of EXTENDED_FILES) copyFile(file);
 for (const file of WORKER_LIB_FILES) {
-  const src = join(legacyLib, file)
-  if (existsSync(src)) copyFile(file)
-  else console.warn(`Worker lib not found, skipped: ${file}`)
+  const src = join(legacyLib, file);
+  if (existsSync(src)) copyFile(file);
+  else console.warn(`Worker lib not found, skipped: ${file}`);
 }
 for (const file of OPTIONAL_FILES) {
-  const src = join(legacyLib, file)
-  if (existsSync(src)) copyFile(file)
-  else console.warn(`Optional file not found, skipped: ${file}`)
+  const src = join(legacyLib, file);
+  if (existsSync(src)) copyFile(file);
+  else console.warn(`Optional file not found, skipped: ${file}`);
 }
 
 for (const dir of OPTIONAL_DIRS) {
-  const src = join(legacyLib, dir)
+  const src = join(legacyLib, dir);
   if (existsSync(src)) {
-    cpSync(src, join(publicLib, dir), { recursive: true })
-    console.log(`Copied ${dir}/`)
+    cpSync(src, join(publicLib, dir), { recursive: true });
+    console.log(`Copied ${dir}/`);
   }
 }
 
-const legacyConcealjs = join(legacyLib, "concealjs")
+const legacyConcealjs = join(legacyLib, "concealjs");
 if (existsSync(legacyConcealjs)) {
-  cpSync(legacyConcealjs, join(publicLib, "concealjs"), { recursive: true })
-  console.log("Copied concealjs/")
+  cpSync(legacyConcealjs, join(publicLib, "concealjs"), { recursive: true });
+  console.log("Copied concealjs/");
 }
 
 const manifest = {
@@ -100,12 +100,14 @@ const manifest = {
   skippedUiLegacy: SKIPPED_UI_LEGACY,
   notes: {
     core: "ensureWalletRuntimeLibs() in lib/conceal/init.ts",
-    extended: "ensureWalletExtendedLibs() — export download, kjua QR, QR import scanner, sync workers",
-    workers: "WalletWatchdog loads /workers/wallet-sync-entrypoint.js (esbuild bundle + importScripts globals)",
+    extended:
+      "ensureWalletExtendedLibs() — export download, kjua QR, QR import scanner, sync workers",
+    workers:
+      "WalletWatchdog loads /workers/wallet-sync-entrypoint.js (esbuild bundle + importScripts globals)",
     skipped: "Replaced by Next.js, React, sonner, qrcode.react, etc.",
   },
-}
+};
 
-writeFileSync(join(publicLib, "legacy-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`)
-console.log("Wrote public/lib/legacy-manifest.json")
-console.log("Legacy libs synced to public/lib/")
+writeFileSync(join(publicLib, "legacy-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+console.log("Wrote public/lib/legacy-manifest.json");
+console.log("Legacy libs synced to public/lib/");

@@ -1,7 +1,7 @@
-import { withBasePath } from "@/lib/utils"
+import { withBasePath } from "@/lib/utils";
 
 const COIN_MASK =
-  "radial-gradient(circle at 50% 49%, #000 42%, rgba(0,0,0,.45) 58%, transparent 70%)"
+  "radial-gradient(circle at 50% 49%, #000 42%, rgba(0,0,0,.45) 58%, transparent 70%)";
 
 /** Fixed, full-bleed atmosphere for the landing hero: a warm ambient light in
  *  the top-right and the faceted Conceal coin sitting low/right, bleeding off
@@ -29,5 +29,5 @@ export function ConcealBackdrop() {
         }}
       />
     </div>
-  )
+  );
 }

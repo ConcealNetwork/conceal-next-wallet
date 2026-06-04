@@ -1,29 +1,34 @@
-import { mockMessages } from "@/lib/mock-data/wallet"
-import { clone, mockDelay } from "@/lib/services/mock/helpers"
-import type { MessageService } from "@/lib/services/message.service"
+import { mockMessages } from "@/lib/mock-data/wallet";
+import { clone, mockDelay } from "@/lib/services/mock/helpers";
+import type { MessageService } from "@/lib/services/message.service";
+import { buildMessageThreadKey } from "@/lib/wallet-core/mappers";
 
 export const mockMessageService: MessageService = {
   async listMessages() {
-    // TODO(backend): replace with real Conceal RPC/walletd call
-    await mockDelay()
-    return clone(mockMessages)
+    await mockDelay();
+    return clone(mockMessages);
   },
   async sendMessage(input) {
-    // TODO(backend): replace with real Conceal RPC/walletd call
-    await mockDelay()
+    await mockDelay();
+    const paymentId = input.paymentId?.trim() || undefined;
     return {
       id: `msg-mock-${Date.now()}`,
       direction: "sent",
       counterpartyName: "New Contact",
       counterpartyAddress: input.recipientAddress,
       body: input.body,
+      hasBody: true,
+      sentTo: input.recipientAddress,
+      paymentIdFrom: null,
+      paymentIdTo: paymentId ?? null,
       timestamp: new Date().toISOString(),
       unread: false,
-    }
+      blockHeight: 0,
+      threadKey: buildMessageThreadKey(input.recipientAddress, paymentId),
+    };
   },
   async markRead(id) {
-    // TODO(backend): replace with real Conceal RPC/walletd call
-    await mockDelay()
-    return clone(mockMessages.find((message) => message.id === id) ?? mockMessages[0])
+    await mockDelay();
+    return clone(mockMessages.find((message) => message.id === id) ?? mockMessages[0]);
   },
-}
+};

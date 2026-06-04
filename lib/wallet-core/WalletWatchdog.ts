@@ -30,8 +30,8 @@
  *     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import { Wallet } from "./Wallet";
-import { BlockchainExplorer, RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
+import type { Wallet } from "./Wallet";
+import type { BlockchainExplorer, RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
 import { TransactionData } from "./Transaction";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import { walletWorkerUrl } from "./worker-url";
@@ -71,8 +71,8 @@ class TxQueue {
     this.isApplying = true;
 
     try {
-      for (let txData of parsedTransactions) {
-        let txDataObject = TransactionData.fromRaw(txData);
+      for (const txData of parsedTransactions) {
+        const txDataObject = TransactionData.fromRaw(txData);
 
         this.wallet.addNew(txDataObject.transaction);
         this.wallet.addDeposits(txDataObject.deposits);
@@ -119,7 +119,10 @@ class BlockList {
     this.chainHeight = 0;
     this.watchdog = watchdog;
     this.txQueue = new TxQueue(wallet, (blockNumber: number) => {
-      this.wallet.lastHeight = Math.min(this.chainHeight, Math.max(this.wallet.lastHeight, blockNumber));
+      this.wallet.lastHeight = Math.min(
+        this.chainHeight,
+        Math.max(this.wallet.lastHeight, blockNumber),
+      );
       this.watchdog.setLastBlockLoadingFromApply(blockNumber);
       this.watchdog.checkMempool();
       this.watchdog.notifyTxQueueDrain();
@@ -134,7 +137,7 @@ class BlockList {
 
     this.chainHeight = Math.max(this.chainHeight, chainHeight);
 
-    let rangeData: IBlockRange = {
+    const rangeData: IBlockRange = {
       startBlock: startBlock,
       endBlock: endBlock,
       finished: false,
@@ -162,7 +165,11 @@ class BlockList {
     return true;
   };
 
-  setFetchedTransactions = (startBlock: number, endBlock: number, transactions: RawDaemon_Transaction[]) => {
+  setFetchedTransactions = (
+    startBlock: number,
+    endBlock: number,
+    transactions: RawDaemon_Transaction[],
+  ) => {
     for (let i = 0; i < this.blocks.length; ++i) {
       if (this.blocks[i].startBlock === startBlock && this.blocks[i].endBlock === endBlock) {
         this.blocks[i].fetched = true;
@@ -234,7 +241,7 @@ class BlockList {
 
   buildOwnedTransactions = (range: IBlockRange): RawDaemon_Transaction[] => {
     const owned: RawDaemon_Transaction[] = [];
-    for (let raw of range.fetchedTransactions) {
+    for (const raw of range.fetchedTransactions) {
       if (raw?.height && raw.hash && range.screenHashes.has(raw.hash)) {
         owned.push(raw);
       }
@@ -253,7 +260,7 @@ class BlockList {
 
     while (this.blocks.length > 0) {
       if (this.blocks[0].finished) {
-        let block = this.blocks.shift()!;
+        const block = this.blocks.shift()!;
         this.txQueue.applyParsedTransactions(block.parsedTransactions, block.endBlock);
       } else {
         break;
@@ -282,7 +289,7 @@ class BlockList {
       return null;
     }
 
-    let timeDiff: number = new Date().getTime() - head.timestamp.getTime();
+    const timeDiff: number = new Date().getTime() - head.timestamp.getTime();
     if (timeDiff / 1000 > 30) {
       if (reset) {
         head.timestamp = new Date();
@@ -322,7 +329,12 @@ class ParseWorker {
   private countProcessed: number;
   private parseTxCallback: ParseTxCallback;
 
-  constructor(wallet: Wallet, watchdog: WalletWatchdog, blockList: BlockList, parseTxCallback: ParseTxCallback) {
+  constructor(
+    wallet: Wallet,
+    watchdog: WalletWatchdog,
+    blockList: BlockList,
+    parseTxCallback: ParseTxCallback,
+  ) {
     this.parseTxCallback = parseTxCallback;
     this.blockList = blockList;
     this.watchdog = watchdog;
@@ -337,7 +349,7 @@ class ParseWorker {
   initWorker = (): Worker => {
     this.workerProcess = new Worker(walletWorkerUrl("wallet-sync-entrypoint.js"));
     this.workerProcess.onmessage = (data: MessageEvent) => {
-      let message: string | any = data.data;
+      const message: string | any = data.data;
       if (message === "ready") {
         logDebugMsg("worker ready...");
         // signal the wallet update
@@ -357,7 +369,11 @@ class ParseWorker {
           this.setIsWorking(false);
           this.parseTxCallback();
         } else if (message.type === "processed") {
-          this.blockList.finishBlockRange(message.startBlock, message.maxHeight, message.transactions);
+          this.blockList.finishBlockRange(
+            message.startBlock,
+            message.maxHeight,
+            message.transactions,
+          );
           this.setIsWorking(false);
           this.parseTxCallback();
         }
@@ -411,7 +427,7 @@ class SyncWorker {
 
   fetchBlocks = (
     startBlock: number,
-    endBlock: number
+    endBlock: number,
   ): Promise<{ transactions: RawDaemon_Transaction[]; lastBlock: number; startBlock: number }> => {
     this.isWorking = true;
 
@@ -419,7 +435,7 @@ class SyncWorker {
       this.prefetchSlotIndex,
       startBlock,
       endBlock,
-      this.wallet.options.checkMinerTx
+      this.wallet.options.checkMinerTx,
     );
 
     return fetchPromise
@@ -465,8 +481,10 @@ export class WalletWatchdog {
     console.log("WalletWatchdog");
     // by default we use all cores but limited up to config.maxWorkerCores
     this.maxCpuCores = Math.min(
-      window.navigator.hardwareConcurrency ? Math.max(window.navigator.hardwareConcurrency - 1, 1) : 1,
-      config.maxWorkerCores
+      window.navigator.hardwareConcurrency
+        ? Math.max(window.navigator.hardwareConcurrency - 1, 1)
+        : 1,
+      config.maxWorkerCores,
     );
 
     this.wallet = wallet;
@@ -474,7 +492,9 @@ export class WalletWatchdog {
     this.blockList = new BlockList(wallet, this);
 
     for (let i = 0; i < config.maxPrefetchParallel; ++i) {
-      this.filterWorkers.push(new ParseWorker(this.wallet, this, this.blockList, this.tryScheduleFilter));
+      this.filterWorkers.push(
+        new ParseWorker(this.wallet, this, this.blockList, this.tryScheduleFilter),
+      );
       this.syncWorkers.push(new SyncWorker(this.explorer, this.wallet, i));
     }
 
@@ -487,7 +507,11 @@ export class WalletWatchdog {
     if (this.wallet.options.readSpeed == 10) {
       this.remoteNodes = Math.min(config.maxPrefetchParallel, poolSize, config.maxRemoteNodes);
     } else if (this.wallet.options.readSpeed == 50) {
-      this.remoteNodes = Math.min(Math.max(1, Math.floor(poolSize / 2)), config.maxPrefetchParallel, config.maxRemoteNodes);
+      this.remoteNodes = Math.min(
+        Math.max(1, Math.floor(poolSize / 2)),
+        config.maxPrefetchParallel,
+        config.maxRemoteNodes,
+      );
     } else if (this.wallet.options.readSpeed == 100) {
       this.remoteNodes = 1;
     } else {
@@ -516,7 +540,7 @@ export class WalletWatchdog {
         () => {
           this.checkMempool();
         },
-        (config.avgBlockTime / 4) * 1000
+        (config.avgBlockTime / 4) * 1000,
       );
     }
     this.checkMempool();
@@ -681,7 +705,10 @@ export class WalletWatchdog {
   };
 
   private isTxQueueFull = (incomingTxCount: number = 0): boolean => {
-    return this.queuedTxCount() + incomingTxCount > config.maxTxQueueHigh || this.blockList.getSize() >= config.maxTxQueuePackets;
+    return (
+      this.queuedTxCount() + incomingTxCount > config.maxTxQueueHigh ||
+      this.blockList.getSize() >= config.maxTxQueuePackets
+    );
   };
 
   private waitForQueueCapacity = async (incomingTxCount: number = 0): Promise<void> => {
@@ -704,7 +731,10 @@ export class WalletWatchdog {
   };
 
   private isTxQueueBelowLowWatermark = (): boolean => {
-    return this.queuedTxCount() <= config.maxTxQueueLow && this.blockList.getSize() <= this.getTxQueuePacketsLowWatermark();
+    return (
+      this.queuedTxCount() <= config.maxTxQueueLow &&
+      this.blockList.getSize() <= this.getTxQueuePacketsLowWatermark()
+    );
   };
 
   notifyTxQueueDrain = (): void => {
@@ -748,8 +778,8 @@ export class WalletWatchdog {
       .getTransactionPool()
       .then((pool: any) => {
         if (typeof pool !== "undefined") {
-          for (let rawTx of pool) {
-            let txData = TransactionsExplorer.parse(rawTx, this.wallet);
+          for (const rawTx of pool) {
+            const txData = TransactionsExplorer.parse(rawTx, this.wallet);
 
             if (txData !== null && txData.transaction !== null) {
               this.wallet.addNewMemTx(txData.transaction);
@@ -766,7 +796,11 @@ export class WalletWatchdog {
     return true;
   };
 
-  private onBlockRangeFetched = (startBlock: number, endBlock: number, transactions: RawDaemon_Transaction[]): void => {
+  private onBlockRangeFetched = (
+    startBlock: number,
+    endBlock: number,
+    transactions: RawDaemon_Transaction[],
+  ): void => {
     this.blockList.setFetchedTransactions(startBlock, endBlock, transactions);
     this.tryScheduleFilter();
   };
@@ -806,7 +840,7 @@ export class WalletWatchdog {
   };
 
   startSyncLoop = async () => {
-    (async function (self) {
+    (async (self) => {
       while (!self.stopped) {
         try {
           if (self.lastBlockLoading === -1) {
@@ -815,13 +849,18 @@ export class WalletWatchdog {
 
           // backpressure: avoid scheduling new fetches while the tx FIFO is at high watermark
           if (self.isTxQueueFull(0)) {
-            logDebugMsg(`Tx FIFO at high watermark`, self.blockList.getSize(), self.queuedTxCount(), config.maxTxQueueHigh);
+            logDebugMsg(
+              `Tx FIFO at high watermark`,
+              self.blockList.getSize(),
+              self.queuedTxCount(),
+              config.maxTxQueueHigh,
+            );
             await self.waitForQueueCapacity(0);
             continue;
           }
 
           // get the current height of the chain
-          let height = await self.explorer.getHeight();
+          const height = await self.explorer.getHeight();
 
           // make sure we are not ahead of chain
           if (self.lastBlockLoading > height) {
@@ -840,11 +879,11 @@ export class WalletWatchdog {
           self.tryScheduleFilter();
 
           // get a free worker and check if we have idle blocks first
-          let freeWorker: SyncWorker | null = self.getFreeWorker();
+          const freeWorker: SyncWorker | null = self.getFreeWorker();
 
           if (freeWorker) {
             // first check if we have any stale ranges available
-            let idleRange = self.blockList.getFirstIdleRange(true);
+            const idleRange = self.blockList.getFirstIdleRange(true);
             let startBlock: number = 0;
             let endBlock: number = 0;
 
@@ -899,13 +938,29 @@ export class WalletWatchdog {
             // try to fetch the block range with a currently selected sync worker
             freeWorker
               .fetchBlocks(startBlock, endBlock)
-              .then((blockData: { transactions: RawDaemon_Transaction[]; lastBlock: number; startBlock: number }) => {
-                self.onBlockRangeFetched(blockData.startBlock, blockData.lastBlock, blockData.transactions);
-              })
-              .catch((blockData: { transactions: RawDaemon_Transaction[]; lastBlock: number; startBlock: number }) => {
-                self.blockList.markIdleBlockRange(blockData.lastBlock);
-                self.tryScheduleFilter();
-              });
+              .then(
+                (blockData: {
+                  transactions: RawDaemon_Transaction[];
+                  lastBlock: number;
+                  startBlock: number;
+                }) => {
+                  self.onBlockRangeFetched(
+                    blockData.startBlock,
+                    blockData.lastBlock,
+                    blockData.transactions,
+                  );
+                },
+              )
+              .catch(
+                (blockData: {
+                  transactions: RawDaemon_Transaction[];
+                  lastBlock: number;
+                  startBlock: number;
+                }) => {
+                  self.blockList.markIdleBlockRange(blockData.lastBlock);
+                  self.tryScheduleFilter();
+                },
+              );
           } else {
             self.tryScheduleFilter();
             await new Promise((r) => setTimeout(r, 500));
