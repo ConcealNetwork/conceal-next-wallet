@@ -43,7 +43,7 @@ export default function MessagesPage() {
   const [recipient, setRecipient] = useState("");
   const [composeBody, setComposeBody] = useState("");
   const [ttlMinutes, setTtlMinutes] = useState<number | null>(null);
-  const [formatMode, setFormatMode] = useState<"raw" | "md">("raw");
+  const [composeViewMd, setComposeViewMd] = useState(false);
   const [threadViewMd, setThreadViewMd] = useState(false);
   const ttlNoticeShownRef = useRef(false);
 
@@ -72,13 +72,13 @@ export default function MessagesPage() {
     `${c.name} ${c.address}`.toLowerCase().includes(query.trim().toLowerCase()),
   );
   const active = conversations.find((c) => c.address === activeAddress) ?? filtered[0] ?? null;
-  const showMdPreview = formatMode === "md" && shouldShowMessagePreview(composeBody);
+  const showMdPreview = composeViewMd && shouldShowMessagePreview(composeBody);
 
   function resetComposeForm() {
     setRecipient("");
     setComposeBody("");
     setTtlMinutes(null);
-    setFormatMode("raw");
+    setComposeViewMd(false);
     ttlNoticeShownRef.current = false;
   }
 
@@ -165,9 +165,9 @@ export default function MessagesPage() {
       />
 
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
-        <div className="wallet-card grid h-[600px] grid-cols-1 overflow-hidden md:grid-cols-[0.85fr_1.15fr]">
+        <div className="wallet-card messages-inbox-height grid grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
           {/* Conversation list */}
-          <div className="flex min-h-0 flex-col border-b border-border md:border-b-0 md:border-r">
+          <div className="flex min-h-0 min-w-0 flex-col border-b border-border md:border-b-0 md:border-r">
             <div className="border-b border-border p-3">
               <div className="relative">
                 <Search
@@ -247,7 +247,7 @@ export default function MessagesPage() {
 
           {/* Thread */}
           {active ? (
-            <div className="flex min-h-0 flex-col">
+            <div className="flex min-h-0 min-w-0 flex-col">
               <div className="flex items-center gap-3 border-b border-border px-5 py-3">
                 <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
                   {active.name.charAt(0)}
@@ -267,22 +267,10 @@ export default function MessagesPage() {
                   </p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "h-7 min-w-7 px-2 text-xs font-semibold tracking-wide",
-                      threadViewMd
-                        ? "border-wallet-amber bg-wallet-amber/15 text-wallet-amber hover:bg-wallet-amber/20"
-                        : "border-border bg-transparent text-muted-foreground hover:bg-secondary/80",
-                    )}
-                    aria-pressed={threadViewMd}
-                    aria-label={threadViewMd ? "Show plain text" : "Show formatted messages"}
-                    onClick={() => setThreadViewMd((on) => !on)}
-                  >
-                    MD
-                  </Button>
+                  <MessageMdToggleButton
+                    active={threadViewMd}
+                    onToggle={() => setThreadViewMd((on) => !on)}
+                  />
                   <CopyButton value={active.address} label="Copy" />
                 </div>
               </div>
@@ -311,7 +299,7 @@ export default function MessagesPage() {
                     >
                       {threadViewMd ? (
                         <div
-                          className="[&_i]:italic"
+                          className="[&_i]:italic [&_s]:line-through"
                           dangerouslySetInnerHTML={{
                             __html: formatMessageText(
                               message.body,
@@ -358,7 +346,7 @@ export default function MessagesPage() {
               </div>
             </div>
           ) : (
-            <div className="hidden flex-col items-center justify-center gap-3 p-8 text-center md:flex">
+            <div className="hidden min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center md:flex">
               <MailOpen className="size-10 text-muted-foreground" aria-hidden="true" />
               <p className="font-semibold">No conversations yet</p>
               <p className="text-sm text-muted-foreground">
@@ -389,24 +377,10 @@ export default function MessagesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <Label htmlFor="compose-body">Message</Label>
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={formatMode === "raw" ? "default" : "outline"}
-                    onClick={() => setFormatMode("raw")}
-                  >
-                    RAW
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={formatMode === "md" ? "default" : "outline"}
-                    onClick={() => setFormatMode("md")}
-                  >
-                    MD
-                  </Button>
-                </div>
+                <MessageMdToggleButton
+                  active={composeViewMd}
+                  onToggle={() => setComposeViewMd((on) => !on)}
+                />
               </div>
               <Textarea
                 id="compose-body"
@@ -422,7 +396,7 @@ export default function MessagesPage() {
                 <div className="space-y-1.5">
                   <span className="text-xs font-medium text-muted-foreground">Preview</span>
                   <div
-                    className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm leading-relaxed"
+                    className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm leading-relaxed [&_i]:italic [&_s]:line-through"
                     dangerouslySetInnerHTML={{ __html: formatMessageText(composeBody) }}
                   />
                 </div>
@@ -469,8 +443,35 @@ export default function MessagesPage() {
   );
 }
 
+function MessageMdToggleButton({
+  active,
+  onToggle,
+}: {
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className={cn(
+        "h-7 min-w-7 px-2 text-xs font-semibold tracking-wide",
+        active
+          ? "border-wallet-amber bg-wallet-amber/15 text-wallet-amber hover:bg-wallet-amber/20"
+          : "border-border bg-transparent text-muted-foreground hover:bg-secondary/80",
+      )}
+      aria-pressed={active}
+      aria-label={active ? "Show plain text" : "Show formatted messages"}
+      onClick={onToggle}
+    >
+      MD
+    </Button>
+  );
+}
+
 function shouldShowMessagePreview(text: string): boolean {
-  return text.includes("  ") || text.includes("*") || text.includes("`");
+  return text.includes("  ") || text.includes("*") || text.includes("`") || text.includes("~~");
 }
 
 /** v1 messages.ts formatTTL — slider stores minutes, label shows HH:MM. */
@@ -538,6 +539,7 @@ function formatMessageText(text: string, theme: MessageFormatTheme = "compose"):
     `<span style="font-weight: bold; color: ${codeColors.textBold}; text-shadow: 0px 0px 1px ${codeColors.textBold}">$1</span>`,
   );
   formatted = formatted.replace(/\*([^*\s][^*]*[^*\s])\*/g, "<i>$1</i>");
+  formatted = formatted.replace(/~~([^~]+)~~/g, "<s>$1</s>");
   formatted = formatted.replace(
     /`([^`]+)`/g,
     `<span style="background-color: ${codeColors.bg}; color: ${codeColors.textCode}; padding: 1px 3px; border-radius: 3px; border: 1px solid ${codeColors.border}; font-family: monospace; font-size: 0.9em;">$1</span>`,

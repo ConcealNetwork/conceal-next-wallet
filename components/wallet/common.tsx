@@ -188,7 +188,9 @@ export function AmountText({
         ? "text-muted-foreground"
         : type === "deposit"
           ? "text-wallet-deposit"
-          : "text-wallet-incoming";
+          : type === "message"
+            ? "text-primary"
+            : "text-wallet-incoming";
   return (
     <span className={cn("font-semibold", color)}>
       <CcxAmount>{amount}</CcxAmount>
@@ -249,11 +251,13 @@ export function TransactionRow({ transaction }: { transaction: Transaction }) {
     withdrawal: "Withdrawal",
     fusion: "Fusion",
     miner: "Miner",
+    message: "Message",
   }[transaction.type];
   const prefix =
     transaction.type === "send" ||
     transaction.type === "fusion" ||
-    transaction.type === "withdrawal"
+    transaction.type === "withdrawal" ||
+    (transaction.type === "message" && transaction.outgoing)
       ? "-"
       : "+";
 

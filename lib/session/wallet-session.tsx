@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { env } from "@/lib/env";
 import type { WalletInfo } from "@/lib/types";
+import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
 
 type WalletStatus = "locked" | "open";
 
@@ -46,7 +47,14 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
     setIsHydrated(true);
   }, []);
 
+  useEffect(() => {
+    if (env.persistWalletSession && isHydrated && status === "open") {
+      resetMessageNavBadge();
+    }
+  }, [isHydrated, status]);
+
   const openSession = useCallback((nextWalletInfo: WalletInfo) => {
+    resetMessageNavBadge();
     setStatus("open");
     setWalletInfo(nextWalletInfo);
     if (env.persistWalletSession) {

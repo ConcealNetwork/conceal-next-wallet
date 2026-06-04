@@ -9,6 +9,7 @@ import {
   Combine,
   Hash,
   Lock,
+  Mail,
   Pickaxe,
   Search,
 } from "lucide-react";
@@ -106,6 +107,13 @@ const transactionMeta: Record<
     amountClassName: "text-wallet-incoming",
     chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
   },
+  message: {
+    label: "Message",
+    icon: Mail,
+    sign: "+",
+    amountClassName: "text-primary",
+    chipClassName: "bg-primary/10 text-primary",
+  },
 };
 
 export default function TransactionsPageClient() {
@@ -116,17 +124,9 @@ export default function TransactionsPageClient() {
   const [selected, setSelected] = useState<Transaction | null>(null);
 
   const filtered = useMemo(() => {
-    const typeForTab: Record<string, TransactionType[] | null> = {
-      All: null,
-      Received: ["receive", "miner", "withdrawal"],
-      Sent: ["send", "fusion"],
-      Deposits: ["deposit"],
-      Withdrawals: ["withdrawal"],
-    };
     return data
       .filter((transaction) => {
-        const tabTypes = typeForTab[active];
-        const matchesTab = !tabTypes || tabTypes.includes(transaction.type);
+        const matchesTab = transactionMatchesTab(transaction, active);
         const searchTarget = [
           transaction.address,
           transaction.hash,
@@ -656,7 +656,35 @@ function getTransactionStatus(confirmations: number): TransactionStatus {
 
 function formatSignedAmount(transaction: Transaction) {
   const meta = transactionMeta[transaction.type];
-  return `${meta.sign}${formatCcx(transaction.amount)}`;
+  const sign =
+    transaction.type === "message" && transaction.outgoing ? "−" : meta.sign;
+  return `${sign}${formatCcx(transaction.amount)}`;
+}
+
+function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
+  switch (tab) {
+    case "All":
+      return true;
+    case "Received":
+      return (
+        transaction.type === "receive" ||
+        transaction.type === "miner" ||
+        transaction.type === "withdrawal" ||
+        (transaction.type === "message" && !transaction.outgoing)
+      );
+    case "Sent":
+      return (
+        transaction.type === "send" ||
+        transaction.type === "fusion" ||
+        (transaction.type === "message" && Boolean(transaction.outgoing))
+      );
+    case "Deposits":
+      return transaction.type === "deposit";
+    case "Withdrawals":
+      return transaction.type === "withdrawal";
+    default:
+      return true;
+  }
 }
 
 function formatTimestamp(timestamp: string) {

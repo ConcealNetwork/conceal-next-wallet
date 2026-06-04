@@ -1,6 +1,6 @@
 "use client";
 
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { DialogPrimitive } from "@/components/ui/radix-dialog-primitive";
 import { X } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/lib/utils";
@@ -95,6 +95,7 @@ export {
   DialogHeader,
   DialogOverlay,
   DialogPortal,
+  DialogPrimitive,
   DialogTitle,
   DialogTrigger,
 };

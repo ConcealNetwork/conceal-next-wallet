@@ -1,4 +1,5 @@
 import { createWalletNetworkConfig, type WalletNetworkConfig } from "@/lib/config/config";
+import { MESSAGE_TX_AMOUNT_ATOMIC } from "@/lib/config/config";
 import type {
   Deposit as UiDeposit,
   Message as UiMessage,
@@ -40,11 +41,18 @@ export function mapWalletToInfo(wallet: Wallet, networkHeight: number): WalletIn
   };
 }
 
+/** Pure message envelope: message body + exactly 0.0001 CCX (100 atomic). */
+export function isStandaloneMessageTx(tx: CoreTransaction): boolean {
+  if (!tx.message) return false;
+  return Math.abs(tx.getAmount()) === MESSAGE_TX_AMOUNT_ATOMIC;
+}
+
 /** Classify a synced core transaction for the UI (matches Transaction.ts getters). */
 export function resolveTransactionType(tx: CoreTransaction): TransactionType {
   if (tx.isDeposit) return "deposit";
   if (tx.isWithdrawal) return "withdrawal";
   if (tx.isFusion) return "fusion";
+  if (isStandaloneMessageTx(tx)) return "message";
   if (tx.isCoinbase()) return "miner";
   return tx.getAmount() < 0 ? "send" : "receive";
 }
@@ -85,6 +93,7 @@ export function mapCoreTransaction(
     confirmations,
     paymentId: tx.paymentId || undefined,
     message: tx.message || undefined,
+    ...(type === "message" ? { outgoing: tx.getAmount() < 0 } : {}),
   };
 }
 
@@ -102,7 +111,7 @@ export function isMessageTransactionExpired(tx: CoreTransaction): boolean {
 }
 
 export function mapCoreMessage(tx: CoreTransaction, _walletAddress: string): UiMessage | null {
-  if (!tx.message) return null;
+  if (!isStandaloneMessageTx(tx)) return null;
   if (isMessageTransactionExpired(tx)) return null;
 
   const sent = tx.ins.length > 0;

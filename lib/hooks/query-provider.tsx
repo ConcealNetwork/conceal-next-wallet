@@ -1,7 +1,15 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
+
+export { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient };
 
 export function WalletQueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(

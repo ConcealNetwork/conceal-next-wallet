@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provider";
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
 import { marketQueryOptions, networkQueryOptions } from "@/lib/services/query-options";
@@ -9,18 +9,10 @@ import type { AddressEntryInput } from "@/lib/services/address-book.service";
 import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
-import type { WalletSettings } from "@/lib/types";
+import type { WalletInfo, WalletSettings } from "@/lib/types";
+import { queryKeys } from "@/lib/hooks/query-keys";
 
-export const queryKeys = {
-  wallet: ["wallet"] as const,
-  transactions: ["transactions"] as const,
-  market: ["market"] as const,
-  messages: ["messages"] as const,
-  deposits: ["deposits"] as const,
-  addressBook: ["address-book"] as const,
-  network: ["network"] as const,
-  settings: ["settings"] as const,
-};
+export { queryKeys };
 
 export function useWalletInfo() {
   return useQuery({ queryKey: queryKeys.wallet, queryFn: () => services.wallet.getWalletInfo() });
@@ -30,7 +22,7 @@ export function useRefreshWallet() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => services.wallet.refreshWallet(),
-    onSuccess: (wallet) => {
+    onSuccess: (wallet: WalletInfo) => {
       queryClient.setQueryData(queryKeys.wallet, wallet);
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.network });
@@ -52,6 +44,7 @@ export function useWalletLiveSync() {
         void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
         void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
         void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
         void queryClient.invalidateQueries({ queryKey: queryKeys.network });
       });
     });
@@ -176,7 +169,7 @@ export function useUpdateWalletSettings() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: Partial<WalletSettings>) => services.settings.updateSettings(input),
-    onSuccess: (settings) => {
+    onSuccess: (settings: WalletSettings) => {
       queryClient.setQueryData(queryKeys.settings, settings);
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
 
 export function OpenWalletForm() {
   const router = useRouter();
@@ -67,6 +68,7 @@ export function useWalletDisconnect() {
 
   return function disconnect() {
     void services.wallet.disconnect?.();
+    resetMessageNavBadge();
     closeSession();
   };
 }

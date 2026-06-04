@@ -32,7 +32,14 @@ export type WalletStatTrend = {
   changePct: number;
 };
 
-export type TransactionType = "receive" | "send" | "deposit" | "withdrawal" | "fusion" | "miner";
+export type TransactionType =
+  | "receive"
+  | "send"
+  | "deposit"
+  | "withdrawal"
+  | "fusion"
+  | "miner"
+  | "message";
 
 export type Transaction = {
   id: string;
@@ -44,6 +51,8 @@ export type Transaction = {
   confirmations: number;
   paymentId?: string;
   message?: string;
+  /** Standalone message txs only — true when this wallet sent the 0.0001 CCX envelope. */
+  outgoing?: boolean;
 };
 
 export type DepositStatus = "active" | "unlocked" | "spent";

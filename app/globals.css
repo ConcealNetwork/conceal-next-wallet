@@ -101,6 +101,22 @@
   @apply rounded-xl border border-border/70 bg-card/70 backdrop-blur-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_18px_60px_rgba(0,0,0,0.32)];
 }
 
+/* Messages inbox: fill remaining viewport; each column scrolls internally. */
+@layer components {
+  .messages-inbox-height {
+    min-height: 18rem;
+    height: calc(100dvh - 18rem);
+    max-height: calc(100dvh - 18rem);
+  }
+
+  @media (min-width: 1024px) {
+    .messages-inbox-height {
+      height: calc(100dvh - 14rem);
+      max-height: calc(100dvh - 14rem);
+    }
+  }
+}
+
 @layer base {
   :root {
     color-scheme: dark;

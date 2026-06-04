@@ -36,7 +36,12 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
+import { NavMessageBadge } from "@/components/layout/nav-message-badge";
 import { cn } from "@/lib/utils";
+import {
+  useAcknowledgeMessagesSinceOpen,
+  useNewMessagesSinceOpen,
+} from "@/lib/hooks/use-new-messages-since-open";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
 
 const mainNav = [
@@ -60,34 +65,53 @@ const bottomNav = [
 function NavLink({
   item,
   collapsed = false,
+  badge,
+  onNavigate,
 }: {
   item: (typeof mainNav)[number];
   collapsed?: boolean;
+  badge?: number;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const Icon = item.icon;
   const active = pathname === item.href;
+  const showBadge = badge !== undefined && badge > 0 && !active;
 
   const link = (
     <Link
       href={item.href}
-      aria-label={collapsed ? item.label : undefined}
+      aria-label={
+        collapsed
+          ? showBadge
+            ? `${item.label}, ${badge} new since open`
+            : item.label
+          : undefined
+      }
+      onClick={onNavigate}
       className={cn(
-        "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+        "flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         active &&
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
       )}
     >
-      <Icon className="size-4 shrink-0" aria-hidden="true" />
-      <span
-        className={cn(
-          "whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none",
-          collapsed && "pointer-events-none opacity-0",
-        )}
-        aria-hidden={collapsed}
-      >
-        {item.label}
+      <span className={cn("relative shrink-0", collapsed && showBadge && "mr-auto")}>
+        <Icon className="size-4" aria-hidden="true" />
+        {showBadge && collapsed ? (
+          <NavMessageBadge count={badge} className="absolute -right-2 -top-2" />
+        ) : null}
       </span>
+      {!collapsed ? (
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate whitespace-nowrap",
+            showBadge && "font-semibold text-foreground",
+          )}
+        >
+          {item.label}
+        </span>
+      ) : null}
+      {showBadge && !collapsed ? <NavMessageBadge count={badge} className="ml-auto shrink-0" /> : null}
     </Link>
   );
 
@@ -98,7 +122,9 @@ function NavLink({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{link}</TooltipTrigger>
-      <TooltipContent side="right">{item.label}</TooltipContent>
+      <TooltipContent side="right">
+        {showBadge ? `${item.label} (+${badge > 99 ? "99" : badge} new)` : item.label}
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -154,6 +180,9 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
 }
 
 function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
+  const newMessages = useNewMessagesSinceOpen();
+  const acknowledgeMessages = useAcknowledgeMessagesSinceOpen();
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[hsl(var(--chrome))] px-3 py-5">
       <div className="mb-8 flex h-10 items-center">
@@ -174,9 +203,15 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
           </span>
         </Link>
       </div>
-      <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-x-visible overflow-y-auto">
         {mainNav.map((item) => (
-          <NavLink key={item.href} item={item} collapsed={collapsed} />
+          <NavLink
+            key={item.href}
+            item={item}
+            collapsed={collapsed}
+            badge={item.href === "/wallet/messages" ? newMessages : undefined}
+            onNavigate={item.href === "/wallet/messages" ? acknowledgeMessages : undefined}
+          />
         ))}
         <div className="my-4 border-t border-border" />
         {bottomNav.map((item) => (

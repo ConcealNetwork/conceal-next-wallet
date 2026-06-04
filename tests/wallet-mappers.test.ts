@@ -4,12 +4,14 @@ import {
   clampImportHeight,
   deriveIndicativeDepositApr,
   isMessageTransactionExpired,
+  isStandaloneMessageTx,
   mapCoreDeposit,
   mapCoreMessage,
   mapCoreTransaction,
   resolveTransactionDisplayAmount,
   resolveTransactionType,
 } from "@/lib/wallet-core/mappers";
+import { MESSAGE_TX_AMOUNT_ATOMIC } from "@/lib/config/config";
 import { Deposit, Transaction, TransactionIn, TransactionOut } from "@/lib/wallet-core/Transaction";
 
 function makeTx(
@@ -74,6 +76,25 @@ describe("wallet mappers", () => {
 
     const receive = makeTx({ outs: [out(250_000)] });
     expect(resolveTransactionType(receive)).toBe("receive");
+  });
+
+  it("classifies standalone message txs before miner coinbase heuristics", () => {
+    const messageOut = out(MESSAGE_TX_AMOUNT_ATOMIC);
+    messageOut.rtcAmount = "";
+    const messageTx = makeTx({ hash: "msg-1", ins: [], outs: [messageOut] });
+    messageTx.message = "Hello";
+    expect(isStandaloneMessageTx(messageTx)).toBe(true);
+    expect(resolveTransactionType(messageTx)).toBe("message");
+
+    const minerOut = out(2_000_000);
+    minerOut.rtcAmount = "";
+    const miner = makeTx({ outs: [minerOut] });
+    expect(resolveTransactionType(miner)).toBe("miner");
+
+    const receiveWithMemo = makeTx({ outs: [out(50_000_000)] });
+    receiveWithMemo.message = "Payment ref #42";
+    expect(resolveTransactionType(receiveWithMemo)).toBe("receive");
+    expect(mapCoreMessage(receiveWithMemo, "ccx7wallet")).toBeNull();
   });
 
   it("prefers deposit/withdrawal over send/receive amount sign", () => {

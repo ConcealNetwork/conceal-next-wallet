@@ -271,6 +271,7 @@ function TransactionFlowSummary({
 const TX_META: Record<TransactionType, { label: string; sign: string; className: string }> = {
   receive: { label: "Receive", sign: "+", className: "text-wallet-incoming" },
   miner: { label: "Miner", sign: "+", className: "text-wallet-incoming" },
+  message: { label: "Message", sign: "+", className: "text-primary" },
   deposit: { label: "Deposit", sign: "+", className: "text-wallet-deposit" },
   send: { label: "Send", sign: "−", className: "text-wallet-outgoing" },
   withdrawal: { label: "Withdraw", sign: "+", className: "text-wallet-incoming" },
@@ -286,6 +287,8 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
       <ul className="mt-1 divide-y divide-border">
         {transactions.map((transaction, index) => {
           const meta = TX_META[transaction.type];
+          const sign =
+            transaction.type === "message" && transaction.outgoing ? "−" : meta.sign;
           return (
             <li
               key={transaction.id}
@@ -302,7 +305,7 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
               </div>
               <div className="flex shrink-0 items-center gap-3">
                 <span className={cn("font-mono text-sm font-medium", meta.className)}>
-                  {meta.sign}
+                  {sign}
                   <CcxAmount>{formatCcx(transaction.amount)}</CcxAmount>
                 </span>
                 <span className="hidden w-16 text-right text-xs text-muted-foreground sm:inline">
