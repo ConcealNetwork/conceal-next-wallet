@@ -21,8 +21,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
     static randomTriangularSimplified(max) {
-      let r = _MathUtil.randomUint32() % (1 << 53);
-      let frac = Math.sqrt(r / (1 << 53));
+      const r = _MathUtil.randomUint32() % (1 << 53);
+      const frac = Math.sqrt(r / (1 << 53));
       let i = frac * max | 0;
       if (i == max) --i;
       return i;
@@ -304,7 +304,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
       RCT_TYPE2[RCT_TYPE2["SimpleBulletproof"] = 4] = "SimpleBulletproof";
     })(RCT_TYPE = CnVars2.RCT_TYPE || (CnVars2.RCT_TYPE = {}));
     CnVars2.H = "8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94";
-    CnVars2.l = JSBigInt("7237005577332262213973186563042994240857116359379907606001950938285454250989");
+    CnVars2.l = JSBigInt(
+      "7237005577332262213973186563042994240857116359379907606001950938285454250989"
+    );
     CnVars2.I = "0100000000000000000000000000000000000000000000000000000000000000";
     CnVars2.Z = "0000000000000000000000000000000000000000000000000000000000000000";
     CnVars2.H2 = [
@@ -439,7 +441,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnUtils2.h2d = h2d;
     function d2b(integer) {
-      let integerStr = integer.toString();
+      const integerStr = integer.toString();
       if (typeof integer !== "string" && integerStr.length > 15) {
         throw "integer should be entered as a string for precision";
       }
@@ -447,7 +449,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       for (let i = 0; i < 63; i++) {
         padding += "0";
       }
-      let a = new JSBigInt(integerStr);
+      const a = new JSBigInt(integerStr);
       if (a.toString(2).length > 64) {
         throw "amount overflows uint64!";
       }
@@ -476,7 +478,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnUtils2.ge_neg = ge_neg;
     function ge_sub(point1, point2) {
-      let point2n = CnUtils2.ge_neg(point2);
+      const point2n = CnUtils2.ge_neg(point2);
       return CnUtils2.ge_add(point1, point2n);
     }
     CnUtils2.ge_sub = ge_sub;
@@ -488,7 +490,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnUtils2.sec_key_to_pub = sec_key_to_pub;
     function valid_hex(hex) {
-      let exp = new RegExp("[0-9a-fA-F]{" + hex.length + "}");
+      const exp = new RegExp("[0-9a-fA-F]{" + hex.length + "}");
       return exp.test(hex);
     }
     CnUtils2.valid_hex = valid_hex;
@@ -502,7 +504,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         throw "Invalid derivation length!";
       }
       buf += derivation;
-      let enc = CnUtils2.encode_varint(output_index);
+      const enc = CnUtils2.encode_varint(output_index);
       if (enc.length > 10 * 2) {
         throw "output_index didn't fit in 64-bit varint";
       }
@@ -541,9 +543,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (!hex1 || !hex2 || hex1.length !== hex2.length || hex1.length % 2 !== 0 || hex2.length % 2 !== 0) {
         throw "Hex string(s) is/are invalid!";
       }
-      let bin1 = hextobin(hex1);
-      let bin2 = hextobin(hex2);
-      let xor = new Uint8Array(bin1.length);
+      const bin1 = hextobin(hex1);
+      const bin2 = hextobin(hex2);
+      const xor = new Uint8Array(bin1.length);
       for (let i = 0; i < xor.length; i++) {
         xor[i] = bin1[i] ^ bin2[i];
       }
@@ -578,7 +580,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     CnUtils2.ge_double_scalarmult_postcomp_vartime = ge_double_scalarmult_postcomp_vartime;
     function decompose_amount_into_digits(amount) {
       amount = amount.toString();
-      let ret = [];
+      const ret = [];
       while (amount.length > 0) {
         if (amount[0] !== "0") {
           let digit = amount[0];
@@ -593,8 +595,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnUtils2.decompose_amount_into_digits = decompose_amount_into_digits;
     function decode_rct_ecdh(ecdh, key) {
-      let first = Cn.hash_to_scalar(key);
-      let second = Cn.hash_to_scalar(first);
+      const first = Cn.hash_to_scalar(key);
+      const second = Cn.hash_to_scalar(first);
       return {
         mask: CnNativeBride.sc_sub(ecdh.mask, first),
         amount: CnNativeBride.sc_sub(ecdh.amount, second)
@@ -602,8 +604,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnUtils2.decode_rct_ecdh = decode_rct_ecdh;
     function encode_rct_ecdh(ecdh, key) {
-      let first = Cn.hash_to_scalar(key);
-      let second = Cn.hash_to_scalar(first);
+      const first = Cn.hash_to_scalar(key);
+      const second = Cn.hash_to_scalar(first);
       return {
         mask: CnNativeBride.sc_add(ecdh.mask, first),
         amount: CnNativeBride.sc_add(ecdh.amount, second)
@@ -666,7 +668,13 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (real_index >= keys.length || real_index < 0) {
         throw "real_index is invalid";
       }
-      return concealjs.crypto.generate_ring_signature(prefix_hash, k_image, keys, sec, real_index);
+      return concealjs.crypto.generate_ring_signature(
+        prefix_hash,
+        k_image,
+        keys,
+        sec,
+        real_index
+      );
     }
     CnNativeBride3.generate_ring_signature = generate_ring_signature;
     function generate_signature(prefixHash, publicKey, secretKey) {
@@ -736,8 +744,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
   var Cn;
   ((Cn2) => {
     function hash_to_scalar(buf) {
-      let hash = CnUtils.cn_fast_hash(buf);
-      let scalar = concealjs.crypto.sc_reduce32(hash);
+      const hash = CnUtils.cn_fast_hash(buf);
+      const scalar = concealjs.crypto.sc_reduce32(hash);
       return scalar;
     }
     Cn2.hash_to_scalar = hash_to_scalar;
@@ -756,7 +764,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (pub.length !== 64 || sec.length !== 64) {
         throw "Invalid input length";
       }
-      let P = CnUtils.ge_scalarmult(pub, sec);
+      const P = CnUtils.ge_scalarmult(pub, sec);
       return CnUtils.ge_scalarmult(P, CnUtils.d2s(8));
     }
     Cn2.generate_key_derivation = generate_key_derivation;
@@ -771,14 +779,14 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (derivation.length !== 64 || pub.length !== 64) {
         throw "Invalid input length!";
       }
-      let s = CnUtils.derivation_to_scalar(derivation, out_index);
+      const s = CnUtils.derivation_to_scalar(derivation, out_index);
       return CnUtils.ge_sub(pub, CnUtils.ge_scalarmult_base(s));
     }
     Cn2.underive_public_key = underive_public_key;
     function generate_keys(seed) {
       if (seed.length !== 64) throw "Invalid input length!";
-      let sec = concealjs.crypto.sc_reduce32(seed);
-      let pub = concealjs.cnutils.sec_key_to_pub(sec);
+      const sec = concealjs.crypto.sc_reduce32(seed);
+      const pub = concealjs.cnutils.sec_key_to_pub(sec);
       return {
         sec,
         pub
@@ -790,14 +798,14 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     Cn2.random_keypair = random_keypair;
     function pubkeys_to_string(spend, view) {
-      let prefix = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX);
-      let data = prefix + spend + view;
-      let checksum = CnUtils.cn_fast_hash(data);
+      const prefix = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX);
+      const data = prefix + spend + view;
+      const checksum = CnUtils.cn_fast_hash(data);
       return cnBase58.encode(data + checksum.slice(0, ADDRESS_CHECKSUM_SIZE * 2));
     }
     Cn2.pubkeys_to_string = pubkeys_to_string;
     function create_address(seed) {
-      let keys = {
+      const keys = {
         spend: {
           sec: "",
           pub: ""
@@ -815,7 +823,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         first = seed;
       }
       keys.spend = Cn2.generate_keys(first);
-      let second = seed.length !== 64 ? CnUtils.cn_fast_hash(first) : CnUtils.cn_fast_hash(keys.spend.sec);
+      const second = seed.length !== 64 ? CnUtils.cn_fast_hash(first) : CnUtils.cn_fast_hash(keys.spend.sec);
       keys.view = Cn2.generate_keys(second);
       keys.public_addr = Cn2.pubkeys_to_string(keys.spend.pub, keys.view.pub);
       return keys;
@@ -823,28 +831,43 @@ var reportError = self.reportError || function (e) { console.error(e); };
     Cn2.create_address = create_address;
     function decode_address(address) {
       let dec = cnBase58.decode(address);
-      logDebugMsg(dec, CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX, CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX);
-      let expectedPrefix = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX);
-      let expectedPrefixInt = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX);
-      let expectedPrefixSub = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX);
-      let prefix = dec.slice(0, expectedPrefix.length);
+      logDebugMsg(
+        dec,
+        CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX,
+        CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX
+      );
+      const expectedPrefix = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX);
+      const expectedPrefixInt = CnUtils.encode_varint(
+        CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX
+      );
+      const expectedPrefixSub = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX);
+      const prefix = dec.slice(0, expectedPrefix.length);
       logDebugMsg(prefix, expectedPrefixInt, expectedPrefix);
       if (prefix !== expectedPrefix && prefix !== expectedPrefixInt && prefix !== expectedPrefixSub) {
         throw "Invalid address prefix";
       }
       dec = dec.slice(expectedPrefix.length);
-      let spend = dec.slice(0, 64);
-      let view = dec.slice(64, 128);
+      const spend = dec.slice(0, 64);
+      const view = dec.slice(64, 128);
       let checksum = null;
       let expectedChecksum = null;
       let intPaymentId = null;
       if (prefix === expectedPrefixInt) {
         intPaymentId = dec.slice(128, 128 + INTEGRATED_ID_SIZE * 2);
-        checksum = dec.slice(128 + INTEGRATED_ID_SIZE * 2, 128 + INTEGRATED_ID_SIZE * 2 + ADDRESS_CHECKSUM_SIZE * 2);
-        expectedChecksum = CnUtils.cn_fast_hash(prefix + spend + view + intPaymentId).slice(0, ADDRESS_CHECKSUM_SIZE * 2);
+        checksum = dec.slice(
+          128 + INTEGRATED_ID_SIZE * 2,
+          128 + INTEGRATED_ID_SIZE * 2 + ADDRESS_CHECKSUM_SIZE * 2
+        );
+        expectedChecksum = CnUtils.cn_fast_hash(prefix + spend + view + intPaymentId).slice(
+          0,
+          ADDRESS_CHECKSUM_SIZE * 2
+        );
       } else {
         checksum = dec.slice(128, 128 + ADDRESS_CHECKSUM_SIZE * 2);
-        expectedChecksum = CnUtils.cn_fast_hash(prefix + spend + view).slice(0, ADDRESS_CHECKSUM_SIZE * 2);
+        expectedChecksum = CnUtils.cn_fast_hash(prefix + spend + view).slice(
+          0,
+          ADDRESS_CHECKSUM_SIZE * 2
+        );
       }
       if (checksum !== expectedChecksum) {
         throw "Invalid checksum";
@@ -857,37 +880,42 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     Cn2.decode_address = decode_address;
     function is_subaddress(addr) {
-      let decoded = cnBase58.decode(addr);
-      let subaddressPrefix = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX);
-      let prefix = decoded.slice(0, subaddressPrefix.length);
+      const decoded = cnBase58.decode(addr);
+      const subaddressPrefix = CnUtils.encode_varint(CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX);
+      const prefix = decoded.slice(0, subaddressPrefix.length);
       return prefix === subaddressPrefix;
     }
     Cn2.is_subaddress = is_subaddress;
     function valid_keys(view_pub, view_sec, spend_pub, spend_sec) {
-      let expected_view_pub = concealjs.cnutils.sec_key_to_pub(view_sec);
-      let expected_spend_pub = concealjs.cnutils.sec_key_to_pub(spend_sec);
+      const expected_view_pub = concealjs.cnutils.sec_key_to_pub(view_sec);
+      const expected_spend_pub = concealjs.cnutils.sec_key_to_pub(spend_sec);
       return expected_spend_pub === spend_pub && expected_view_pub === view_pub;
     }
     Cn2.valid_keys = valid_keys;
     function decrypt_payment_id(payment_id8, tx_public_key, acc_prv_view_key) {
       if (payment_id8.length !== 16) throw "Invalid input length2!";
-      let key_derivation = concealjs.crypto.generate_key_derivation(tx_public_key, acc_prv_view_key);
-      let pid_key = concealjs.crypto.cn_fast_hash(key_derivation + ENCRYPTED_PAYMENT_ID_TAIL.toString(16)).slice(0, INTEGRATED_ID_SIZE * 2);
-      let decrypted_payment_id = concealjs.cnutils.hex_xor(payment_id8, pid_key);
+      const key_derivation = concealjs.crypto.generate_key_derivation(
+        tx_public_key,
+        acc_prv_view_key
+      );
+      const pid_key = concealjs.crypto.cn_fast_hash(key_derivation + ENCRYPTED_PAYMENT_ID_TAIL.toString(16)).slice(0, INTEGRATED_ID_SIZE * 2);
+      const decrypted_payment_id = concealjs.cnutils.hex_xor(payment_id8, pid_key);
       return decrypted_payment_id;
     }
     Cn2.decrypt_payment_id = decrypt_payment_id;
     function get_account_integrated_address(address, payment_id8) {
-      let decoded_address = decode_address(address);
-      let prefix = concealjs.cnutils.encode_varint(CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX);
-      let data = prefix + decoded_address.spend + decoded_address.view + payment_id8;
-      let checksum = concealjs.cnutils.cn_fast_hash(data);
+      const decoded_address = decode_address(address);
+      const prefix = concealjs.cnutils.encode_varint(
+        CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX
+      );
+      const data = prefix + decoded_address.spend + decoded_address.view + payment_id8;
+      const checksum = concealjs.cnutils.cn_fast_hash(data);
       return cnBase58.encode(data + checksum.slice(0, ADDRESS_CHECKSUM_SIZE * 2));
     }
     Cn2.get_account_integrated_address = get_account_integrated_address;
     function formatMoneyFull(units) {
       let unitsStr = units.toString();
-      let symbol = unitsStr[0] === "-" ? "-" : "";
+      const symbol = unitsStr[0] === "-" ? "-" : "";
       if (symbol === "-") {
         unitsStr = unitsStr.slice(1);
       }
@@ -905,7 +933,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     Cn2.formatMoneyFullSymbol = formatMoneyFullSymbol;
     function formatMoney(units) {
-      let f = CnUtils.trimRight(Cn2.formatMoneyFull(units), "0");
+      const f = CnUtils.trimRight(Cn2.formatMoneyFull(units), "0");
       if (f[f.length - 1] === ".") {
         return f.slice(0, f.length - 1);
       }
@@ -923,7 +951,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (!CnUtils.valid_hex(mask) || mask.length !== 64 || !CnUtils.valid_hex(amount) || amount.length !== 64) {
         throw "invalid amount or mask!";
       }
-      let C = CnUtils.ge_double_scalarmult_base_vartime(amount, CnVars.H, mask);
+      const C = CnUtils.ge_double_scalarmult_base_vartime(amount, CnVars.H, mask);
       return C;
     }
     CnTransactions2.commit = commit;
@@ -931,20 +959,20 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (!CnUtils.valid_hex(amount) || amount.length !== 64) {
         throw "invalid amount!";
       }
-      let C = CnUtils.ge_double_scalarmult_base_vartime(amount, CnVars.H, CnVars.I);
+      const C = CnUtils.ge_double_scalarmult_base_vartime(amount, CnVars.H, CnVars.I);
       return C;
     }
     CnTransactions2.zeroCommit = zeroCommit;
     function decodeRctSimple(rv, sk, i, mask, hwdev = null) {
-      let ecdh_info = CnUtils.decode_rct_ecdh(rv.ecdhInfo[i], sk);
-      let amount = ecdh_info.amount;
-      let C = rv.outPk[i].mask;
+      const ecdh_info = CnUtils.decode_rct_ecdh(rv.ecdhInfo[i], sk);
+      const amount = ecdh_info.amount;
+      const C = rv.outPk[i].mask;
       return CnUtils.h2d(amount);
     }
     CnTransactions2.decodeRctSimple = decodeRctSimple;
     function decode_ringct(rv, pub, sec, i, mask, amount, derivation) {
       if (derivation === null) derivation = CnNativeBride.generate_key_derivation(pub, sec);
-      let scalar1 = CnUtils.derivation_to_scalar(derivation, i);
+      const scalar1 = CnUtils.derivation_to_scalar(derivation, i);
       try {
         switch (rv.type) {
           case 2 /* Simple */:
@@ -972,10 +1000,22 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.decode_ringct = decode_ringct;
     function generate_key_image_helper(ack, tx_public_key, real_output_index, recv_derivation) {
-      if (recv_derivation === null) recv_derivation = concealjs.crypto.generate_key_derivation(tx_public_key, ack.view_secret_key);
-      let in_ephemeral_pub = concealjs.crypto.derive_public_key(recv_derivation, real_output_index, ack.public_spend_key);
-      let in_ephemeral_sec = concealjs.crypto.derive_secret_key(recv_derivation, real_output_index, ack.spend_secret_key);
-      let ki = concealjs.crypto.generate_key_image(in_ephemeral_pub, in_ephemeral_sec);
+      if (recv_derivation === null)
+        recv_derivation = concealjs.crypto.generate_key_derivation(
+          tx_public_key,
+          ack.view_secret_key
+        );
+      const in_ephemeral_pub = concealjs.crypto.derive_public_key(
+        recv_derivation,
+        real_output_index,
+        ack.public_spend_key
+      );
+      const in_ephemeral_sec = concealjs.crypto.derive_secret_key(
+        recv_derivation,
+        real_output_index,
+        ack.spend_secret_key
+      );
+      const ki = concealjs.crypto.generate_key_image(in_ephemeral_pub, in_ephemeral_sec);
       return {
         ephemeral_pub: in_ephemeral_pub,
         ephemeral_sec: in_ephemeral_sec,
@@ -984,20 +1024,28 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.generate_key_image_helper = generate_key_image_helper;
     function generate_key_image_helper_rct(keys, tx_pub_key, out_index, enc_mask) {
-      let recv_derivation = CnNativeBride.generate_key_derivation(tx_pub_key, keys.view.sec);
+      const recv_derivation = CnNativeBride.generate_key_derivation(tx_pub_key, keys.view.sec);
       if (!recv_derivation) throw "Failed to generate key image";
       let mask;
       if (enc_mask === CnVars.I) {
         mask = enc_mask;
       } else {
-        let temp0 = CnUtils.derivation_to_scalar(recv_derivation, out_index);
-        let temp1 = Cn.hash_to_scalar(temp0);
+        const temp0 = CnUtils.derivation_to_scalar(recv_derivation, out_index);
+        const temp1 = Cn.hash_to_scalar(temp0);
         mask = enc_mask ? CnNativeBride.sc_sub(enc_mask, temp1) : CnVars.I;
       }
-      let ephemeral_pub = CnNativeBride.derive_public_key(recv_derivation, out_index, keys.spend.pub);
+      const ephemeral_pub = CnNativeBride.derive_public_key(
+        recv_derivation,
+        out_index,
+        keys.spend.pub
+      );
       if (!ephemeral_pub) throw "Failed to generate key image";
-      let ephemeral_sec = CnNativeBride.derive_secret_key(recv_derivation, out_index, keys.spend.sec);
-      let image = concealjs.crypto.generate_key_image(ephemeral_pub, ephemeral_sec);
+      const ephemeral_sec = CnNativeBride.derive_secret_key(
+        recv_derivation,
+        out_index,
+        keys.spend.sec
+      );
+      const image = concealjs.crypto.generate_key_image(ephemeral_pub, ephemeral_sec);
       return {
         in_ephemeral: {
           pub: ephemeral_pub,
@@ -1018,7 +1066,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.estimateRctSize = estimateRctSize;
     function decompose_tx_destinations(dsts, rct) {
-      let out = [];
+      const out = [];
       if (rct) {
         for (let i = 0; i < dsts.length; i++) {
           out.push({
@@ -1028,7 +1076,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
       } else {
         for (let i = 0; i < dsts.length; i++) {
-          let digits = CnUtils.decompose_amount_into_digits(dsts[i].amount);
+          const digits = CnUtils.decompose_amount_into_digits(dsts[i].amount);
           for (let j = 0; j < digits.length; j++) {
             if (digits[j].compare(0) > 0) {
               out.push({
@@ -1039,9 +1087,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
         }
       }
-      return out.sort(function(a, b) {
-        return a["amount"] - b["amount"];
-      });
+      return out.sort((a, b) => a["amount"] - b["amount"]);
     }
     CnTransactions2.decompose_tx_destinations = decompose_tx_destinations;
     function get_payment_id_nonce(payment_id, pid_encrypt) {
@@ -1077,7 +1123,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (keys.length === 0) return extra;
       extra += TX_EXTRA_TAGS.ADDITIONAL_PUBKEY;
       extra += ("0" + keys.length.toString(16)).slice(-2);
-      for (let key of keys) {
+      for (const key of keys) {
         if (key.length !== 64) throw "Invalid pubkey length";
         extra += key;
       }
@@ -1105,7 +1151,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       buf += CnUtils.encode_varint(tx.vin.length);
       let i, j;
       for (i = 0; i < tx.vin.length; i++) {
-        let vin = tx.vin[i];
+        const vin = tx.vin[i];
         logDebugMsg("start vin", vin);
         switch (vin.type) {
           case "input_to_key":
@@ -1134,7 +1180,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       logDebugMsg("serialize tx ", tx);
       buf += CnUtils.encode_varint(tx.vout.length);
       for (i = 0; i < tx.vout.length; i++) {
-        let vout = tx.vout[i];
+        const vout = tx.vout[i];
         buf += CnUtils.encode_varint(vout.amount);
         switch (vout.target.type) {
           case "txout_to_key":
@@ -1205,11 +1251,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
       let buf = "";
       buf += CnTransactions2.serialize_tx(tx, true);
       hashes += CnUtils.cn_fast_hash(buf);
-      let buf2 = CnTransactions2.serialize_rct_base(tx.rct_signatures);
+      const buf2 = CnTransactions2.serialize_rct_base(tx.rct_signatures);
       hashes += CnUtils.cn_fast_hash(buf2);
       buf += buf2;
       let buf3 = serializeRangeProofs(tx.rct_signatures);
-      let p = tx.rct_signatures.p;
+      const p = tx.rct_signatures.p;
       if (p)
         for (let i = 0; i < p.MGs.length; i++) {
           for (let j = 0; j < p.MGs[i].ss.length; j++) {
@@ -1220,7 +1266,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
       hashes += CnUtils.cn_fast_hash(buf3);
       buf += buf3;
-      let hash = CnUtils.cn_fast_hash(hashes);
+      const hash = CnUtils.cn_fast_hash(hashes);
       return {
         raw: buf,
         hash,
@@ -1229,7 +1275,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.serialize_rct_tx_with_hash = serialize_rct_tx_with_hash;
     function get_tx_prefix_hash(tx) {
-      let prefix = CnTransactions2.serialize_tx(tx, true);
+      const prefix = CnTransactions2.serialize_tx(tx, true);
       return CnUtils.cn_fast_hash(prefix);
     }
     CnTransactions2.get_tx_prefix_hash = get_tx_prefix_hash;
@@ -1253,24 +1299,24 @@ var reportError = self.reportError || function (e) { console.error(e); };
           throw "bad indices value at: " + i + ": " + iv[i];
         }
       }
-      let bb = {
+      const bb = {
         s: [],
         ee: ""
       };
-      let L = [];
+      const L = [];
       for (let i = 0; i < size; i++) {
         bb.s[i] = [];
         L[i] = [];
       }
       let index;
-      let alpha = [];
+      const alpha = [];
       for (let i = 0; i < nrings; i++) {
         index = parseInt("" + iv[i]);
         alpha[i] = CnRandom.random_scalar();
         L[index][i] = CnUtils.ge_scalarmult_base(alpha[i]);
         for (let j = index + 1; j < size; j++) {
           bb.s[j][i] = CnRandom.random_scalar();
-          let c = Cn.hash_to_scalar(L[j - 1][i]);
+          const c = Cn.hash_to_scalar(L[j - 1][i]);
           L[j][i] = CnUtils.ge_double_scalarmult_base_vartime(c, pm[j][i], bb.s[j][i]);
         }
       }
@@ -1284,7 +1330,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         let j = 0;
         for (j = 0; j < parseInt(iv[i]); j++) {
           bb.s[j][i] = CnRandom.random_scalar();
-          let LL = CnUtils.ge_double_scalarmult_base_vartime(cc, pm[j][i], bb.s[j][i]);
+          const LL = CnUtils.ge_double_scalarmult_base_vartime(cc, pm[j][i], bb.s[j][i]);
           cc = Cn.hash_to_scalar(LL);
         }
         bb.s[j][i] = CnNativeBride.sc_mulsub(xv[i], cc, alpha[i]);
@@ -1293,11 +1339,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.genBorromean = genBorromean;
     function proveRange(commitMaskObj, amount, nrings, enc_seed, exponent) {
-      let size = 2;
+      const size = 2;
       let C = CnVars.I;
       let mask = CnVars.Z;
-      let indices = CnUtils.d2b(amount);
-      let sig = {
+      const indices = CnUtils.d2b(amount);
+      const sig = {
         Ci: [],
         bsig: {
           s: [],
@@ -1305,8 +1351,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
         //exp: exponent //doesn't exist for now
       };
-      let ai = [];
-      let PM = [];
+      const ai = [];
+      const PM = [];
       for (let i = 0; i < size; i++) {
         PM[i] = [];
       }
@@ -1336,11 +1382,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.proveRange = proveRange;
     function MLSAG_Gen(message, pk, xx, kimg, index) {
-      let cols = pk.length;
+      const cols = pk.length;
       if (index >= cols) {
         throw "index out of range";
       }
-      let rows = pk[0].length;
+      const rows = pk[0].length;
       if (rows !== 2) {
         throw "wrong row count";
       }
@@ -1353,15 +1399,15 @@ var reportError = self.reportError || function (e) { console.error(e); };
         throw "bad xx size";
       }
       let c_old = "";
-      let alpha = [];
-      let rv = {
+      const alpha = [];
+      const rv = {
         ss: [],
         cc: ""
       };
       for (let i2 = 0; i2 < cols; i2++) {
         rv.ss[i2] = [];
       }
-      let toHash = [];
+      const toHash = [];
       toHash[0] = message;
       alpha[0] = CnRandom.random_scalar();
       toHash[1] = pk[index][0];
@@ -1396,12 +1442,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.MLSAG_Gen = MLSAG_Gen;
     function proveRctMG(message, pubs, inSk, kimg, mask, Cout, index) {
-      let cols = pubs.length;
+      const cols = pubs.length;
       if (cols < 3) {
         throw "cols must be > 2 (mixin)";
       }
-      let xx = [];
-      let PK = [];
+      const xx = [];
+      const PK = [];
       for (let i = 0; i < cols; i++) {
         PK[i] = [];
         PK[i][0] = pubs[i].dest;
@@ -1435,8 +1481,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.serialize_rct_base = serialize_rct_base;
     function serializeRangeProofs(rv) {
-      let buf = "";
-      let p = rv.p;
+      const buf = "";
+      const p = rv.p;
       if (p) {
         if (p.rangeSigs.length) return CnTransactions2.serializeRangeProofsClassic(rv);
         else if (p.bulletproofs.length) return CnTransactions2.serializeRangeProofsBulletproof(rv);
@@ -1447,7 +1493,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     CnTransactions2.serializeRangeProofs = serializeRangeProofs;
     function serializeRangeProofsClassic(rv) {
       let buf = "";
-      let p = rv.p;
+      const p = rv.p;
       if (p && p.rangeSigs.length)
         for (let i = 0; i < p.rangeSigs.length; i++) {
           for (let j = 0; j < p.rangeSigs[i].bsig.s.length; j++) {
@@ -1465,8 +1511,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnTransactions2.serializeRangeProofsClassic = serializeRangeProofsClassic;
     function serializeRangeProofsBulletproof(rv) {
-      let buf = "";
-      let p = rv.p;
+      const buf = "";
+      const p = rv.p;
       if (p)
         for (let i = 0; i < p.bulletproofs.length; i++) {
           throw new Error("bulletproof serialization not implemented");
@@ -1479,7 +1525,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       let hashes = "";
       hashes += rv.message;
       hashes += CnUtils.cn_fast_hash(CnTransactions2.serialize_rct_base(rv));
-      let buf = CnTransactions2.serializeRangeProofs(rv);
+      const buf = CnTransactions2.serializeRangeProofs(rv);
       hashes += CnUtils.cn_fast_hash(buf);
       return CnUtils.cn_fast_hash(hashes);
     }
@@ -1504,7 +1550,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         throw "mismatched indices/inSk";
       }
       logDebugMsg("======t");
-      let rv = {
+      const rv = {
         type: inSk.length === 1 ? 1 /* Full */ : 2 /* Simple */,
         message,
         outPk: [],
@@ -1518,27 +1564,31 @@ var reportError = self.reportError || function (e) { console.error(e); };
         pseudoOuts: []
       };
       let sumout = CnVars.Z;
-      let cmObj = {
+      const cmObj = {
         C: "",
         mask: ""
       };
       logDebugMsg("====a");
-      let p = rv.p;
+      const p = rv.p;
       if (p) {
-        let nrings = 64;
+        const nrings = 64;
         for (let i = 0; i < outAmounts.length; i++) {
-          let teststart = (/* @__PURE__ */ new Date()).getTime();
-          if (!bulletproof) p.rangeSigs[i] = CnTransactions2.proveRange(cmObj, outAmounts[i], nrings, 0, 0);
-          let testfinish = (/* @__PURE__ */ new Date()).getTime() - teststart;
+          const teststart = (/* @__PURE__ */ new Date()).getTime();
+          if (!bulletproof)
+            p.rangeSigs[i] = CnTransactions2.proveRange(cmObj, outAmounts[i], nrings, 0, 0);
+          const testfinish = (/* @__PURE__ */ new Date()).getTime() - teststart;
           logDebugMsg("Time take for range proof " + i + ": " + testfinish);
           rv.outPk[i] = cmObj.C;
           sumout = CnNativeBride.sc_add(sumout, cmObj.mask);
-          rv.ecdhInfo[i] = CnUtils.encode_rct_ecdh({ mask: cmObj.mask, amount: CnUtils.d2s(outAmounts[i]) }, amountKeys[i]);
+          rv.ecdhInfo[i] = CnUtils.encode_rct_ecdh(
+            { mask: cmObj.mask, amount: CnUtils.d2s(outAmounts[i]) },
+            amountKeys[i]
+          );
         }
         logDebugMsg("====a");
         logDebugMsg("-----------rv type", rv.type);
         if (rv.type === 2 /* Simple */) {
-          let ai = [];
+          const ai = [];
           let sumpouts = CnVars.Z;
           let i = 0;
           for (; i < inAmounts.length - 1; i++) {
@@ -1548,9 +1598,19 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
           ai[i] = CnNativeBride.sc_sub(sumout, sumpouts);
           rv.pseudoOuts[i] = commit(CnUtils.d2s(inAmounts[i]), ai[i]);
-          let full_message = CnTransactions2.get_pre_mlsag_hash(rv);
+          const full_message = CnTransactions2.get_pre_mlsag_hash(rv);
           for (let i2 = 0; i2 < inAmounts.length; i2++) {
-            p.MGs.push(CnTransactions2.proveRctMG(full_message, mixRing[i2], inSk[i2], kimg[i2], ai[i2], rv.pseudoOuts[i2], indices[i2]));
+            p.MGs.push(
+              CnTransactions2.proveRctMG(
+                full_message,
+                mixRing[i2],
+                inSk[i2],
+                kimg[i2],
+                ai[i2],
+                rv.pseudoOuts[i2],
+                indices[i2]
+              )
+            );
           }
         } else {
           let sumC = CnVars.I;
@@ -1558,8 +1618,18 @@ var reportError = self.reportError || function (e) { console.error(e); };
             sumC = CnUtils.ge_add(sumC, rv.outPk[i]);
           }
           sumC = CnUtils.ge_add(sumC, CnUtils.ge_scalarmult(CnVars.H, CnUtils.d2s(rv.txnFee)));
-          let full_message = CnTransactions2.get_pre_mlsag_hash(rv);
-          p.MGs.push(CnTransactions2.proveRctMG(full_message, mixRing[0], inSk[0], kimg[0], sumout, sumC, indices[0]));
+          const full_message = CnTransactions2.get_pre_mlsag_hash(rv);
+          p.MGs.push(
+            CnTransactions2.proveRctMG(
+              full_message,
+              mixRing[0],
+              inSk[0],
+              kimg[0],
+              sumout,
+              sumC,
+              indices[0]
+            )
+          );
         }
       }
       return rv;
@@ -1568,7 +1638,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     function construct_tx(keys, sources, dsts, senderAddress, fee_amount, payment_id, pid_encrypt, realDestViewKey, unlock_time = 0, rct, message, ttl, transactionType, term) {
       try {
         console.log("Starting transaction construction...");
-        let txkey = Cn.random_keypair();
+        const txkey = Cn.random_keypair();
         logDebugMsg(txkey);
         let extra = "";
         if (payment_id) {
@@ -1577,17 +1647,17 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
           logDebugMsg("Adding payment id: " + payment_id);
           if (pid_encrypt && realDestViewKey) {
-            let pid_key = CnUtils.cn_fast_hash(
+            const pid_key = CnUtils.cn_fast_hash(
               Cn.generate_key_derivation(realDestViewKey, txkey.sec) + ENCRYPTED_PAYMENT_ID_TAIL.toString(16)
             ).slice(0, INTEGRATED_ID_SIZE * 2);
             logDebugMsg("Txkeys:", txkey, "Payment ID key:", pid_key);
             payment_id = CnUtils.hex_xor(payment_id, pid_key);
           }
-          let nonce = CnTransactions2.get_payment_id_nonce(payment_id, pid_encrypt);
+          const nonce = CnTransactions2.get_payment_id_nonce(payment_id, pid_encrypt);
           logDebugMsg("Extra nonce: " + nonce);
           extra = CnTransactions2.add_nonce_to_extra(extra, nonce);
         }
-        let tx = {
+        const tx = {
           unlock_time,
           version: rct ? CURRENT_TX_VERSION : OLD_TX_VERSION,
           extra,
@@ -1618,7 +1688,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           tx.version = DEPOSIT_TX_VERSION;
         }
         tx.prvkey = txkey.sec;
-        let in_contexts = [];
+        const in_contexts = [];
         let inputs_money = JSBigInt.ZERO;
         let i, j;
         logDebugMsg("Sources: ");
@@ -1628,7 +1698,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             if (sources[i].real_out >= sources[i].outputs.length) {
               throw "real index >= outputs.length";
             }
-            let res = CnTransactions2.generate_key_image_helper_rct(
+            const res = CnTransactions2.generate_key_image_helper_rct(
               keys,
               sources[i].real_out_tx_key,
               sources[i].real_out_in_tx,
@@ -1641,9 +1711,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
             sources[i].key_image = res.image;
             sources[i].in_ephemeral = res.in_ephemeral;
           }
-          sources.sort(function(a, b) {
-            return JSBigInt.parse(a.key_image, 16).compare(JSBigInt.parse(b.key_image, 16)) * -1;
-          });
+          sources.sort(
+            (a, b) => JSBigInt.parse(a.key_image, 16).compare(JSBigInt.parse(b.key_image, 16)) * -1
+          );
         }
         for (i = 0; i < sources.length; i++) {
           inputs_money = inputs_money.add(sources[i].amount);
@@ -1677,18 +1747,18 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
           tx.vin.push(input_to_key);
         }
-        let outputs_money = JSBigInt.ZERO;
+        const outputs_money = JSBigInt.ZERO;
         let out_index = 0;
-        let amountKeys = [];
+        const amountKeys = [];
         let num_stdaddresses = 0;
         let num_subaddresses = 0;
         let single_dest_subaddress = "";
-        let unique_dst_addresses = {};
+        const unique_dst_addresses = {};
         for (i = 0; i < dsts.length; ++i) {
           if (new JSBigInt(dsts[i].amount).compare(0) < 0) {
             throw "dst.amount < 0";
           }
-          let destKeys = Cn.decode_address(dsts[i].address);
+          const destKeys = Cn.decode_address(dsts[i].address);
           if (destKeys.view === keys.view.pub)
             continue;
           if (typeof unique_dst_addresses[dsts[i].address] === "undefined") {
@@ -1703,14 +1773,14 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
         logDebugMsg("Destinations resume:", unique_dst_addresses, num_stdaddresses, num_subaddresses);
         if (num_stdaddresses == 0 && num_subaddresses == 1) {
-          let uniqueSubaddressDecoded = Cn.decode_address(single_dest_subaddress);
+          const uniqueSubaddressDecoded = Cn.decode_address(single_dest_subaddress);
           txkey.pub = CnUtils.ge_scalarmult(uniqueSubaddressDecoded.spend, txkey.sec);
         }
-        let additional_tx_keys = [];
-        let additional_tx_public_keys = [];
-        let need_additional_txkeys = num_subaddresses > 0 && (num_stdaddresses > 0 || num_subaddresses > 1);
+        const additional_tx_keys = [];
+        const additional_tx_public_keys = [];
+        const need_additional_txkeys = num_subaddresses > 0 && (num_stdaddresses > 0 || num_subaddresses > 1);
         for (i = 0; i < dsts.length; ++i) {
-          let destKeys = Cn.decode_address(dsts[i].address);
+          const destKeys = Cn.decode_address(dsts[i].address);
           let additional_txkey = { sec: "", pub: "" };
           if (need_additional_txkeys) {
             additional_txkey = Cn.random_keypair();
@@ -1736,7 +1806,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           let out_ephemeral_pub = Cn.derive_public_key(out_derivation, out_index, destKeys.spend);
           let out;
           if (transactionType === "deposit" && i === 0) {
-            let depositOut = {
+            const depositOut = {
               amount: dsts[i].amount,
               // dsts[0].amount = amount_to_deposit
               target: {
@@ -1766,7 +1836,10 @@ var reportError = self.reportError || function (e) { console.error(e); };
           ++out_index;
         }
         tx.extra = CnTransactions2.add_pub_key_to_extra(tx.extra, txkey.pub);
-        tx.extra = CnTransactions2.add_additionnal_pub_keys_to_extra(tx.extra, additional_tx_public_keys);
+        tx.extra = CnTransactions2.add_additionnal_pub_keys_to_extra(
+          tx.extra,
+          additional_tx_public_keys
+        );
         if (message) {
           let messageAddress = null;
           for (let i2 = 0; i2 < dsts.length; i2++) {
@@ -1775,33 +1848,36 @@ var reportError = self.reportError || function (e) { console.error(e); };
             }
           }
           if (messageAddress) {
-            let destKeys = Cn.decode_address(messageAddress);
-            let derivation = CnNativeBride.generate_key_derivation(destKeys.spend, txkey.sec);
-            let magick1 = "80";
-            let magick2 = "00";
-            let keyData = derivation + magick1 + magick2;
-            let hash = CnUtils.cn_fast_hash(keyData);
-            let hashBuf = CnUtils.hextobin(hash);
-            let nonceBuf = new Uint8Array(12);
-            let index = 0;
+            const destKeys = Cn.decode_address(messageAddress);
+            const derivation = CnNativeBride.generate_key_derivation(
+              destKeys.spend,
+              txkey.sec
+            );
+            const magick1 = "80";
+            const magick2 = "00";
+            const keyData = derivation + magick1 + magick2;
+            const hash = CnUtils.cn_fast_hash(keyData);
+            const hashBuf = CnUtils.hextobin(hash);
+            const nonceBuf = new Uint8Array(12);
+            const index = 0;
             for (let i2 = 0; i2 < 12; i2++) {
               nonceBuf.set([index / 256 ** i2], 11 - i2);
             }
-            let rawMessArr = new TextEncoder().encode(message);
-            let rawMessArrFull = new Uint8Array(rawMessArr.length + 4);
+            const rawMessArr = new TextEncoder().encode(message);
+            const rawMessArrFull = new Uint8Array(rawMessArr.length + 4);
             rawMessArrFull.set(rawMessArr);
             rawMessArrFull.set([0, 0, 0, 0], rawMessArr.length);
             const cha = new JSChaCha8(hashBuf, nonceBuf);
-            let _buf = cha.encrypt(rawMessArrFull);
-            let encryptedMessStr = CnUtils.bintohex(_buf);
+            const _buf = cha.encrypt(rawMessArrFull);
+            const encryptedMessStr = CnUtils.bintohex(_buf);
             tx.extra += TX_EXTRA_TAGS.MESSAGE_TAG;
             tx.extra += ("0" + rawMessArrFull.length.toString(16)).slice(-2);
             tx.extra += encryptedMessStr;
           }
         }
         if (ttl !== 0) {
-          let ttlStr = CnUtils.encode_varint(ttl);
-          let ttlSize = CnUtils.encode_varint(ttlStr.length / 2);
+          const ttlStr = CnUtils.encode_varint(ttl);
+          const ttlSize = CnUtils.encode_varint(ttlStr.length / 2);
           tx.extra = tx.extra + TX_EXTRA_TAGS.TTL_TAG + ttlSize + ttlStr;
         }
         if (outputs_money.add(fee_amount).compare(inputs_money) > 0) {
@@ -1809,12 +1885,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
         if (!rct) {
           for (i = 0; i < sources.length; ++i) {
-            let src_keys = [];
+            const src_keys = [];
             for (j = 0; j < sources[i].outputs.length; ++j) {
               src_keys.push(sources[i].outputs[j].key);
             }
             if (transactionType !== "withdraw") {
-              let sigs = CnNativeBride.generate_ring_signature(
+              const sigs = CnNativeBride.generate_ring_signature(
                 CnTransactions2.get_tx_prefix_hash(tx),
                 tx.vin[i].k_image,
                 src_keys,
@@ -1823,14 +1899,14 @@ var reportError = self.reportError || function (e) { console.error(e); };
               );
               tx.signatures.push(sigs);
             } else {
-              let txPrefixHash = CnTransactions2.get_tx_prefix_hash(tx);
-              let derivation = CnNativeBride.generate_key_derivation(
+              const txPrefixHash = CnTransactions2.get_tx_prefix_hash(tx);
+              const derivation = CnNativeBride.generate_key_derivation(
                 sources[i].real_out_tx_key,
                 // sourceTransactionKey
                 keys.view.sec
                 // accountKeys.viewSecretKey
               );
-              let ephemeralPublicKey = CnNativeBride.derive_public_key(
+              const ephemeralPublicKey = CnNativeBride.derive_public_key(
                 derivation,
                 // derivation
                 parseInt(sources[i].outputs[i].index),
@@ -1838,7 +1914,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
                 keys.spend.pub
                 // accountKeys.address.spendPublicKey
               );
-              let ephemeralSecretKey = CnNativeBride.derive_secret_key(
+              const ephemeralSecretKey = CnNativeBride.derive_secret_key(
                 derivation,
                 // derivation
                 parseInt(sources[i].outputs[i].index),
@@ -1846,7 +1922,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
                 keys.spend.sec
                 // accountKeys.spendSecretKey
               );
-              let sig = CnNativeBride.generate_signature(
+              const sig = CnNativeBride.generate_signature(
                 txPrefixHash,
                 // txPrefixHash
                 ephemeralPublicKey,
@@ -1854,7 +1930,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
                 ephemeralSecretKey
                 // ephemeralSecretKey
               );
-              const isValidSignature = CnNativeBride.verify_signature(txPrefixHash, ephemeralPublicKey, sig);
+              const isValidSignature = CnNativeBride.verify_signature(
+                txPrefixHash,
+                ephemeralPublicKey,
+                sig
+              );
               console.log("Signature verification result:", isValidSignature);
               if (!isValidSignature) {
                 throw "Signature verification failed";
@@ -1863,12 +1943,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
             }
           }
         } else {
-          let txnFee = fee_amount;
-          let keyimages = [];
-          let inSk = [];
-          let inAmounts = [];
-          let mixRing = [];
-          let indices = [];
+          const txnFee = fee_amount;
+          const keyimages = [];
+          const inSk = [];
+          const inAmounts = [];
+          const mixRing = [];
+          const indices = [];
           for (i = 0; i < tx.vin.length; i++) {
             keyimages.push(tx.vin[i].k_image);
             inSk.push({
@@ -1888,13 +1968,13 @@ var reportError = self.reportError || function (e) { console.error(e); };
             }
             indices.push(sources[i].real_out);
           }
-          let outAmounts = [];
+          const outAmounts = [];
           for (i = 0; i < tx.vout.length; i++) {
             outAmounts.push(tx.vout[i].amount);
             tx.vout[i].amount = 0;
           }
           logDebugMsg("rc signature----");
-          let tx_prefix_hash = CnTransactions2.get_tx_prefix_hash(tx);
+          const tx_prefix_hash = CnTransactions2.get_tx_prefix_hash(tx);
           logDebugMsg("rc signature----");
           tx.rct_signatures = CnTransactions2.genRct(
             tx_prefix_hash,
@@ -1936,7 +2016,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
         }
       }
-      let keys = {
+      const keys = {
         view: {
           pub: pub_keys.view,
           sec: sec_keys.view
@@ -1957,7 +2037,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
       }
       let found_money = JSBigInt.ZERO;
-      let sources = [];
+      const sources = [];
       logDebugMsg("Selected transfers: ", outputs);
       for (i = 0; i < outputs.length; ++i) {
         found_money = found_money.add(outputs[i].amount);
@@ -1965,7 +2045,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           throw "Input overflow!";
         }
         if (transactionType === "withdraw") {
-          let src = {
+          const src = {
             outputs: [
               {
                 index: outputs[i].index.toString(),
@@ -1992,7 +2072,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           src.amount = new JSBigInt(outputs[i].amount).toString();
           sources.push(src);
         } else {
-          let src = {
+          const src = {
             outputs: [],
             amount: "",
             real_out_tx_key: "",
@@ -2010,13 +2090,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
           src.amount = new JSBigInt(outputs[i].amount).toString();
           if (mix_outs.length !== 0) {
             logDebugMsg("mix outs before sort", mix_outs[i].outs);
-            mix_outs[i].outs.sort(function(a, b) {
-              return new JSBigInt(a.global_index).compare(b.global_index);
-            });
+            mix_outs[i].outs.sort((a, b) => new JSBigInt(a.global_index).compare(b.global_index));
             j = 0;
             logDebugMsg("mix outs sorted", mix_outs[i].outs);
             while (src.outputs.length < fake_outputs_count && j < mix_outs[i].outs.length) {
-              let out = mix_outs[i].outs[j];
+              const out = mix_outs[i].outs[j];
               logDebugMsg("chekcing mixin");
               logDebugMsg("out: ", out);
               logDebugMsg("output ", i, ": ", outputs[i]);
@@ -2025,7 +2103,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
                 j++;
                 continue;
               }
-              let oe = {
+              const oe = {
                 index: out.global_index.toString(),
                 key: out.public_key,
                 commit: ""
@@ -2034,7 +2112,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
               j++;
             }
           }
-          let real_oe = {
+          const real_oe = {
             index: new JSBigInt(outputs[i].global_index || 0).toString(),
             key: outputs[i].public_key,
             commit: ""
@@ -2059,7 +2137,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       logDebugMsg("found_money: ", found_money);
       logDebugMsg("needed_money: ", needed_money);
       logDebugMsg("sources: ", sources);
-      let change = {
+      const change = {
         amount: JSBigInt.ZERO
       };
       let cmp = needed_money.compare(found_money);
@@ -2133,7 +2211,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return { applicable: false };
     }
     const PRETTY_AMOUNTS = config.PRETTY_AMOUNTS;
-    let idx = PRETTY_AMOUNTS.findIndex((a) => a >= amount);
+    const idx = PRETTY_AMOUNTS.findIndex((a) => a >= amount);
     if (idx === -1 || PRETTY_AMOUNTS[idx] !== amount) {
       return { applicable: false };
     }
@@ -2175,7 +2253,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.rtcMask = "";
       this.rtcAmount = "";
       this.export = () => {
-        let data = {
+        const data = {
           keyImage: this.keyImage,
           outputIdx: this.outputIdx,
           globalIndex: this.globalIndex,
@@ -2191,7 +2269,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return data;
       };
       this.copy = () => {
-        let aCopy = new _TransactionOut();
+        const aCopy = new _TransactionOut();
         aCopy.amount = this.amount;
         aCopy.keyImage = this.keyImage;
         aCopy.outputIdx = this.outputIdx;
@@ -2208,7 +2286,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
   };
   _TransactionOut.fromRaw = (raw) => {
-    let nout = new _TransactionOut();
+    const nout = new _TransactionOut();
     nout.keyImage = raw.keyImage;
     nout.outputIdx = raw.outputIdx;
     nout.globalIndex = raw.globalIndex;
@@ -2241,7 +2319,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         };
       };
       this.copy = () => {
-        let aCopy = new _TransactionIn();
+        const aCopy = new _TransactionIn();
         aCopy.outputIndex = this.outputIndex;
         aCopy.keyImage = this.keyImage;
         aCopy.amount = this.amount;
@@ -2252,7 +2330,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
   };
   _TransactionIn.fromRaw = (raw) => {
-    let nin = new _TransactionIn();
+    const nin = new _TransactionIn();
     nin.outputIndex = raw.outputIndex, nin.keyImage = raw.keyImage;
     nin.amount = raw.amount;
     nin.type = raw.type;
@@ -2274,23 +2352,25 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.message = "";
       this.messageViewed = false;
       this.ttl = 0;
+      // TTL timestamp (absolute UNIX timestamp in seconds)
+      this.remoteAddress = "";
       this.export = () => {
-        let data = {
+        const data = {
           blockHeight: this.blockHeight,
           txPubKey: this.txPubKey,
           timestamp: this.timestamp,
           hash: this.hash
         };
         if (this.ins.length > 0) {
-          let rins = [];
-          for (let nin of this.ins) {
+          const rins = [];
+          for (const nin of this.ins) {
             rins.push(nin.export());
           }
           data.ins = rins;
         }
         if (this.outs.length > 0) {
-          let routs = [];
-          for (let nout of this.outs) {
+          const routs = [];
+          for (const nout of this.outs) {
             routs.push(nout.export());
           }
           data.outs = routs;
@@ -2301,16 +2381,17 @@ var reportError = self.reportError || function (e) { console.error(e); };
         if (this.fusion) data.fusion = this.fusion;
         if (this.messageViewed) data.messageViewed = this.messageViewed;
         if (this.ttl !== 0) data.ttl = this.ttl;
+        if (this.remoteAddress !== "") data.remoteAddress = this.remoteAddress;
         return data;
       };
       this.getAmount = () => {
         let amount = 0;
-        for (let out of this.outs) {
+        for (const out of this.outs) {
           if (out.type !== "03") {
             amount += out.amount;
           }
         }
-        for (let nin of this.ins) {
+        for (const nin of this.ins) {
           if (nin.type !== "03") {
             amount -= nin.amount;
           }
@@ -2340,7 +2421,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             return false;
           }
         } else {
-          for (let input of this.ins) {
+          for (const input of this.ins) {
             if (input.amount < 0) {
               return false;
             }
@@ -2349,11 +2430,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
       };
       this.hasMessage = () => {
-        let txAmount = this.getAmount();
+        const txAmount = this.getAmount();
         return this.message !== "" && txAmount > 0 && txAmount !== 1 * config.remoteNodeFee && txAmount !== 10 * config.remoteNodeFee;
       };
       this.copy = () => {
-        let aCopy = new _Transaction();
+        const aCopy = new _Transaction();
         aCopy.blockHeight = this.blockHeight;
         aCopy.txPubKey = this.txPubKey;
         aCopy.hash = this.hash;
@@ -2364,10 +2445,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
         aCopy.fusion = this.fusion;
         aCopy.messageViewed = this.messageViewed;
         aCopy.ttl = this.ttl;
-        for (let nin of this.ins) {
+        aCopy.remoteAddress = this.remoteAddress;
+        for (const nin of this.ins) {
           aCopy.ins.push(nin.copy());
         }
-        for (let nout of this.outs) {
+        for (const nout of this.outs) {
           aCopy.outs.push(nout.copy());
         }
         return aCopy;
@@ -2380,30 +2462,29 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return this.ins.some((input) => input.type === "03");
     }
     get isFusion() {
-      let outputsCount = this.outs.length;
-      let inputsCount = this.ins.length;
+      const outputsCount = this.outs.length;
+      const inputsCount = this.ins.length;
       if (this.outs.some((out) => out.type === "03") || this.ins.some((input) => input.type === "03")) {
         return false;
       }
       return inputsCount > Currency.fusionTxMinInputCount && inputsCount / outputsCount > config.fusionTxMinInOutCountRatio || this.fusion;
     }
   };
-  // TTL timestamp (absolute UNIX timestamp in seconds)
   _Transaction.fromRaw = (raw) => {
-    let transac = new _Transaction();
+    const transac = new _Transaction();
     transac.blockHeight = raw.blockHeight;
     transac.txPubKey = raw.txPubKey;
     transac.timestamp = raw.timestamp;
     if (typeof raw.ins !== "undefined") {
-      let ins = [];
-      for (let rin of raw.ins) {
+      const ins = [];
+      for (const rin of raw.ins) {
         ins.push(TransactionIn.fromRaw(rin));
       }
       transac.ins = ins;
     }
     if (typeof raw.outs !== "undefined") {
-      let outs = [];
-      for (let rout of raw.outs) {
+      const outs = [];
+      for (const rout of raw.outs) {
         outs.push(TransactionOut.fromRaw(rout));
       }
       transac.outs = outs;
@@ -2415,6 +2496,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     if (typeof raw.fusion !== "undefined") transac.fusion = raw.fusion;
     if (typeof raw.messageViewed !== "undefined") transac.messageViewed = raw.messageViewed;
     if (typeof raw.ttl !== "undefined") transac.ttl = raw.ttl;
+    if (typeof raw.remoteAddress !== "undefined") transac.remoteAddress = raw.remoteAddress;
     return transac;
   };
   var Transaction = _Transaction;
@@ -2432,7 +2514,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.txPubKey = "";
     }
     static fromRaw(raw) {
-      let deposit = new Deposit();
+      const deposit = new Deposit();
       deposit.term = raw.term;
       deposit.txHash = raw.txHash;
       deposit.amount = raw.amount;
@@ -2460,7 +2542,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       };
     }
     copy() {
-      let aCopy = new Deposit();
+      const aCopy = new Deposit();
       aCopy.term = this.term;
       aCopy.txHash = this.txHash;
       aCopy.amount = this.amount;
@@ -2482,7 +2564,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       // Array of public keys for multisignature deposit
       this.withdrawPending = false;
       this.copy = () => {
-        let aCopy = super.copy();
+        const aCopy = super.copy();
         aCopy.spentTx = this.spentTx;
         aCopy.withdrawPending = this.withdrawPending;
         aCopy.keys = [...this.keys];
@@ -2490,7 +2572,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       };
     }
     static fromRaw(raw) {
-      let deposit = new _Deposit();
+      const deposit = new _Deposit();
       deposit.term = raw.term;
       deposit.txHash = raw.txHash;
       deposit.amount = raw.amount;
@@ -2544,19 +2626,19 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.withdrawals = [];
       this.deposits = [];
       this.export = () => {
-        let txData = {};
-        let deposits = [];
-        let withdrawals = [];
+        const txData = {};
+        const deposits = [];
+        const withdrawals = [];
         if (this.transaction) {
           txData.transaction = this.transaction.export();
         }
         if (this.deposits.length > 0) {
-          for (let deposit of this.deposits) {
+          for (const deposit of this.deposits) {
             deposits.push(deposit.export());
           }
         }
         if (this.withdrawals.length > 0) {
-          for (let withdrawal of this.withdrawals) {
+          for (const withdrawal of this.withdrawals) {
             withdrawals.push(withdrawal.export());
           }
         }
@@ -2565,12 +2647,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return txData;
       };
       this.copy = () => {
-        let aCopy = new _TransactionData();
+        const aCopy = new _TransactionData();
         aCopy.transaction = this.transaction ? this.transaction.copy() : null;
-        for (let deposit of this.deposits) {
+        for (const deposit of this.deposits) {
           aCopy.deposits.push(deposit.copy());
         }
-        for (let withdrawal of this.withdrawals) {
+        for (const withdrawal of this.withdrawals) {
           aCopy.withdrawals.push(withdrawal.copy());
         }
         return aCopy;
@@ -2578,15 +2660,15 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
   };
   _TransactionData.fromRaw = (raw) => {
-    let txData = new _TransactionData();
+    const txData = new _TransactionData();
     txData.transaction = Transaction.fromRaw(raw.transaction);
     if (raw.withdrawals) {
-      for (let withdrawal of raw.withdrawals) {
+      for (const withdrawal of raw.withdrawals) {
         txData.withdrawals.push(Deposit.fromRaw(withdrawal));
       }
     }
     if (raw.deposits) {
-      for (let deposit of raw.deposits) {
+      for (const deposit of raw.deposits) {
         txData.deposits.push(Deposit.fromRaw(deposit));
       }
     }
@@ -2595,7 +2677,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
   var TransactionData = _TransactionData;
 
   // lib/wallet-core/Interest.ts
-  var InterestCalculator = class {
+  var _InterestCalculator = class _InterestCalculator {
     // Block with special handling
     /**
      * Calculates interest for a deposit based on amount, term, and lock height
@@ -2606,18 +2688,18 @@ var reportError = self.reportError || function (e) { console.error(e); };
      */
     static calculateInterest(amount, term, lockHeight) {
       const m_coin = Math.pow(10, config.coinUnitPlaces);
-      if (lockHeight === this.BLOCK_WITH_MISSING_INTEREST) {
+      if (lockHeight === _InterestCalculator.BLOCK_WITH_MISSING_INTEREST) {
         lockHeight = lockHeight + term;
       }
-      if (term % this.DEPOSIT_MIN_TERM_V3 === 0 && lockHeight > (config.depositHeightV3 || this.DEPOSIT_HEIGHT_V3)) {
-        return this.calculateInterestV3(amount, term);
+      if (term % _InterestCalculator.DEPOSIT_MIN_TERM_V3 === 0 && lockHeight > (config.depositHeightV3 || _InterestCalculator.DEPOSIT_HEIGHT_V3)) {
+        return _InterestCalculator.calculateInterestV3(amount, term);
       }
-      if (term % 64800 === 0 || term % this.DEPOSIT_MIN_TERM === 0) {
-        return this.calculateInterestV2(amount, term);
+      if (term % 64800 === 0 || term % _InterestCalculator.DEPOSIT_MIN_TERM === 0) {
+        return _InterestCalculator.calculateInterestV2(amount, term);
       }
       logDebugMsg("Warning: Using legacy V1 interest calculation");
-      const m_depositMaxTerm = this.DEPOSIT_MAX_TERM_V1;
-      const a = term * this.DEPOSIT_MAX_TOTAL_RATE - this.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
+      const m_depositMaxTerm = _InterestCalculator.DEPOSIT_MAX_TERM_V1;
+      const a = term * _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE - _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
       let interestAmount = amount * a / (100 * m_depositMaxTerm);
       const END_MULTIPLIER_BLOCK = 1e6;
       const MULTIPLIER_FACTOR = 3;
@@ -2641,7 +2723,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       } else if (amount4Humans >= 1e4) {
         baseInterest = config.depositRateV3[1] || 0.039;
       }
-      let months = term / this.DEPOSIT_MIN_TERM_V3;
+      let months = term / _InterestCalculator.DEPOSIT_MIN_TERM_V3;
       if (months > 12) {
         months = 12;
       }
@@ -2685,8 +2767,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
         const interest = amount * (rate / 100);
         return Math.floor(interest);
       }
-      if (term % this.DEPOSIT_MIN_TERM === 0) {
-        const weeks = term / this.DEPOSIT_MIN_TERM;
+      if (term % _InterestCalculator.DEPOSIT_MIN_TERM === 0) {
+        const weeks = term / _InterestCalculator.DEPOSIT_MIN_TERM;
         const baseInterest = config.weeklyBaseInterest || 0.0696;
         const interestPerWeek = config.weeklyInterestIncrement || 2e-4;
         const interestRate = baseInterest + weeks * interestPerWeek;
@@ -2697,25 +2779,26 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
   };
   // Constants from C++ implementation
-  InterestCalculator.DEPOSIT_MIN_TERM = 5040;
+  _InterestCalculator.DEPOSIT_MIN_TERM = 5040;
   // One week
-  InterestCalculator.DEPOSIT_MAX_TERM = 12 * 21900;
+  _InterestCalculator.DEPOSIT_MAX_TERM = 12 * 21900;
   // One year
-  InterestCalculator.DEPOSIT_MAX_TERM_V1 = 64800 * 20;
+  _InterestCalculator.DEPOSIT_MAX_TERM_V1 = 64800 * 20;
   // Five years
-  InterestCalculator.DEPOSIT_MIN_TERM_V3 = 21900;
+  _InterestCalculator.DEPOSIT_MIN_TERM_V3 = 21900;
   // One month
-  InterestCalculator.DEPOSIT_MAX_TERM_V3 = 12 * 21900;
+  _InterestCalculator.DEPOSIT_MAX_TERM_V3 = 12 * 21900;
   // One year
-  InterestCalculator.DEPOSIT_HEIGHT_V3 = 413400;
+  _InterestCalculator.DEPOSIT_HEIGHT_V3 = 413400;
   // Height when V3 deposit rates were activated
-  InterestCalculator.DEPOSIT_HEIGHT_V4 = 1162162;
+  _InterestCalculator.DEPOSIT_HEIGHT_V4 = 1162162;
   // Height when deposit terms were enforced
-  InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR = 0;
+  _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR = 0;
   // Constant rate
-  InterestCalculator.DEPOSIT_MAX_TOTAL_RATE = 4;
+  _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE = 4;
   // Legacy deposits
-  InterestCalculator.BLOCK_WITH_MISSING_INTEREST = 425799;
+  _InterestCalculator.BLOCK_WITH_MISSING_INTEREST = 425799;
+  var InterestCalculator = _InterestCalculator;
 
   // lib/wallet-core/Varint.ts
   var MSB = 128;
@@ -2723,7 +2806,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
   var MSBALL = ~REST;
   var INT = Math.pow(2, 31);
   var TWO_POWER_SEVEN = Math.pow(2, 7);
-  var decode = function(buf, offset = 0) {
+  var decode = ((buf, offset = 0) => {
     let res = 0, shift = 1, counter = offset, b;
     const l = Math.pow(TWO_POWER_SEVEN, buf.length - offset < 8 ? (buf.length - offset) * 7 : 49);
     do {
@@ -2737,7 +2820,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     } while (b >= MSB);
     decode.bytes = counter - offset;
     return res;
-  };
+  });
 
   // lib/wallet-core/TransactionsExplorer.ts
   var TX_EXTRA_TAG_PADDING = 0;
@@ -2753,7 +2836,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
   var TransactionsExplorer = class _TransactionsExplorer {
     static parseExtra(oExtra) {
       let extra = oExtra.slice();
-      let extras = [];
+      const extras = [];
       let hasFoundPubKey = false;
       while (extra.length > 0) {
         try {
@@ -2781,7 +2864,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             break;
           }
           if (startOffset > 0 && extraSize > 0) {
-            let data = extra.slice(startOffset, startOffset + extraSize);
+            const data = extra.slice(startOffset, startOffset + extraSize);
             extras.push({
               type: extra[0],
               data
@@ -2933,18 +3016,18 @@ var reportError = self.reportError || function (e) { console.error(e); };
         console.error("UNABLE TO CREATE DERIVATION", e);
         return null;
       }
-      let magick1 = "80";
-      let magick2 = "00";
-      let keyData = derivation + magick1 + magick2;
-      let hash = concealjs.cnutils.cn_fast_hash(keyData);
-      let hashBuf = concealjs.cnutils.hextobin(hash);
-      let nonceBuf = new Uint8Array(12);
+      const magick1 = "80";
+      const magick2 = "00";
+      const keyData = derivation + magick1 + magick2;
+      const hash = concealjs.cnutils.cn_fast_hash(keyData);
+      const hashBuf = concealjs.cnutils.hextobin(hash);
+      const nonceBuf = new Uint8Array(12);
       for (let i = 0; i < 12; i++) {
         nonceBuf.set([index / 256 ** i], 11 - i);
       }
-      let rawMessArr = concealjs.cnutils.hextobin(rawMessage);
+      const rawMessArr = concealjs.cnutils.hextobin(rawMessage);
       const cha = new JSChaCha8(hashBuf, nonceBuf);
-      let _buf = cha.decrypt(rawMessArr);
+      const _buf = cha.decrypt(rawMessArr);
       decryptedMessage = new TextDecoder().decode(_buf);
       mlen -= TX_EXTRA_MESSAGE_CHECKSUM_SIZE;
       for (let i = 0; i < TX_EXTRA_MESSAGE_CHECKSUM_SIZE; i++) {
@@ -2957,25 +3040,25 @@ var reportError = self.reportError || function (e) { console.error(e); };
     static parse(rawTransaction, wallet) {
       let transactionData = null;
       let transaction = null;
-      let withdrawals = [];
-      let deposits = [];
+      const withdrawals = [];
+      const deposits = [];
       let tx_pub_key = "";
       let paymentId = null;
       let rawMessage = "";
       let ttl = 0;
       let txExtras = [];
       try {
-        let hexExtra = [];
-        let uint8Array = concealjs.cnutils.hextobin(rawTransaction.extra);
+        const hexExtra = [];
+        const uint8Array = concealjs.cnutils.hextobin(rawTransaction.extra);
         for (let i = 0; i < uint8Array.byteLength; i++) {
           hexExtra[i] = uint8Array[i];
         }
-        txExtras = this.parseExtra(hexExtra);
+        txExtras = _TransactionsExplorer.parseExtra(hexExtra);
       } catch (e) {
         console.error("Error when scanning transaction on block " + rawTransaction.height, e);
         return null;
       }
-      for (let extra of txExtras) {
+      for (const extra of txExtras) {
         if (extra.type === TX_EXTRA_TAG_PUBKEY) {
           for (let i = 0; i < 32; ++i) {
             tx_pub_key += String.fromCharCode(extra.data[i]);
@@ -2990,7 +3073,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       tx_pub_key = concealjs.cnutils.bintohex(tx_pub_key);
       let encryptedPaymentId = null;
       let extraIndex = 0;
-      for (let extra of txExtras) {
+      for (const extra of txExtras) {
         if (extra.type === TX_EXTRA_NONCE) {
           if (extra.data[0] === TX_EXTRA_NONCE_PAYMENT_ID) {
             paymentId = "";
@@ -3015,8 +3098,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
           for (let i = 0; i < extra.data.length; ++i) {
             rawTTL += String.fromCharCode(extra.data[i]);
           }
-          let ttlStr = concealjs.cnutils.bintohex(rawTTL);
-          let uint8Array = concealjs.cnutils.hextobin(ttlStr);
+          const ttlStr = concealjs.cnutils.bintohex(rawTTL);
+          const uint8Array = concealjs.cnutils.hextobin(ttlStr);
           ttl = decode(uint8Array);
         }
         extraIndex++;
@@ -3028,11 +3111,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
         console.error("UNABLE TO CREATE DERIVATION", e);
         return null;
       }
-      let outs = [];
-      let ins = [];
+      const outs = [];
+      const ins = [];
       for (let iOut = 0; iOut < rawTransaction.vout.length; iOut++) {
-        let out = rawTransaction.vout[iOut];
-        let txout_k = out.target.data;
+        const out = rawTransaction.vout[iOut];
+        const txout_k = out.target.data;
         let amount = 0;
         try {
           amount = out.amount;
@@ -3040,8 +3123,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
           console.error(e);
           continue;
         }
-        let output_idx_in_tx = iOut;
-        let generated_tx_pubkey = concealjs.crypto.derive_public_key(derivation, output_idx_in_tx, wallet.keys.pub.spend);
+        const output_idx_in_tx = iOut;
+        const generated_tx_pubkey = concealjs.crypto.derive_public_key(
+          derivation,
+          output_idx_in_tx,
+          wallet.keys.pub.spend
+        );
         let mine_output = false;
         if (out.target.type == "02" && typeof txout_k.key !== "undefined") {
           mine_output = txout_k.key == generated_tx_pubkey;
@@ -3053,7 +3140,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
         }
         if (mine_output) {
-          let transactionOut = new TransactionOut();
+          const transactionOut = new TransactionOut();
           if (typeof rawTransaction.global_index_start !== "undefined")
             transactionOut.globalIndex = rawTransaction.output_indexes[output_idx_in_tx];
           else transactionOut.globalIndex = output_idx_in_tx;
@@ -3065,8 +3152,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
             transactionOut.pubKey = generated_tx_pubkey;
             transactionOut.type = "03";
             if (out.target.data && out.target.data.term) {
-              let deposit = new Deposit();
-              if (typeof rawTransaction.height !== "undefined") deposit.blockHeight = rawTransaction.height;
+              const deposit = new Deposit();
+              if (typeof rawTransaction.height !== "undefined")
+                deposit.blockHeight = rawTransaction.height;
               if (typeof rawTransaction.hash !== "undefined") deposit.txHash = rawTransaction.hash;
               if (typeof rawTransaction.ts !== "undefined") deposit.timestamp = rawTransaction.ts;
               deposit.amount = transactionOut.amount;
@@ -3081,13 +3169,17 @@ var reportError = self.reportError || function (e) { console.error(e); };
                 deposit.keys = out.target.data.keys;
               }
               deposit.txPubKey = tx_pub_key;
-              deposit.interest = InterestCalculator.calculateInterest(deposit.amount, deposit.term, deposit.blockHeight);
+              deposit.interest = InterestCalculator.calculateInterest(
+                deposit.amount,
+                deposit.term,
+                deposit.blockHeight
+              );
               deposits.push(deposit);
             }
           }
           transactionOut.outputIdx = output_idx_in_tx;
           if (wallet.keys.priv.spend !== null && wallet.keys.priv.spend !== "") {
-            let m_key_image = CnTransactions.generate_key_image_helper(
+            const m_key_image = CnTransactions.generate_key_image_helper(
               {
                 view_secret_key: wallet.keys.priv.view,
                 spend_secret_key: wallet.keys.priv.spend,
@@ -3104,27 +3196,30 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
       }
       if (wallet.keys.priv.spend !== null && wallet.keys.priv.spend !== "") {
-        let keyImages = wallet.getTransactionKeyImages();
+        const keyImages = wallet.getTransactionKeyImages();
         for (let iIn = 0; iIn < rawTransaction.vin.length; ++iIn) {
-          let vin = rawTransaction.vin[iIn];
+          const vin = rawTransaction.vin[iIn];
           let wasAdded = false;
           if (vin.value && vin.value.k_image && keyImages.indexOf(vin.value.k_image) !== -1) {
-            let walletOuts = wallet.getAllOuts();
-            for (let ut of walletOuts) {
+            const walletOuts = wallet.getAllOuts();
+            for (const ut of walletOuts) {
               if (wasAdded) {
                 console.log(ut.keyImage, "=", vin.value.k_image);
               }
               if (ut.keyImage == vin.value.k_image) {
-                let transactionIn = new TransactionIn();
+                const transactionIn = new TransactionIn();
                 transactionIn.amount = ut.amount;
                 transactionIn.keyImage = ut.keyImage;
                 if (vin.type == "03") {
                   if (vin.value && vin.value.term) {
-                    let withdrawal = new Deposit();
+                    const withdrawal = new Deposit();
                     withdrawal.globalOutputIndex = vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
-                    if (typeof rawTransaction.height !== "undefined") withdrawal.blockHeight = rawTransaction.height;
-                    if (typeof rawTransaction.hash !== "undefined") withdrawal.txHash = rawTransaction.hash;
-                    if (typeof rawTransaction.ts !== "undefined") withdrawal.timestamp = rawTransaction.ts;
+                    if (typeof rawTransaction.height !== "undefined")
+                      withdrawal.blockHeight = rawTransaction.height;
+                    if (typeof rawTransaction.hash !== "undefined")
+                      withdrawal.txHash = rawTransaction.hash;
+                    if (typeof rawTransaction.ts !== "undefined")
+                      withdrawal.timestamp = rawTransaction.ts;
                     withdrawal.term = vin.value && vin.value.term ? vin.value.term : 0;
                     withdrawal.amount = transactionIn.amount;
                     withdrawals.push(withdrawal);
@@ -3137,17 +3232,18 @@ var reportError = self.reportError || function (e) { console.error(e); };
             }
           }
           if (!wasAdded && vin.type == "03") {
-            let transactionIn = new TransactionIn();
+            const transactionIn = new TransactionIn();
             transactionIn.type = "03";
             transactionIn.term = vin.value && vin.value.term ? vin.value.term : 0;
             if (vin.value && vin.value.amount) {
               transactionIn.amount = parseInt(vin.value.amount);
             }
             ins.push(transactionIn);
-            let withdrawal = new Deposit();
+            const withdrawal = new Deposit();
             if (typeof rawTransaction.ts !== "undefined") withdrawal.timestamp = rawTransaction.ts;
             if (typeof rawTransaction.hash !== "undefined") withdrawal.txHash = rawTransaction.hash;
-            if (typeof rawTransaction.height !== "undefined") withdrawal.blockHeight = rawTransaction.height;
+            if (typeof rawTransaction.height !== "undefined")
+              withdrawal.blockHeight = rawTransaction.height;
             if (vin.value && vin.value.amount) withdrawal.amount = parseInt(vin.value?.amount);
             withdrawal.globalOutputIndex = vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
             withdrawal.term = vin.value && vin.value.term ? vin.value.term : 0;
@@ -3156,25 +3252,25 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
         }
       } else {
-        let txOutIndexes = wallet.getTransactionOutIndexes();
+        const txOutIndexes = wallet.getTransactionOutIndexes();
         for (let iIn = 0; iIn < rawTransaction.vin.length; ++iIn) {
-          let vin = rawTransaction.vin[iIn];
+          const vin = rawTransaction.vin[iIn];
           if (!vin.value) continue;
-          let absoluteOffets = vin.value.key_offsets.slice();
+          const absoluteOffets = vin.value.key_offsets.slice();
           for (let i = 1; i < absoluteOffets.length; ++i) {
             absoluteOffets[i] += absoluteOffets[i - 1];
           }
           let ownTx = -1;
-          for (let index of absoluteOffets) {
+          for (const index of absoluteOffets) {
             if (txOutIndexes.indexOf(index) !== -1) {
               ownTx = index;
               break;
             }
           }
           if (ownTx !== -1) {
-            let txOut = wallet.getOutWithGlobalIndex(ownTx);
+            const txOut = wallet.getOutWithGlobalIndex(ownTx);
             if (txOut !== null) {
-              let transactionIn = new TransactionIn();
+              const transactionIn = new TransactionIn();
               transactionIn.amount = -txOut.amount;
               transactionIn.keyImage = txOut.keyImage;
               if (vin.type == "03") {
@@ -3189,13 +3285,18 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (outs.length > 0 || ins.length) {
         transactionData = new TransactionData();
         transaction = new Transaction();
-        if (typeof rawTransaction.height !== "undefined") transaction.blockHeight = rawTransaction.height;
+        if (typeof rawTransaction.height !== "undefined")
+          transaction.blockHeight = rawTransaction.height;
         if (typeof rawTransaction.ts !== "undefined") transaction.timestamp = rawTransaction.ts;
         if (typeof rawTransaction.hash !== "undefined") transaction.hash = rawTransaction.hash;
         transaction.txPubKey = tx_pub_key;
         if (paymentId !== null) transaction.paymentId = paymentId;
         if (encryptedPaymentId !== null) {
-          transaction.paymentId = Cn.decrypt_payment_id(encryptedPaymentId, tx_pub_key, wallet.keys.priv.view);
+          transaction.paymentId = Cn.decrypt_payment_id(
+            encryptedPaymentId,
+            tx_pub_key,
+            wallet.keys.priv.view
+          );
         }
         if (rawTransaction.vin[0].type === "ff") {
           transaction.fees = 0;
@@ -3210,7 +3311,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
         transactionData.deposits = deposits;
         if (rawMessage !== "") {
           try {
-            let message = this.decryptMessage(extraIndex, tx_pub_key, wallet.keys.priv.spend, rawMessage);
+            const message = _TransactionsExplorer.decryptMessage(
+              extraIndex,
+              tx_pub_key,
+              wallet.keys.priv.spend,
+              rawMessage
+            );
             transaction.message = message;
           } catch (e) {
             console.error("ERROR IN DECRYPTING MESSAGE: ", e);
@@ -3223,13 +3329,13 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return transactionData;
     }
     static formatWalletOutsForTx(wallet, blockchainHeight) {
-      let allOuts = [];
+      const allOuts = [];
       let unspentOuts = [];
-      for (let tr of wallet.getAll()) {
+      for (const tr of wallet.getAll()) {
         if (!tr.isConfirmed(blockchainHeight - 2)) {
           continue;
         }
-        for (let out of tr.outs) {
+        for (const out of tr.outs) {
           if (out.type === "03") {
             continue;
           }
@@ -3245,8 +3351,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
       }
       const spentKeyImages = /* @__PURE__ */ new Set();
-      for (let tr of wallet.getAll().concat(wallet.txsMem)) {
-        for (let i of tr.ins) {
+      for (const tr of wallet.getAll().concat(wallet.txsMem)) {
+        for (const i of tr.ins) {
           if (i.keyImage) {
             spentKeyImages.add(i.keyImage);
           }
@@ -3256,22 +3362,22 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return unspentOuts;
     }
     static createRawTx(dsts, wallet, rct, usingOuts, pid_encrypt, mix_outs = [], mixin, neededFee, payment_id, message, ttl, transactionType, term) {
-      return new Promise(function(resolve, reject) {
+      return new Promise((resolve, reject) => {
         let signed;
         try {
-          let realDestViewKey = void 0;
+          let realDestViewKey;
           if (pid_encrypt) {
             realDestViewKey = Cn.decode_address(dsts[0].address).view;
           }
-          let messageTo = void 0;
+          let messageTo;
           if (message) {
             messageTo = dsts[0].address;
           }
           let splittedDsts;
           if (transactionType === "deposit") {
-            let depositDst = dsts[0];
-            let otherDsts = dsts.slice(1);
-            let decomposedOtherDsts = CnTransactions.decompose_tx_destinations(otherDsts, rct);
+            const depositDst = dsts[0];
+            const otherDsts = dsts.slice(1);
+            const decomposedOtherDsts = CnTransactions.decompose_tx_destinations(otherDsts, rct);
             splittedDsts = [depositDst].concat(decomposedOtherDsts);
           } else {
             splittedDsts = CnTransactions.decompose_tx_destinations(dsts, rct);
@@ -3303,7 +3409,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             term
           );
           logDebugMsg("signed tx: ", signed);
-          let raw_tx_and_hash = CnTransactions.serialize_tx_with_hash(signed);
+          const raw_tx_and_hash = CnTransactions.serialize_tx_with_hash(signed);
           resolve({ raw: raw_tx_and_hash, signed });
         } catch (e) {
           reject("Failed to create transaction: " + e);
@@ -3311,16 +3417,16 @@ var reportError = self.reportError || function (e) { console.error(e); };
       });
     }
     static createTx(userDestinations, userPaymentId = "", wallet, blockchainHeight, obtainMixOutsCallback, confirmCallback, mixin = config.defaultMixin, message = "", ttl = 0, transactionType = "regular", term = 0) {
-      return new Promise(function(resolve, reject) {
-        let neededFee = new JSBigInt(window.config.coinFee);
+      return new Promise((resolve, reject) => {
+        const neededFee = new JSBigInt(window.config.coinFee);
         let pid_encrypt = false;
         let totalAmountWithoutFee = new JSBigInt(0);
         let paymentIdIncluded = 0;
         let paymentId = "";
-        let dsts = [];
-        for (let dest of userDestinations) {
+        const dsts = [];
+        for (const dest of userDestinations) {
           totalAmountWithoutFee = totalAmountWithoutFee.add(dest.amount);
-          let target = Cn.decode_address(dest.address);
+          const target = Cn.decode_address(dest.address);
           if (target.intPaymentId !== null) {
             ++paymentIdIncluded;
             paymentId = target.intPaymentId;
@@ -3354,19 +3460,22 @@ var reportError = self.reportError || function (e) { console.error(e); };
           pid_encrypt = userPaymentId.length === 16;
           paymentId = userPaymentId;
         }
-        let unspentOuts = _TransactionsExplorer.formatWalletOutsForTx(wallet, blockchainHeight);
-        let usingOuts = [];
+        const unspentOuts = _TransactionsExplorer.formatWalletOutsForTx(
+          wallet,
+          blockchainHeight
+        );
+        const usingOuts = [];
         let usingOuts_amount = new JSBigInt(0);
-        let unusedOuts = unspentOuts.slice(0);
-        let totalAmount = totalAmountWithoutFee.add(neededFee);
+        const unusedOuts = unspentOuts.slice(0);
+        const totalAmount = totalAmountWithoutFee.add(neededFee);
         function pop_random_value(list) {
-          let idx = Math.floor(MathUtil.randomFloat() * list.length);
-          let val = list[idx];
+          const idx = Math.floor(MathUtil.randomFloat() * list.length);
+          const val = list[idx];
           list.splice(idx, 1);
           return val;
         }
         while (usingOuts_amount.compare(totalAmount) < 0 && unusedOuts.length > 0) {
-          let out = pop_random_value(unusedOuts);
+          const out = pop_random_value(unusedOuts);
           usingOuts.push(out);
           usingOuts_amount = usingOuts_amount.add(out.amount);
         }
@@ -3374,7 +3483,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         logDebugMsg(
           "using amount of " + usingOuts_amount + " for sending " + totalAmountWithoutFee + " with fees of " + neededFee / Math.pow(10, config.coinUnitPlaces) + " CCX"
         );
-        confirmCallback(totalAmountWithoutFee, neededFee).then(function() {
+        confirmCallback(totalAmountWithoutFee, neededFee).then(() => {
           if (usingOuts_amount.compare(totalAmount) < 0) {
             logDebugMsg(
               "Not enough spendable outputs / balance too low (have " + Cn.formatMoneyFull(usingOuts_amount) + " but need " + Cn.formatMoneyFull(totalAmount) + " (estimated fee " + Cn.formatMoneyFull(neededFee) + " CCX included)"
@@ -3386,26 +3495,36 @@ var reportError = self.reportError || function (e) { console.error(e); };
             if (ttl > 0) {
               changeAmount = changeAmount.add(neededFee);
             }
-            logDebugMsg("1) Sending change of " + Cn.formatMoneySymbol(changeAmount) + " to " + wallet.getPublicAddress());
+            logDebugMsg(
+              "1) Sending change of " + Cn.formatMoneySymbol(changeAmount) + " to " + wallet.getPublicAddress()
+            );
             dsts.push({
               address: wallet.getPublicAddress(),
               amount: changeAmount
             });
           }
           logDebugMsg("destinations", dsts);
-          let amounts = [];
+          const amounts = [];
           for (let l = 0; l < usingOuts.length; l++) {
             amounts.push(usingOuts[l].amount);
           }
-          let nbOutsNeeded = mixin + 1;
-          let nbOutsRequested = nbOutsNeeded + 3;
-          obtainMixOutsCallback(amounts, nbOutsRequested).then(function(lotsMixOuts) {
+          const nbOutsNeeded = mixin + 1;
+          const nbOutsRequested = nbOutsNeeded + 3;
+          obtainMixOutsCallback(amounts, nbOutsRequested).then((lotsMixOuts) => {
             logDebugMsg("------------------------------mix_outs");
             logDebugMsg("amounts", amounts);
             logDebugMsg("lots_mix_outs", lotsMixOuts);
             const removedDuplicateMixOuts = _TransactionsExplorer.removeDuplicateMixOuts(lotsMixOuts);
-            const selectedMixOuts = _TransactionsExplorer.selectMixOuts(removedDuplicateMixOuts, usingOuts, nbOutsNeeded);
-            const validation = _TransactionsExplorer.validateMixOutsForInputs(usingOuts, selectedMixOuts, mixin);
+            const selectedMixOuts = _TransactionsExplorer.selectMixOuts(
+              removedDuplicateMixOuts,
+              usingOuts,
+              nbOutsNeeded
+            );
+            const validation = _TransactionsExplorer.validateMixOutsForInputs(
+              usingOuts,
+              selectedMixOuts,
+              mixin
+            );
             if (!validation.valid) {
               reject(new Error(validation.reason));
               return;
@@ -3424,9 +3543,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
               ttl,
               transactionType,
               term
-            ).then(function(data) {
-              resolve(data);
-            }).catch(function(e) {
+            ).then(
+              (data) => {
+                resolve(data);
+              }
+            ).catch((e) => {
               reject(e);
             });
           }).catch(reject);
@@ -3435,25 +3556,25 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     static createWithdrawTx(deposit, wallet, blockchainHeight, obtainMixOutsCallback, confirmCallback, mixin = 0, paymentId = "", message = "", ttl = 0, transactionType = "withdraw", term = 0) {
       return new Promise((resolve, reject) => {
-        let lockedAmount = deposit.amount;
-        let totalInterest = deposit.interest;
-        let totalAmount = lockedAmount + totalInterest;
-        let pid_encrypt = false;
-        let paymentId2 = "";
+        const lockedAmount = deposit.amount;
+        const totalInterest = deposit.interest;
+        const totalAmount = lockedAmount + totalInterest;
+        const pid_encrypt = false;
+        const paymentId2 = "";
         if (deposit.unlockHeight > blockchainHeight) {
           reject(new Error("Deposit is still locked"));
           return;
         }
         logDebugMsg("Withdrawing deposit with amount", totalAmount);
-        let neededFee = new JSBigInt(config.depositSmallWithdrawFee);
-        let totalAmountWithoutFee = new JSBigInt(totalAmount);
+        const neededFee = new JSBigInt(config.depositSmallWithdrawFee);
+        const totalAmountWithoutFee = new JSBigInt(totalAmount);
         if (lockedAmount < 1) {
           reject(new Error("such a deposit cannot could not have been created"));
           return;
         }
         confirmCallback(totalAmountWithoutFee.subtract(neededFee), neededFee).then(() => {
-          let usingOuts = [];
-          let depositOutput = {
+          const usingOuts = [];
+          const depositOutput = {
             keyImage: "",
             // Not needed for deposit withdrawal
             amount: deposit.amount,
@@ -3470,20 +3591,22 @@ var reportError = self.reportError || function (e) { console.error(e); };
             // Add the single key from deposit
           };
           usingOuts.push(depositOutput);
-          let changeAmount = totalAmountWithoutFee.subtract(neededFee);
-          let dsts = [];
-          logDebugMsg("Sending withdrawn amount of " + Cn.formatMoneySymbol(changeAmount) + " to " + wallet.getPublicAddress());
+          const changeAmount = totalAmountWithoutFee.subtract(neededFee);
+          const dsts = [];
+          logDebugMsg(
+            "Sending withdrawn amount of " + Cn.formatMoneySymbol(changeAmount) + " to " + wallet.getPublicAddress()
+          );
           dsts.push({
             address: wallet.getPublicAddress(),
             amount: changeAmount
           });
           logDebugMsg("destinations", dsts);
-          let amounts = [];
+          const amounts = [];
           for (let l = 0; l < usingOuts.length; l++) {
             amounts.push(usingOuts[l].amount);
           }
-          let nbOutsNeeded = mixin + 1;
-          obtainMixOutsCallback(amounts, nbOutsNeeded).then(function(lotsMixOuts) {
+          const nbOutsNeeded = mixin + 1;
+          obtainMixOutsCallback(amounts, nbOutsNeeded).then((lotsMixOuts) => {
             logDebugMsg("------------------------------mix_outs");
             logDebugMsg("amounts", amounts);
             logDebugMsg("lots_mix_outs", lotsMixOuts);
@@ -3501,9 +3624,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
               ttl,
               "withdraw",
               deposit.term
-            ).then(function(data) {
-              resolve(data);
-            }).catch(function(e) {
+            ).then(
+              (data) => {
+                resolve(data);
+              }
+            ).catch((e) => {
               reject(e);
             });
           }).catch((error) => {
@@ -3559,7 +3684,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
         const out = usingOuts[i];
         const mixOutGroup = mixOuts[i];
         if (mixOutGroup && mixOutGroup.amount === out.amount && mixOutGroup.outs.length > 0) {
-          const availableMixouts = mixOutGroup.outs.filter((mixout) => !usedGlobalIndices.has(mixout.global_index));
+          const availableMixouts = mixOutGroup.outs.filter(
+            (mixout) => !usedGlobalIndices.has(mixout.global_index)
+          );
           if (availableMixouts.length < nbOutsNeeded) {
             console.log(
               `Warning: Not enough unique mixouts for output ${i} (amount ${out.amount}). Need ${nbOutsNeeded}, have ${availableMixouts.length}`
@@ -3619,12 +3746,52 @@ var reportError = self.reportError || function (e) { console.error(e); };
               objectToRemoveFrom = objectIndex;
             }
           }
-          mixOuts[objectToRemoveFrom].outs = mixOuts[objectToRemoveFrom].outs.filter((mixout) => mixout.global_index !== globalIndex);
+          mixOuts[objectToRemoveFrom].outs = mixOuts[objectToRemoveFrom].outs.filter(
+            (mixout) => mixout.global_index !== globalIndex
+          );
         }
       }
       return mixOuts;
     }
   };
+
+  // lib/wallet-core/sent-messages.ts
+  function normalizeEntry(item) {
+    if (!item || typeof item !== "object") return null;
+    const raw = item;
+    const txHash = typeof raw.txHash === "string" ? raw.txHash.trim() : "";
+    const messageBody = typeof raw.messageBody === "string" ? raw.messageBody : "";
+    const receiver = typeof raw.receiver === "string" ? raw.receiver.trim() : "";
+    if (!txHash || !messageBody.trim()) return null;
+    const record = { txHash, messageBody, receiver };
+    if (typeof raw.paymentIdTo === "string" && raw.paymentIdTo.trim()) {
+      record.paymentIdTo = raw.paymentIdTo.trim();
+    } else if (typeof raw.paymentId === "string" && raw.paymentId.trim()) {
+      record.paymentIdTo = raw.paymentId.trim();
+    }
+    return record;
+  }
+  function normalizeSentMessagesFromRaw(raw) {
+    if (raw === null || raw === void 0) return [];
+    if (Array.isArray(raw)) {
+      return raw.map(normalizeEntry).filter((entry) => entry !== null);
+    }
+    if (typeof raw === "object") {
+      return Object.entries(raw).map(([txHash, messageBody]) => ({
+        txHash,
+        messageBody: String(messageBody),
+        receiver: ""
+      })).filter((entry) => entry.txHash && entry.messageBody.trim());
+    }
+    return [];
+  }
+  function indexSentMessageRecords(records) {
+    const map = /* @__PURE__ */ new Map();
+    for (const record of records) {
+      map.set(record.txHash, record);
+    }
+    return map;
+  }
 
   // lib/wallet-core/keys-normalize.ts
   function analyzeKeysShape(keys) {
@@ -3665,8 +3832,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
   // lib/wallet-core/KeysRepository.ts
   var KeysRepository = class _KeysRepository {
     static fromPriv(spend, view) {
-      let pubView = CnUtils.sec_key_to_pub(view);
-      let pubSpend = CnUtils.sec_key_to_pub(spend);
+      const pubView = CnUtils.sec_key_to_pub(view);
+      const pubSpend = CnUtils.sec_key_to_pub(spend);
       return {
         pub: {
           view: pubView,
@@ -3698,7 +3865,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     removeObserver(eventType, callback) {
       if (!(eventType in this.observers)) return;
-      for (let i in this.observers[eventType]) {
+      for (const i in this.observers[eventType]) {
         if (this.observers[eventType][i] == callback) {
           this.observers[eventType].splice(i, 1);
           break;
@@ -3707,11 +3874,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     notify(eventType = _Observable.EVENT_MODIFIED, data = null) {
       if (!(eventType in this.observers)) return;
-      let observers = [];
-      for (let i in this.observers[eventType]) {
+      const observers = [];
+      for (const i in this.observers[eventType]) {
         observers.push(this.observers[eventType][i]);
       }
-      for (let i in observers) {
+      for (const i in observers) {
         observers[i](eventType, data);
       }
     }
@@ -3723,12 +3890,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
   var WalletOptions = class _WalletOptions {
     constructor() {
       this.checkMinerTx = false;
-      this.readSpeed = 10;
+      this.readSpeed = 50;
       this.customNode = false;
       this.nodeUrl = "https://explorer.conceal.network/daemon/";
     }
     static fromRaw(raw) {
-      let options = new _WalletOptions();
+      const options = new _WalletOptions();
       if (typeof raw.checkMinerTx !== "undefined") options.checkMinerTx = raw.checkMinerTx;
       if (typeof raw.readSpeed !== "undefined") options.readSpeed = raw.readSpeed;
       if (typeof raw.customNode !== "undefined") options.customNode = raw.customNode;
@@ -3736,7 +3903,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return options;
     }
     exportToJson() {
-      let data = {
+      const data = {
         readSpeed: this.readSpeed,
         checkMinerTx: this.checkMinerTx,
         customNode: this.customNode,
@@ -3761,24 +3928,32 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.txPrivateKeys = {};
       this.coinAddressPrefix = config.addressPrefix;
       this._options = new WalletOptions();
+      this.addressBook = [];
+      /** Outgoing message records keyed by tx hash — persisted in wallet blob, not on chain. */
+      this.sentMessageRecords = /* @__PURE__ */ new Map();
+      this.pendingMessageTargets = /* @__PURE__ */ new Map();
       this.signalChanged = () => {
         this.modifiedTS = /* @__PURE__ */ new Date();
         this.modified = true;
       };
       this.exportToRaw = () => {
-        let deposits = [];
-        let withdrawals = [];
-        let transactions = [];
-        for (let deposit of this.deposits) {
+        const deposits = [];
+        const withdrawals = [];
+        const transactions = [];
+        for (const deposit of this.deposits) {
           deposits.push(deposit.export());
         }
-        for (let withdrawal of this.withdrawals) {
+        for (const withdrawal of this.withdrawals) {
           withdrawals.push(withdrawal.export());
         }
-        for (let transaction of this.transactions) {
-          transactions.push(transaction.export());
+        for (const transaction of this.transactions) {
+          const exported = transaction.export();
+          if (transaction.hash && this.sentMessageRecords.has(transaction.hash) && exported.message) {
+            delete exported.message;
+          }
+          transactions.push(exported);
         }
-        let data = {
+        const data = {
           deposits,
           withdrawals,
           transactions,
@@ -3792,25 +3967,114 @@ var reportError = self.reportError || function (e) { console.error(e); };
         if (this.creationHeight !== 0) {
           data.creationHeight = this.creationHeight;
         }
+        if (this.addressBook.length > 0) {
+          data.addressBook = this.addressBook.slice();
+        }
+        if (this.sentMessageRecords.size > 0) {
+          data.sentMessages = Array.from(this.sentMessageRecords.values());
+        }
         return data;
       };
       this.isViewOnly = () => {
         return this.keys.priv.spend === "";
       };
+      this.listAddressBook = () => {
+        return this.addressBook.slice();
+      };
+      this.createAddressEntry = (entry) => {
+        this.addressBook.push(entry);
+        this.signalChanged();
+        this.notify();
+        return entry;
+      };
+      this.updateAddressEntry = (id, input) => {
+        const index = this.addressBook.findIndex((entry) => entry.id === id);
+        if (index === -1) return null;
+        const updated = { id, ...input };
+        this.addressBook[index] = updated;
+        this.signalChanged();
+        this.notify();
+        return updated;
+      };
+      this.deleteAddressEntry = (id) => {
+        const index = this.addressBook.findIndex((entry) => entry.id === id);
+        if (index === -1) return false;
+        this.addressBook.splice(index, 1);
+        this.signalChanged();
+        this.notify();
+        return true;
+      };
+      this.setPendingMessageTarget = (hash, remoteAddress, paymentId, body) => {
+        this.pendingMessageTargets.set(hash, { remoteAddress, paymentId });
+        if (body) {
+          this.saveSentMessageRecord({
+            txHash: hash,
+            messageBody: body,
+            receiver: remoteAddress,
+            paymentIdTo: paymentId || void 0
+          });
+        }
+        for (const tx of this.txsMem.concat(this.transactions)) {
+          if (tx.hash === hash) this.applyPendingMessageTarget(tx);
+        }
+        this.signalChanged();
+        this.notify();
+      };
+      this.saveSentMessageRecord = (record) => {
+        if (!record.txHash || !record.messageBody.trim()) return;
+        this.sentMessageRecords.set(record.txHash, { ...record });
+        for (const tx of this.txsMem.concat(this.transactions)) {
+          if (tx.hash === record.txHash) this.hydrateSentMessageBody(tx);
+        }
+        this.signalChanged();
+        this.notify();
+      };
+      this.getSentMessageRecord = (hash) => {
+        return hash ? this.sentMessageRecords.get(hash) : void 0;
+      };
+      this.listSentMessageRecords = () => {
+        return Array.from(this.sentMessageRecords.values());
+      };
+      this.hydrateSentMessageBody = (transaction) => {
+        if (!transaction.hash) return;
+        const record = this.sentMessageRecords.get(transaction.hash);
+        if (!record) return;
+        if (!transaction.message) transaction.message = record.messageBody;
+        if (!transaction.remoteAddress && record.receiver) {
+          transaction.remoteAddress = record.receiver;
+        }
+      };
+      this.applyPendingMessageTarget = (transaction) => {
+        if (!transaction.hash) return;
+        const pending = this.pendingMessageTargets.get(transaction.hash);
+        if (pending) {
+          if (!transaction.remoteAddress) transaction.remoteAddress = pending.remoteAddress;
+          if (pending.paymentId && !transaction.paymentId) transaction.paymentId = pending.paymentId;
+        }
+        this.hydrateSentMessageBody(transaction);
+      };
+      this.preserveMessageTransactionMeta = (next, previous) => {
+        if (previous.message && !next.message) next.message = previous.message;
+        if (!next.message) this.hydrateSentMessageBody(next);
+        if (previous.messageViewed) next.messageViewed = previous.messageViewed || next.messageViewed;
+        if (previous.remoteAddress && !next.remoteAddress) next.remoteAddress = previous.remoteAddress;
+        if (previous.paymentId && !next.paymentId) next.paymentId = previous.paymentId;
+      };
       this.getAll = (forceReload = false) => {
         return this.transactions.slice();
       };
       this.getAllOuts = () => {
-        let alls = this.getAll();
-        let outs = [];
-        for (let tr of alls) {
+        const alls = this.getAll();
+        const outs = [];
+        for (const tr of alls) {
           outs.push.apply(outs, tr.outs);
         }
         return outs;
       };
       this.addNew = (transaction, replace = true) => {
         if (transaction) {
-          let exist = this.findWithTxPubKey(transaction.txPubKey);
+          this.applyPendingMessageTarget(transaction);
+          const exist = this.findWithTxPubKey(transaction.txPubKey);
           if (!exist || replace) {
             if (!exist) {
               this.keyLookupMap.set(transaction.txPubKey, transaction);
@@ -3821,17 +4085,19 @@ var reportError = self.reportError || function (e) { console.error(e); };
                 if (this.transactions[tr].txPubKey === transaction.txPubKey) {
                   transaction.fusion = this.transactions[tr].fusion;
                   transaction.messageViewed = this.transactions[tr].messageViewed || transaction.messageViewed;
+                  this.preserveMessageTransactionMeta(transaction, this.transactions[tr]);
                   this.keyLookupMap.set(transaction.txPubKey, transaction);
                   this.txLookupMap.set(transaction.hash, transaction);
                   this.transactions[tr] = transaction;
                 }
               }
             }
-            let existMem = this.findMemWithTxPubKey(transaction.txPubKey);
+            const existMem = this.findMemWithTxPubKey(transaction.txPubKey);
             if (existMem) {
               transaction.fusion = existMem.fusion;
               transaction.messageViewed = existMem.messageViewed || transaction.messageViewed;
-              let trIndex = this.txsMem.indexOf(existMem);
+              this.preserveMessageTransactionMeta(transaction, existMem);
+              const trIndex = this.txsMem.indexOf(existMem);
               if (trIndex != -1) {
                 this.txsMem.splice(trIndex, 1);
               }
@@ -3847,7 +4113,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
        * Only updates the specified fields, does not replace the transaction object.
        */
       this.updateTransactionFlags = (txPubKeyOrHash, flags) => {
-        let tx = this.findWithTxPubKey(txPubKeyOrHash) || this.findWithTxHash(txPubKeyOrHash);
+        const tx = this.findWithTxPubKey(txPubKeyOrHash) || this.findWithTxHash(txPubKeyOrHash);
         if (tx) {
           if (typeof flags.fusion !== "undefined") tx.fusion = flags.fusion;
           if (typeof flags.messageViewed !== "undefined") tx.messageViewed = flags.messageViewed;
@@ -3878,9 +4144,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
         this.notify();
       };
       this.updateDepositFlags = (txHashOrPubKey, flags) => {
-        let deposit = this.deposits.find((d) => d.txHash === txHashOrPubKey || d.txPubKey === txHashOrPubKey);
+        const deposit = this.deposits.find(
+          (d) => d.txHash === txHashOrPubKey || d.txPubKey === txHashOrPubKey
+        );
         if (deposit) {
-          if (typeof flags.withdrawPending !== "undefined") deposit.withdrawPending = flags.withdrawPending;
+          if (typeof flags.withdrawPending !== "undefined")
+            deposit.withdrawPending = flags.withdrawPending;
           this.signalChanged();
           this.notify();
           return true;
@@ -3935,11 +4204,13 @@ var reportError = self.reportError || function (e) { console.error(e); };
         this.notify();
       };
       this.addNewMemTx = (transaction, replace = true) => {
+        this.applyPendingMessageTarget(transaction);
         let modified = false;
         let foundTx = false;
         for (let i = 0; i < this.txsMem.length; ++i) {
           if (this.txsMem[i].hash === transaction.hash) {
             if (replace) {
+              this.preserveMessageTransactionMeta(transaction, this.txsMem[i]);
               this.txsMem[i] = transaction;
               modified = true;
             }
@@ -3958,7 +4229,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         this.txsMem = [];
       };
       this.findWithTxPubKey = (pubKey) => {
-        let transaction = this.keyLookupMap.get(pubKey);
+        const transaction = this.keyLookupMap.get(pubKey);
         if (transaction !== void 0) {
           return transaction;
         } else {
@@ -3966,7 +4237,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
       };
       this.findWithTxHash = (hash) => {
-        let transaction = this.txLookupMap.get(hash);
+        const transaction = this.txLookupMap.get(hash);
         if (transaction !== void 0) {
           return transaction;
         } else {
@@ -3974,7 +4245,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
       };
       this.findMemWithTxPubKey = (pubKey) => {
-        for (let tr of this.txsMem) if (tr.txPubKey === pubKey) return tr;
+        for (const tr of this.txsMem) if (tr.txPubKey === pubKey) return tr;
         return null;
       };
       this.findTxPrivateKeyWithHash = (hash) => {
@@ -3998,8 +4269,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return this.txOutIndexes;
       };
       this.getOutWithGlobalIndex = (index) => {
-        for (let tx of this.transactions) {
-          for (let out of tx.outs) {
+        for (const tx of this.transactions) {
+          for (const out of tx.outs) {
             if (out.globalIndex === index) return out;
           }
         }
@@ -4008,8 +4279,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.keyImages = [];
       this.txOutIndexes = [];
       this.getTransactionsCopy = () => {
-        let news = [];
-        for (let transaction of this.transactions) {
+        const news = [];
+        for (const transaction of this.transactions) {
           news.push(Transaction.fromRaw(transaction.export()));
         }
         news.sort((a, b) => {
@@ -4018,14 +4289,14 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return news;
       };
       this.getDepositsCopy = () => {
-        let news = this.deposits.slice();
+        const news = this.deposits.slice();
         news.sort((a, b) => {
           return a.timestamp - b.timestamp;
         });
         return news;
       };
       this.getWithdrawalsCopy = () => {
-        let news = this.withdrawals.slice();
+        const news = this.withdrawals.slice();
         news.sort((a, b) => {
           return a.timestamp - b.timestamp;
         });
@@ -4033,30 +4304,30 @@ var reportError = self.reportError || function (e) { console.error(e); };
       };
       this.availableAmount = (currentBlockHeight = -1) => {
         let amount = 0;
-        for (let transaction of this.transactions) {
+        for (const transaction of this.transactions) {
           if (!transaction.isFullyChecked()) continue;
           if (transaction.isConfirmed(currentBlockHeight) || currentBlockHeight === -1) {
-            for (let nout of transaction.outs) {
+            for (const nout of transaction.outs) {
               if (nout.type !== "03") {
                 amount += nout.amount;
               }
             }
           }
-          for (let nin of transaction.ins) {
+          for (const nin of transaction.ins) {
             if (nin.type !== "03") {
               amount -= nin.amount;
             }
           }
         }
-        for (let transaction of this.txsMem) {
+        for (const transaction of this.txsMem) {
           if (transaction.isConfirmed(currentBlockHeight) || currentBlockHeight === -1) {
-            for (let nout of transaction.outs) {
+            for (const nout of transaction.outs) {
               if (nout.type !== "03") {
                 amount += nout.amount;
               }
             }
           }
-          for (let nin of transaction.ins) {
+          for (const nin of transaction.ins) {
             if (nin.type !== "03") {
               amount -= nin.amount;
             }
@@ -4066,7 +4337,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       };
       this.lockedDeposits = (currHeight) => {
         let amount = 0;
-        for (let deposit of this.deposits) {
+        for (const deposit of this.deposits) {
           if (deposit.blockHeight + deposit.term > currHeight) {
             amount += deposit.amount;
           }
@@ -4075,7 +4346,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       };
       this.unlockedDeposits = (currHeight) => {
         let amount = 0;
-        for (let deposit of this.deposits) {
+        for (const deposit of this.deposits) {
           if (deposit.blockHeight + deposit.term <= currHeight) {
             if (!deposit.spentTx) {
               amount += deposit.amount;
@@ -4089,7 +4360,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         let futureLockedInterest = 0;
         let futureUnlockedInterest = 0;
         let spentInterest = 0;
-        for (let deposit of this.deposits) {
+        for (const deposit of this.deposits) {
           const status = deposit.getStatus(currHeight);
           switch (status) {
             case "Locked":
@@ -4132,9 +4403,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
       };
       this.recalculateIfNotViewOnly = () => {
         if (!this.isViewOnly()) {
-          for (let tx of this.transactions) {
+          for (const tx of this.transactions) {
             let needDerivation = false;
-            for (let out of tx.outs) {
+            for (const out of tx.outs) {
               if (out.keyImage === "") {
                 needDerivation = true;
                 break;
@@ -4147,9 +4418,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
               } catch (e) {
                 continue;
               }
-              for (let out of tx.outs) {
+              for (const out of tx.outs) {
                 if (out.keyImage === "") {
-                  let m_key_image = CnTransactions.generate_key_image_helper(
+                  const m_key_image = CnTransactions.generate_key_image_helper(
                     {
                       view_secret_key: this.keys.priv.view,
                       spend_secret_key: this.keys.priv.spend,
@@ -4171,11 +4442,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
           for (let iTx = 0; iTx < this.transactions.length; ++iTx) {
             for (let iIn = 0; iIn < this.transactions[iTx].ins.length; ++iIn) {
-              let vin = this.transactions[iTx].ins[iIn];
+              const vin = this.transactions[iTx].ins[iIn];
               if (vin.amount < 0) {
                 if (this.keyImages.indexOf(vin.keyImage) != -1) {
-                  let walletOuts = this.getAllOuts();
-                  for (let ut of walletOuts) {
+                  const walletOuts = this.getAllOuts();
+                  for (const ut of walletOuts) {
                     if (ut.keyImage == vin.keyImage) {
                       this.transactions[iTx].ins[iIn].amount = ut.amount;
                       this.transactions[iTx].ins[iIn].keyImage = ut.keyImage;
@@ -4205,10 +4476,17 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.estimateFusionReadyness = (threshold, blockchainHeight) => {
         const NUM_BUCKETS = 20;
         const bucketSizes = new Array(NUM_BUCKETS).fill(0);
-        let unspentOuts = TransactionsExplorer.formatWalletOutsForTx(this, blockchainHeight);
-        let unspentOutsCount = unspentOuts.length;
+        const unspentOuts = TransactionsExplorer.formatWalletOutsForTx(
+          this,
+          blockchainHeight
+        );
+        const unspentOutsCount = unspentOuts.length;
         for (const out of unspentOuts) {
-          const result = Currency.isAmountApplicableInFusionTransactionInput(out.amount, threshold, blockchainHeight);
+          const result = Currency.isAmountApplicableInFusionTransactionInput(
+            out.amount,
+            threshold,
+            blockchainHeight
+          );
           if (result.applicable && typeof result.amountPowerOfTen === "number") {
             if (result.amountPowerOfTen < NUM_BUCKETS) {
               bucketSizes[result.amountPowerOfTen]++;
@@ -4229,10 +4507,17 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.pickRandomFusionInputs = (threshold, blockchainHeight, minInputCount = Currency.fusionTxMinInputCount, maxInputCount) => {
         const NUM_BUCKETS = 20;
         const bucketSizes = new Array(NUM_BUCKETS).fill(0);
-        let unspentOuts = TransactionsExplorer.formatWalletOutsForTx(this, blockchainHeight);
-        let allFusionReadyOuts = [];
-        for (let out of unspentOuts) {
-          let result = Currency.isAmountApplicableInFusionTransactionInput(out.amount, threshold, blockchainHeight);
+        const unspentOuts = TransactionsExplorer.formatWalletOutsForTx(
+          this,
+          blockchainHeight
+        );
+        const allFusionReadyOuts = [];
+        for (const out of unspentOuts) {
+          const result = Currency.isAmountApplicableInFusionTransactionInput(
+            out.amount,
+            threshold,
+            blockchainHeight
+          );
           if (result.applicable) {
             allFusionReadyOuts.push(out);
             const powerOfTen = result.amountPowerOfTen || 0;
@@ -4241,13 +4526,15 @@ var reportError = self.reportError || function (e) { console.error(e); };
             }
           }
         }
-        let bucketNumbers = Array.from({ length: NUM_BUCKETS }, (_, i) => i);
+        const bucketNumbers = Array.from({ length: NUM_BUCKETS }, (_, i) => i);
         const bucketGenerator = new ShuffleGenerator(NUM_BUCKETS);
-        let shuffledBucketNumbers = [];
+        const shuffledBucketNumbers = [];
         for (let i = 0; i < NUM_BUCKETS; i++) {
           shuffledBucketNumbers.push(bucketNumbers[bucketGenerator.next()]);
         }
-        let selectedBucket = shuffledBucketNumbers.find((bucket) => bucketSizes[bucket] >= minInputCount);
+        const selectedBucket = shuffledBucketNumbers.find(
+          (bucket) => bucketSizes[bucket] >= minInputCount
+        );
         if (selectedBucket === void 0) {
           return [];
         }
@@ -4255,15 +4542,17 @@ var reportError = self.reportError || function (e) { console.error(e); };
         for (let i = 0; i < selectedBucket; ++i) {
           lowerBound *= 10;
         }
-        let upperBound = selectedBucket === NUM_BUCKETS - 1 ? Number.MAX_SAFE_INTEGER : lowerBound * 10;
-        let selectedOuts = allFusionReadyOuts.filter((out) => out.amount >= lowerBound && out.amount < upperBound);
+        const upperBound = selectedBucket === NUM_BUCKETS - 1 ? Number.MAX_SAFE_INTEGER : lowerBound * 10;
+        const selectedOuts = allFusionReadyOuts.filter(
+          (out) => out.amount >= lowerBound && out.amount < upperBound
+        );
         if (selectedOuts.length < minInputCount) {
           return [];
         }
         selectedOuts.sort((a, b) => a.amount - b.amount);
         if (selectedOuts.length > maxInputCount) {
           const generator = new ShuffleGenerator(selectedOuts.length);
-          let trimmedSelectedOuts = [];
+          const trimmedSelectedOuts = [];
           for (let i = 0; i < maxInputCount; ++i) {
             trimmedSelectedOuts.push(selectedOuts[generator.next()]);
           }
@@ -4273,8 +4562,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return selectedOuts;
       };
       this.optimizationNeeded = (blockchainHeight, threshold) => {
-        let unspentOuts = TransactionsExplorer.formatWalletOutsForTx(this, blockchainHeight);
-        let unspentOutsCount = unspentOuts.length;
+        const unspentOuts = TransactionsExplorer.formatWalletOutsForTx(
+          this,
+          blockchainHeight
+        );
+        const unspentOutsCount = unspentOuts.length;
         let isNeeded = false;
         if (unspentOutsCount < config.optimizeOutputs) {
           return {
@@ -4282,10 +4574,10 @@ var reportError = self.reportError || function (e) { console.error(e); };
             isNeeded: false
           };
         }
-        let balance = this.availableAmount(blockchainHeight);
+        const balance = this.availableAmount(blockchainHeight);
         let fusionReady = false;
         while (threshold <= balance && !fusionReady) {
-          let estimation = this.estimateFusionReadyness(threshold, blockchainHeight);
+          const estimation = this.estimateFusionReadyness(threshold, blockchainHeight);
           if (estimation.fusionReadyCount > config.optimizeOutputs / 2) {
             fusionReady = true;
             break;
@@ -4306,9 +4598,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.createFusionTransaction = (blockchainHeight, threshold, blockchainExplorer, obtainMixOutsCallback) => {
         return new Promise(async (resolve, reject) => {
           try {
-            let MAX_FUSION_OUTPUTS = config.maxFusionOutputs;
-            let fusionThreshold = config.dustThreshold;
-            let neededFee = config.minimumFee_V2;
+            const MAX_FUSION_OUTPUTS = config.maxFusionOutputs;
+            const fusionThreshold = config.dustThreshold;
+            const neededFee = config.minimumFee_V2;
             if (threshold <= fusionThreshold) {
               throw new Error("Threshold is too low");
             }
@@ -4316,7 +4608,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             if (destinationAddress === "") {
               throw new Error("Destination address is not set");
             }
-            let estimateFusionInputsCount = Currency.getApproximateMaximumInputCount(
+            const estimateFusionInputsCount = Currency.getApproximateMaximumInputCount(
               Currency.fusionTxMaxSize,
               MAX_FUSION_OUTPUTS,
               config.defaultMixin
@@ -4324,7 +4616,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             if (estimateFusionInputsCount < Currency.fusionTxMinInputCount) {
               throw new Error("Mixin count is too big");
             }
-            let fusionInputs = this.pickRandomFusionInputs(
+            const fusionInputs = this.pickRandomFusionInputs(
               threshold,
               blockchainHeight,
               Currency.fusionTxMinInputCount,
@@ -4340,19 +4632,19 @@ var reportError = self.reportError || function (e) { console.error(e); };
               if (round !== 0) {
                 fusionInputs.pop();
               }
-              let inputAmounts = fusionInputs.map((input) => input.amount);
+              const inputAmounts = fusionInputs.map((input) => input.amount);
               let mixinResult = [];
               if (config.defaultMixin !== 0) {
                 mixinResult = await obtainMixOutsCallback(inputAmounts, config.defaultMixin + 1);
               }
-              let inputsAmount = fusionInputs.reduce((sum, input) => sum + input.amount, 0);
-              let dsts = [
+              const inputsAmount = fusionInputs.reduce((sum, input) => sum + input.amount, 0);
+              const dsts = [
                 {
                   address: destinationAddress,
                   amount: inputsAmount - neededFee
                 }
               ];
-              let data = await TransactionsExplorer.createRawTx(
+              const data = await TransactionsExplorer.createRawTx(
                 dsts,
                 this,
                 false,
@@ -4367,7 +4659,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
                 "regular",
                 0
               );
-              transactionSize = Currency.getApproximateTransactionSize(data.signed.vin.length, data.signed.vout.length, config.defaultMixin);
+              transactionSize = Currency.getApproximateTransactionSize(
+                data.signed.vin.length,
+                data.signed.vout.length,
+                config.defaultMixin
+              );
               fusionTransaction = data;
               round++;
             } while (transactionSize > Currency.fusionTxMaxSize && fusionInputs.length >= Currency.fusionTxMinInputCount);
@@ -4384,7 +4680,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
               throw new Error("Maximum output count exceeded");
             }
             await blockchainExplorer.sendRawTx(fusionTransaction.raw.raw).then(() => {
-              this.addTxPrivateKeyWithTxHashAndFusion(fusionTransaction.raw.hash, fusionTransaction.raw.prvkey, true);
+              this.addTxPrivateKeyWithTxHashAndFusion(
+                fusionTransaction.raw.hash,
+                fusionTransaction.raw.prvkey,
+                true
+              );
               return swal({
                 type: "success",
                 title: i18n.t("global.optimize.success"),
@@ -4429,27 +4729,27 @@ var reportError = self.reportError || function (e) { console.error(e); };
       };
     }
     static loadFromRaw(raw) {
-      let wallet = new _Wallet();
+      const wallet = new _Wallet();
       wallet.transactions = [];
       wallet.withdrawals = [];
       wallet.deposits = [];
       wallet.keyLookupMap.clear();
       wallet.txLookupMap.clear();
       if (raw.deposits) {
-        for (let rawDeposit of raw.deposits) {
-          let deposit = Deposit.fromRaw(rawDeposit);
+        for (const rawDeposit of raw.deposits) {
+          const deposit = Deposit.fromRaw(rawDeposit);
           wallet.deposits.push(deposit);
         }
       }
       if (raw.withdrawals) {
-        for (let rawWithdrawal of raw.withdrawals) {
-          let withdrawal = Withdrawal.fromRaw(rawWithdrawal);
+        for (const rawWithdrawal of raw.withdrawals) {
+          const withdrawal = Withdrawal.fromRaw(rawWithdrawal);
           wallet.withdrawals.push(withdrawal);
         }
       }
       if (raw.transactions) {
-        for (let rawTransac of raw.transactions) {
-          let transaction = Transaction.fromRaw(rawTransac);
+        for (const rawTransac of raw.transactions) {
+          const transaction = Transaction.fromRaw(rawTransac);
           wallet.transactions.push(transaction);
           wallet.txLookupMap.set(transaction.hash, transaction);
           wallet.keyLookupMap.set(transaction.txPubKey, transaction);
@@ -4458,13 +4758,13 @@ var reportError = self.reportError || function (e) { console.error(e); };
       wallet._lastHeight = raw.lastHeight;
       if (typeof raw.encryptedKeys === "string" && raw.encryptedKeys !== "") {
         if (raw.encryptedKeys.length === 128) {
-          let privView = raw.encryptedKeys.substr(0, 64);
-          let privSpend = raw.encryptedKeys.substr(64, 64);
+          const privView = raw.encryptedKeys.substr(0, 64);
+          const privSpend = raw.encryptedKeys.substr(64, 64);
           wallet.keys = KeysRepository.fromPriv(privSpend, privView);
         } else {
-          let privView = raw.encryptedKeys.substr(0, 64);
-          let pubViewKey = raw.encryptedKeys.substr(64, 64);
-          let pubSpendKey = raw.encryptedKeys.substr(128, 64);
+          const privView = raw.encryptedKeys.substr(0, 64);
+          const pubViewKey = raw.encryptedKeys.substr(64, 64);
+          const pubSpendKey = raw.encryptedKeys.substr(128, 64);
           wallet.keys = {
             pub: {
               view: pubViewKey,
@@ -4482,10 +4782,23 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (typeof raw.creationHeight !== "undefined") wallet.creationHeight = raw.creationHeight;
       if (typeof raw.options !== "undefined") wallet._options = WalletOptions.fromRaw(raw.options);
       if (typeof raw.txPrivateKeys !== "undefined") wallet.txPrivateKeys = raw.txPrivateKeys;
-      if (typeof raw.coinAddressPrefix !== "undefined") wallet.coinAddressPrefix = raw.coinAddressPrefix;
+      if (typeof raw.coinAddressPrefix !== "undefined")
+        wallet.coinAddressPrefix = raw.coinAddressPrefix;
       else wallet.coinAddressPrefix = config.addressPrefix;
-      if (typeof raw.coinAddressPrefix !== "undefined") wallet.coinAddressPrefix = raw.coinAddressPrefix;
-      else wallet.coinAddressPrefix = config.addressPrefix;
+      if (typeof raw.addressBook !== "undefined") {
+        wallet.addressBook = raw.addressBook.slice();
+      }
+      if (typeof raw.sentMessages !== "undefined") {
+        wallet.sentMessageRecords = indexSentMessageRecords(
+          normalizeSentMessagesFromRaw(raw.sentMessages)
+        );
+        for (const transaction of wallet.transactions) {
+          wallet.hydrateSentMessageBody(transaction);
+        }
+        for (const transaction of wallet.txsMem) {
+          wallet.hydrateSentMessageBody(transaction);
+        }
+      }
       wallet.recalculateKeyImages();
       return wallet;
     }
@@ -4493,7 +4806,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return this._lastHeight;
     }
     set lastHeight(value) {
-      let modified = value !== this._lastHeight;
+      const modified = value !== this._lastHeight;
       this._lastHeight = value;
       if (modified) {
         this.notify();
@@ -4507,10 +4820,10 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.signalChanged();
     }
     recalculateKeyImages() {
-      let keys = [];
-      let indexes = [];
-      for (let transaction of this.transactions) {
-        for (let out of transaction.outs) {
+      const keys = [];
+      const indexes = [];
+      for (const transaction of this.transactions) {
+        for (const out of transaction.outs) {
           if (out.keyImage !== null && out.keyImage !== "") keys.push(out.keyImage);
           if (out.globalIndex !== 0) indexes.push(out.globalIndex);
         }
@@ -4558,7 +4871,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
   };
 
   // lib/wallet-core/workers/sync-worker-entry.ts
-  self.onmessage = function(data) {
+  self.onmessage = (data) => {
     const event = data.data;
     try {
       if (event.type === "initWallet") {
@@ -4576,7 +4889,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
           return;
         }
         try {
-          hashes = TransactionsExplorer.screenShardForOwnedHashes(rawTransactions, currentWallet, readMinersTx);
+          hashes = TransactionsExplorer.screenShardForOwnedHashes(
+            rawTransactions,
+            currentWallet,
+            readMinersTx
+          );
         } catch (err) {
           console.error("Failed to screen shard:", err);
         }
@@ -4594,7 +4911,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         const rawTransactions = event.transactions;
         const maxBlockNumber = event.maxBlock;
         const startBlockNumber = typeof event.startBlock !== "undefined" ? event.startBlock : 0;
-        let currentWallet = Wallet.loadFromRaw(event.wallet);
+        const currentWallet = Wallet.loadFromRaw(event.wallet);
         const transactions = [];
         logDebugMsg("rawTransactions", rawTransactions);
         if (!currentWallet) {

@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useQuery } from "@/lib/hooks/query-provider";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { services } from "@/lib/services";
+import { useWalletSession } from "@/lib/session/wallet-session";
 import {
   acknowledgeMessages,
   messageNavBadgeDelta,
@@ -12,7 +13,12 @@ import {
 } from "@/lib/ui/message-nav-badge";
 
 function useWalletInfo() {
-  return useQuery({ queryKey: queryKeys.wallet, queryFn: () => services.wallet.getWalletInfo() });
+  const { status } = useWalletSession();
+  return useQuery({
+    queryKey: queryKeys.wallet,
+    queryFn: () => services.wallet.getWalletInfo(),
+    enabled: status === "open",
+  });
 }
 
 function useMessages() {

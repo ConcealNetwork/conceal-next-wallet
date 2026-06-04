@@ -12,11 +12,18 @@ import type { SendTransactionInput } from "@/lib/services/transaction.service";
 import type { Message, WalletInfo, WalletSettings } from "@/lib/types";
 import { sortMessagesNewestFirst } from "@/lib/messages/conversations";
 import { queryKeys } from "@/lib/hooks/query-keys";
+import { useWalletSession } from "@/lib/session/wallet-session";
 
 export { queryKeys };
 
 export function useWalletInfo() {
-  return useQuery({ queryKey: queryKeys.wallet, queryFn: () => services.wallet.getWalletInfo() });
+  const { status, walletInfo } = useWalletSession();
+  return useQuery({
+    queryKey: queryKeys.wallet,
+    queryFn: () => services.wallet.getWalletInfo(),
+    enabled: status === "open",
+    placeholderData: walletInfo ?? undefined,
+  });
 }
 
 export function useRefreshWallet() {

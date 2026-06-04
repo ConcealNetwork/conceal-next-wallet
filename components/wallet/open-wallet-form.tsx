@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ import { useWalletSession } from "@/lib/session/wallet-session";
 import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
 
 export function OpenWalletForm() {
-  const router = useRouter();
   const { openSession } = useWalletSession();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,8 +25,7 @@ export function OpenWalletForm() {
     setLoading(true);
     try {
       const wallet = await services.wallet.openWallet({ password });
-      openSession(wallet);
-      router.push("/wallet/account");
+      openSession(wallet, "/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to open wallet.");
     } finally {

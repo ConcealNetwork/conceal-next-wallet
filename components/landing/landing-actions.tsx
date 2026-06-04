@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { createContext, useContext, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +34,6 @@ function useOpenWalletContext() {
 
 /** Renders unlock and no-wallet dialogs for all landing open-wallet buttons. */
 export function OpenWalletProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const { openSession } = useWalletSession();
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [noWalletDialogOpen, setNoWalletDialogOpen] = useState(false);
@@ -48,10 +46,9 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
       const wallet = await services.wallet.openWallet(
         env.useMockWallet ? {} : { password: passwordValue },
       );
-      openSession(wallet);
+      openSession(wallet, "/wallet/account");
       setUnlockDialogOpen(false);
       setPassword("");
-      router.push("/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to open wallet.");
     } finally {

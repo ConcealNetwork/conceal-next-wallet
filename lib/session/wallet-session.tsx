@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@/lib/hooks/query-provider";
+import { queryKeys } from "@/lib/hooks/query-keys";
 import { env } from "@/lib/env";
 import type { WalletInfo } from "@/lib/types";
 import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
@@ -17,7 +19,8 @@ type WalletSessionContextValue = {
   status: WalletStatus;
   walletInfo: WalletInfo | null;
   isHydrated: boolean;
-  openSession: (walletInfo: WalletInfo) => void;
+  /** Pass `redirectTo` (e.g. `/wallet/account`) to navigate after session state commits. */
+  openSession: (walletInfo: WalletInfo, redirectTo?: string) => void;
   closeSession: () => void;
 };
 
@@ -27,9 +30,11 @@ const WalletSessionContext = createContext<WalletSessionContextValue | null>(nul
 
 export function WalletSessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<WalletStatus>("locked");
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
 
   useEffect(() => {
     if (env.persistWalletSession) {
@@ -53,15 +58,32 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
     }
   }, [isHydrated, status]);
 
-  const openSession = useCallback((nextWalletInfo: WalletInfo) => {
-    resetMessageNavBadge();
-    setStatus("open");
-    setWalletInfo(nextWalletInfo);
-    if (env.persistWalletSession) {
-      const nextSession: PersistedSession = { status: "open", walletInfo: nextWalletInfo };
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+  /** Navigate only after `status === "open"` is committed (avoids WalletGuard bounce on static export). */
+  useEffect(() => {
+    if (status !== "open" || pendingRedirect === null) {
+      return;
     }
-  }, []);
+    const target = pendingRedirect;
+    setPendingRedirect(null);
+    router.push(target);
+  }, [pendingRedirect, router, status]);
+
+  const openSession = useCallback(
+    (nextWalletInfo: WalletInfo, redirectTo?: string) => {
+      resetMessageNavBadge();
+      setStatus("open");
+      setWalletInfo(nextWalletInfo);
+      queryClient.setQueryData(queryKeys.wallet, nextWalletInfo);
+      if (env.persistWalletSession) {
+        const nextSession: PersistedSession = { status: "open", walletInfo: nextWalletInfo };
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+      }
+      if (redirectTo) {
+        setPendingRedirect(redirectTo);
+      }
+    },
+    [queryClient],
+  );
 
   const closeSession = useCallback(() => {
     setStatus("locked");

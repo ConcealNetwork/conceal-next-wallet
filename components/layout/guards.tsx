@@ -24,15 +24,16 @@ function RouteLoading({ label }: { label: string }) {
 
 export function WalletGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { status, isHydrated } = useWalletSession();
+  const { status, walletInfo, isHydrated } = useWalletSession();
+  const sessionOpen = status === "open" || walletInfo !== null;
 
   useEffect(() => {
-    if (isHydrated && status !== "open") {
+    if (isHydrated && !sessionOpen) {
       router.replace("/");
     }
-  }, [isHydrated, router, status]);
+  }, [isHydrated, router, sessionOpen]);
 
-  if (!isHydrated || status !== "open") {
+  if (!isHydrated || !sessionOpen) {
     return <RouteLoading label="Loading wallet..." />;
   }
 
