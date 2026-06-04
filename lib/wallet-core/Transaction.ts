@@ -161,6 +161,7 @@ export class Transaction {
   message: string = "";
   messageViewed: boolean = false;
   ttl: number = 0; // TTL timestamp (absolute UNIX timestamp in seconds)
+  remoteAddress: string = "";
 
   static fromRaw = (raw: any) => {
     const transac = new Transaction();
@@ -188,6 +189,7 @@ export class Transaction {
     if (typeof raw.fusion !== "undefined") transac.fusion = raw.fusion;
     if (typeof raw.messageViewed !== "undefined") transac.messageViewed = raw.messageViewed;
     if (typeof raw.ttl !== "undefined") transac.ttl = raw.ttl;
+    if (typeof raw.remoteAddress !== "undefined") transac.remoteAddress = raw.remoteAddress;
     return transac;
   };
 
@@ -218,6 +220,7 @@ export class Transaction {
     if (this.fusion) data.fusion = this.fusion;
     if (this.messageViewed) data.messageViewed = this.messageViewed;
     if (this.ttl !== 0) data.ttl = this.ttl;
+    if (this.remoteAddress !== "") data.remoteAddress = this.remoteAddress;
     return data;
   };
 
@@ -323,6 +326,7 @@ export class Transaction {
     aCopy.fusion = this.fusion;
     aCopy.messageViewed = this.messageViewed;
     aCopy.ttl = this.ttl;
+    aCopy.remoteAddress = this.remoteAddress;
 
     for (const nin of this.ins) {
       aCopy.ins.push(nin.copy());

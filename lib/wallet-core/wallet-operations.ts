@@ -16,8 +16,10 @@ import { WalletRepository } from "./WalletRepository";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Storage } from "./Storage";
 import {
+  buildMessageThreadKey,
   clampImportHeight,
   deriveIndicativeDepositApr,
+  findAddressBookContact,
   getWalletDepositConstraints,
   listWalletDeposits,
   listWalletMessages,
@@ -399,11 +401,13 @@ export async function sendMessageOperation(input: SendMessageInput): Promise<Mes
     });
   }
 
+  const paymentId = input.paymentId?.trim() ?? "";
+
   let rawTxData: { raw: { hash: string; prvkey: string; raw: string }; signed: unknown };
   try {
     rawTxData = await TransactionsExplorer.createTx(
       destinations,
-      "",
+      paymentId,
       wallet,
       blockchainHeight,
       (amounts: number[], numberOuts: number) => explorer.getRandomOuts(amounts, numberOuts),
@@ -428,22 +432,40 @@ export async function sendMessageOperation(input: SendMessageInput): Promise<Mes
     throw normalizeWalletOperationError(error, "Failed to broadcast message transaction.");
   }
   wallet.addTxPrivateKeyWithTxHash(rawTxData.raw.hash, rawTxData.raw.prvkey);
+  wallet.setPendingMessageTarget(
+    rawTxData.raw.hash,
+    destinationAddress,
+    paymentId || undefined,
+    body,
+  );
   const watchdog = getRuntimeWatchdog();
   if (watchdog !== null) watchdog.checkMempool();
 
-  const shortAddress =
-    destinationAddress.length > 16
+  const addressBook = wallet.listAddressBook();
+  const contact = findAddressBookContact(addressBook, {
+    paymentId: paymentId || undefined,
+    address: destinationAddress,
+  });
+  const counterpartyName =
+    contact?.label ??
+    (destinationAddress.length > 16
       ? `${destinationAddress.slice(0, 8)}…${destinationAddress.slice(-6)}`
-      : destinationAddress;
+      : destinationAddress);
 
   return {
     id: rawTxData.raw.hash,
     direction: "sent",
-    counterpartyName: shortAddress,
+    counterpartyName,
     counterpartyAddress: destinationAddress,
     body,
+    hasBody: true,
+    sentTo: destinationAddress,
     timestamp: new Date().toISOString(),
     unread: false,
+    paymentIdFrom: null,
+    paymentIdTo: paymentId || null,
+    blockHeight: 0,
+    threadKey: buildMessageThreadKey(destinationAddress, paymentId || undefined),
   };
 }
 
@@ -458,7 +480,13 @@ export async function markMessageReadOperation(id: string): Promise<Message> {
   const tx = all.find((candidate) => candidate.hash === id);
   if (!tx) throw new Error("Message transaction not found.");
 
-  const mapped = mapCoreMessage(tx, wallet.getPublicAddress());
+  wallet.hydrateSentMessageBody(tx);
+  const mapped = mapCoreMessage(
+    tx,
+    wallet.getPublicAddress(),
+    wallet.listAddressBook(),
+    wallet.getSentMessageRecord(id),
+  );
   if (!mapped) throw new Error("Transaction is not a message.");
 
   return { ...mapped, unread: false };

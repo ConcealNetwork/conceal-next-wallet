@@ -78,8 +78,18 @@ export type Message = {
   counterpartyName: string;
   counterpartyAddress: string;
   body: string;
+  /** False when sent envelope is known but local body was not saved (e.g. after rescan). */
+  hasBody: boolean;
+  /** Recipient CCX address for sent messages. */
+  sentTo?: string | null;
   timestamp: string;
   unread: boolean;
+  /** PID on incoming messages; always null on sent. */
+  paymentIdFrom: string | null;
+  /** PID embedded in outgoing tx; always null on received. Topic threads later. */
+  paymentIdTo: string | null;
+  blockHeight: number;
+  threadKey: string;
   /** Mempool TTL expiry (unix seconds); set when blockHeight === 0 and tx.ttl > 0. */
   ttlExpiresAt?: number;
 };
@@ -112,7 +122,7 @@ export type AddressEntry = {
   label: string;
   address: string;
   paymentId?: string;
-  /** Optional contact photo as a data URL (mock — set client-side). */
+  /** Built-in avatar slug (e.g. "kraken") — maps to `/brand/contacts/{slug}.png`. */
   avatar?: string;
 };
 

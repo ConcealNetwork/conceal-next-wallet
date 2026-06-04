@@ -1,17 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { createWalletNetworkConfig, walletNetworkScalars } from "@/lib/config/config";
+import {
+  MESSAGE_TX_AMOUNT_ATOMIC,
+  SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC,
+  SENT_MESSAGE_AMOUNT_SELF_ATOMIC,
+  createWalletNetworkConfig,
+  walletNetworkScalars,
+} from "@/lib/config/config";
 import {
   clampImportHeight,
   deriveIndicativeDepositApr,
+  hasMessageEnvelopeIn,
+  isMessageIn,
+  isMessageOut,
   isMessageTransactionExpired,
-  isStandaloneMessageTx,
   mapCoreDeposit,
   mapCoreMessage,
   mapCoreTransaction,
   resolveTransactionDisplayAmount,
   resolveTransactionType,
+  resolveUiTransactionType,
+  listWalletMessages,
+  sortMessagesByHeight,
+  isUiMessageOut,
 } from "@/lib/wallet-core/mappers";
-import { MESSAGE_TX_AMOUNT_ATOMIC } from "@/lib/config/config";
 import { Deposit, Transaction, TransactionIn, TransactionOut } from "@/lib/wallet-core/Transaction";
 
 function makeTx(
@@ -83,13 +94,18 @@ describe("wallet mappers", () => {
     messageOut.rtcAmount = "";
     const messageTx = makeTx({ hash: "msg-1", ins: [], outs: [messageOut] });
     messageTx.message = "Hello";
-    expect(isStandaloneMessageTx(messageTx)).toBe(true);
+    expect(isMessageIn(messageTx)).toBe(true);
+    expect(hasMessageEnvelopeIn(messageTx)).toBe(true);
     expect(resolveTransactionType(messageTx)).toBe("message");
 
     const minerOut = out(2_000_000);
     minerOut.rtcAmount = "";
     const miner = makeTx({ outs: [minerOut] });
     expect(resolveTransactionType(miner)).toBe("miner");
+
+    const send = makeTx({ ins: [input(500_000)], outs: [out(100_000)] });
+    send.message = "Payment ref #42";
+    expect(resolveTransactionType(send)).toBe("send");
 
     const receiveWithMemo = makeTx({ outs: [out(50_000_000)] });
     receiveWithMemo.message = "Payment ref #42";
@@ -172,7 +188,7 @@ describe("wallet mappers", () => {
     received.message = "Hello";
     received.messageViewed = false;
 
-    const sent = makeTx({ hash: "sent-1", ins: [input(100)], outs: [] });
+    const sent = makeTx({ hash: "sent-1", ins: [input(500_000)], outs: [out(489_900)] });
     sent.message = "Hi back";
 
     const expired = makeTx({ hash: "ttl-1", ins: [], outs: [out(100)] });
@@ -193,5 +209,174 @@ describe("wallet mappers", () => {
     expect(mapCoreMessage(sent, walletAddress)?.direction).toBe("sent");
     expect(mapCoreMessage(expired, walletAddress)).toBeNull();
     expect(isMessageTransactionExpired(expired)).toBe(true);
+  });
+
+  it("detects sent messages by tx amount (10100 / 11100)", () => {
+    const walletAddress = "ccx7WalletAddressExample";
+    const selfNode = makeTx({
+      hash: "sent-self",
+      ins: [input(500_000)],
+      outs: [out(489_900)],
+    });
+    selfNode.message = "Reply with change";
+    selfNode.remoteAddress =
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
+
+    expect(isMessageIn(selfNode)).toBe(false);
+    expect(isMessageOut(selfNode)).toBe(true);
+    expect(resolveTransactionType(selfNode)).toBe("message");
+    expect(mapCoreMessage(selfNode, walletAddress)?.direction).toBe("sent");
+    expect(mapCoreTransaction(selfNode, 200, walletAddress).amount.atomic).toBe(
+      SENT_MESSAGE_AMOUNT_SELF_ATOMIC,
+    );
+
+    const remote = makeTx({
+      hash: "sent-remote",
+      ins: [input(500_000)],
+      outs: [out(488_900)],
+    });
+    remote.message = "Hello via remote node";
+
+    expect(isMessageOut(remote)).toBe(true);
+    expect(mapCoreTransaction(remote, 200, walletAddress).type).toBe("message");
+    expect(mapCoreTransaction(remote, 200, walletAddress).amount.atomic).toBe(
+      SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC,
+    );
+
+    const largeSend = makeTx({ ins: [input(500_000)], outs: [out(400_000)] });
+    largeSend.message = "Payment ref";
+    expect(isMessageOut(largeSend)).toBe(false);
+    expect(resolveTransactionType(largeSend)).toBe("send");
+  });
+
+  it("detects sent messages via remoteAddress before message body is synced", () => {
+    const walletAddress = "ccx7WalletAddressExample";
+    const sent = makeTx({
+      hash: "sent-remote-addr",
+      ins: [input(500_000)],
+      outs: [out(488_900)],
+    });
+    sent.remoteAddress =
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
+
+    expect(isMessageOut(sent)).toBe(true);
+    expect(mapCoreTransaction(sent, 200, walletAddress).type).toBe("message");
+    expect(mapCoreTransaction(sent, 200, walletAddress).outgoing).toBe(true);
+  });
+
+  it("resolveUiTransactionType shows envelope for misclassified send rows", () => {
+    const sentMessage: import("@/lib/types").Transaction = {
+      id: "x",
+      hash: "x",
+      type: "send",
+      amount: { atomic: SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC },
+      address: "",
+      timestamp: new Date().toISOString(),
+      confirmations: 10,
+      message: "Hello",
+    };
+
+    expect(resolveUiTransactionType(sentMessage)).toBe("message");
+    expect(isUiMessageOut(sentMessage)).toBe(true);
+  });
+
+  it("listWalletMessages hydrates sender body from wallet sentMessages records", () => {
+    const walletAddress = "ccx7WalletAddressExample";
+    const receiver =
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
+    const sent = makeTx({
+      hash: "sent-stored-body",
+      ins: [input(500_000)],
+      outs: [out(488_900)],
+    });
+
+    const sentRecord = {
+      txHash: "sent-stored-body",
+      messageBody: "Hello from sender storage",
+      receiver,
+      paymentIdTo: "pid123",
+    };
+    const wallet = {
+      getPublicAddress: () => walletAddress,
+      listAddressBook: () => [],
+      txsMem: [],
+      getTransactionsCopy: () => [sent],
+      getSentMessageRecord: (hash: string) => (hash === sentRecord.txHash ? sentRecord : undefined),
+      hydrateSentMessageBody: (tx: Transaction) => {
+        if (!tx.message && tx.hash === sentRecord.txHash) {
+          tx.message = sentRecord.messageBody;
+          tx.remoteAddress = sentRecord.receiver;
+        }
+      },
+    } as unknown as import("@/lib/wallet-core/Wallet").Wallet;
+
+    const messages = listWalletMessages(wallet);
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.direction).toBe("sent");
+    expect(messages[0]?.body).toBe("Hello from sender storage");
+    expect(messages[0]?.hasBody).toBe(true);
+    expect(messages[0]?.counterpartyAddress).toBe(receiver);
+    expect(messages[0]?.threadKey).toBe(`${receiver}:pid123`);
+  });
+
+  it("listWalletMessages includes sent txs without stored body (envelope only)", () => {
+    const walletAddress = "ccx7WalletAddressExample";
+    const sent = makeTx({
+      hash: "sent-no-body",
+      ins: [input(500_000)],
+      outs: [out(488_900)],
+    });
+    sent.remoteAddress =
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
+
+    const wallet = {
+      getPublicAddress: () => walletAddress,
+      listAddressBook: () => [],
+      txsMem: [],
+      getTransactionsCopy: () => [sent],
+      getSentMessageRecord: () => undefined,
+      hydrateSentMessageBody: () => {},
+    } as unknown as import("@/lib/wallet-core/Wallet").Wallet;
+
+    const messages = listWalletMessages(wallet);
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.direction).toBe("sent");
+    expect(messages[0]?.hasBody).toBe(false);
+  });
+
+  it("sortMessagesByHeight puts received before sent when block and time tie", () => {
+    const ts = "2026-06-04T09:55:00.000Z";
+    const received: import("@/lib/types").Message = {
+      id: "recv-hash",
+      direction: "received",
+      counterpartyName: "Alice",
+      counterpartyAddress: "recv:abc",
+      body: "Conversation",
+      hasBody: true,
+      paymentIdFrom: "pid",
+      paymentIdTo: null,
+      timestamp: ts,
+      unread: false,
+      blockHeight: 2_087_751,
+      threadKey: "t",
+    };
+    const sent: import("@/lib/types").Message = {
+      id: "sent-hash",
+      direction: "sent",
+      counterpartyName: "Alice",
+      counterpartyAddress: "ccx7abc",
+      body: "Reply",
+      hasBody: true,
+      sentTo: "ccx7abc",
+      paymentIdFrom: null,
+      paymentIdTo: "pid",
+      timestamp: ts,
+      unread: false,
+      blockHeight: 2_087_751,
+      threadKey: "t",
+    };
+
+    const sorted = sortMessagesByHeight([sent, received]);
+    expect(sorted.map((m) => m.direction)).toEqual(["received", "sent"]);
   });
 });

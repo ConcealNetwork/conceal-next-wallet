@@ -16,7 +16,18 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import { Transaction, TransactionIn, type TransactionOut, Deposit, Withdrawal } from "./Transaction";
+import {
+  indexSentMessageRecords,
+  normalizeSentMessagesFromRaw,
+  type RawSentMessageRecord,
+} from "./sent-messages";
+import {
+  Transaction,
+  TransactionIn,
+  type TransactionOut,
+  Deposit,
+  Withdrawal,
+} from "./Transaction";
 import { DependencyInjectorInstance } from "./numbersLab/DependencyInjector";
 import type { BlockchainExplorer, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
 import { TransactionsExplorer } from "./TransactionsExplorer";
@@ -77,6 +88,14 @@ export class WalletOptions {
   }
 }
 
+export type RawAddressEntry = {
+  id: string;
+  label: string;
+  address: string;
+  paymentId?: string;
+  avatar?: string;
+};
+
 export type RawWallet = {
   deposits: any[];
   withdrawals: any[];
@@ -89,11 +108,16 @@ export type RawWallet = {
   creationHeight?: number;
   options?: RawWalletOptions;
   coinAddressPrefix?: any;
+  addressBook?: RawAddressEntry[];
+  /** Sender-only outgoing message copies (optional; ignored by wallet v1). */
+  sentMessages?: RawSentMessageRecord[];
 };
 export type RawFullyEncryptedWallet = {
   data: number[];
   nonce: string;
 };
+
+export type { RawSentMessageRecord } from "./sent-messages";
 
 export class Wallet extends Observable {
   private _lastHeight: number = 0;
@@ -113,6 +137,10 @@ export class Wallet extends Observable {
   keys!: UserKeys;
 
   private _options: WalletOptions = new WalletOptions();
+  private addressBook: RawAddressEntry[] = [];
+  /** Outgoing message records keyed by tx hash — persisted in wallet blob, not on chain. */
+  private sentMessageRecords = new Map<string, RawSentMessageRecord>();
+  private pendingMessageTargets = new Map<string, { remoteAddress: string; paymentId?: string }>();
 
   signalChanged = () => {
     this.modifiedTS = new Date();
@@ -131,7 +159,12 @@ export class Wallet extends Observable {
       withdrawals.push(withdrawal.export());
     }
     for (const transaction of this.transactions) {
-      transactions.push(transaction.export());
+      const exported = transaction.export();
+      // Keep sender message bodies out of tx entries so wallet v1 is unaffected.
+      if (transaction.hash && this.sentMessageRecords.has(transaction.hash) && exported.message) {
+        delete exported.message;
+      }
+      transactions.push(exported);
     }
 
     const data: RawWallet = {
@@ -149,6 +182,14 @@ export class Wallet extends Observable {
 
     if (this.creationHeight !== 0) {
       data.creationHeight = this.creationHeight;
+    }
+
+    if (this.addressBook.length > 0) {
+      data.addressBook = this.addressBook.slice();
+    }
+
+    if (this.sentMessageRecords.size > 0) {
+      data.sentMessages = Array.from(this.sentMessageRecords.values());
     }
 
     return data;
@@ -219,9 +260,21 @@ export class Wallet extends Observable {
       wallet.coinAddressPrefix = raw.coinAddressPrefix;
     else wallet.coinAddressPrefix = config.addressPrefix;
 
-    if (typeof raw.coinAddressPrefix !== "undefined")
-      wallet.coinAddressPrefix = raw.coinAddressPrefix;
-    else wallet.coinAddressPrefix = config.addressPrefix;
+    if (typeof raw.addressBook !== "undefined") {
+      wallet.addressBook = raw.addressBook.slice();
+    }
+
+    if (typeof raw.sentMessages !== "undefined") {
+      wallet.sentMessageRecords = indexSentMessageRecords(
+        normalizeSentMessagesFromRaw(raw.sentMessages),
+      );
+      for (const transaction of wallet.transactions) {
+        wallet.hydrateSentMessageBody(transaction);
+      }
+      for (const transaction of wallet.txsMem) {
+        wallet.hydrateSentMessageBody(transaction);
+      }
+    }
 
     wallet.recalculateKeyImages();
     return wallet;
@@ -252,6 +305,104 @@ export class Wallet extends Observable {
     this.signalChanged();
   }
 
+  listAddressBook = (): RawAddressEntry[] => {
+    return this.addressBook.slice();
+  };
+
+  createAddressEntry = (entry: RawAddressEntry): RawAddressEntry => {
+    this.addressBook.push(entry);
+    this.signalChanged();
+    this.notify();
+    return entry;
+  };
+
+  updateAddressEntry = (id: string, input: Omit<RawAddressEntry, "id">): RawAddressEntry | null => {
+    const index = this.addressBook.findIndex((entry) => entry.id === id);
+    if (index === -1) return null;
+    const updated: RawAddressEntry = { id, ...input };
+    this.addressBook[index] = updated;
+    this.signalChanged();
+    this.notify();
+    return updated;
+  };
+
+  deleteAddressEntry = (id: string): boolean => {
+    const index = this.addressBook.findIndex((entry) => entry.id === id);
+    if (index === -1) return false;
+    this.addressBook.splice(index, 1);
+    this.signalChanged();
+    this.notify();
+    return true;
+  };
+
+  setPendingMessageTarget = (
+    hash: string,
+    remoteAddress: string,
+    paymentId?: string,
+    body?: string,
+  ): void => {
+    this.pendingMessageTargets.set(hash, { remoteAddress, paymentId });
+    if (body) {
+      this.saveSentMessageRecord({
+        txHash: hash,
+        messageBody: body,
+        receiver: remoteAddress,
+        paymentIdTo: paymentId || undefined,
+      });
+    }
+    for (const tx of this.txsMem.concat(this.transactions)) {
+      if (tx.hash === hash) this.applyPendingMessageTarget(tx);
+    }
+    this.signalChanged();
+    this.notify();
+  };
+
+  saveSentMessageRecord = (record: RawSentMessageRecord): void => {
+    if (!record.txHash || !record.messageBody.trim()) return;
+    this.sentMessageRecords.set(record.txHash, { ...record });
+    for (const tx of this.txsMem.concat(this.transactions)) {
+      if (tx.hash === record.txHash) this.hydrateSentMessageBody(tx);
+    }
+    this.signalChanged();
+    this.notify();
+  };
+
+  getSentMessageRecord = (hash: string): RawSentMessageRecord | undefined => {
+    return hash ? this.sentMessageRecords.get(hash) : undefined;
+  };
+
+  listSentMessageRecords = (): RawSentMessageRecord[] => {
+    return Array.from(this.sentMessageRecords.values());
+  };
+
+  hydrateSentMessageBody = (transaction: Transaction): void => {
+    if (!transaction.hash) return;
+    const record = this.sentMessageRecords.get(transaction.hash);
+    if (!record) return;
+    if (!transaction.message) transaction.message = record.messageBody;
+    if (!transaction.remoteAddress && record.receiver) {
+      transaction.remoteAddress = record.receiver;
+    }
+  };
+
+  private applyPendingMessageTarget = (transaction: Transaction): void => {
+    if (!transaction.hash) return;
+    const pending = this.pendingMessageTargets.get(transaction.hash);
+    if (pending) {
+      if (!transaction.remoteAddress) transaction.remoteAddress = pending.remoteAddress;
+      if (pending.paymentId && !transaction.paymentId) transaction.paymentId = pending.paymentId;
+    }
+    this.hydrateSentMessageBody(transaction);
+  };
+
+  private preserveMessageTransactionMeta = (next: Transaction, previous: Transaction): void => {
+    if (previous.message && !next.message) next.message = previous.message;
+    if (!next.message) this.hydrateSentMessageBody(next);
+    if (previous.messageViewed) next.messageViewed = previous.messageViewed || next.messageViewed;
+    if (previous.remoteAddress && !next.remoteAddress) next.remoteAddress = previous.remoteAddress;
+    if (previous.paymentId && !next.paymentId) next.paymentId = previous.paymentId;
+  };
+
   getAll = (forceReload = false): Transaction[] => {
     return this.transactions.slice();
   };
@@ -267,6 +418,7 @@ export class Wallet extends Observable {
 
   addNew = (transaction: Transaction | null, replace = true) => {
     if (transaction) {
+      this.applyPendingMessageTarget(transaction);
       const exist = this.findWithTxPubKey(transaction.txPubKey);
 
       if (!exist || replace) {
@@ -282,6 +434,7 @@ export class Wallet extends Observable {
               // Preserve messageViewed flag when replacing
               transaction.messageViewed =
                 this.transactions[tr].messageViewed || transaction.messageViewed;
+              this.preserveMessageTransactionMeta(transaction, this.transactions[tr]);
               this.keyLookupMap.set(transaction.txPubKey, transaction);
               this.txLookupMap.set(transaction.hash, transaction);
               this.transactions[tr] = transaction;
@@ -296,6 +449,7 @@ export class Wallet extends Observable {
           transaction.fusion = existMem.fusion;
           // Preserve messageViewed flag from mempool
           transaction.messageViewed = existMem.messageViewed || transaction.messageViewed;
+          this.preserveMessageTransactionMeta(transaction, existMem);
           const trIndex = this.txsMem.indexOf(existMem);
           if (trIndex != -1) {
             this.txsMem.splice(trIndex, 1);
@@ -444,12 +598,14 @@ export class Wallet extends Observable {
   };
 
   addNewMemTx = (transaction: Transaction, replace = true) => {
+    this.applyPendingMessageTarget(transaction);
     let modified: boolean = false;
     let foundTx: boolean = false;
 
     for (let i = 0; i < this.txsMem.length; ++i) {
       if (this.txsMem[i].hash === transaction.hash) {
         if (replace) {
+          this.preserveMessageTransactionMeta(transaction, this.txsMem[i]);
           this.txsMem[i] = transaction;
           modified = true;
         }
@@ -899,7 +1055,8 @@ export class Wallet extends Observable {
     for (let i = 0; i < selectedBucket; ++i) {
       lowerBound *= 10;
     }
-    const upperBound = selectedBucket === NUM_BUCKETS - 1 ? Number.MAX_SAFE_INTEGER : lowerBound * 10;
+    const upperBound =
+      selectedBucket === NUM_BUCKETS - 1 ? Number.MAX_SAFE_INTEGER : lowerBound * 10;
 
     // Select outputs within bounds
     const selectedOuts = allFusionReadyOuts.filter(

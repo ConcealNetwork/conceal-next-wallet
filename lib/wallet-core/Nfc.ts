@@ -126,7 +126,10 @@ export class Nfc {
     return new Promise<void>((resolve, reject) => {
       if (window.nfc && window.ndef) {
         if (message.lang === "") message.lang = "en";
-        const nativeNdef: NativeNfcEventNdef = window.ndef.textRecord(message.content, message.lang);
+        const nativeNdef: NativeNfcEventNdef = window.ndef.textRecord(
+          message.content,
+          message.lang,
+        );
         window.nfc.share(
           [nativeNdef],
           (data: any) => {

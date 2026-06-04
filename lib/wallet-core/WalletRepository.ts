@@ -134,7 +134,10 @@ export class WalletRepository {
   }
 
   static save(wallet: Wallet, password: string): Promise<void> {
-    return Storage.setItem("wallet", JSON.stringify(WalletRepository.getEncrypted(wallet, password)));
+    return Storage.setItem(
+      "wallet",
+      JSON.stringify(WalletRepository.getEncrypted(wallet, password)),
+    );
   }
 
   static getEncrypted(wallet: Wallet, password: string): RawFullyEncryptedWallet {

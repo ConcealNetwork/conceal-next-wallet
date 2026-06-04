@@ -287,8 +287,7 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
       <ul className="mt-1 divide-y divide-border">
         {transactions.map((transaction, index) => {
           const meta = TX_META[transaction.type];
-          const sign =
-            transaction.type === "message" && transaction.outgoing ? "−" : meta.sign;
+          const sign = transaction.type === "message" && transaction.outgoing ? "−" : meta.sign;
           return (
             <li
               key={transaction.id}

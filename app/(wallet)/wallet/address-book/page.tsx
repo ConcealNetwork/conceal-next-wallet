@@ -1,16 +1,22 @@
 "use client";
 
-import { Camera, LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react";
+import { ArrowLeftRight, LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CopyButton, EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
-import { useAddressBook, useCreateAddressEntry } from "@/lib/hooks";
+import {
+  useAddressBook,
+  useCreateAddressEntry,
+  useDeleteAddressEntry,
+  useUpdateAddressEntry,
+} from "@/lib/hooks";
 import type { AddressEntry } from "@/lib/types";
+import { CONTACT_AVATARS, contactAvatarPath, isContactAvatarId } from "@/lib/ui/contact-avatars";
+import { addressIsValid, generatePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
 import { cn, truncateAddress, withBasePath } from "@/lib/utils";
 
 type View = "cards" | "table";
@@ -19,8 +25,8 @@ const VIEW_KEY = "conceal-address-view";
 export default function AddressBookPage() {
   const addressBook = useAddressBook();
   const createEntry = useCreateAddressEntry();
-  const [added, setAdded] = useState<AddressEntry[]>([]);
-  const [removed, setRemoved] = useState<Set<string>>(new Set());
+  const updateEntry = useUpdateAddressEntry();
+  const deleteEntry = useDeleteAddressEntry();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<View>("cards");
   const [open, setOpen] = useState(false);
@@ -29,27 +35,10 @@ export default function AddressBookPage() {
   const [paymentId, setPaymentId] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [edited, setEdited] = useState<Record<string, AddressEntry>>({});
-
-  function onPhoto(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2_000_000) {
-      toast.error("Please choose an image under 2 MB.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => setAvatar(typeof reader.result === "string" ? reader.result : null);
-    reader.readAsDataURL(file);
-  }
 
   useEffect(() => {
-    function applyStoredView(next: View) {
-      setView(next);
-    }
-
     const stored = window.localStorage.getItem(VIEW_KEY);
-    if (stored === "cards" || stored === "table") applyStoredView(stored);
+    if (stored === "cards" || stored === "table") setView(stored);
   }, []);
 
   function chooseView(next: View) {
@@ -58,16 +47,12 @@ export default function AddressBookPage() {
   }
 
   const entries = useMemo(() => {
-    const base = [...(addressBook.data ?? []), ...added]
-      .filter((entry) => !removed.has(entry.id))
-      .map((entry) => edited[entry.id] ?? entry);
+    const base = addressBook.data ?? [];
     const term = query.trim().toLowerCase();
     return term
       ? base.filter((entry) => `${entry.label} ${entry.address}`.toLowerCase().includes(term))
       : base;
-  }, [addressBook.data, added, removed, edited, query]);
-
-  const total = (addressBook.data ?? []).length + added.length - removed.size;
+  }, [addressBook.data, query]);
 
   function resetForm() {
     setLabel("");
@@ -91,38 +76,71 @@ export default function AddressBookPage() {
     setOpen(true);
   }
 
+  function validateForm(): boolean {
+    if (!label.trim()) {
+      toast.error("Label is required.");
+      return false;
+    }
+    if (!addressIsValid(address)) {
+      toast.error("Address must start with ccx7 and be exactly 98 characters.");
+      return false;
+    }
+    if (!paymentIdIsValid(paymentId)) {
+      toast.error("Payment ID must be 64 or 16 hexadecimal characters.");
+      return false;
+    }
+    return true;
+  }
+
   function submit() {
+    if (!validateForm()) return;
+
+    const input = {
+      label: label.trim(),
+      address: address.trim(),
+      paymentId: paymentId.trim() || undefined,
+      avatar: avatar ?? undefined,
+    };
+
     if (editingId) {
-      const updated: AddressEntry = {
-        id: editingId,
-        label,
-        address,
-        paymentId: paymentId || undefined,
-        avatar: avatar ?? undefined,
-      };
-      setEdited((current) => ({ ...current, [editingId]: updated }));
-      toast.success("Mock address updated.");
-      setOpen(false);
-      resetForm();
+      updateEntry.mutate(
+        { id: editingId, input },
+        {
+          onSuccess: () => {
+            toast.success("Address updated.");
+            setOpen(false);
+            resetForm();
+          },
+          onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Update failed.");
+          },
+        },
+      );
       return;
     }
-    createEntry.mutate(
-      { label, address, paymentId, avatar: avatar ?? undefined },
-      {
-        onSuccess: (entry) => {
-          setAdded((current) => [...current, entry]);
-          toast.success("Mock address saved.");
-          setOpen(false);
-          resetForm();
-        },
+
+    createEntry.mutate(input, {
+      onSuccess: () => {
+        toast.success("Address saved.");
+        setOpen(false);
+        resetForm();
       },
-    );
+      onError: (error) => {
+        toast.error(error instanceof Error ? error.message : "Save failed.");
+      },
+    });
   }
 
   function remove(id: string) {
-    setRemoved((current) => new Set(current).add(id));
-    toast.success("Mock address removed.");
+    deleteEntry.mutate(id, {
+      onSuccess: () => toast.success("Address removed."),
+      onError: (error) => {
+        toast.error(error instanceof Error ? error.message : "Delete failed.");
+      },
+    });
   }
+
+  const isSaving = createEntry.isPending || updateEntry.isPending;
 
   return (
     <>
@@ -139,7 +157,7 @@ export default function AddressBookPage() {
 
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <SectionCard>
-          {total === 0 ? (
+          {(addressBook.data ?? []).length === 0 ? (
             <EmptyState
               title="No addresses saved yet"
               description="Add your first CCX address to get started."
@@ -305,28 +323,30 @@ export default function AddressBookPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Photo (optional)</Label>
-              <div className="flex items-center gap-3">
-                <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/15 text-primary">
-                  {avatar ? (
-                    <img src={avatar} alt="" className="size-12 object-cover" />
-                  ) : (
-                    <Camera className="size-5" aria-hidden="true" />
-                  )}
-                </span>
-                <label className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-border px-3 text-sm transition-colors duration-200 hover:border-ring focus-within:ring-2 focus-within:ring-ring">
-                  Upload photo
-                  <input type="file" accept="image/*" className="sr-only" onChange={onPhoto} />
-                </label>
-                {avatar && (
+              <Label>Avatar (optional)</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {CONTACT_AVATARS.map((item) => (
                   <button
+                    key={item.id}
                     type="button"
-                    onClick={() => setAvatar(null)}
-                    className="cursor-pointer text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                    title={item.label}
+                    aria-label={item.label}
+                    aria-pressed={avatar === item.id}
+                    onClick={() => setAvatar(avatar === item.id ? null : item.id)}
+                    className={cn(
+                      "grid size-14 place-items-center rounded-xl border transition-colors duration-200",
+                      avatar === item.id
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-ring/50",
+                    )}
                   >
-                    Remove
+                    <img
+                      src={withBasePath(contactAvatarPath(item.id))}
+                      alt=""
+                      className="size-12 rounded-lg object-cover"
+                    />
                   </button>
-                )}
+                ))}
               </div>
             </div>
             <div className="space-y-2">
@@ -350,19 +370,31 @@ export default function AddressBookPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="ab-paymentId">Payment ID</Label>
-              <Input
-                id="ab-paymentId"
-                value={paymentId}
-                onChange={(event) => setPaymentId(event.target.value)}
-                placeholder="Optional"
-                autoComplete="off"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="ab-paymentId"
+                  value={paymentId}
+                  onChange={(event) => setPaymentId(event.target.value)}
+                  placeholder="Optional — 64 hex characters"
+                  autoComplete="off"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Generate random payment ID"
+                  onClick={() => setPaymentId(generatePaymentId())}
+                >
+                  <ArrowLeftRight className="size-4" />
+                </Button>
+              </div>
             </div>
             <Button
               type="button"
               className="w-full"
               onClick={submit}
-              disabled={!label.trim() || !address.trim() || (!editingId && createEntry.isPending)}
+              disabled={!label.trim() || !address.trim() || isSaving}
             >
               {editingId ? "Save changes" : "Save Address"}
             </Button>
@@ -373,13 +405,13 @@ export default function AddressBookPage() {
   );
 }
 
-function ContactAvatar({ entry, className }: { entry: AddressEntry; className?: string }) {
-  if (entry.avatar) {
+export function ContactAvatar({ entry, className }: { entry: AddressEntry; className?: string }) {
+  if (isContactAvatarId(entry.avatar)) {
     return (
       <img
-        src={withBasePath(entry.avatar)}
+        src={withBasePath(contactAvatarPath(entry.avatar))}
         alt=""
-        className={cn("shrink-0 object-cover", className)}
+        className={cn("shrink-0 rounded-lg object-cover", className)}
       />
     );
   }

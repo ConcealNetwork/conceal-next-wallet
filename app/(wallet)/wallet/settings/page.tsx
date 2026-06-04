@@ -144,7 +144,8 @@ export default function SettingsPage() {
           isMock ? "Mock rescan started." : "Wallet reset — rescanning from creation height.",
         );
       },
-      onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Rescan failed."),
+      onError: (error: unknown) =>
+        toast.error(error instanceof Error ? error.message : "Rescan failed."),
     });
   }
 
@@ -253,10 +254,7 @@ export default function SettingsPage() {
                     />
                   </div>
                 </Row>
-                <Row
-                  label="Maintenance"
-                  description="Apply height changes or rescan the chain"
-                >
+                <Row label="Maintenance" description="Apply height changes or rescan the chain">
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"

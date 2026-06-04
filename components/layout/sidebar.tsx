@@ -82,11 +82,7 @@ function NavLink({
     <Link
       href={item.href}
       aria-label={
-        collapsed
-          ? showBadge
-            ? `${item.label}, ${badge} new since open`
-            : item.label
-          : undefined
+        collapsed ? (showBadge ? `${item.label}, ${badge} new since open` : item.label) : undefined
       }
       onClick={onNavigate}
       className={cn(
@@ -111,7 +107,9 @@ function NavLink({
           {item.label}
         </span>
       ) : null}
-      {showBadge && !collapsed ? <NavMessageBadge count={badge} className="ml-auto shrink-0" /> : null}
+      {showBadge && !collapsed ? (
+        <NavMessageBadge count={badge} className="ml-auto shrink-0" />
+      ) : null}
     </Link>
   );
 

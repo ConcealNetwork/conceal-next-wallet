@@ -840,7 +840,10 @@ export namespace Cn {
   ) {
     if (payment_id8.length !== 16) throw "Invalid input length2!";
 
-    const key_derivation = concealjs.crypto.generate_key_derivation(tx_public_key, acc_prv_view_key);
+    const key_derivation = concealjs.crypto.generate_key_derivation(
+      tx_public_key,
+      acc_prv_view_key,
+    );
 
     const pid_key = concealjs.crypto
       .cn_fast_hash(key_derivation + ENCRYPTED_PAYMENT_ID_TAIL.toString(16))
@@ -1064,9 +1067,17 @@ export namespace CnTransactions {
       mask = enc_mask ? CnNativeBride.sc_sub(enc_mask, temp1) : CnVars.I; //decode mask, or d2s(1) if no mask
     }
 
-    const ephemeral_pub = CnNativeBride.derive_public_key(recv_derivation, out_index, keys.spend.pub);
+    const ephemeral_pub = CnNativeBride.derive_public_key(
+      recv_derivation,
+      out_index,
+      keys.spend.pub,
+    );
     if (!ephemeral_pub) throw "Failed to generate key image";
-    const ephemeral_sec = CnNativeBride.derive_secret_key(recv_derivation, out_index, keys.spend.sec);
+    const ephemeral_sec = CnNativeBride.derive_secret_key(
+      recv_derivation,
+      out_index,
+      keys.spend.sec,
+    );
     const image = concealjs.crypto.generate_key_image(ephemeral_pub, ephemeral_sec);
     return {
       in_ephemeral: {
@@ -2064,7 +2075,9 @@ export namespace CnTransactions {
           sources[i].in_ephemeral = res.in_ephemeral;
         }
         //sort ins
-        sources.sort((a, b) => JSBigInt.parse(a.key_image, 16).compare(JSBigInt.parse(b.key_image, 16)) * -1);
+        sources.sort(
+          (a, b) => JSBigInt.parse(a.key_image, 16).compare(JSBigInt.parse(b.key_image, 16)) * -1,
+        );
       }
       //copy the sorted sources data to tx
       for (i = 0; i < sources.length; i++) {
@@ -2230,7 +2243,10 @@ export namespace CnTransactions {
 
         if (messageAddress) {
           const destKeys = Cn.decode_address(messageAddress);
-          const derivation: string = CnNativeBride.generate_key_derivation(destKeys.spend, txkey.sec);
+          const derivation: string = CnNativeBride.generate_key_derivation(
+            destKeys.spend,
+            txkey.sec,
+          );
           const magick1: string = "80";
           const magick2: string = "00";
           const keyData: string = derivation + magick1 + magick2;

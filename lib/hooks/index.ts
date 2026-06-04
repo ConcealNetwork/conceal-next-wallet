@@ -9,7 +9,8 @@ import type { AddressEntryInput } from "@/lib/services/address-book.service";
 import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
-import type { WalletInfo, WalletSettings } from "@/lib/types";
+import type { Message, WalletInfo, WalletSettings } from "@/lib/types";
+import { sortMessagesNewestFirst } from "@/lib/messages/conversations";
 import { queryKeys } from "@/lib/hooks/query-keys";
 
 export { queryKeys };
@@ -85,7 +86,12 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SendMessageInput) => services.messages.sendMessage(input),
-    onSuccess: () => {
+    onSuccess: (sent) => {
+      queryClient.setQueryData<Message[]>(queryKeys.messages, (current) => {
+        const list = current ?? [];
+        if (list.some((message) => message.id === sent.id)) return list;
+        return sortMessagesNewestFirst([...list, sent]);
+      });
       void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
@@ -148,8 +154,33 @@ export function useAddressBook() {
 }
 
 export function useCreateAddressEntry() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: AddressEntryInput) => services.addressBook.createEntry(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.addressBook });
+    },
+  });
+}
+
+export function useUpdateAddressEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: AddressEntryInput }) =>
+      services.addressBook.updateEntry(id, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.addressBook });
+    },
+  });
+}
+
+export function useDeleteAddressEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.addressBook.deleteEntry(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.addressBook });
+    },
   });
 }
 

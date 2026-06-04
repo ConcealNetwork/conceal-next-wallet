@@ -79,7 +79,9 @@ export class InterestCalculator {
 
     const m_depositMaxTerm = InterestCalculator.DEPOSIT_MAX_TERM_V1;
 
-    const a = term * InterestCalculator.DEPOSIT_MAX_TOTAL_RATE - InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
+    const a =
+      term * InterestCalculator.DEPOSIT_MAX_TOTAL_RATE -
+      InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
     // In JS we don't need mul128/div128 as JS Numbers can handle larger values
     let interestAmount = (amount * a) / (100 * m_depositMaxTerm);
 

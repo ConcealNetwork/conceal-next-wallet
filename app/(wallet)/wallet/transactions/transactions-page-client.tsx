@@ -41,6 +41,7 @@ import {
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Transaction, TransactionType } from "@/lib/types";
+import { isUiMessageIn, isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
 import { ccxToNumber, cn, formatCcx, timeAgo, truncateAddress } from "@/lib/utils";
 
 const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals"];
@@ -482,7 +483,7 @@ function TransactionListRow({
   transaction: Transaction;
   onSelect: (transaction: Transaction) => void;
 }) {
-  const meta = transactionMeta[transaction.type];
+  const meta = transactionMeta[resolveUiTransactionType(transaction)];
   const status = getTransactionStatus(transaction.confirmations);
   const Icon = meta.icon;
 
@@ -536,7 +537,7 @@ function TransactionDetailsDialog({
     return null;
   }
 
-  const meta = transactionMeta[transaction.type];
+  const meta = transactionMeta[resolveUiTransactionType(transaction)];
   const status = getTransactionStatus(transaction.confirmations);
   const Icon = meta.icon;
 
@@ -655,29 +656,26 @@ function getTransactionStatus(confirmations: number): TransactionStatus {
 }
 
 function formatSignedAmount(transaction: Transaction) {
-  const meta = transactionMeta[transaction.type];
-  const sign =
-    transaction.type === "message" && transaction.outgoing ? "−" : meta.sign;
+  const effectiveType = resolveUiTransactionType(transaction);
+  const meta = transactionMeta[effectiveType];
+  const sign = effectiveType === "message" && isUiMessageOut(transaction) ? "−" : meta.sign;
   return `${sign}${formatCcx(transaction.amount)}`;
 }
 
 function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
+  const effectiveType = resolveUiTransactionType(transaction);
   switch (tab) {
     case "All":
       return true;
     case "Received":
       return (
-        transaction.type === "receive" ||
-        transaction.type === "miner" ||
-        transaction.type === "withdrawal" ||
-        (transaction.type === "message" && !transaction.outgoing)
+        effectiveType === "receive" ||
+        effectiveType === "miner" ||
+        effectiveType === "withdrawal" ||
+        isUiMessageIn(transaction)
       );
     case "Sent":
-      return (
-        transaction.type === "send" ||
-        transaction.type === "fusion" ||
-        (transaction.type === "message" && Boolean(transaction.outgoing))
-      );
+      return effectiveType === "send" || effectiveType === "fusion" || isUiMessageOut(transaction);
     case "Deposits":
       return transaction.type === "deposit";
     case "Withdrawals":

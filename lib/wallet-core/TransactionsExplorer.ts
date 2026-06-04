@@ -833,12 +833,12 @@ export class TransactionsExplorer {
       let signed;
       try {
         //need to get viewkey for encrypting here, because of splitting and sorting
-        let realDestViewKey ;
+        let realDestViewKey;
         if (pid_encrypt) {
           realDestViewKey = Cn.decode_address(dsts[0].address).view;
         }
         // getting message destination address for encrypting here, before splitting and sorting
-        let messageTo ;
+        let messageTo;
         if (message) {
           messageTo = dsts[0].address;
         }
@@ -1110,12 +1110,11 @@ export class TransactionsExplorer {
                 transactionType,
                 term,
               )
-                .then((data: {
-                  raw: { hash: string; prvkey: string; raw: string };
-                  signed: any;
-                }) => {
-                  resolve(data);
-                })
+                .then(
+                  (data: { raw: { hash: string; prvkey: string; raw: string }; signed: any }) => {
+                    resolve(data);
+                  },
+                )
                 .catch((e) => {
                   reject(e);
                 });
@@ -1230,12 +1229,11 @@ export class TransactionsExplorer {
                 "withdraw",
                 deposit.term,
               )
-                .then((data: {
-                  raw: { hash: string; prvkey: string; raw: string };
-                  signed: any;
-                }) => {
-                  resolve(data);
-                })
+                .then(
+                  (data: { raw: { hash: string; prvkey: string; raw: string }; signed: any }) => {
+                    resolve(data);
+                  },
+                )
                 .catch((e) => {
                   reject(e);
                 });

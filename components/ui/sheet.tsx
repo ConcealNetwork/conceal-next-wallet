@@ -44,10 +44,7 @@ function SheetContent({ side = "right", className, children, ...props }: SheetCo
   return (
     <SheetPortal>
       <SheetOverlay />
-      <SheetPrimitive.Content
-        className={cn(sheetVariants({ side }), className)}
-        {...props}
-      >
+      <SheetPrimitive.Content className={cn(sheetVariants({ side }), className)} {...props}>
         <SheetPrimitive.Title className="sr-only">Navigation</SheetPrimitive.Title>
         <SheetPrimitive.Description className="sr-only">
           Wallet navigation menu

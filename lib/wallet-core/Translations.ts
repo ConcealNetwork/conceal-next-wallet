@@ -126,12 +126,7 @@ export class Translations {
         },
       );
 
-    promise.then((data: {
-      website?: any;
-      messages?: any;
-      date?: string;
-      number?: string;
-    }) => {
+    promise.then((data: { website?: any; messages?: any; date?: string; number?: string }) => {
       if (typeof data.date !== "undefined") i18n.setDateTimeFormat(lang, data.date);
       if (typeof data.number !== "undefined") i18n.setNumberFormat(lang, data.number);
       if (typeof data.messages !== "undefined") i18n.setLocaleMessage(lang, data.messages);

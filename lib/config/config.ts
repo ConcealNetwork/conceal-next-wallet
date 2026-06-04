@@ -19,6 +19,10 @@ export const AVG_BLOCK_TIME_SECONDS = walletNetworkScalars.avgBlockTime;
 export const MAX_MESSAGE_SIZE = walletNetworkScalars.maxMessageSize;
 export const MAX_TTL_MINUTES = walletNetworkScalars.cryptonoteMemPoolTxLifetimeSeconds / 60;
 export const MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars.messageTxAmountAtomic;
+/** Sent message tx amount (remote node fee returned to wallet). */
+export const SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE_NODE_FEE_ATOMIC;
+/** Sent message tx amount (remote node operator fee paid). */
+export const SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
 
 type WalletConfigBigInt = {
   new (value: string): { valueOf(): number };

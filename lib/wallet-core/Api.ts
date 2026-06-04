@@ -185,7 +185,8 @@ export class Api {
           paymentId,
           wallet,
           blockchainHeight,
-          (amounts: number[], numberOuts: number): Promise<RawDaemon_Out[]> => blockchainExplorer.getRandomOuts(amounts, numberOuts),
+          (amounts: number[], numberOuts: number): Promise<RawDaemon_Out[]> =>
+            blockchainExplorer.getRandomOuts(amounts, numberOuts),
           (amount: number, feesAmount: number): Promise<void> => {
             if (amount + feesAmount > wallet.availableAmount(blockchainHeight)) {
               console.log("Amount higher than the funds");
@@ -196,26 +197,25 @@ export class Api {
           },
           mixinToSendWith,
         )
-          .then((rawTxData: {
-            raw: { hash: string; prvkey: string; raw: string };
-            signed: any;
-          }) => {
-            blockchainExplorer
-              .sendRawTx(rawTxData.raw.raw)
-              .then(() => {
-                //save the tx private key
-                wallet.addTxPrivateKeyWithTxHash(rawTxData.raw.hash, rawTxData.raw.prvkey);
+          .then(
+            (rawTxData: { raw: { hash: string; prvkey: string; raw: string }; signed: any }) => {
+              blockchainExplorer
+                .sendRawTx(rawTxData.raw.raw)
+                .then(() => {
+                  //save the tx private key
+                  wallet.addTxPrivateKeyWithTxHash(rawTxData.raw.hash, rawTxData.raw.prvkey);
 
-                //force a mempool check so the user is up to date
-                const watchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
-                  WalletWatchdog.name,
-                );
-                if (watchdog !== null) watchdog.checkMempool();
-              })
-              .catch((data: any) => {
-                console.log("Generic error while sending funds: ", data);
-              });
-          })
+                  //force a mempool check so the user is up to date
+                  const watchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
+                    WalletWatchdog.name,
+                  );
+                  if (watchdog !== null) watchdog.checkMempool();
+                })
+                .catch((data: any) => {
+                  console.log("Generic error while sending funds: ", data);
+                });
+            },
+          )
           .catch((error: any) => {
             //console.log(error);
             if (error && error !== "") {
