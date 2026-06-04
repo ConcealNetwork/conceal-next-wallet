@@ -99,6 +99,15 @@ export default function AccountPage() {
           {info.networkHeight.toLocaleString()} ({syncPct}%)
         </div>
       )}
+      {wallet.isError && (
+        <div
+          className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          role="alert"
+        >
+          Could not load wallet data:{" "}
+          {wallet.error instanceof Error ? wallet.error.message : "Unknown error"}
+        </div>
+      )}
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         {info && market.data && deposits.data ? (
           <BalanceHero wallet={info} market={market.data} deposits={deposits.data} />

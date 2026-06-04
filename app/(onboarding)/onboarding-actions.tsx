@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FileKey, KeyRound, QrCode, Upload } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -90,7 +89,6 @@ function ImportSubmitButton({ label, loading }: { label: string; loading: boolea
 }
 
 export function ImportKeysForm() {
-  const router = useRouter();
   const { openSession } = useWalletSession();
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState("");
@@ -112,9 +110,8 @@ export function ImportKeysForm() {
         password,
       };
       const wallet = await services.wallet.importWallet(input);
-      openSession(wallet);
+      openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
-      router.push("/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Import failed.");
     } finally {
@@ -174,7 +171,6 @@ function normalizeImportHeight(value: string): number {
 }
 
 export function ImportMnemonicForm() {
-  const router = useRouter();
   const { openSession } = useWalletSession();
   const [loading, setLoading] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
@@ -193,9 +189,8 @@ export function ImportMnemonicForm() {
         language,
         scanHeight: normalizeImportHeight(importHeight),
       });
-      openSession(wallet);
+      openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
-      router.push("/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Import failed.");
     } finally {
@@ -263,7 +258,6 @@ export function ImportMnemonicForm() {
 }
 
 export function ImportFileForm() {
-  const router = useRouter();
   const { openSession } = useWalletSession();
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
@@ -304,9 +298,8 @@ export function ImportFileForm() {
     setLoading(true);
     try {
       const wallet = await services.wallet.importWallet({ method: "file", file, password });
-      openSession(wallet);
+      openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
-      router.push("/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Import failed.");
     } finally {
@@ -342,7 +335,6 @@ export function ImportFileForm() {
 }
 
 export function ImportQrForm() {
-  const router = useRouter();
   const { openSession } = useWalletSession();
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState("");
@@ -353,9 +345,8 @@ export function ImportQrForm() {
     setLoading(true);
     try {
       const wallet = await services.wallet.importWallet({ method: "qr", payload, password });
-      openSession(wallet);
+      openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
-      router.push("/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Import failed.");
     } finally {

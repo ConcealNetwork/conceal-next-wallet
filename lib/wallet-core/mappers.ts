@@ -32,22 +32,36 @@ export function clampImportHeight(scanHeight: number | undefined, currentHeight:
   return height;
 }
 
+type GlobalWithRuntimeWallet = typeof globalThis & { __ccxRuntimeWallet?: Wallet };
+
+function resolveWalletForMapping(wallet: Wallet): Wallet {
+  if (typeof wallet.availableAmount === "function") {
+    return wallet;
+  }
+  const runtime = (globalThis as GlobalWithRuntimeWallet).__ccxRuntimeWallet;
+  if (runtime != null && typeof runtime.availableAmount === "function") {
+    return runtime;
+  }
+  throw new Error("Wallet runtime is not initialized.");
+}
+
 export function mapWalletToInfo(wallet: Wallet, networkHeight: number): WalletInfo {
-  const walletHeight = Math.max(0, Number(wallet.lastHeight));
-  const available = wallet.availableAmount(networkHeight);
-  const locked = wallet.lockedDeposits(networkHeight);
-  const withdrawable = wallet.unlockedDeposits(networkHeight);
-  const pending = Math.max(0, wallet.availableAmount(-1) - available);
+  const w = resolveWalletForMapping(wallet);
+  const walletHeight = Math.max(0, Number(w.lastHeight));
+  const available = w.availableAmount(networkHeight);
+  const locked = w.lockedDeposits(networkHeight);
+  const withdrawable = w.unlockedDeposits(networkHeight);
+  const pending = Math.max(0, w.availableAmount(-1) - available);
 
   return {
-    address: wallet.getPublicAddress(),
+    address: w.getPublicAddress(),
     balanceTotal: { atomic: available + locked },
     available: { atomic: available },
     pending: { atomic: pending },
     lockedDeposits: { atomic: locked },
     staking: { atomic: 0 },
     withdrawable: { atomic: withdrawable },
-    creationHeight: wallet.creationHeight,
+    creationHeight: w.creationHeight,
     currentHeight: walletHeight,
     networkHeight,
   };

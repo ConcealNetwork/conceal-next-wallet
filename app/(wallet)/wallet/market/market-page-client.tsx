@@ -3,7 +3,7 @@
 import { RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/lib/hooks/query-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";

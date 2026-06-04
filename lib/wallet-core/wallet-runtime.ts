@@ -34,6 +34,17 @@ export class WalletWorker {
 
 let cachedMnemonic = "";
 
+type GlobalWithRuntimeWallet = typeof globalThis & { __ccxRuntimeWallet?: Wallet };
+
+function isWalletInstance(value: unknown): value is Wallet {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    typeof (value as Wallet).availableAmount === "function" &&
+    typeof (value as Wallet).getPublicAddress === "function"
+  );
+}
+
 export function setCreatedMnemonic(mnemonic: string) {
   cachedMnemonic = mnemonic;
 }
@@ -49,6 +60,7 @@ export function clearCreatedMnemonic() {
 export async function openWalletRuntime(wallet: Wallet, password: string) {
   await prepareWalletForOpen(wallet);
 
+  (globalThis as GlobalWithRuntimeWallet).__ccxRuntimeWallet = wallet;
   const walletWorker = new WalletWorker(wallet, password);
   DependencyInjectorInstance().register(Wallet.name, wallet);
   const explorer = BlockchainExplorerProvider.getInstance();
@@ -71,6 +83,7 @@ export function disconnectWalletRuntime() {
   BlockchainExplorerProvider.getInstance().cleanupSession();
 
   unregisterWalletSyncNotifier();
+  delete (globalThis as GlobalWithRuntimeWallet).__ccxRuntimeWallet;
   DependencyInjectorInstance().register(Wallet.name, undefined, "default");
   DependencyInjectorInstance().register(WalletWorker.name, undefined, "default");
   DependencyInjectorInstance().register(WalletWatchdog.name, undefined, "default");
@@ -78,7 +91,24 @@ export function disconnectWalletRuntime() {
 }
 
 export function getRuntimeWallet(): Wallet | null {
-  return DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
+  const globalWallet = (globalThis as GlobalWithRuntimeWallet).__ccxRuntimeWallet;
+  if (isWalletInstance(globalWallet)) {
+    return globalWallet;
+  }
+
+  const fromDi = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
+  if (isWalletInstance(fromDi)) {
+    return fromDi;
+  }
+
+  const worker = DependencyInjectorInstance().getInstance(WalletWorker.name, "default", false) as
+    | WalletWorker
+    | null;
+  if (isWalletInstance(worker?.wallet)) {
+    return worker.wallet;
+  }
+
+  return null;
 }
 
 export function getRuntimeWalletWorker(): WalletWorker | null {
