@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -19,10 +19,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CcxAmount } from "@/components/wallet/ccx";
+import {
+  AddressBookContactPicker,
+  findAddressBookContactByAddress,
+} from "@/components/wallet/address-book-contact-picker";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
 import { COIN_FEE_ATOMIC, COIN_UNIT_PLACES, REMOTE_NODE_FEE_ATOMIC } from "@/lib/config/config";
 import { useCountUp } from "@/lib/hooks/use-count-up";
-import { useMarketData, useSendTransaction, useTransactions, useWalletInfo } from "@/lib/hooks";
+import { useMarketData, useAddressBook, useSendTransaction, useTransactions, useWalletInfo } from "@/lib/hooks";
+import type { AddressEntry } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxToNumber, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils";
 
@@ -48,10 +53,12 @@ type SendForm = z.infer<typeof sendSchema>;
 
 export default function SendPage() {
   const wallet = useWalletInfo();
+  const addressBook = useAddressBook();
   const market = useMarketData();
   const transactions = useTransactions();
   const send = useSendTransaction();
   const [review, setReview] = useState<SendForm | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
 
   const available = wallet.data ? ccxToNumber(wallet.data.available) : 0;
   const price = market.data?.price.value ?? 0;
@@ -64,9 +71,20 @@ export default function SendPage() {
 
   const amount = useWatch({ control: form.control, name: "amount" }) || 0;
   const message = useWatch({ control: form.control, name: "message" }) || "";
+  const address = useWatch({ control: form.control, name: "address" }) || "";
   const recentSent = (transactions.data ?? [])
     .filter((transaction) => transaction.type === "send")
     .slice(0, 5);
+
+  useEffect(() => {
+    const match = findAddressBookContactByAddress(addressBook.data ?? [], address);
+    setSelectedContactId(match?.id ?? null);
+  }, [address, addressBook.data]);
+
+  function pickContact(entry: AddressEntry | null) {
+    setSelectedContactId(entry?.id ?? null);
+    form.setValue("address", entry?.address ?? "", { shouldValidate: true });
+  }
 
   function confirmSend() {
     if (!review) return;
@@ -74,6 +92,7 @@ export default function SendPage() {
       onSuccess: () => {
         toast.success(walletCopy.sendSuccess);
         form.reset();
+        setSelectedContactId(null);
         setReview(null);
       },
     });
@@ -91,6 +110,11 @@ export default function SendPage() {
             <form className="space-y-5" onSubmit={form.handleSubmit((values) => setReview(values))}>
               <div className="space-y-2">
                 <Label htmlFor="address">Destination Address</Label>
+                <AddressBookContactPicker
+                  contacts={addressBook.data ?? []}
+                  selectedId={selectedContactId}
+                  onSelect={pickContact}
+                />
                 <Input
                   id="address"
                   placeholder="ccx7 ..."
