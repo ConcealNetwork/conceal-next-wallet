@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -73,7 +73,8 @@ function SyncSpeedSelector({
   onChange: (speed: SyncSpeed) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Wallet sync speed">
+    <fieldset className="flex flex-wrap gap-2 border-0 p-0">
+      <legend className="sr-only">Wallet sync speed</legend>
       {SYNC_SPEED_OPTIONS.map((speed) => (
         <button
           key={speed}
@@ -90,7 +91,7 @@ function SyncSpeedSelector({
           {SYNC_SPEED_LABELS[speed]}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ContactAvatar } from "@/app/(wallet)/wallet/address-book/page";
 import { Button } from "@/components/ui/button";
@@ -17,19 +17,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton, PageHeader } from "@/components/wallet/common";
+import { MAX_MESSAGE_SIZE, MAX_TTL_MINUTES } from "@/lib/config/config";
 import { useAddressBook, useMessages, useSendMessage } from "@/lib/hooks";
 import {
   buildConversationFromMessage,
   canReplyToConversation,
-  sortMessagesNewestFirst,
   type MessageConversation,
+  sortMessagesNewestFirst,
 } from "@/lib/messages/conversations";
 import type { AddressEntry, Message } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { MAX_MESSAGE_SIZE, MAX_TTL_MINUTES } from "@/lib/config/config";
-import { buildMessageThreadKey } from "@/lib/wallet-core/mappers";
 import { cn, timeAgo, truncateAddress } from "@/lib/utils";
 import { addressIsValid, generatePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
+import { buildMessageThreadKey } from "@/lib/wallet-core/mappers";
 
 const TTL_STEP = 5;
 
@@ -372,10 +372,9 @@ export default function MessagesPage() {
               {showMdPreview ? (
                 <div className="space-y-1.5">
                   <span className="text-xs font-medium text-muted-foreground">Preview</span>
-                  <div
-                    className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm leading-relaxed [&_i]:italic [&_s]:line-through"
-                    dangerouslySetInnerHTML={{ __html: formatMessageText(composeBody) }}
-                  />
+                  <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm leading-relaxed [&_i]:italic [&_s]:line-through">
+                    <FormattedMessageText text={composeBody} />
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -500,7 +499,9 @@ function MessageListItem({
               {preview}
             </span>
             {message.unread && message.direction === "received" && (
-              <span className="size-2 shrink-0 rounded-full bg-primary" aria-label="unread" />
+              <span className="size-2 shrink-0 rounded-full bg-primary" role="status">
+                <span className="sr-only">Unread</span>
+              </span>
             )}
           </span>
         </span>
@@ -601,15 +602,12 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
       >
         {message.hasBody ? (
           threadViewMd ? (
-            <div
-              className="[&_i]:italic [&_s]:line-through"
-              dangerouslySetInnerHTML={{
-                __html: formatMessageText(
-                  message.body,
-                  message.direction === "sent" ? "sent" : "received",
-                ),
-              }}
-            />
+            <div className="[&_i]:italic [&_s]:line-through">
+              <FormattedMessageText
+                text={message.body}
+                theme={message.direction === "sent" ? "sent" : "received"}
+              />
+            </div>
           ) : (
             <p className="whitespace-pre-wrap break-words">{message.body}</p>
           )
@@ -691,44 +689,126 @@ function MessageTtlExpiryLabel({ expiresAt }: { expiresAt: number }) {
 
 type MessageFormatTheme = "compose" | "received" | "sent";
 
-/** Ported from conceal-web-wallet messages.ts (send / history / inbox themes). */
-function formatMessageText(text: string, theme: MessageFormatTheme = "compose"): string {
-  if (!text) return "";
+type MessageCodeColors = {
+  bg: string;
+  textCode: string;
+  textBold: string;
+  border: string;
+};
 
-  const codeColors =
-    theme === "sent"
-      ? {
-          bg: "rgba(0,0,0,0.28)",
-          textCode: "#fafafa",
-          textBold: "#fafafa",
-          border: "rgba(255,255,255,0.35)",
-        }
-      : theme === "received"
-        ? {
-            bg: "#2d3748",
-            textCode: "#fafafa",
-            textBold: "#fafafa",
-            border: "#D9DCE7",
-          }
-        : {
-            bg: "#424242",
-            textCode: "#fafafa",
-            textBold: "#2d3748",
-            border: "#000",
-          };
+function getMessageCodeColors(theme: MessageFormatTheme): MessageCodeColors {
+  if (theme === "sent") {
+    return {
+      bg: "rgba(0,0,0,0.28)",
+      textCode: "#fafafa",
+      textBold: "#fafafa",
+      border: "rgba(255,255,255,0.35)",
+    };
+  }
+  if (theme === "received") {
+    return {
+      bg: "#2d3748",
+      textCode: "#fafafa",
+      textBold: "#fafafa",
+      border: "#D9DCE7",
+    };
+  }
+  return {
+    bg: "#424242",
+    textCode: "#fafafa",
+    textBold: "#2d3748",
+    border: "#000",
+  };
+}
 
-  let formatted = text.replace(
-    /\*\*([^*\s][^*]*[^*\s])\*\*/g,
-    `<span style="font-weight: bold; color: ${codeColors.textBold}; text-shadow: 0px 0px 1px ${codeColors.textBold}">$1</span>`,
-  );
-  formatted = formatted.replace(/\*([^*\s][^*]*[^*\s])\*/g, "<i>$1</i>");
-  formatted = formatted.replace(/~~([^~]+)~~/g, "<s>$1</s>");
-  formatted = formatted.replace(
-    /`([^`]+)`/g,
-    `<span style="background-color: ${codeColors.bg}; color: ${codeColors.textCode}; padding: 1px 3px; border-radius: 3px; border: 1px solid ${codeColors.border}; font-family: monospace; font-size: 0.9em;">$1</span>`,
-  );
-  formatted = formatted.replace(/\*\s/g, "&nbsp;&nbsp•&nbsp");
-  formatted = formatted.replace(/ {2}/g, "<br>");
+function FormattedMessageText({
+  text,
+  theme = "compose",
+}: {
+  text: string;
+  theme?: MessageFormatTheme;
+}) {
+  if (!text) return null;
+  return <>{renderFormattedMessage(text, getMessageCodeColors(theme))}</>;
+}
 
-  return formatted;
+const INLINE_MESSAGE_PATTERN =
+  /\*\*([^*\s][^*]*[^*\s])\*\*|\*([^*\s][^*]*[^*\s])\*|~~([^~]+)~~|`([^`]+)`|\*\s/g;
+
+function renderFormattedMessage(text: string, codeColors: MessageCodeColors): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let key = 0;
+  const segments = text.split(/ {2}/);
+
+  segments.forEach((segment, segmentIndex) => {
+    if (segmentIndex > 0) {
+      nodes.push(<br key={`br-${key++}`} />);
+    }
+    nodes.push(...renderInlineMessageSegment(segment, codeColors, () => key++));
+  });
+
+  return nodes;
+}
+
+function renderInlineMessageSegment(
+  text: string,
+  codeColors: MessageCodeColors,
+  nextKey: () => number,
+): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(INLINE_MESSAGE_PATTERN)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      nodes.push(text.slice(lastIndex, index));
+    }
+
+    const key = nextKey();
+    if (match[1]) {
+      nodes.push(
+        <span
+          key={key}
+          style={{
+            fontWeight: "bold",
+            color: codeColors.textBold,
+            textShadow: `0px 0px 1px ${codeColors.textBold}`,
+          }}
+        >
+          {match[1]}
+        </span>,
+      );
+    } else if (match[2]) {
+      nodes.push(<i key={key}>{match[2]}</i>);
+    } else if (match[3]) {
+      nodes.push(<s key={key}>{match[3]}</s>);
+    } else if (match[4]) {
+      nodes.push(
+        <span
+          key={key}
+          style={{
+            backgroundColor: codeColors.bg,
+            color: codeColors.textCode,
+            padding: "1px 3px",
+            borderRadius: "3px",
+            border: `1px solid ${codeColors.border}`,
+            fontFamily: "monospace",
+            fontSize: "0.9em",
+          }}
+        >
+          {match[4]}
+        </span>,
+      );
+    } else {
+      nodes.push(<Fragment key={key}>{"\u00A0\u00A0•\u00A0"}</Fragment>);
+    }
+
+    lastIndex = index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/wallet/common";
 import { useNetworkStatus } from "@/lib/hooks";
@@ -8,6 +8,7 @@ import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import { cn } from "@/lib/utils";
 
 const BLOCK_TARGET_SECONDS = 120;
+const TELEMETRY_SKELETON_KEYS = ["height", "hashrate", "peers", "block-time"] as const;
 
 export default function NetworkPage() {
   const { data, isLoading } = useNetworkStatus();
@@ -31,8 +32,8 @@ export default function NetworkPage() {
             <Skeleton className="h-56 rounded-xl" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="h-40 rounded-xl" />
+            {TELEMETRY_SKELETON_KEYS.map((key) => (
+              <Skeleton key={key} className="h-40 rounded-xl" />
             ))}
           </div>
         </div>
@@ -285,13 +286,14 @@ function PeerGraph({ animate }: { animate: boolean }) {
 // Recent blocks as a chain — each bar is a block, the newest is highlighted (and pulses).
 function BlockChainStrip({ blocks, animate }: { blocks: number; animate: boolean }) {
   const count = Math.max(blocks, 1);
+  const barKeys = useMemo(() => Array.from({ length: count }, () => crypto.randomUUID()), [count]);
   return (
     <div className="flex h-12 items-stretch gap-1.5" aria-hidden="true">
-      {Array.from({ length: count }, (_, index) => {
+      {barKeys.map((barKey, index) => {
         const isNewest = index === count - 1;
         return (
           <div
-            key={index}
+            key={barKey}
             className={cn(
               "flex-1 rounded-[4px]",
               isNewest ? "bg-primary" : "bg-secondary",
@@ -421,11 +423,12 @@ function MiniArea({ values, color }: { values: number[]; color: string }) {
 
 function MiniBars({ values, color }: { values: number[]; color: string }) {
   const max = Math.max(...values, 1);
+  const barKeys = useMemo(() => values.map(() => crypto.randomUUID()), [values]);
   return (
     <div className="flex h-12 items-end gap-1" aria-hidden="true">
       {values.map((value, index) => (
         <div
-          key={index}
+          key={barKeys[index]}
           className="min-h-[4px] flex-1 rounded-sm"
           style={{ height: `${Math.max((value / max) * 100, 10)}%`, backgroundColor: color }}
         />

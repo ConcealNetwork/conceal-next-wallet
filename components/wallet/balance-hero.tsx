@@ -21,6 +21,8 @@ type Segment = {
   note: string;
 };
 
+const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Staking"] as const;
+
 export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   const available = ccxToNumber(wallet.available);
   const total = ccxToNumber(wallet.balanceTotal);
@@ -95,6 +97,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
           </div>
           <div className="shrink-0 text-left sm:text-right">
             <span
+              role="status"
               className="inline-flex items-center gap-1 rounded-full bg-wallet-incoming/10 px-2.5 py-1 text-xs font-semibold text-wallet-incoming"
               aria-label={`Market change up ${changeLabel}`}
             >
@@ -170,8 +173,8 @@ export function BalanceHeroSkeleton() {
         </div>
         <Skeleton className="mt-6 h-3.5 w-full rounded-full" />
         <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="space-y-2">
+          {BALANCE_SEGMENT_LABELS.map((segmentLabel) => (
+            <div key={segmentLabel} className="space-y-2">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-6 w-28" />
               <Skeleton className="h-3 w-32" />
