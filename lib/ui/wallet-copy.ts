@@ -13,6 +13,12 @@ export const walletCopy = {
   mnemonicHint: env.useMockWallet
     ? "These words are not a real wallet seed."
     : "Write these words down and store them offline. Anyone with this phrase can spend your funds.",
+  mnemonicLossWarning:
+    "I understand that if I lose this seed phrase or the related keys, this wallet and its funds will be totally unretrievable.",
+  mnemonicDoubleClickCopy: "Double-click to copy",
+  mnemonicCopied: "Copied",
+  passwordHintDisclaimer:
+    "These are recommendations for a strong password. You may continue with any password that matches.",
   exportAlertTitle: env.useMockWallet ? "Mock-only export data" : "Sensitive backup material",
   exportAlertBody: env.useMockWallet
     ? "Displayed values are placeholders for layout review only."

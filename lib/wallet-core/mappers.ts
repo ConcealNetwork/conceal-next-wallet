@@ -32,6 +32,13 @@ export function clampImportHeight(scanHeight: number | undefined, currentHeight:
   return height;
 }
 
+/** Scan start for a brand-new wallet: near chain tip, not from genesis. */
+export function newWalletCreationHeight(currentHeight: number): number {
+  let height = currentHeight - 10;
+  if (height < 0) height = 0;
+  return height;
+}
+
 type GlobalWithRuntimeWallet = typeof globalThis & { __ccxRuntimeWallet?: Wallet };
 
 function resolveWalletForMapping(wallet: Wallet): Wallet {

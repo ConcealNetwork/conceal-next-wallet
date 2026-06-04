@@ -13,6 +13,7 @@ import { Mnemonic } from "./Mnemonic";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import { Wallet } from "./Wallet";
 import { WalletRepository } from "./WalletRepository";
+import { StorageOld } from "./StorageOld";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Storage } from "./Storage";
 import {
@@ -27,17 +28,21 @@ import {
   mapCoreDeposit,
   mapCoreMessage,
   mapWalletToInfo,
+  newWalletCreationHeight,
 } from "./mappers";
 import { InterestCalculator } from "./Interest";
 import { Deposit as CoreDeposit } from "./Transaction";
 import {
+  clearPendingWalletCreation,
   disconnectWalletRuntime,
   getCreatedMnemonic,
+  getPendingWalletCreation,
   getRuntimeWallet,
   getRuntimeWalletWorker,
   getRuntimeWatchdog,
   openWalletRuntime,
   setCreatedMnemonic,
+  setPendingWalletCreation,
 } from "./wallet-runtime";
 import { CoinUri } from "./CoinUri";
 
@@ -61,10 +66,10 @@ export async function unlockStoredWallet(password: string): Promise<WalletInfo> 
   return mapWalletToInfo(wallet, height);
 }
 
-export async function createWalletOperation(
-  name: string,
-  password: string,
-): Promise<{ wallet: WalletInfo; mnemonic: string }> {
+export async function generateWalletDraftOperation(): Promise<{
+  mnemonic: string;
+  address: string;
+}> {
   await prepareLegacyRuntime();
   const explorer = BlockchainExplorerProvider.getInstance();
   const currentHeight = await explorer.getHeight();
@@ -73,19 +78,38 @@ export async function createWalletOperation(
   const keys = Cn.create_address(seed);
   const wallet = new Wallet();
   wallet.keys = KeysRepository.fromPriv(keys.spend.sec, keys.view.sec);
-  wallet.lastHeight = clampImportHeight(undefined, currentHeight);
+  wallet.lastHeight = newWalletCreationHeight(currentHeight);
   wallet.creationHeight = wallet.lastHeight;
 
   const phrase = Mnemonic.mn_encode(wallet.keys.priv.spend, "english");
   if (phrase === null) {
     throw new Error("Failed to encode mnemonic.");
   }
-  setCreatedMnemonic(phrase);
-  await openWalletRuntime(wallet, password);
+
+  setPendingWalletCreation(wallet, phrase);
   return {
-    wallet: mapWalletToInfo(wallet, currentHeight),
     mnemonic: phrase,
+    address: wallet.getPublicAddress(),
   };
+}
+
+export function abortWalletCreationOperation(): void {
+  clearPendingWalletCreation();
+}
+
+export async function finalizeWalletCreationOperation(password: string): Promise<WalletInfo> {
+  const pending = getPendingWalletCreation();
+  if (pending === null) {
+    throw new Error("No wallet draft found. Start creation again.");
+  }
+
+  await prepareLegacyRuntime();
+  setCreatedMnemonic(pending.mnemonic);
+  await openWalletRuntime(pending.wallet, password);
+  clearPendingWalletCreation();
+
+  const height = await BlockchainExplorerProvider.getInstance().getHeight();
+  return mapWalletToInfo(pending.wallet, height);
 }
 
 export async function importWalletOperation(input: ImportWalletInput): Promise<WalletInfo> {
@@ -693,6 +717,17 @@ function normalizeWalletOperationError(error: unknown, fallback: string): Error 
     return new Error(`${fallback} ${String((error as { error: unknown }).error)}`);
   }
   return new Error(fallback);
+}
+
+export async function deleteStoredWalletOperation(): Promise<void> {
+  await ensureAllWalletLegacyLibs();
+  disconnectWalletRuntime();
+  await WalletRepository.deleteLocalCopy();
+  try {
+    await StorageOld.remove("wallet");
+  } catch {
+    // best-effort legacy cleanup
+  }
 }
 
 export { disconnectWalletRuntime, hasStoredWallet } from "./wallet-runtime";

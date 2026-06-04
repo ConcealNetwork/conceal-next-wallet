@@ -16,6 +16,7 @@ import {
   mapCoreDeposit,
   mapCoreMessage,
   mapCoreTransaction,
+  newWalletCreationHeight,
   resolveTransactionDisplayAmount,
   resolveTransactionType,
   resolveUiTransactionType,
@@ -65,6 +66,12 @@ describe("wallet mappers", () => {
     expect(clampImportHeight(0, 1000)).toBe(0);
     expect(clampImportHeight(500, 1000)).toBe(490);
     expect(clampImportHeight(2000, 1000)).toBe(989);
+  });
+
+  it("sets new wallet creation height to chain tip minus 10", () => {
+    expect(newWalletCreationHeight(1000)).toBe(990);
+    expect(newWalletCreationHeight(10)).toBe(0);
+    expect(newWalletCreationHeight(11)).toBe(1);
   });
 
   it("classifies deposit, withdrawal, fusion, miner, send, and receive", () => {

@@ -7,7 +7,8 @@ describe("mock services", () => {
       wallet,
       refreshed,
       opened,
-      created,
+      prepared,
+      finalized,
       imported,
       exportedWallet,
       changedPassword,
@@ -32,7 +33,8 @@ describe("mock services", () => {
       services.wallet.getWalletInfo(),
       services.wallet.refreshWallet(),
       services.wallet.openWallet(),
-      services.wallet.createWallet({ name: "Mock", password: "password123" }),
+      services.wallet.prepareCreateWallet(),
+      services.wallet.finalizeCreateWallet({ password: "password123" }),
       services.wallet.importWallet({
         method: "mnemonic",
         mnemonic: "mock",
@@ -65,7 +67,8 @@ describe("mock services", () => {
     expect(wallet.address).toMatch(/^ccx7/);
     expect(refreshed.balanceTotal.atomic).toBeGreaterThan(0);
     expect(opened.available.atomic).toBeGreaterThan(0);
-    expect(created.mnemonic).toContain("mock");
+    expect(prepared.mnemonic).toContain("mock");
+    expect(finalized.address).toMatch(/^ccx7/);
     expect(imported.address).toMatch(/^ccx7/);
     expect(exportedWallet.spendKey).toContain("mock");
     expect(changedPassword.ok).toBe(true);

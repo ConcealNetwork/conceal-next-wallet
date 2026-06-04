@@ -21,10 +21,19 @@ export const mockWalletService: WalletService = {
     await mockDelay();
     return clone(mockWalletInfo);
   },
-  async createWallet() {
-    // TODO(backend): replace with real Conceal RPC/walletd call
+  async prepareCreateWallet() {
     await mockDelay();
-    return { wallet: clone(mockWalletInfo), mnemonic: mockExportData.mnemonic };
+    return { mnemonic: mockExportData.mnemonic, address: mockWalletInfo.address };
+  },
+  async finalizeCreateWallet() {
+    await mockDelay();
+    return clone(mockWalletInfo);
+  },
+  async abortCreateWallet() {
+    // no draft state in mock mode
+  },
+  async deleteStoredWallet() {
+    // no persisted wallet in mock mode
   },
   async importWallet(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call

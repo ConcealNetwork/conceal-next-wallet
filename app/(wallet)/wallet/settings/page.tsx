@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/wallet/common";
-import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
+import { useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { env } from "@/lib/env";
 import {
   useOptimizeWallet,
@@ -102,7 +102,7 @@ export default function SettingsPage() {
   const optimizeWallet = useOptimizeWallet();
   const resetAndRescan = useResetAndRescan();
   const wallet = useWalletInfo();
-  const disconnect = useWalletDisconnect();
+  const deleteWallet = useWalletDelete();
   const current = settings.data;
   const isMock = env.useMockWallet;
 
@@ -301,7 +301,7 @@ export default function SettingsPage() {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={disconnect}
+                          onClick={deleteWallet}
                         >
                           Delete wallet
                         </AlertDialogAction>

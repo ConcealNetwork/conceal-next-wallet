@@ -33,6 +33,8 @@ export class WalletWorker {
 }
 
 let cachedMnemonic = "";
+let pendingCreationWallet: Wallet | null = null;
+let pendingCreationMnemonic = "";
 
 type GlobalWithRuntimeWallet = typeof globalThis & { __ccxRuntimeWallet?: Wallet };
 
@@ -55,6 +57,23 @@ export function getCreatedMnemonic() {
 
 export function clearCreatedMnemonic() {
   cachedMnemonic = "";
+}
+
+export function setPendingWalletCreation(wallet: Wallet, mnemonic: string) {
+  pendingCreationWallet = wallet;
+  pendingCreationMnemonic = mnemonic;
+}
+
+export function getPendingWalletCreation(): { wallet: Wallet; mnemonic: string } | null {
+  if (pendingCreationWallet === null) {
+    return null;
+  }
+  return { wallet: pendingCreationWallet, mnemonic: pendingCreationMnemonic };
+}
+
+export function clearPendingWalletCreation() {
+  pendingCreationWallet = null;
+  pendingCreationMnemonic = "";
 }
 
 export async function openWalletRuntime(wallet: Wallet, password: string) {
@@ -88,6 +107,7 @@ export function disconnectWalletRuntime() {
   DependencyInjectorInstance().register(WalletWorker.name, undefined, "default");
   DependencyInjectorInstance().register(WalletWatchdog.name, undefined, "default");
   clearCreatedMnemonic();
+  clearPendingWalletCreation();
 }
 
 export function getRuntimeWallet(): Wallet | null {

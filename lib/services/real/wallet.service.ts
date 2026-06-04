@@ -1,7 +1,7 @@
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
 import type {
-  CreateWalletInput,
   ExportWalletData,
+  FinalizeCreateWalletInput,
   ImportWalletInput,
   WalletService,
 } from "@/lib/services/wallet.service";
@@ -29,8 +29,17 @@ export const realWalletService: WalletService = {
     }
     throw new Error("Password is required to open a stored wallet.");
   },
-  async createWallet(input: CreateWalletInput) {
-    return (await walletOps()).createWalletOperation(input.name, input.password);
+  async prepareCreateWallet() {
+    return (await walletOps()).generateWalletDraftOperation();
+  },
+  async finalizeCreateWallet(input: FinalizeCreateWalletInput) {
+    return (await walletOps()).finalizeWalletCreationOperation(input.password);
+  },
+  async abortCreateWallet() {
+    (await walletOps()).abortWalletCreationOperation();
+  },
+  async deleteStoredWallet() {
+    await (await walletOps()).deleteStoredWalletOperation();
   },
   async importWallet(input: ImportWalletInput): Promise<WalletInfo> {
     return (await walletOps()).importWalletOperation(input);
