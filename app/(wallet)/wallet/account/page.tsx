@@ -371,6 +371,7 @@ function MarketSummaryHybrid({
           </p>
         </div>
         <span
+          role="status"
           className="inline-flex shrink-0 items-center gap-1 rounded-full bg-wallet-incoming/10 px-2.5 py-1 text-xs font-semibold text-wallet-incoming"
           aria-label={`CCX price up ${market.change24hPct.toFixed(2)} percent`}
         >

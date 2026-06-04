@@ -161,11 +161,8 @@ export default function AddressBookPage() {
                     aria-label="Search addresses"
                   />
                 </div>
-                <div
-                  className="inline-flex rounded-xl border border-border p-1"
-                  role="group"
-                  aria-label="View"
-                >
+                <fieldset className="m-0 inline-flex min-w-0 rounded-xl border border-border p-1">
+                  <legend className="sr-only">View</legend>
                   <ViewToggle
                     active={view === "cards"}
                     onClick={() => chooseView("cards")}
@@ -180,7 +177,7 @@ export default function AddressBookPage() {
                   >
                     <Table2 className="size-4" />
                   </ViewToggle>
-                </div>
+                </fieldset>
               </div>
 
               {entries.length === 0 ? (

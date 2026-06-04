@@ -297,9 +297,13 @@ export function ImportFileForm() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!file) {
+      toast.error("Select a wallet backup file first.");
+      return;
+    }
     setLoading(true);
     try {
-      const wallet = await services.wallet.importWallet({ method: "file", file: file!, password });
+      const wallet = await services.wallet.importWallet({ method: "file", file, password });
       openSession(wallet);
       toast.success("Wallet imported.");
       router.push("/wallet/account");

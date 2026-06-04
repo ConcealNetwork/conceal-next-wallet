@@ -27,7 +27,6 @@ export class Nfc {
   public static ERROR_NO_NFC = "no_nfc";
 
   private _nativeNfc: boolean = false;
-  private _nativeNfcListening: boolean = false;
   private _pendingNdef: NdefMessageText | null = null;
   private _pendingNdefPromiseResolve: Function | null = null;
   private _pendingNdefPromiseReject: Function | null = null;
@@ -50,9 +49,7 @@ export class Nfc {
             this.writeNdefOnTag();
           }
         },
-        (data: any) => {
-          this._nativeNfcListening = true;
-        },
+        () => {},
         (error: any) => {
           if (error === "NFC_DISABLED") {
           } else alert(JSON.stringify(error));
@@ -60,8 +57,6 @@ export class Nfc {
       );
     }
   }
-
-  private registerListener() {}
 
   private parseNdefMessage(record: NativeNfcEventNdef): NdefMessage | null {
     const payload = record.payload.slice();
@@ -87,7 +82,7 @@ export class Nfc {
 
   public get writableNfc(): boolean {
     //TODO return true on andorid only
-    return this._nativeNfc ? true : false;
+    return Boolean(this._nativeNfc);
   }
 
   public get enabled(): Promise<void> {
@@ -178,7 +173,7 @@ export class Nfc {
 
       window.nfc.write(
         [nativeNdef],
-        (data: any) => {
+        () => {
           if (this._pendingNdefPromiseResolve) this._pendingNdefPromiseResolve();
         },
         (data: string) => {

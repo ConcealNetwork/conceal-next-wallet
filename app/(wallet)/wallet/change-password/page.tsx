@@ -45,6 +45,8 @@ const STRENGTH = [
   { label: "Strong", className: "bg-wallet-incoming" },
 ];
 
+const STRENGTH_BAR_KEYS = ["strength-1", "strength-2", "strength-3", "strength-4"] as const;
+
 export default function ChangePasswordPage() {
   const router = useRouter();
   const [show, setShow] = useState(false);
@@ -109,9 +111,9 @@ export default function ChangePasswordPage() {
               {newPassword.length > 0 && (
                 <div className="space-y-1">
                   <div className="flex gap-1" aria-hidden="true">
-                    {Array.from({ length: 4 }, (_, index) => (
+                    {STRENGTH_BAR_KEYS.map((key, index) => (
                       <span
-                        key={index}
+                        key={key}
                         className={cn(
                           "h-1 flex-1 rounded-full transition-colors duration-200",
                           index < score ? STRENGTH[score].className : "bg-secondary",

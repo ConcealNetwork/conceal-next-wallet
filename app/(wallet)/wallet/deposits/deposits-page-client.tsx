@@ -619,7 +619,8 @@ function CompositionDonut({
     (current, segment) => {
       const start = current.reduce((sum, arc) => sum + arc.fraction, 0);
       const fraction = totalLocked > 0 ? segment.amount / totalLocked : 0;
-      return [...current, { segment, fraction, start }];
+      current.push({ segment, fraction, start });
+      return current;
     },
     [],
   );
@@ -709,11 +710,8 @@ function DepositViewSwitcher({
   onChange: (view: DepositView) => void;
 }) {
   return (
-    <div
-      className="inline-flex rounded-xl border border-border p-1"
-      role="group"
-      aria-label="Deposit view"
-    >
+    <fieldset className="m-0 inline-flex min-w-0 rounded-xl border border-border p-1">
+      <legend className="sr-only">Deposit view</legend>
       <DepositViewToggle active={value === "cards"} onClick={() => onChange("cards")} label="Cards">
         <LayoutGrid className="size-4" aria-hidden="true" />
       </DepositViewToggle>
@@ -727,7 +725,7 @@ function DepositViewSwitcher({
       >
         <CalendarClock className="size-4" aria-hidden="true" />
       </DepositViewToggle>
-    </div>
+    </fieldset>
   );
 }
 
@@ -1480,10 +1478,6 @@ function getDepositStatus(deposit: Deposit): DepositStatus {
   if (canWithdrawDeposit(deposit)) return "matured";
   if (deposit.unlocksInDays < 14) return "soon";
   return "active";
-}
-
-function isMatured(deposit: Deposit) {
-  return canWithdrawDeposit(deposit);
 }
 
 function getProgressPct(deposit: Deposit) {

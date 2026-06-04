@@ -158,6 +158,7 @@ function DeltaChip({ change }: { change: number }) {
 
   return (
     <span
+      role="status"
       className={cn(
         "inline-flex min-h-8 items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold",
         isPositive
@@ -181,7 +182,8 @@ function TimeframeToggle({
   onChange: (range: MarketTimeframe) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2" aria-label="Price chart timeframe">
+    <fieldset className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
+      <legend className="sr-only">Price chart timeframe</legend>
       {TIMEFRAMES.map((range) => (
         <button
           key={range}
@@ -197,7 +199,7 @@ function TimeframeToggle({
           {range}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
 }
 
@@ -477,11 +479,20 @@ function ChartSkeleton() {
   );
 }
 
+const MARKET_STAT_SKELETON_KEYS = [
+  "market-stat-supply",
+  "market-stat-cap",
+  "market-stat-volume",
+  "market-stat-change",
+  "market-stat-rank",
+  "market-stat-liquidity",
+] as const;
+
 function StatsSkeleton() {
   return (
     <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <Skeleton key={index} className="min-h-[132px] rounded-xl" />
+      {MARKET_STAT_SKELETON_KEYS.map((key) => (
+        <Skeleton key={key} className="min-h-[132px] rounded-xl" />
       ))}
     </div>
   );
