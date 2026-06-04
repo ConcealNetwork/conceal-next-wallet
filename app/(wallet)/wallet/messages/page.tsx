@@ -3,7 +3,11 @@
 import { MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ContactAvatar } from "@/app/(wallet)/wallet/address-book/page";
+import { ContactAvatar } from "@/components/wallet/contact-avatar";
+import {
+  AddressBookContactPicker,
+  findAddressBookContactByAddress,
+} from "@/components/wallet/address-book-contact-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,6 +52,7 @@ export default function MessagesPage() {
   const [draft, setDraft] = useState("");
   const [compose, setCompose] = useState(false);
   const [recipient, setRecipient] = useState("");
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [composePaymentId, setComposePaymentId] = useState("");
   const [composeBody, setComposeBody] = useState("");
   const [ttlMinutes, setTtlMinutes] = useState<number | null>(null);
@@ -99,11 +104,23 @@ export default function MessagesPage() {
 
   function resetComposeForm() {
     setRecipient("");
+    setSelectedContactId(null);
     setComposePaymentId("");
     setComposeBody("");
     setTtlMinutes(null);
     setComposeViewMd(false);
     ttlNoticeShownRef.current = false;
+  }
+
+  function pickComposeContact(entry: AddressEntry | null) {
+    setSelectedContactId(entry?.id ?? null);
+    setRecipient(entry?.address ?? "");
+  }
+
+  function handleRecipientChange(value: string) {
+    setRecipient(value);
+    const match = findAddressBookContactByAddress(addressBook.data ?? [], value);
+    setSelectedContactId(match?.id ?? null);
   }
 
   function handleComposeOpenChange(open: boolean) {
@@ -320,10 +337,15 @@ export default function MessagesPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="recipient">Recipient address</Label>
+              <AddressBookContactPicker
+                contacts={addressBook.data ?? []}
+                selectedId={selectedContactId}
+                onSelect={pickComposeContact}
+              />
               <Input
                 id="recipient"
                 value={recipient}
-                onChange={(event) => setRecipient(event.target.value)}
+                onChange={(event) => handleRecipientChange(event.target.value)}
                 placeholder="ccx7 …"
                 autoComplete="off"
               />

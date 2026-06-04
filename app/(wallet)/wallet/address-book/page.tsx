@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import { CopyButton, EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
 import {
   useAddressBook,
@@ -15,7 +16,7 @@ import {
   useUpdateAddressEntry,
 } from "@/lib/hooks";
 import type { AddressEntry } from "@/lib/types";
-import { CONTACT_AVATARS, contactAvatarPath, isContactAvatarId } from "@/lib/ui/contact-avatars";
+import { CONTACT_AVATARS, contactAvatarPath } from "@/lib/ui/contact-avatars";
 import { addressIsValid, generatePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
 import { cn, truncateAddress, withBasePath } from "@/lib/utils";
 
@@ -402,28 +403,6 @@ export default function AddressBookPage() {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-export function ContactAvatar({ entry, className }: { entry: AddressEntry; className?: string }) {
-  if (isContactAvatarId(entry.avatar)) {
-    return (
-      <img
-        src={withBasePath(contactAvatarPath(entry.avatar))}
-        alt=""
-        className={cn("shrink-0 rounded-lg object-cover", className)}
-      />
-    );
-  }
-  return (
-    <span
-      className={cn(
-        "grid shrink-0 place-items-center bg-primary/15 font-semibold text-primary",
-        className,
-      )}
-    >
-      {entry.label.charAt(0)}
-    </span>
   );
 }
 
