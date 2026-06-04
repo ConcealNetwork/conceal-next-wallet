@@ -126,12 +126,12 @@ export class Translations {
         },
       );
 
-    promise.then(function (data: {
+    promise.then((data: {
       website?: any;
       messages?: any;
       date?: string;
       number?: string;
-    }) {
+    }) => {
       if (typeof data.date !== "undefined") i18n.setDateTimeFormat(lang, data.date);
       if (typeof data.number !== "undefined") i18n.setNumberFormat(lang, data.number);
       if (typeof data.messages !== "undefined") i18n.setLocaleMessage(lang, data.messages);
@@ -146,7 +146,7 @@ export class Translations {
       $('meta[property="og:description"]').attr("content", data.website.description);
       $('meta[property="twitter:description"]').attr("content", data.website.description);
 
-      let htmlDocument = document.querySelector("html");
+      const htmlDocument = document.querySelector("html");
       if (htmlDocument !== null) htmlDocument.setAttribute("lang", lang);
     });
 

@@ -18,7 +18,7 @@
 
 import { Constants } from "../Constants";
 import { DependencyInjectorInstance } from "../numbersLab/DependencyInjector";
-import { BlockchainExplorer } from "../blockchain/BlockchainExplorer";
+import type { BlockchainExplorer } from "../blockchain/BlockchainExplorer";
 import { BlockchainExplorerRpcDaemon } from "../blockchain/BlockchainExplorerRPCDaemon";
 
 export class BlockchainExplorerProvider {

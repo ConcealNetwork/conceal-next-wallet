@@ -26,7 +26,7 @@ class crc32Type {
   processString(str: string) {
     str = crc32.Utf8Encode(str);
     for (let i = 0; i < str.length; i++) {
-      let byte_index = ((str.charCodeAt(i) ^ this.rem_) >>> 0) & 0xff;
+      const byte_index = ((str.charCodeAt(i) ^ this.rem_) >>> 0) & 0xff;
       this.rem_ = ((this.rem_ >>> 8) ^ crc32.table[byte_index]) >>> 0;
     }
   }
@@ -38,7 +38,7 @@ class crc32 {
   }
 
   static run(str: string) {
-    let crc = new crc32Type();
+    const crc = new crc32Type();
     crc.processString(str);
     return crc.checksum();
   }
@@ -81,19 +81,19 @@ class crc32 {
 
 export class Mnemonic {
   static mn_encode(str: string, wordset_name: string) {
-    let wordset = MnemonicLang.getLang(wordset_name);
+    const wordset = MnemonicLang.getLang(wordset_name);
     if (wordset === null) return null;
 
     let out: any[] = [];
-    let n = wordset.words.length;
+    const n = wordset.words.length;
     for (let j = 0; j < str.length; j += 8) {
       str = str.slice(0, j) + Mnemonic.mn_swap_endian_4byte(str.slice(j, j + 8)) + str.slice(j + 8);
     }
     for (let i = 0; i < str.length; i += 8) {
-      let x = parseInt(str.substr(i, 8), 16);
-      let w1 = x % n;
-      let w2 = (Math.floor(x / n) + w1) % n;
-      let w3 = (Math.floor(Math.floor(x / n) / n) + w2) % n;
+      const x = parseInt(str.substr(i, 8), 16);
+      const w1 = x % n;
+      const w2 = (Math.floor(x / n) + w1) % n;
+      const w3 = (Math.floor(Math.floor(x / n) / n) + w2) % n;
       out = out.concat([wordset.words[w1], wordset.words[w2], wordset.words[w3]]);
     }
     if (wordset.prefixLen > 0) {
@@ -103,12 +103,12 @@ export class Mnemonic {
   }
 
   static mn_decode(str: string, wordset_name: string) {
-    let wordset = MnemonicLang.getLang(wordset_name);
+    const wordset = MnemonicLang.getLang(wordset_name);
     if (wordset === null) return null;
 
     let out = "";
-    let n = wordset.words.length;
-    let wlist = str.split(" ");
+    const n = wordset.words.length;
+    const wlist = str.split(" ");
     let checksum_word = "";
     if (wlist.length < 12) throw "You've entered too few words, please try again";
     if (
@@ -120,7 +120,7 @@ export class Mnemonic {
       throw "You seem to be missing the last word in your private key, please try again";
     if (wordset.prefixLen > 0) {
       // Pop checksum from mnemonic
-      let word = wlist.pop();
+      const word = wlist.pop();
       if (typeof word !== "undefined") checksum_word = word;
     }
     // Decode mnemonic
@@ -138,15 +138,15 @@ export class Mnemonic {
       if (w1 === -1 || w2 === -1 || w3 === -1) {
         throw "invalid word in mnemonic";
       }
-      let x = w1 + n * ((n - w1 + w2) % n) + n * n * ((n - w2 + w3) % n);
+      const x = w1 + n * ((n - w1 + w2) % n) + n * n * ((n - w2 + w3) % n);
       if (x % n != w1)
         throw "Something went wrong when decoding your private key, please try again";
       out += Mnemonic.mn_swap_endian_4byte(("0000000" + x.toString(16)).slice(-8));
     }
     // Verify checksum
     if (wordset.prefixLen > 0) {
-      let index = Mnemonic.mn_get_checksum_index(wlist, wordset.prefixLen);
-      let expected_checksum_word = wlist[index];
+      const index = Mnemonic.mn_get_checksum_index(wlist, wordset.prefixLen);
+      const expected_checksum_word = wlist[index];
       if (
         expected_checksum_word.slice(0, wordset.prefixLen) !==
         checksum_word.slice(0, wordset.prefixLen)
@@ -162,7 +162,7 @@ export class Mnemonic {
     for (let i = 0; i < words.length; i++) {
       trimmed_words += words[i].slice(0, prefixLen);
     }
-    let checksum = crc32.run(trimmed_words);
+    const checksum = crc32.run(trimmed_words);
     return checksum % words.length;
   }
 
@@ -173,7 +173,7 @@ export class Mnemonic {
 
   static mn_random(bits: number) {
     if (bits % 32 !== 0) throw "Something weird went wrong: Invalid number of bits - " + bits;
-    let array = new Uint32Array(bits / 32);
+    const array = new Uint32Array(bits / 32);
     if (!window.crypto)
       throw "Unfortunately MyMonero only runs on browsers that support the JavaScript Crypto API";
     let i = 0;
@@ -201,9 +201,9 @@ export class Mnemonic {
   }
 
   static detectLang(mnemonicPhrase: string) {
-    for (let lang of MnemonicLang.getLangs()) {
+    for (const lang of MnemonicLang.getLangs()) {
       try {
-        let mnemonic_decoded = Mnemonic.mn_decode(mnemonicPhrase, lang.name);
+        const mnemonic_decoded = Mnemonic.mn_decode(mnemonicPhrase, lang.name);
         if (mnemonic_decoded !== null) {
           return lang.name;
         }

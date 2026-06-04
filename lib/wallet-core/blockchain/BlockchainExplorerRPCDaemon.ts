@@ -17,13 +17,13 @@
  */
 
 import {
-  BlockchainExplorer,
+  type BlockchainExplorer,
   NetworkInfo,
-  RawDaemon_Transaction,
-  RawDaemon_Out,
-  RemoteNodeInformation,
+  type RawDaemon_Transaction,
+  type RawDaemon_Out,
+  type RemoteNodeInformation,
 } from "./BlockchainExplorer";
-import { Wallet } from "../Wallet";
+import type { Wallet } from "../Wallet";
 import { Storage } from "../Storage";
 import { WalletWatchdog } from "../WalletWatchdog";
 
@@ -498,7 +498,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
     }
 
     return this.nodeWorkers.makeRequest("GET", "getheight").then((data: any) => {
-      let height = parseInt(data.height, 10);
+      const height = parseInt(data.height, 10);
       this.lastTimeRetrieveHeight = Date.now();
       this.cacheHeight = height;
       return height;
@@ -522,7 +522,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
           // While there remain elements to shuffle...
           while (currentIndex != 0) {
             // Pick a remaining element...
-            let randomIndex = Math.floor(Math.random() * currentIndex);
+            const randomIndex = Math.floor(Math.random() * currentIndex);
             currentIndex--;
 
             // And swap it with the current element.
@@ -591,7 +591,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
 
           if (result.success && result.list.length > 0) {
             for (let i = 0; i < result.list.length; ++i) {
-              let finalUrl = "https://" + result.list[i].url.host + "/";
+              const finalUrl = "https://" + result.list[i].url.host + "/";
 
               if (config.nodeList.findIndex(doesMatch(finalUrl)) === -1) {
                 config.nodeList.push(finalUrl);
@@ -622,7 +622,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
   };
 
   start = (wallet: Wallet): WalletWatchdog => {
-    let watchdog = new WalletWatchdog(wallet, this);
+    const watchdog = new WalletWatchdog(wallet, this);
     watchdog.start();
     return watchdog;
   };
@@ -633,7 +633,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
    * @param end
    */
   range(start: number, end: number) {
-    let numbers: number[] = [];
+    const numbers: number[] = [];
     for (let i = start; i <= end; ++i) {
       numbers.push(i);
     }
@@ -660,7 +660,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
     }
 
     if (response.transactions.length > 0) {
-      for (let rawTx of response.transactions) {
+      for (const rawTx of response.transactions) {
         let tx: RawDaemon_Transaction | null = null;
 
         if (rawTx && rawTx.transaction) {
@@ -737,9 +737,9 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
           fee: number;
         }[];
       }) => {
-        let formatted: RawDaemon_Transaction[] = [];
+        const formatted: RawDaemon_Transaction[] = [];
 
-        for (let rawTx of response.transactions) {
+        for (const rawTx of response.transactions) {
           let tx: RawDaemon_Transaction | null = null;
 
           if (rawTx && rawTx.transaction) {
@@ -814,7 +814,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
   resolveOpenAlias(domain: string): Promise<{ address: string; name: string | null }> {
     return this.nodeWorkers
       .makeRpcRequest("resolve_open_alias", { url: domain })
-      .then(function (response: { addresses?: string[]; status: "OK" | string }) {
+      .then((response: { addresses?: string[]; status: "OK" | string }) => {
         if (response.addresses && response.addresses.length > 0)
           return { address: response.addresses[0], name: null };
         throw "not_found";
@@ -823,8 +823,8 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
 
   getNetworkInfo(): Promise<any> {
     return this.nodeWorkers.makeRpcRequest("getlastblockheader").then((raw: any) => {
-      let nodeList: NodeWorker[] = this.nodeWorkers.getNodes();
-      let usedNodes: NodeInfo[] = [];
+      const nodeList: NodeWorker[] = this.nodeWorkers.getNodes();
+      const usedNodes: NodeInfo[] = [];
 
       for (let i = 0; i < nodeList.length; i++) {
         usedNodes.push({

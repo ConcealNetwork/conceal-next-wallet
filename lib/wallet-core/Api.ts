@@ -20,15 +20,15 @@ import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvid
 import { Mnemonic } from "./Mnemonic";
 import { Translations } from "./Translations";
 import { MnemonicLang } from "./MnemonicLang";
-import { BlockchainExplorer, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
+import type { BlockchainExplorer, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
 import { Cn, CnUtils } from "./Cn";
 import { AppState } from "./AppState";
 import { DependencyInjectorInstance } from "./numbersLab/DependencyInjector";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import { WalletWatchdog } from "./WalletWatchdog";
-import { Transaction, TransactionIn } from "./Transaction";
+import { type Transaction, TransactionIn } from "./Transaction";
 
-let blockchainExplorer: BlockchainExplorer = BlockchainExplorerProvider.getInstance();
+const blockchainExplorer: BlockchainExplorer = BlockchainExplorerProvider.getInstance();
 
 export class Api {
   mnemonicPhrase = "";
@@ -43,11 +43,11 @@ export class Api {
     privateSpendKey: string,
     password: string,
   ) {
-    let self = this;
-    blockchainExplorer.getHeight().then(function (currentHeight) {
-      let newWallet = new Wallet();
+    const self = this;
+    blockchainExplorer.getHeight().then((currentHeight) => {
+      const newWallet = new Wallet();
       if (viewOnly) {
-        let decodedPublic = Cn.decode_address(publicAddress.trim());
+        const decodedPublic = Cn.decode_address(publicAddress.trim());
         newWallet.keys = {
           priv: {
             spend: "",
@@ -88,24 +88,24 @@ export class Api {
   }
 
   importWalletFromMnemonic(mnemonicPhrase: string, language: string = "auto", password: string) {
-    let self = this;
-    blockchainExplorer.getHeight().then(function (currentHeight) {
-      let newWallet = new Wallet();
+    const self = this;
+    blockchainExplorer.getHeight().then((currentHeight) => {
+      const newWallet = new Wallet();
 
-      let mnemonic = mnemonicPhrase.trim();
+      const mnemonic = mnemonicPhrase.trim();
       // let current_lang = 'english';
       let current_lang = "english";
 
       if (language === "auto") {
-        let detectedLang = Mnemonic.detectLang(mnemonicPhrase.trim());
+        const detectedLang = Mnemonic.detectLang(mnemonicPhrase.trim());
         if (detectedLang !== null) current_lang = detectedLang;
       } else current_lang = language;
 
-      let mnemonic_decoded = Mnemonic.mn_decode(mnemonic, current_lang);
+      const mnemonic_decoded = Mnemonic.mn_decode(mnemonic, current_lang);
       if (mnemonic_decoded !== null) {
-        let keys = Cn.create_address(mnemonic_decoded);
+        const keys = Cn.create_address(mnemonic_decoded);
 
-        let newWallet = new Wallet();
+        const newWallet = new Wallet();
         newWallet.keys = KeysRepository.fromPriv(keys.spend.sec, keys.view.sec);
 
         let height = self.importHeight - 10;
@@ -124,28 +124,28 @@ export class Api {
   }
 
   generateWallet(walletPassword: string) {
-    let self = this;
-    setTimeout(function () {
-      blockchainExplorer.getHeight().then(function (currentHeight) {
-        let seed = concealjs.random.random_scalar();
-        let keys = Cn.create_address(seed);
+    const self = this;
+    setTimeout(() => {
+      blockchainExplorer.getHeight().then((currentHeight) => {
+        const seed = concealjs.random.random_scalar();
+        const keys = Cn.create_address(seed);
 
-        let newWallet = new Wallet();
+        const newWallet = new Wallet();
         newWallet.keys = KeysRepository.fromPriv(keys.spend.sec, keys.view.sec);
         let height = currentHeight - 10;
         if (height < 0) height = 0;
         newWallet.lastHeight = height;
         newWallet.creationHeight = height;
 
-        Translations.getLang().then(function (userLang: string) {
+        Translations.getLang().then((userLang: string) => {
           let langToExport = "english";
-          for (let lang of MnemonicLang.getLangs()) {
+          for (const lang of MnemonicLang.getLangs()) {
             if (lang.shortLang === userLang) {
               langToExport = lang.name;
               break;
             }
           }
-          let phrase = Mnemonic.mn_encode(newWallet.keys.priv.spend, langToExport);
+          const phrase = Mnemonic.mn_encode(newWallet.keys.priv.spend, langToExport);
           if (phrase !== null) self.mnemonicPhrase = phrase;
         });
 
@@ -162,11 +162,11 @@ export class Api {
   // Maybe pass wallet as a pararm? To be define later after testing
   //	send(wallet: Wallet, amountToSend: string, destinationAddress: string, paymentId: string) {
   send(amountToSend: string, destinationAddress: string, paymentId: string) {
-    let self = this;
-    let wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
+    const self = this;
+    const wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
 
-    blockchainExplorer.getHeight().then(function (blockchainHeight: number) {
-      let amount = parseFloat(amountToSend);
+    blockchainExplorer.getHeight().then((blockchainHeight: number) => {
+      const amount = parseFloat(amountToSend);
       if (destinationAddress !== null) {
         //todo use BigInteger
         if (
@@ -177,48 +177,46 @@ export class Api {
           return;
         }
         //TODO use biginteger
-        let amountToSend = amount * Math.pow(10, config.coinUnitPlaces);
-        let mixinToSendWith: number = config.defaultMixin;
+        const amountToSend = amount * Math.pow(10, config.coinUnitPlaces);
+        const mixinToSendWith: number = config.defaultMixin;
 
         TransactionsExplorer.createTx(
           [{ address: destinationAddress, amount: amountToSend }],
           paymentId,
           wallet,
           blockchainHeight,
-          function (amounts: number[], numberOuts: number): Promise<RawDaemon_Out[]> {
-            return blockchainExplorer.getRandomOuts(amounts, numberOuts);
-          },
-          function (amount: number, feesAmount: number): Promise<void> {
+          (amounts: number[], numberOuts: number): Promise<RawDaemon_Out[]> => blockchainExplorer.getRandomOuts(amounts, numberOuts),
+          (amount: number, feesAmount: number): Promise<void> => {
             if (amount + feesAmount > wallet.availableAmount(blockchainHeight)) {
               console.log("Amount higher than the funds");
               throw "Amount higher than the funds";
             }
 
-            return new Promise<void>(function (resolve, reject) {});
+            return new Promise<void>((resolve, reject) => {});
           },
           mixinToSendWith,
         )
-          .then(function (rawTxData: {
+          .then((rawTxData: {
             raw: { hash: string; prvkey: string; raw: string };
             signed: any;
-          }) {
+          }) => {
             blockchainExplorer
               .sendRawTx(rawTxData.raw.raw)
-              .then(function () {
+              .then(() => {
                 //save the tx private key
                 wallet.addTxPrivateKeyWithTxHash(rawTxData.raw.hash, rawTxData.raw.prvkey);
 
                 //force a mempool check so the user is up to date
-                let watchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
+                const watchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
                   WalletWatchdog.name,
                 );
                 if (watchdog !== null) watchdog.checkMempool();
               })
-              .catch(function (data: any) {
+              .catch((data: any) => {
                 console.log("Generic error while sending funds: ", data);
               });
           })
-          .catch(function (error: any) {
+          .catch((error: any) => {
             //console.log(error);
             if (error && error !== "") {
               if (typeof error === "string")
@@ -233,19 +231,19 @@ export class Api {
   }
 
   refresh(callback: any) {
-    let self = this;
-    blockchainExplorer.getHeight().then(function (height: number) {
+    const self = this;
+    blockchainExplorer.getHeight().then((height: number) => {
       callback(height);
     });
   }
 
   getTxDetails(transaction: Transaction) {
-    let wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
+    const wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
 
-    let explorerUrlHash = config.testnet
+    const explorerUrlHash = config.testnet
       ? config.testnetExplorerUrlHash
       : config.mainnetExplorerUrlHash;
-    let explorerUrlBlock = config.testnet
+    const explorerUrlBlock = config.testnet
       ? config.testnetExplorerUrlBlock
       : config.mainnetExplorerUrlBlock;
     let fees = 0;
@@ -257,7 +255,7 @@ export class Api {
     }
 
     let txPrivKeyMessage = "";
-    let txPrivKey = wallet.findTxPrivateKeyWithHash(transaction.hash);
+    const txPrivKey = wallet.findTxPrivateKeyWithHash(transaction.hash);
     if (txPrivKey !== null) {
       txPrivKeyMessage = txPrivKey;
     }
@@ -272,7 +270,7 @@ export class Api {
   }
 
   getTransactions() {
-    let wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
+    const wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
 
     return wallet.txsMem.concat(wallet.getTransactionsCopy().reverse());
   }

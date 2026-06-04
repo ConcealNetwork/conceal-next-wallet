@@ -1046,7 +1046,7 @@ function DepositWithdrawButton({
   const canWithdraw = canWithdrawDeposit(deposit);
   const principal = ccxToNumber(deposit.amount);
   const interest = ccxToNumber(deposit.interest);
-  const withdrawFee = DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES);
+  const withdrawFee = DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
   const netReceive = principal + interest - withdrawFee;
 
   function confirmWithdraw() {
@@ -1241,7 +1241,7 @@ function CreateDepositDialog({
   );
   const previewInterest = preview.data?.interestCcx ?? 0;
   const previewApr = preview.data?.indicativeApr ?? 0;
-  const createFee = COIN_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES);
+  const createFee = COIN_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
   const maturityDate = formatDate(addDays(new Date(), estimateDepositUnlockDays(durationMonths)));
 
   useEffect(() => {

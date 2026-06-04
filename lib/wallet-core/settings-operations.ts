@@ -6,7 +6,7 @@ import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvid
 import { Storage } from "./Storage";
 import { getRuntimeWallet, getRuntimeWatchdog } from "./wallet-runtime";
 
-let uiOnlySettings: Pick<WalletSettings, "language" | "autoLock" | "biometric"> = {
+const uiOnlySettings: Pick<WalletSettings, "language" | "autoLock" | "biometric"> = {
   language: "English",
   autoLock: true,
   biometric: false,

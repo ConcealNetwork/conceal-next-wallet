@@ -13,7 +13,7 @@ declare const self: DedicatedWorkerGlobalScope & {
   onmessage: ((event: MessageEvent) => void) | null;
 };
 
-self.onmessage = function (data: MessageEvent) {
+self.onmessage = (data: MessageEvent) => {
   const event: any = data.data;
   try {
     if (event.type === "initWallet") {
@@ -59,7 +59,7 @@ self.onmessage = function (data: MessageEvent) {
       const maxBlockNumber: number = event.maxBlock;
       const startBlockNumber: number =
         typeof event.startBlock !== "undefined" ? event.startBlock : 0;
-      let currentWallet: Wallet | null = Wallet.loadFromRaw(event.wallet);
+      const currentWallet: Wallet | null = Wallet.loadFromRaw(event.wallet);
       const transactions: any[] = [];
 
       logDebugMsg("rawTransactions", rawTransactions);

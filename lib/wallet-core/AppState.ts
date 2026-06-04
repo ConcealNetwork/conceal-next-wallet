@@ -22,7 +22,7 @@ import { Transaction, Deposit } from "./Transaction";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Observable } from "./numbersLab/Observable";
 import { WalletRepository } from "./WalletRepository";
-import { BlockchainExplorer, RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
+import type { BlockchainExplorer, RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import { WalletWatchdog } from "./WalletWatchdog";
 
@@ -35,10 +35,10 @@ export class WalletWorker {
   constructor(wallet: Wallet, password: string) {
     this.wallet = wallet;
     this.password = password;
-    let self: any = this;
-    wallet.addObserver(Observable.EVENT_MODIFIED, function () {
+    const self: any = this;
+    wallet.addObserver(Observable.EVENT_MODIFIED, () => {
       if (self.intervalSave === 0)
-        self.intervalSave = setTimeout(function () {
+        self.intervalSave = setTimeout(() => {
           self.save();
           self.intervalSave = 0;
         }, 1000);
@@ -54,9 +54,9 @@ export class WalletWorker {
 
 export class AppState {
   static openWallet(wallet: Wallet, password: string) {
-    let walletWorker = new WalletWorker(wallet, password);
+    const walletWorker = new WalletWorker(wallet, password);
     DependencyInjectorInstance().register(Wallet.name, wallet);
-    let watchdog = BlockchainExplorerProvider.getInstance().start(wallet);
+    const watchdog = BlockchainExplorerProvider.getInstance().start(wallet);
     DependencyInjectorInstance().register(WalletWatchdog.name, watchdog);
     DependencyInjectorInstance().register(WalletWorker.name, walletWorker);
 
@@ -67,13 +67,13 @@ export class AppState {
   }
 
   static disconnect() {
-    let wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
-    let walletWorker: WalletWorker = DependencyInjectorInstance().getInstance(
+    const wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
+    const walletWorker: WalletWorker = DependencyInjectorInstance().getInstance(
       WalletWorker.name,
       "default",
       false,
     );
-    let walletWatchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
+    const walletWatchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
       WalletWatchdog.name,
       "default",
       false,
@@ -84,7 +84,7 @@ export class AppState {
     }
 
     // Clean up the blockchain explorer session to ensure fresh node selection on next connection
-    let blockchainExplorer = BlockchainExplorerProvider.getInstance();
+    const blockchainExplorer = BlockchainExplorerProvider.getInstance();
     blockchainExplorer.cleanupSession();
 
     DependencyInjectorInstance().register(Wallet.name, undefined, "default");
@@ -97,15 +97,15 @@ export class AppState {
   private static leftMenuEnabled = false;
 
   static enableLeftMenu() {
-    if (!this.leftMenuEnabled) {
-      this.leftMenuEnabled = true;
+    if (!AppState.leftMenuEnabled) {
+      AppState.leftMenuEnabled = true;
       $("body").removeClass("menuDisabled");
     }
   }
 
   static disableLeftMenu() {
-    if (this.leftMenuEnabled) {
-      this.leftMenuEnabled = false;
+    if (AppState.leftMenuEnabled) {
+      AppState.leftMenuEnabled = false;
       $("body").addClass("menuDisabled");
     }
   }

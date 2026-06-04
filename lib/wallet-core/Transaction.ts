@@ -50,7 +50,7 @@ export class TransactionOut {
   rtcAmount: string = "";
 
   static fromRaw = (raw: any) => {
-    let nout = new TransactionOut();
+    const nout = new TransactionOut();
     nout.keyImage = raw.keyImage;
     nout.outputIdx = raw.outputIdx;
     nout.globalIndex = raw.globalIndex;
@@ -68,7 +68,7 @@ export class TransactionOut {
   };
 
   export = () => {
-    let data: any = {
+    const data: any = {
       keyImage: this.keyImage,
       outputIdx: this.outputIdx,
       globalIndex: this.globalIndex,
@@ -86,7 +86,7 @@ export class TransactionOut {
   };
 
   copy = () => {
-    let aCopy = new TransactionOut();
+    const aCopy = new TransactionOut();
 
     aCopy.amount = this.amount;
     aCopy.keyImage = this.keyImage;
@@ -114,7 +114,7 @@ export class TransactionIn {
   term: number = 0;
 
   static fromRaw = (raw: any) => {
-    let nin = new TransactionIn();
+    const nin = new TransactionIn();
     (nin.outputIndex = raw.outputIndex), (nin.keyImage = raw.keyImage);
     nin.amount = raw.amount;
     nin.type = raw.type;
@@ -134,7 +134,7 @@ export class TransactionIn {
   };
 
   copy = () => {
-    let aCopy = new TransactionIn();
+    const aCopy = new TransactionIn();
 
     aCopy.outputIndex = this.outputIndex;
     aCopy.keyImage = this.keyImage;
@@ -163,20 +163,20 @@ export class Transaction {
   ttl: number = 0; // TTL timestamp (absolute UNIX timestamp in seconds)
 
   static fromRaw = (raw: any) => {
-    let transac = new Transaction();
+    const transac = new Transaction();
     transac.blockHeight = raw.blockHeight;
     transac.txPubKey = raw.txPubKey;
     transac.timestamp = raw.timestamp;
     if (typeof raw.ins !== "undefined") {
-      let ins: TransactionIn[] = [];
-      for (let rin of raw.ins) {
+      const ins: TransactionIn[] = [];
+      for (const rin of raw.ins) {
         ins.push(TransactionIn.fromRaw(rin));
       }
       transac.ins = ins;
     }
     if (typeof raw.outs !== "undefined") {
-      let outs: TransactionOut[] = [];
-      for (let rout of raw.outs) {
+      const outs: TransactionOut[] = [];
+      for (const rout of raw.outs) {
         outs.push(TransactionOut.fromRaw(rout));
       }
       transac.outs = outs;
@@ -192,22 +192,22 @@ export class Transaction {
   };
 
   export = () => {
-    let data: any = {
+    const data: any = {
       blockHeight: this.blockHeight,
       txPubKey: this.txPubKey,
       timestamp: this.timestamp,
       hash: this.hash,
     };
     if (this.ins.length > 0) {
-      let rins: any[] = [];
-      for (let nin of this.ins) {
+      const rins: any[] = [];
+      for (const nin of this.ins) {
         rins.push(nin.export());
       }
       data.ins = rins;
     }
     if (this.outs.length > 0) {
-      let routs: any[] = [];
-      for (let nout of this.outs) {
+      const routs: any[] = [];
+      for (const nout of this.outs) {
         routs.push(nout.export());
       }
       data.outs = routs;
@@ -223,12 +223,12 @@ export class Transaction {
 
   getAmount = () => {
     let amount = 0;
-    for (let out of this.outs) {
+    for (const out of this.outs) {
       if (out.type !== "03") {
         amount += out.amount;
       }
     }
-    for (let nin of this.ins) {
+    for (const nin of this.ins) {
       if (nin.type !== "03") {
         amount -= nin.amount;
       }
@@ -265,7 +265,7 @@ export class Transaction {
         return false;
       }
     } else {
-      for (let input of this.ins) {
+      for (const input of this.ins) {
         if (input.amount < 0) {
           return false;
         }
@@ -275,7 +275,7 @@ export class Transaction {
   };
 
   hasMessage = () => {
-    let txAmount = this.getAmount();
+    const txAmount = this.getAmount();
     return (
       this.message !== "" &&
       txAmount > 0 &&
@@ -295,8 +295,8 @@ export class Transaction {
   }
 
   get isFusion() {
-    let outputsCount = this.outs.length;
-    let inputsCount = this.ins.length;
+    const outputsCount = this.outs.length;
+    const inputsCount = this.ins.length;
     if (
       this.outs.some((out) => out.type === "03") ||
       this.ins.some((input) => input.type === "03")
@@ -311,7 +311,7 @@ export class Transaction {
   }
 
   copy = () => {
-    let aCopy = new Transaction();
+    const aCopy = new Transaction();
 
     aCopy.blockHeight = this.blockHeight;
     aCopy.txPubKey = this.txPubKey;
@@ -324,10 +324,10 @@ export class Transaction {
     aCopy.messageViewed = this.messageViewed;
     aCopy.ttl = this.ttl;
 
-    for (let nin of this.ins) {
+    for (const nin of this.ins) {
       aCopy.ins.push(nin.copy());
     }
-    for (let nout of this.outs) {
+    for (const nout of this.outs) {
       aCopy.outs.push(nout.copy());
     }
 
@@ -348,7 +348,7 @@ class BaseBanking {
   txPubKey: string = "";
 
   static fromRaw(raw: any) {
-    let deposit = new Deposit();
+    const deposit = new Deposit();
     deposit.term = raw.term;
     deposit.txHash = raw.txHash;
     deposit.amount = raw.amount;
@@ -379,7 +379,7 @@ class BaseBanking {
   }
 
   copy() {
-    let aCopy = new Deposit();
+    const aCopy = new Deposit();
 
     aCopy.term = this.term;
     aCopy.txHash = this.txHash;
@@ -402,7 +402,7 @@ export class Deposit extends BaseBanking {
   withdrawPending: boolean = false;
 
   static fromRaw(raw: any) {
-    let deposit = new Deposit();
+    const deposit = new Deposit();
     deposit.term = raw.term;
     deposit.txHash = raw.txHash;
     deposit.amount = raw.amount;
@@ -428,7 +428,7 @@ export class Deposit extends BaseBanking {
   }
 
   copy = () => {
-    let aCopy = super.copy();
+    const aCopy = super.copy();
     aCopy.spentTx = this.spentTx;
     aCopy.withdrawPending = this.withdrawPending;
     aCopy.keys = [...this.keys];
@@ -470,17 +470,17 @@ export class TransactionData {
   deposits: Deposit[] = [];
 
   static fromRaw = (raw: any) => {
-    let txData = new TransactionData();
+    const txData = new TransactionData();
     txData.transaction = Transaction.fromRaw(raw.transaction);
 
     if (raw.withdrawals) {
-      for (let withdrawal of raw.withdrawals) {
+      for (const withdrawal of raw.withdrawals) {
         txData.withdrawals.push(Deposit.fromRaw(withdrawal));
       }
     }
 
     if (raw.deposits) {
-      for (let deposit of raw.deposits) {
+      for (const deposit of raw.deposits) {
         txData.deposits.push(Deposit.fromRaw(deposit));
       }
     }
@@ -489,22 +489,22 @@ export class TransactionData {
   };
 
   export = () => {
-    let txData: any = {};
-    let deposits: any[] = [];
-    let withdrawals: any[] = [];
+    const txData: any = {};
+    const deposits: any[] = [];
+    const withdrawals: any[] = [];
 
     if (this.transaction) {
       txData.transaction = this.transaction.export();
     }
 
     if (this.deposits.length > 0) {
-      for (let deposit of this.deposits) {
+      for (const deposit of this.deposits) {
         deposits.push(deposit.export());
       }
     }
 
     if (this.withdrawals.length > 0) {
-      for (let withdrawal of this.withdrawals) {
+      for (const withdrawal of this.withdrawals) {
         withdrawals.push(withdrawal.export());
       }
     }
@@ -516,13 +516,13 @@ export class TransactionData {
   };
 
   copy = () => {
-    let aCopy = new TransactionData();
+    const aCopy = new TransactionData();
     aCopy.transaction = this.transaction ? this.transaction.copy() : null;
 
-    for (let deposit of this.deposits) {
+    for (const deposit of this.deposits) {
       aCopy.deposits.push(deposit.copy());
     }
-    for (let withdrawal of this.withdrawals) {
+    for (const withdrawal of this.withdrawals) {
       aCopy.withdrawals.push(withdrawal.copy());
     }
 

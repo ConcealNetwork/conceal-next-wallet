@@ -26,8 +26,8 @@ import { useMarketData, useSendTransaction, useTransactions, useWalletInfo } fro
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxToNumber, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils";
 
-const NETWORK_FEE = COIN_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES);
-const REMOTE_NODE_FEE = REMOTE_NODE_FEE_ATOMIC / Math.pow(10, COIN_UNIT_PLACES);
+const NETWORK_FEE = COIN_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
+const REMOTE_NODE_FEE = REMOTE_NODE_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
 const SEND_FEES = NETWORK_FEE + REMOTE_NODE_FEE;
 
 const sendSchema = z.object({

@@ -30,8 +30,8 @@
  *     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import { Wallet } from "./Wallet";
-import { BlockchainExplorer, RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
+import type { Wallet } from "./Wallet";
+import type { BlockchainExplorer, RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
 import { TransactionData } from "./Transaction";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import { walletWorkerUrl } from "./worker-url";
@@ -71,8 +71,8 @@ class TxQueue {
     this.isApplying = true;
 
     try {
-      for (let txData of parsedTransactions) {
-        let txDataObject = TransactionData.fromRaw(txData);
+      for (const txData of parsedTransactions) {
+        const txDataObject = TransactionData.fromRaw(txData);
 
         this.wallet.addNew(txDataObject.transaction);
         this.wallet.addDeposits(txDataObject.deposits);
@@ -137,7 +137,7 @@ class BlockList {
 
     this.chainHeight = Math.max(this.chainHeight, chainHeight);
 
-    let rangeData: IBlockRange = {
+    const rangeData: IBlockRange = {
       startBlock: startBlock,
       endBlock: endBlock,
       finished: false,
@@ -241,7 +241,7 @@ class BlockList {
 
   buildOwnedTransactions = (range: IBlockRange): RawDaemon_Transaction[] => {
     const owned: RawDaemon_Transaction[] = [];
-    for (let raw of range.fetchedTransactions) {
+    for (const raw of range.fetchedTransactions) {
       if (raw?.height && raw.hash && range.screenHashes.has(raw.hash)) {
         owned.push(raw);
       }
@@ -260,7 +260,7 @@ class BlockList {
 
     while (this.blocks.length > 0) {
       if (this.blocks[0].finished) {
-        let block = this.blocks.shift()!;
+        const block = this.blocks.shift()!;
         this.txQueue.applyParsedTransactions(block.parsedTransactions, block.endBlock);
       } else {
         break;
@@ -289,7 +289,7 @@ class BlockList {
       return null;
     }
 
-    let timeDiff: number = new Date().getTime() - head.timestamp.getTime();
+    const timeDiff: number = new Date().getTime() - head.timestamp.getTime();
     if (timeDiff / 1000 > 30) {
       if (reset) {
         head.timestamp = new Date();
@@ -349,7 +349,7 @@ class ParseWorker {
   initWorker = (): Worker => {
     this.workerProcess = new Worker(walletWorkerUrl("wallet-sync-entrypoint.js"));
     this.workerProcess.onmessage = (data: MessageEvent) => {
-      let message: string | any = data.data;
+      const message: string | any = data.data;
       if (message === "ready") {
         logDebugMsg("worker ready...");
         // signal the wallet update
@@ -778,8 +778,8 @@ export class WalletWatchdog {
       .getTransactionPool()
       .then((pool: any) => {
         if (typeof pool !== "undefined") {
-          for (let rawTx of pool) {
-            let txData = TransactionsExplorer.parse(rawTx, this.wallet);
+          for (const rawTx of pool) {
+            const txData = TransactionsExplorer.parse(rawTx, this.wallet);
 
             if (txData !== null && txData.transaction !== null) {
               this.wallet.addNewMemTx(txData.transaction);
@@ -840,7 +840,7 @@ export class WalletWatchdog {
   };
 
   startSyncLoop = async () => {
-    (async function (self) {
+    (async (self) => {
       while (!self.stopped) {
         try {
           if (self.lastBlockLoading === -1) {
@@ -860,7 +860,7 @@ export class WalletWatchdog {
           }
 
           // get the current height of the chain
-          let height = await self.explorer.getHeight();
+          const height = await self.explorer.getHeight();
 
           // make sure we are not ahead of chain
           if (self.lastBlockLoading > height) {
@@ -879,11 +879,11 @@ export class WalletWatchdog {
           self.tryScheduleFilter();
 
           // get a free worker and check if we have idle blocks first
-          let freeWorker: SyncWorker | null = self.getFreeWorker();
+          const freeWorker: SyncWorker | null = self.getFreeWorker();
 
           if (freeWorker) {
             // first check if we have any stale ranges available
-            let idleRange = self.blockList.getFirstIdleRange(true);
+            const idleRange = self.blockList.getFirstIdleRange(true);
             let startBlock: number = 0;
             let endBlock: number = 0;
 

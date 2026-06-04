@@ -7,7 +7,7 @@ type UseCountUpOptions = {
   formatter?: (value: number) => string;
 };
 
-const easeOutCubic = (value: number) => 1 - Math.pow(1 - value, 3);
+const easeOutCubic = (value: number) => 1 - (1 - value) ** 3;
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export function usePrefersReducedMotion() {

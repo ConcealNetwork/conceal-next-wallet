@@ -543,7 +543,7 @@ function formatMessageText(text: string, theme: MessageFormatTheme = "compose"):
     `<span style="background-color: ${codeColors.bg}; color: ${codeColors.textCode}; padding: 1px 3px; border-radius: 3px; border: 1px solid ${codeColors.border}; font-family: monospace; font-size: 0.9em;">$1</span>`,
   );
   formatted = formatted.replace(/\*\s/g, "&nbsp;&nbsp•&nbsp");
-  formatted = formatted.replace(/  /g, "<br>");
+  formatted = formatted.replace(/ {2}/g, "<br>");
 
   return formatted;
 }

@@ -16,7 +16,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import { RawFullyEncryptedWallet, RawWallet, Wallet } from "./Wallet";
+import { type RawFullyEncryptedWallet, type RawWallet, Wallet } from "./Wallet";
 import { KeysRepository } from "./KeysRepository";
 import { StorageOld } from "./StorageOld";
 import { Storage } from "./Storage";
@@ -52,9 +52,9 @@ export class WalletRepository {
 
   static hasOneStored(): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
-      this.migrateWallet()
+      WalletRepository.migrateWallet()
         .then((isSuccess) => {
-          Storage.getItem("wallet", null).then(function (wallet: any) {
+          Storage.getItem("wallet", null).then((wallet: any) => {
             resolve(wallet !== null);
           });
         })
@@ -80,7 +80,7 @@ export class WalletRepository {
     }
 
     //console.log('open wallet with nonce', rawWallet.nonce);
-    let nonce = encodeUtf8(rawWallet.nonce);
+    const nonce = encodeUtf8(rawWallet.nonce);
 
     let decodedRawWallet = null;
 
@@ -88,9 +88,9 @@ export class WalletRepository {
     if (typeof (<any>rawWallet).data !== "undefined") {
       //RawFullyEncryptedWallet
       //console.log('new wallet format');
-      let rawFullyEncrypted: RawFullyEncryptedWallet = <any>rawWallet;
-      let encrypted = new Uint8Array(<any>rawFullyEncrypted.data);
-      let decrypted = nacl.secretbox.open(encrypted, nonce, privKey);
+      const rawFullyEncrypted: RawFullyEncryptedWallet = <any>rawWallet;
+      const encrypted = new Uint8Array(<any>rawFullyEncrypted.data);
+      const decrypted = nacl.secretbox.open(encrypted, nonce, privKey);
       if (decrypted === null) return null;
 
       try {
@@ -101,9 +101,9 @@ export class WalletRepository {
     } else {
       //RawWallet
       //console.log('old wallet format');
-      let oldRawWallet: RawWallet = <any>rawWallet;
-      let encrypted = new Uint8Array(<any>oldRawWallet.encryptedKeys);
-      let decrypted = nacl.secretbox.open(encrypted, nonce, privKey);
+      const oldRawWallet: RawWallet = <any>rawWallet;
+      const encrypted = new Uint8Array(<any>oldRawWallet.encryptedKeys);
+      const decrypted = nacl.secretbox.open(encrypted, nonce, privKey);
       if (decrypted === null) return null;
 
       oldRawWallet.encryptedKeys = new TextDecoder("utf8").decode(decrypted);
@@ -111,7 +111,7 @@ export class WalletRepository {
     }
 
     if (decodedRawWallet !== null) {
-      let wallet = Wallet.loadFromRaw(decodedRawWallet);
+      const wallet = Wallet.loadFromRaw(decodedRawWallet);
       if (!wallet.keys?.pub?.spend) {
         const normalized = KeysRepository.normalizeKeys(wallet.keys);
         if (normalized === null) return null;
@@ -126,7 +126,7 @@ export class WalletRepository {
   static getLocalWalletWithPassword(password: string): Promise<Wallet | null> {
     return Storage.getItem("wallet", null).then((existingWallet: any) => {
       if (existingWallet !== null) {
-        return this.decodeWithPassword(JSON.parse(existingWallet), password);
+        return WalletRepository.decodeWithPassword(JSON.parse(existingWallet), password);
       } else {
         return null;
       }
@@ -134,7 +134,7 @@ export class WalletRepository {
   }
 
   static save(wallet: Wallet, password: string): Promise<void> {
-    return Storage.setItem("wallet", JSON.stringify(this.getEncrypted(wallet, password)));
+    return Storage.setItem("wallet", JSON.stringify(WalletRepository.getEncrypted(wallet, password)));
   }
 
   static getEncrypted(wallet: Wallet, password: string): RawFullyEncryptedWallet {
@@ -150,19 +150,19 @@ export class WalletRepository {
       privKey = privKey.slice(-32);
     }
 
-    let rawNonce = nacl.util.encodeBase64(nacl.randomBytes(16));
-    let nonce = encodeUtf8(rawNonce);
+    const rawNonce = nacl.util.encodeBase64(nacl.randomBytes(16));
+    const nonce = encodeUtf8(rawNonce);
 
-    let rawWallet = wallet.exportToRaw();
-    let uint8EncryptedContent = encodeUtf8(JSON.stringify(rawWallet));
+    const rawWallet = wallet.exportToRaw();
+    const uint8EncryptedContent = encodeUtf8(JSON.stringify(rawWallet));
 
-    let encrypted: Uint8Array = nacl.secretbox(uint8EncryptedContent, nonce, privKey);
-    let tabEncrypted = [];
+    const encrypted: Uint8Array = nacl.secretbox(uint8EncryptedContent, nonce, privKey);
+    const tabEncrypted = [];
     for (let i = 0; i < encrypted.length; ++i) {
       tabEncrypted.push(encrypted[i]);
     }
 
-    let fullEncryptedWallet: RawFullyEncryptedWallet = {
+    const fullEncryptedWallet: RawFullyEncryptedWallet = {
       data: tabEncrypted,
       nonce: rawNonce,
     };
@@ -177,38 +177,38 @@ export class WalletRepository {
   static downloadEncryptedPdf(wallet: Wallet) {
     if (wallet.keys.priv.spend === "") throw "missing_spend";
 
-    let coinWalletUri = CoinUri.encodeWalletKeys(
+    const coinWalletUri = CoinUri.encodeWalletKeys(
       wallet.getPublicAddress(),
       wallet.keys.priv.spend,
       wallet.keys.priv.view,
       wallet.creationHeight,
     );
-    let coinWalletUriM = CoinUri.encodeWalletKeys(
+    const coinWalletUriM = CoinUri.encodeWalletKeys(
       wallet.getPublicAddress(),
       wallet.keys.priv.spend,
       wallet.keys.priv.view,
     );
 
-    let publicQrCode = kjua({
+    const publicQrCode = kjua({
       render: "canvas",
       text: wallet.getPublicAddress(),
       size: 300,
     });
 
-    let privateSpendQrCode = kjua({
+    const privateSpendQrCode = kjua({
       render: "canvas",
       text: coinWalletUri,
       size: 300,
     });
 
-    let importQrCode = kjua({
+    const importQrCode = kjua({
       render: "canvas",
       text: coinWalletUriM,
       ecLevel: "M",
       size: 333,
     });
 
-    let doc = new jsPDF("landscape");
+    const doc = new jsPDF("landscape");
 
     //creating background
     doc.setFillColor(48, 70, 108);
@@ -319,12 +319,12 @@ export class WalletRepository {
     doc.text(115, 132, "DO NOT REVEAL THE PRIVATE KEY");
 
     //adding Conceal Network logos
-    let c: HTMLCanvasElement | null = <HTMLCanvasElement>document.getElementById("canvasExport");
+    const c: HTMLCanvasElement | null = <HTMLCanvasElement>document.getElementById("canvasExport");
     if (c !== null) {
-      let ctx = c.getContext("2d");
+      const ctx = c.getContext("2d");
 
       // First logo (vertical)
-      let verticalLogo: ImageBitmap | null = <ImageBitmap | null>(
+      const verticalLogo: ImageBitmap | null = <ImageBitmap | null>(
         document.getElementById("verticalLogo")
       );
       if (ctx !== null && verticalLogo !== null) {
@@ -332,21 +332,21 @@ export class WalletRepository {
         c.height = verticalLogo.height;
         ctx.drawImage(verticalLogo, 0, 0);
 
-        let ratio = verticalLogo.width / 45;
-        let smallHeight = verticalLogo.height / ratio;
+        const ratio = verticalLogo.width / 45;
+        const smallHeight = verticalLogo.height / ratio;
         doc.addImage(c.toDataURL(), "JPEG", 224, 106 + (100 - smallHeight) / 2, 45, smallHeight);
       }
 
       // Second logo (cham)
-      let chamLogo: ImageBitmap | null = <ImageBitmap | null>document.getElementById("chamLogo");
+      const chamLogo: ImageBitmap | null = <ImageBitmap | null>document.getElementById("chamLogo");
       if (ctx !== null && chamLogo !== null) {
         c.width = chamLogo.width;
         c.height = chamLogo.height;
         ctx.clearRect(0, 0, c.width, c.height); // Clear previous logo
         ctx.drawImage(chamLogo, 0, 0);
 
-        let ratio = chamLogo.width / 60;
-        let smallHeight = chamLogo.height / ratio;
+        const ratio = chamLogo.width / 60;
+        const smallHeight = chamLogo.height / ratio;
         doc.addImage(c.toDataURL(), "JPEG", 120, 106 + (120 - smallHeight) / 2, 60, smallHeight);
       }
     }
