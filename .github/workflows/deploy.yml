@@ -41,6 +41,8 @@ jobs:
           # Serve the app under the repo subpath (e.g. /conceal-next-wallet).
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
           NEXT_PUBLIC_USE_MOCK: "false"
+          DONATION_SUPPORT_FIAT: "OFF"
+          DONATION_SUPPORT_METHOD: "Crypto"          
         run: npm run build
 
       - name: Disable Jekyll processing

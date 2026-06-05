@@ -56,6 +56,16 @@ shadcn theme tokens below — **never ad-hoc hex** for foundational surfaces.
 - Use theme tokens (`bg-card`, `text-muted-foreground`, `border-border`) — no raw palette hex.
 - One accent only (orange). No competing accent colors, no glassmorphism on every surface.
 
+### Legal / auxiliary pages (Terms, Privacy, Support)
+- Shared layout: sticky footer at viewport bottom (`flex min-h-screen flex-col` + `flex-1` content).
+- Content column `max-w-3xl`; long-form pages use `prose prose-invert`, short pages use `PageHeader` + `SectionCard`.
+- **Sticky back nav** (`LegalBackNav`): stays visible while scrolling (`sticky top-4 z-30`), **right-aligned** (`ml-auto`).
+  - Icon: Lucide `Undo2` (counter-clockwise return arrow) in a circular bubble — not chevrons.
+  - Bubble: `size-9`, `rounded-full`, `border-border`, `bg-secondary/95`, orange tint on hover.
+  - Wrapper: light `bg-background/80 backdrop-blur-sm` so the control stays legible over scrolled content.
+  - Label (sm+): contextual — “Back” when history exists, else “Back to wallet” / “Back to home”.
+  - Mobile: icon-only bubble; label hidden but present in `aria-label`.
+
 ## Known polish backlog (bottom-up pass)
 - [ ] Transaction Summary nested "Recent Transactions / Last Activity" boxes are too dark → use `--secondary`.
 - [x] Sidebar + footer share the neutral `--chrome` surface.

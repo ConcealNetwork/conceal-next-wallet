@@ -39,6 +39,15 @@ export function getCuratedPoolListUrl(poolBase: string = PUBLIC_NODES_POOL_BASE)
   return `${poolBase.replace(/\/$/, "")}/list?${CURATED_POOL_LIST_QUERY}`;
 }
 
+export const WALLET_DONATION_ADDRESS =
+  "ccx7V4LeUXy2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQg84zbNrPduTX2whZ5pacfj";
+
+export const WALLET_DONATION_ADDRESSES = [
+  "ccx7NzuofXxcypov8Yqm2A118xT17HereBFjp3RScjzM7wncf8BRcnHZbACy63sWD71L7NmkJRgQKXFE3weCfAh31RAVFHgttf",
+  WALLET_DONATION_ADDRESS,
+  "ccx7YZ4RC97fqMh1bmzrFtDoSSiEgvEYzhaLE53SR9bh4QrDBUhGUH3TCmXqv8MTLjJDtnCeeaT5bLC2ZSzp3ZmQ19DoiPLLXS",
+] as const;
+
 type WalletConfigBigInt = {
   new (value: string): { valueOf(): number };
 };
@@ -112,13 +121,8 @@ export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
     coinName: "Conceal",
     coinUriPrefix: "conceal:",
 
-    donationAddress:
-      "ccx7V4LeUXy2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQg84zbNrPduTX2whZ5pacfj",
-    donationAddresses: [
-      "ccx7NzuofXxcypov8Yqm2A118xT17HereBFjp3RScjzM7wncf8BRcnHZbACy63sWD71L7NmkJRgQKXFE3weCfAh31RAVFHgttf",
-      "ccx7V4LeUXy2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQg84zbNrPduTX2whZ5pacfj",
-      "ccx7YZ4RC97fqMh1bmzrFtDoSSiEgvEYzhaLE53SR9bh4QrDBUhGUH3TCmXqv8MTLjJDtnCeeaT5bLC2ZSzp3ZmQ19DoiPLLXS",
-    ],
+    donationAddress: WALLET_DONATION_ADDRESS,
+    donationAddresses: [...WALLET_DONATION_ADDRESSES],
 
     avgBlockTime: s.avgBlockTime,
     maxBlockNumber: 500_000_000,
