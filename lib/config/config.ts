@@ -24,6 +24,11 @@ export const SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE
 /** Sent message tx amount (remote node operator fee paid). */
 export const SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
 
+/** Full ticker label (settings + amount formatting). */
+export const COIN_TICKER_FULL = "CCX";
+/** Short Conceal symbol shown when compact ticker is enabled. */
+export const COIN_TICKER_SHORT = "₡";
+
 type WalletConfigBigInt = {
   new (value: string): { valueOf(): number };
 };

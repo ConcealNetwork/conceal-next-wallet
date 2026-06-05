@@ -23,10 +23,12 @@ import {
   cn,
   formatCcx,
   formatUsd,
+  stripTickerSuffix,
   timeAgo,
   truncateAddress,
   walletBalanceUsd,
 } from "@/lib/utils";
+import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
 
 const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false });
 const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false });
@@ -463,9 +465,9 @@ function MarketSummaryHybrid({
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Holdings</p>
             <p className="font-mono text-sm font-semibold leading-tight">
-              {formatCcx(holdingsTotal).replace(" CCX", "")}
+              {stripTickerSuffix(formatCcx(holdingsTotal))}
             </p>
-            <p className="text-[10px] text-primary">CCX</p>
+            <TickerBadge className="text-[10px] text-primary" />
           </div>
         </div>
         <div className="flex-1 space-y-2.5">
@@ -479,7 +481,7 @@ function MarketSummaryHybrid({
                 />
                 <span>{segment.label}</span>
                 <span className="ml-auto font-mono text-muted-foreground">
-                  {formatCcx(segment.value).replace(" CCX", "")}
+                  {stripTickerSuffix(formatCcx(segment.value))}
                 </span>
                 <span className="w-10 text-right font-mono text-muted-foreground">
                   {Math.round(pct)}%

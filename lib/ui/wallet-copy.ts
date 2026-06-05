@@ -23,6 +23,16 @@ export const walletCopy = {
   exportAlertBody: env.useMockWallet
     ? "Displayed values are placeholders for layout review only."
     : "Never share your mnemonic or private keys. Store backups offline.",
+  exportPageSubtitle: env.useMockWallet
+    ? "Back up placeholder wallet material"
+    : "Back up your encrypted wallet file or copy keys offline",
+  downloadBackupDialogTitle: "Download encrypted backup",
+  downloadBackupDialogDescription:
+    "Choose a file name and confirm your wallet password. The file is encrypted with the same password used to unlock this wallet.",
+  downloadBackupFilenameLabel: "File name",
+  downloadBackupFilenameHint: 'Saved as "{filename}" in your downloads folder.',
+  downloadBackupPasswordLabel: "Wallet password",
+  downloadBackupSuccess: "Backup downloaded.",
   passwordChanged: env.useMockWallet ? "Mock password changed." : "Wallet password updated.",
   sendConfirm: env.useMockWallet
     ? "Confirm this mock send? No transaction will be broadcast."

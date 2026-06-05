@@ -30,6 +30,11 @@ import {
 } from "@/lib/hooks";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
+import {
+  TICKER_OPTIONS,
+  useTickerPreference,
+} from "@/lib/ui/ticker-preference-provider";
+import { getNodeUrlFormatHints } from "@/lib/validation/node-url";
 import { cn } from "@/lib/utils";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -103,26 +108,77 @@ export default function SettingsPage() {
   const resetAndRescan = useResetAndRescan();
   const wallet = useWalletInfo();
   const deleteWallet = useWalletDelete();
+  const ticker = useTickerPreference();
   const current = settings.data;
   const isMock = env.useMockWallet;
 
   const [creationHeight, setCreationHeight] = useState("");
   const [scanHeight, setScanHeight] = useState("");
   const [nodeUrl, setNodeUrl] = useState("");
+  const [nodeUrlDirty, setNodeUrlDirty] = useState(false);
+  const nodeUrlHints = getNodeUrlFormatHints(nodeUrl);
 
   useEffect(() => {
     if (!current) return;
     setCreationHeight(String(current.creationHeight ?? wallet.data?.creationHeight ?? 0));
     setScanHeight(String(current.scanHeight ?? wallet.data?.currentHeight ?? 0));
-    setNodeUrl(current.nodeUrl);
-  }, [current, wallet.data?.creationHeight, wallet.data?.currentHeight]);
+    if (!nodeUrlDirty) {
+      setNodeUrl(current.nodeUrl);
+    }
+  }, [current, nodeUrlDirty, wallet.data?.creationHeight, wallet.data?.currentHeight]);
 
   function settingsSavedMessage() {
     return isMock ? "Mock settings updated." : "Settings updated.";
   }
 
   function update(input: Partial<WalletSettings>, message = settingsSavedMessage()) {
-    updateSettings.mutate(input, { onSuccess: () => toast.success(message) });
+    updateSettings.mutate(input, {
+      onSuccess: () => toast.success(message),
+      onError: (error: unknown) =>
+        toast.error(error instanceof Error ? error.message : "Settings update failed."),
+    });
+  }
+
+  function applyNodeConnection(
+    input: { useCustomNode: boolean; nodeUrl: string },
+    message: string,
+  ) {
+    updateSettings.mutate(input, {
+      onSuccess: (settings) => {
+        setNodeUrl(settings.nodeUrl);
+        setNodeUrlDirty(false);
+        toast.success(message);
+      },
+      onError: (error: unknown) =>
+        toast.error(error instanceof Error ? error.message : "Node update failed."),
+    });
+  }
+
+  function handleCustomNodeToggle(checked: boolean) {
+    if (updateSettings.isPending) return;
+
+    if (checked) {
+      applyNodeConnection(
+        { useCustomNode: true, nodeUrl },
+        isMock ? "Mock custom node enabled." : "Custom node connected.",
+      );
+      return;
+    }
+
+    applyNodeConnection(
+      { useCustomNode: false, nodeUrl: current?.nodeUrl ?? nodeUrl },
+      isMock ? "Mock public nodes enabled." : "Using public nodes.",
+    );
+  }
+
+  function commitCustomNodeUrl() {
+    if (!current?.useCustomNode || updateSettings.isPending) return;
+    if (nodeUrl.trim() === current.nodeUrl) return;
+
+    applyNodeConnection(
+      { useCustomNode: true, nodeUrl },
+      isMock ? "Mock custom node updated." : "Custom node updated.",
+    );
   }
 
   function applyHeights() {
@@ -171,6 +227,24 @@ export default function SettingsPage() {
                   <option>English</option>
                 </select>
               </Row>
+              <Row label="Ticker" description="Amount suffix shown across the wallet">
+                <select
+                  className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
+                  value={ticker.useShortTicker ? "short" : "full"}
+                  onChange={(event) => {
+                    const useShort = event.target.value === "short";
+                    void ticker.setUseShortTicker(useShort).then(() => {
+                      toast.success(isMock ? "Mock ticker updated." : "Ticker updated.");
+                    });
+                  }}
+                >
+                  {TICKER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Row>
               <Row
                 label="Wallet optimization"
                 description="Compact transaction outputs to reduce wallet size"
@@ -188,28 +262,56 @@ export default function SettingsPage() {
 
             {current && (
               <Section title="Node">
-                <Row label="Use custom node" description="Connect to your own Conceal daemon">
+                <Row
+                  label="Use custom node"
+                  description="Pin the URL below instead of rotating public nodes"
+                >
                   <Switch
                     checked={current.useCustomNode}
-                    onCheckedChange={(checked: boolean) => update({ useCustomNode: checked })}
+                    disabled={updateSettings.isPending}
+                    onCheckedChange={handleCustomNodeToggle}
                   />
                 </Row>
-                <Row label="Node URL" description="The daemon endpoint this wallet syncs against">
-                  <div className="flex w-full gap-2 sm:w-auto">
+                <Row
+                  label="Node URL"
+                  description={
+                    current.useCustomNode
+                      ? "Custom daemon — edit and press Enter to reconnect"
+                      : "Currently connected daemon — edit before enabling custom node"
+                  }
+                >
+                  <div className="flex w-full flex-col gap-1.5 sm:w-80">
                     <Input
                       value={nodeUrl}
-                      onChange={(event) => setNodeUrl(event.target.value)}
-                      placeholder="https://explorer.conceal.network/daemon/"
-                      className="sm:w-72"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
                       disabled={updateSettings.isPending}
-                      onClick={() => update({ nodeUrl, useCustomNode: current.useCustomNode })}
-                    >
-                      Update
-                    </Button>
+                      onChange={(event) => {
+                        setNodeUrl(event.target.value);
+                        setNodeUrlDirty(true);
+                      }}
+                      onBlur={() => commitCustomNodeUrl()}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      spellCheck={false}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      aria-describedby={nodeUrlHints.length > 0 ? "node-url-hints" : undefined}
+                    />
+                    {nodeUrlHints.length > 0 && (
+                      <div id="node-url-hints" className="space-y-0.5">
+                        {nodeUrlHints.map((hint) => (
+                          <p key={hint} className="text-xs text-amber-400/90">
+                            {hint}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {updateSettings.isPending && (
+                      <p className="text-xs text-muted-foreground">Testing node connection…</p>
+                    )}
                   </div>
                 </Row>
               </Section>

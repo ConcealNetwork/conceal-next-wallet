@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
+import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 import type { ExportWalletData } from "@/lib/services/wallet.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
@@ -300,6 +301,25 @@ export async function exportWalletOperation(): Promise<ExportWalletData> {
     mnemonic,
     spendKey: wallet.keys.priv.spend,
     viewKey: wallet.keys.priv.view,
+  };
+}
+
+export async function downloadWalletBackupOperation(input: {
+  filename: string;
+  password: string;
+}): Promise<{ filename: string; payload: unknown }> {
+  await ensureAllWalletLegacyLibs();
+  const verified = await WalletRepository.getLocalWalletWithPassword(input.password);
+  if (verified === null) {
+    throw new Error("Invalid password.");
+  }
+  const wallet = getRuntimeWallet();
+  if (wallet === null) {
+    throw new Error("Wallet is not open.");
+  }
+  return {
+    filename: backupDownloadFilename(input.filename),
+    payload: WalletRepository.getEncrypted(wallet, input.password),
   };
 }
 

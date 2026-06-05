@@ -8,6 +8,7 @@ export const CONTACT_AVATARS: ContactAvatar[] = [
   { id: "kraken", label: "Kraken" },
   { id: "alice", label: "Alice" },
   { id: "john", label: "John" },
+  { id: "jay", label: "Jay" },
   { id: "mining-pool", label: "Mining pool" },
   { id: "cold-storage", label: "Cold storage" },
 ];

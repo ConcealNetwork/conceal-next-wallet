@@ -1,5 +1,6 @@
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
 import type {
+  DownloadWalletBackupInput,
   ExportWalletData,
   FinalizeCreateWalletInput,
   ImportWalletInput,
@@ -46,6 +47,9 @@ export const realWalletService: WalletService = {
   },
   async exportWallet(): Promise<ExportWalletData> {
     return (await walletOps()).exportWalletOperation();
+  },
+  async downloadWalletBackup(input: DownloadWalletBackupInput) {
+    return (await walletOps()).downloadWalletBackupOperation(input);
   },
   async changePassword(input) {
     await (await walletOps()).changePasswordOperation(input.currentPassword, input.newPassword);

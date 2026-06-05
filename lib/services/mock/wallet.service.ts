@@ -1,6 +1,7 @@
 import { mockExportData, mockWalletInfo } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
-import type { WalletService } from "@/lib/services/wallet.service";
+import type { DownloadWalletBackupResult, WalletService } from "@/lib/services/wallet.service";
+import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 
 export const mockWalletService: WalletService = {
   async getWalletInfo() {
@@ -45,6 +46,16 @@ export const mockWalletService: WalletService = {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
     return clone(mockExportData);
+  },
+  async downloadWalletBackup(input): Promise<DownloadWalletBackupResult> {
+    await mockDelay();
+    return {
+      filename: backupDownloadFilename(input.filename),
+      payload: {
+        mock: true,
+        note: "Placeholder encrypted wallet backup for UI review.",
+      },
+    };
   },
   async changePassword() {
     // TODO(backend): replace with real Conceal RPC/walletd call
