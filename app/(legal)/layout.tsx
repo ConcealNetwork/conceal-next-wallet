@@ -1,12 +1,14 @@
+import { LegalBackNav } from "@/components/legal/legal-back-nav";
 import { Footer } from "@/components/layout/footer";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen px-4 py-10 text-foreground">
-      <div className="mx-auto max-w-3xl">
+    <main className="flex min-h-screen flex-col bg-background text-foreground">
+      <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 pb-16 sm:px-6 lg:px-8">
+        <LegalBackNav />
         {children}
-        <Footer />
       </div>
+      <Footer />
     </main>
   );
 }
