@@ -47,7 +47,41 @@ declare const concealjs: any;
 /** Set by applyWalletNetworkConfig() after legacy scripts load (v1 global). */
 declare const config: import("@/lib/config/config").WalletNetworkConfig;
 
-declare const kjua: (options: Record<string, unknown>) => string;
+declare const kjua: (options: Record<string, unknown>) => HTMLCanvasElement | HTMLImageElement | string;
+
+declare const jsPDF: new (
+  orientation?: "portrait" | "landscape" | "p" | "l" | Record<string, unknown>,
+  unit?: string,
+  format?: string | number[],
+) => {
+  internal: {
+    pageSize: {
+      width: number;
+      height: number;
+      getWidth?: () => number;
+      getHeight?: () => number;
+    };
+  };
+  setFillColor: (r: number, g: number, b: number) => void;
+  setDrawColor: (r: number, g: number, b: number) => void;
+  setLineWidth: (width: number) => void;
+  setTextColor: (r: number, g: number, b: number) => void;
+  setFont: (face: string, style?: string) => void;
+  setFontSize: (size: number) => void;
+  text: (text: string | string[], x: number, y: number) => void;
+  splitTextToSize: (text: string, maxWidth: number) => string | string[];
+  line: (x1: number, y1: number, x2: number, y2: number) => void;
+  rect: (x: number, y: number, w: number, h: number, style?: string) => void;
+  addImage: (
+    imageData: string,
+    format: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ) => void;
+  save: (filename: string) => void;
+};
 
 declare function saveAs(data: Blob, filename: string): void;
 

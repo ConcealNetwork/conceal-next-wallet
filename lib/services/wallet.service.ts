@@ -38,9 +38,11 @@ export type ImportWalletInput =
   | { method: "open"; password: string; label?: string };
 
 export type ExportWalletData = {
+  address: string;
   mnemonic: string;
   spendKey: string;
   viewKey: string;
+  creationHeight: number;
 };
 
 export type DownloadWalletBackupInput = {
@@ -64,6 +66,7 @@ export interface WalletService {
   abortCreateWallet(): Promise<void>;
   importWallet(input: ImportWalletInput): Promise<WalletInfo>;
   exportWallet(): Promise<ExportWalletData>;
+  exportWalletPdf(): Promise<{ filename: string }>;
   downloadWalletBackup(input: DownloadWalletBackupInput): Promise<DownloadWalletBackupResult>;
   changePassword(input: { currentPassword: string; newPassword: string }): Promise<{ ok: true }>;
   disconnect?(): Promise<void>;

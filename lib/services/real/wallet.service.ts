@@ -48,6 +48,9 @@ export const realWalletService: WalletService = {
   async exportWallet(): Promise<ExportWalletData> {
     return (await walletOps()).exportWalletOperation();
   },
+  async exportWalletPdf() {
+    return (await walletOps()).exportWalletPdfOperation();
+  },
   async downloadWalletBackup(input: DownloadWalletBackupInput) {
     return (await walletOps()).downloadWalletBackupOperation(input);
   },

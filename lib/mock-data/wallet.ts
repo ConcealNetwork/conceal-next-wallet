@@ -15,6 +15,9 @@ import { ccxAmount, usdAmount } from "@/lib/utils";
 export const MOCK_ADDRESS =
   "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m";
 
+/** ccx7 addresses must be 98 chars for QR import URIs (export PDF). */
+export const MOCK_EXPORT_ADDRESS = MOCK_ADDRESS.padEnd(98, "0");
+
 export const mockWalletInfo: WalletInfo = {
   address: MOCK_ADDRESS,
   balanceTotal: ccxAmount(1250.5),
@@ -354,8 +357,10 @@ export const mockSettings: WalletSettings = {
 };
 
 export const mockExportData = {
+  address: MOCK_EXPORT_ADDRESS,
   mnemonic:
     "mock amber orbit velvet zero carbon river lunar basic sample wallet conceal never real crypto placeholder safe display only",
   spendKey: "mock-spend-key-placeholder-not-real-".padEnd(98, "x"),
   viewKey: "mock-view-key-placeholder-not-real-".padEnd(98, "y"),
+  creationHeight: mockWalletInfo.creationHeight,
 };

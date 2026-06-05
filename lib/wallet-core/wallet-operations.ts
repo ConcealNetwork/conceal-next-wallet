@@ -298,10 +298,19 @@ export async function exportWalletOperation(): Promise<ExportWalletData> {
   const mnemonic =
     getCreatedMnemonic() || Mnemonic.mn_encode(wallet.keys.priv.spend, "english") || "";
   return {
+    address: wallet.getPublicAddress(),
     mnemonic,
     spendKey: wallet.keys.priv.spend,
     viewKey: wallet.keys.priv.view,
+    creationHeight: wallet.creationHeight,
   };
+}
+
+export async function exportWalletPdfOperation(): Promise<{ filename: string }> {
+  const data = await exportWalletOperation();
+  const { downloadWalletExportPdf } = await import("@/lib/ui/wallet-export-pdf");
+  const filename = await downloadWalletExportPdf(data);
+  return { filename };
 }
 
 export async function downloadWalletBackupOperation(input: {

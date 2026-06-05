@@ -33,6 +33,8 @@ export const walletCopy = {
   downloadBackupFilenameHint: 'Saved as "{filename}" in your downloads folder.',
   downloadBackupPasswordLabel: "Wallet password",
   downloadBackupSuccess: "Backup downloaded.",
+  exportPdfSuccess: "PDF backup downloaded.",
+  exportPdfButton: "Export as PDF",
   passwordChanged: env.useMockWallet ? "Mock password changed." : "Wallet password updated.",
   sendConfirm: env.useMockWallet
     ? "Confirm this mock send? No transaction will be broadcast."

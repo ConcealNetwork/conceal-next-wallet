@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, FileDown } from "lucide-react";
+import { Eye, FileDown, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,6 +29,7 @@ export default function ExportPage() {
   const [backupName, setBackupName] = useState("wallet");
   const [backupPassword, setBackupPassword] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   useEffect(() => {
     services.wallet.exportWallet().then(setData);
@@ -55,6 +56,18 @@ export default function ExportPage() {
       toast.error(error instanceof Error ? error.message : "Failed to download backup.");
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    setExportingPdf(true);
+    try {
+      await services.wallet.exportWalletPdf();
+      toast.success(walletCopy.exportPdfSuccess);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export PDF.");
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -98,6 +111,18 @@ export default function ExportPage() {
               </Button>
               {data && (
                 <CopyButton value={formatWalletBackupMarkdown(data)} label="Copy Backup" />
+              )}
+              {data && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  disabled={exportingPdf}
+                  onClick={() => void handleExportPdf()}
+                >
+                  <FileText className="size-4" aria-hidden="true" />
+                  {exportingPdf ? "Exporting…" : walletCopy.exportPdfButton}
+                </Button>
               )}
               <Button type="button" className="gap-2" onClick={() => setDownloadOpen(true)}>
                 <FileDown className="size-4" aria-hidden="true" />

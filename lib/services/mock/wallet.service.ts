@@ -43,9 +43,14 @@ export const mockWalletService: WalletService = {
     return clone(mockWalletInfo);
   },
   async exportWallet() {
-    // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
     return clone(mockExportData);
+  },
+  async exportWalletPdf() {
+    await mockDelay();
+    const { downloadWalletExportPdf } = await import("@/lib/ui/wallet-export-pdf");
+    const filename = await downloadWalletExportPdf(clone(mockExportData));
+    return { filename };
   },
   async downloadWalletBackup(input): Promise<DownloadWalletBackupResult> {
     await mockDelay();
