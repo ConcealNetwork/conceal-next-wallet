@@ -126,6 +126,19 @@ export type AddressEntry = {
   avatar?: string;
 };
 
+export type SmartNode = {
+  id: string;
+  name: string;
+  url: string;
+  /** Raw `url.host` from pool list (e.g. explorer.conceal.network/daemon). */
+  poolHost: string;
+  isActive?: boolean;
+  /** Pool registry `status.startTime` (ISO). */
+  poolStartTime?: string;
+  /** Pool registry `status.uptime` (0–100). */
+  poolUptimePercent?: number;
+};
+
 export type NodeStatus = {
   url: string;
   height: number;
@@ -141,8 +154,6 @@ export type NodeStatus = {
   mempool: number; // pending tx count (tx_pool_size)
   lastBlockSecondsAgo: number;
   avgBlockTimeSeconds: number;
-  latencyMs: number;
-  uptimeSeconds: number;
   // Short recent-history series used by the telemetry sparklines (oldest → newest)
   heightHistory: number[];
   hashrateHistory: number[];

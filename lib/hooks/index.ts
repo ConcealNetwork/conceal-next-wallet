@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provider";
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
-import { marketQueryOptions, networkQueryOptions } from "@/lib/services/query-options";
+import { fetchSmartNodes } from "@/lib/network/smart-nodes";
+import { marketQueryOptions, networkQueryOptions, smartNodesQueryOptions } from "@/lib/services/query-options";
 import type { AddressEntryInput } from "@/lib/services/address-book.service";
 import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
@@ -196,6 +197,16 @@ export function useNetworkStatus() {
     queryKey: queryKeys.network,
     queryFn: () => services.network.getNodeStatus(),
     ...networkQueryOptions,
+  });
+}
+
+/** Smart-node pool list for the Network page only — one fetch per visit, no background refresh. */
+export function useSmartNodes(activeNodeUrl: string | undefined) {
+  return useQuery({
+    queryKey: [...queryKeys.network, "smart-nodes", activeNodeUrl] as const,
+    queryFn: () => fetchSmartNodes(activeNodeUrl!),
+    enabled: Boolean(activeNodeUrl),
+    ...smartNodesQueryOptions,
   });
 }
 

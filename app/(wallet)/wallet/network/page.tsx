@@ -3,8 +3,11 @@
 import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/wallet/common";
-import { useNetworkStatus } from "@/lib/hooks";
+import { useNetworkStatus, useSmartNodes } from "@/lib/hooks";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
+import { formatNodeVersion } from "@/lib/network/format-node-version";
+import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
+import type { SmartNode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const BLOCK_TARGET_SECONDS = 120;
@@ -12,6 +15,13 @@ const TELEMETRY_SKELETON_KEYS = ["height", "hashrate", "peers", "block-time"] as
 
 export default function NetworkPage() {
   const { data, isLoading } = useNetworkStatus();
+  const {
+    data: smartNodes,
+    isPending: smartNodesPending,
+    isFetching: smartNodesFetching,
+    isError: smartNodesError,
+  } = useSmartNodes(data?.url);
+  const smartNodesLoading = smartNodesPending || smartNodesFetching;
   const prefersReducedMotion = usePrefersReducedMotion();
   const animate = !prefersReducedMotion;
   const heightLabel = useCountUp(data?.height ?? 0, {
@@ -44,6 +54,7 @@ export default function NetworkPage() {
   const host = data.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const syncPct =
     data.networkHeight > 0 ? Math.min((data.height / data.networkHeight) * 100, 100) : 0;
+  const uptimeLabel = smartNodesLoading ? "…" : formatPoolUptimeForNodeUrl(smartNodes, data.url);
 
   return (
     <>
@@ -60,9 +71,8 @@ export default function NetworkPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Meta label="Ping" value={`${data.latencyMs} ms`} tone="incoming" />
-            <Meta label="Uptime" value={formatUptime(data.uptimeSeconds)} />
-            <Meta label="Version" value={data.version.replace(/^Conceal Core\s*/, "v")} mono />
+            <Meta label="Uptime" value={uptimeLabel} />
+            <Meta label="Version" value={formatNodeVersion(data.version)} mono />
             <span
               className={cn(
                 "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
@@ -89,7 +99,12 @@ export default function NetworkPage() {
         </div>
 
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 wallet-card flex flex-col items-center justify-center gap-4 p-6 [animation-delay:140ms]">
-          <PeerGraph animate={animate} />
+          <SmartNodesGraph
+            animate={animate}
+            nodes={smartNodes ?? []}
+            loading={smartNodesLoading}
+            failed={smartNodesError}
+          />
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Connected Peers</p>
             <p className="mt-1 font-mono text-3xl font-bold tracking-tight">{peersLabel}</p>
@@ -113,7 +128,8 @@ export default function NetworkPage() {
         <ChartCard
           label="Network Hashrate"
           value={formatHashrate(data.hashrate)}
-          detail={`difficulty ${formatDifficulty(data.difficulty)}`}
+          secondaryLabel="Difficulty"
+          secondaryValue={formatDifficulty(data.difficulty)}
           delay={260}
           chart={<MiniArea values={data.hashrateHistory} color="hsl(var(--chart-1))" />}
         />
@@ -226,40 +242,155 @@ function SyncRing({ pct }: { pct: number }) {
   );
 }
 
-// Live P2P node graph: peers stream packets into the central node, which pulses.
-function PeerGraph({ animate }: { animate: boolean }) {
-  // Six peers evenly placed on a circle (radius 60) around the central node at (85,85).
-  const peers = [
-    [85, 25],
-    [137, 55],
-    [137, 115],
-    [85, 145],
-    [33, 115],
-    [33, 55],
-  ] as const;
+function SmartNodesGraph({
+  animate,
+  nodes,
+  loading,
+  failed,
+}: {
+  animate: boolean;
+  nodes: SmartNode[];
+  loading: boolean;
+  failed: boolean;
+}) {
+  const showLive = !loading && !failed && nodes.length > 0;
+
   return (
-    <svg viewBox="0 0 170 170" className="h-40 w-40" aria-hidden="true">
+    <div className="relative h-44 w-full max-w-[220px]">
+      <div
+        className={cn(
+          "transition-opacity duration-300",
+          showLive ? "pointer-events-none absolute inset-0 opacity-0" : "opacity-50",
+        )}
+        aria-hidden={showLive}
+      >
+        <PeerGraphPlaceholder />
+      </div>
+
+      {showLive ? (
+        <PeerGraph animate={animate} nodes={nodes} />
+      ) : (
+        <div
+          className={cn(
+            "absolute inset-0 flex items-center justify-center rounded-xl",
+            loading ? "backdrop-blur-sm bg-background/25" : "backdrop-blur-md bg-background/45",
+          )}
+        >
+          {failed ? (
+            <p className="px-3 text-center text-xs text-muted-foreground">Curated smart nodes unavailable</p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Decorative wireframe only — shown blurred until the curated pool API responds. */
+function PeerGraphPlaceholder() {
+  const cx = 100;
+  const cy = 92;
+  const radius = 58;
+  const slots = 4;
+  const dots = Array.from({ length: slots }, (_, index) => {
+    const angle = (2 * Math.PI * index) / slots - Math.PI / 2;
+    return [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)] as const;
+  });
+
+  return (
+    <svg viewBox="0 0 200 190" className="h-44 w-full">
+      <g stroke="hsl(var(--border))" strokeWidth="1.2" opacity="0.7">
+        {dots.map(([x, y]) => (
+          <line key={`pl-${x}-${y}`} x1={cx} y1={cy} x2={x} y2={y} />
+        ))}
+      </g>
+      <g fill="hsl(var(--muted-foreground))" opacity="0.35">
+        {dots.map(([x, y]) => (
+          <circle key={`pd-${x}-${y}`} cx={x} cy={y} r="5.5" />
+        ))}
+      </g>
+      <circle cx={cx} cy={cy} r="13" fill="hsl(var(--muted-foreground))" opacity="0.25" />
+    </svg>
+  );
+}
+
+// Live graph from curated pool (SSL + fee address + reachable).
+function PeerGraph({ animate, nodes }: { animate: boolean; nodes: SmartNode[] }) {
+  const cx = 100;
+  const cy = 92;
+  const radius = 58;
+  const positions = useMemo((): Array<{
+    node: SmartNode;
+    x: number;
+    y: number;
+    labelX: number;
+    labelY: number;
+    textAnchor: "start" | "middle" | "end";
+  }> => {
+    if (nodes.length === 0) return [];
+    return nodes.map((node, index) => {
+      const angle = (2 * Math.PI * index) / nodes.length - Math.PI / 2;
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+      const labelRadius = radius + 16;
+      const labelX = cx + labelRadius * Math.cos(angle);
+      const labelY = cy + labelRadius * Math.sin(angle);
+      const cos = Math.cos(angle);
+      const textAnchor: "start" | "middle" | "end" =
+        cos > 0.25 ? "start" : cos < -0.25 ? "end" : "middle";
+      return { node, x, y, labelX, labelY, textAnchor };
+    });
+  }, [nodes]);
+
+  const activeName = nodes.find((node) => node.isActive)?.name;
+
+  return (
+    <svg
+      viewBox="0 0 200 190"
+      className="h-44 w-full max-w-[220px]"
+      role="img"
+      aria-label={
+        nodes.length > 0
+          ? `Smart nodes: ${nodes.map((node) => node.name).join(", ")}`
+          : "Smart nodes unavailable"
+      }
+    >
       <g stroke="hsl(var(--border))" strokeWidth="1.2">
-        {peers.map(([x, y]) => (
-          <line key={`l-${x}-${y}`} x1="85" y1="85" x2={x} y2={y} />
+        {positions.map(({ node, x, y }) => (
+          <line key={`l-${node.id}`} x1={cx} y1={cy} x2={x} y2={y} />
         ))}
       </g>
-      <g fill="hsl(var(--chart-1))">
-        {peers.map(([x, y]) => (
-          <circle key={`d-${x}-${y}`} cx={x} cy={y} r="5.5" />
+      <g>
+        {positions.map(({ node, x, y, labelX, labelY, textAnchor }) => (
+          <g key={node.id}>
+            <circle
+              cx={x}
+              cy={y}
+              r="5.5"
+              fill={node.isActive ? "hsl(var(--primary))" : "hsl(var(--chart-1))"}
+            />
+            <text
+              x={labelX}
+              y={labelY}
+              textAnchor={textAnchor}
+              dominantBaseline="middle"
+              className="fill-muted-foreground text-[8px] font-medium"
+            >
+              {truncateNodeName(node.name)}
+            </text>
+          </g>
         ))}
       </g>
-      {animate ? (
+      {animate && positions.length > 0 ? (
         <>
-          {peers.map(([x, y], index) => {
+          {positions.map(({ node, x, y }, index) => {
             const begin = `${(index * 0.32).toFixed(2)}s`;
             return (
-              <circle key={`pkt-${x}-${y}`} r="2.6" fill="hsl(var(--chart-1))">
+              <circle key={`pkt-${node.id}`} r="2.6" fill="hsl(var(--chart-1))">
                 <animateMotion
                   dur="1.9s"
                   begin={begin}
                   repeatCount="indefinite"
-                  path={`M${x},${y} L85,85`}
+                  path={`M${x},${y} L${cx},${cy}`}
                 />
                 <animate
                   attributeName="opacity"
@@ -272,15 +403,29 @@ function PeerGraph({ animate }: { animate: boolean }) {
               </circle>
             );
           })}
-          <circle cx="85" cy="85" r="13" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5">
+          <circle cx={cx} cy={cy} r="13" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5">
             <animate attributeName="r" values="13;26" dur="2.4s" repeatCount="indefinite" />
             <animate attributeName="opacity" values="0.5;0" dur="2.4s" repeatCount="indefinite" />
           </circle>
         </>
       ) : null}
-      <circle cx="85" cy="85" r="13" fill="hsl(var(--primary))" />
+      <circle cx={cx} cy={cy} r="13" fill="hsl(var(--primary))" />
+      {activeName ? (
+        <text
+          x={cx}
+          y={cy + 28}
+          textAnchor="middle"
+          className="fill-foreground text-[9px] font-semibold"
+        >
+          {truncateNodeName(activeName)}
+        </text>
+      ) : null}
     </svg>
   );
+}
+
+function truncateNodeName(name: string, max = 14): string {
+  return name.length > max ? `${name.slice(0, max - 1)}…` : name;
 }
 
 // Recent blocks as a chain — each bar is a block, the newest is highlighted (and pulses).
@@ -310,13 +455,17 @@ function ChartCard({
   label,
   value,
   detail,
+  secondaryLabel,
+  secondaryValue,
   tone = "default",
   chart,
   delay,
 }: {
   label: string;
   value: string | number;
-  detail: string;
+  detail?: string;
+  secondaryLabel?: string;
+  secondaryValue?: string | number;
   tone?: "default" | "amber" | "incoming";
   chart: React.ReactNode;
   delay: number;
@@ -327,22 +476,25 @@ function ChartCard({
       : tone === "incoming"
         ? "text-wallet-incoming"
         : "text-foreground";
+  const metricClass = cn(
+    "mt-1 wrap-break-word font-mono text-2xl font-bold tracking-tight",
+    toneClass,
+  );
   return (
     <div
       className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 wallet-card flex min-h-[150px] flex-col p-5"
       style={{ animationDelay: `${delay}ms` }}
     >
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "mt-1 wrap-break-word font-mono text-2xl font-bold tracking-tight",
-          toneClass,
-        )}
-      >
-        {value}
-      </p>
+      <p className={metricClass}>{value}</p>
+      {secondaryLabel !== undefined && secondaryValue !== undefined ? (
+        <>
+          <p className="mt-2 text-sm text-muted-foreground">{secondaryLabel}</p>
+          <p className={metricClass}>{secondaryValue}</p>
+        </>
+      ) : null}
       <div className="mt-auto pt-4">{chart}</div>
-      <p className="mt-2 text-xs text-muted-foreground">{detail}</p>
+      {detail ? <p className="mt-2 text-xs text-muted-foreground">{detail}</p> : null}
     </div>
   );
 }
@@ -448,13 +600,6 @@ function formatDifficulty(difficulty: number) {
   if (difficulty >= 1e9) return `${(difficulty / 1e9).toFixed(2)} G`;
   if (difficulty >= 1e6) return `${(difficulty / 1e6).toFixed(2)} M`;
   return difficulty.toLocaleString();
-}
-
-function formatUptime(seconds: number) {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours === 0) return `${minutes}m`;
-  return `${hours}h ${minutes}m`;
 }
 
 function formatRelative(seconds: number) {

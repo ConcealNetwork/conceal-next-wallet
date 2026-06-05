@@ -268,6 +268,13 @@ export async function getNodeStatusOperation(): Promise<NodeStatus> {
   const lastBlockSecondsAgo =
     info.start_time > 0 ? Math.max(0, now - info.start_time) : config.avgBlockTime;
 
+  const version =
+    typeof info.version === "string" && info.version.trim().length > 0
+      ? info.version.trim()
+      : info.status === "OK"
+        ? ""
+        : String(info.status);
+
   return {
     url: nodeUrl,
     height: walletHeight,
@@ -276,14 +283,12 @@ export async function getNodeStatusOperation(): Promise<NodeStatus> {
     peersOut: info.outgoing_connections_count ?? 0,
     peersIn: info.incoming_connections_count ?? 0,
     isCustom: Boolean(customNodeUrl),
-    version: String(info.status === "OK" ? "Conceal Core" : info.status),
+    version,
     difficulty: info.difficulty ?? 0,
     hashrate: info.difficulty > 0 ? Math.round(info.difficulty / config.avgBlockTime) : 0,
     mempool: info.transactions_pool_size ?? 0,
     lastBlockSecondsAgo,
     avgBlockTimeSeconds: config.avgBlockTime,
-    latencyMs: 0,
-    uptimeSeconds: info.start_time > 0 ? Math.max(0, now - info.start_time) : 0,
     heightHistory: [walletHeight],
     hashrateHistory: [info.difficulty > 0 ? info.difficulty / config.avgBlockTime / 1_000_000 : 0],
     peersHistory: [(info.white_peerlist_size ?? 0) + (info.grey_peerlist_size ?? 0)],

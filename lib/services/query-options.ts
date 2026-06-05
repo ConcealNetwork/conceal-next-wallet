@@ -16,3 +16,12 @@ export const marketHistoryQueryOptions = {
 export const networkQueryOptions = {
   refetchInterval: env.useMockWallet ? (false as const) : NETWORK_POLL_MS,
 };
+
+/** Pool list — fetched once when the Network page mounts; not polled or invalidated on sync. */
+export const smartNodesQueryOptions = {
+  staleTime: Number.POSITIVE_INFINITY,
+  gcTime: 30 * 60 * 1000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchInterval: false as const,
+};

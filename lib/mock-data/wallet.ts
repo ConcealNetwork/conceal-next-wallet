@@ -331,15 +331,13 @@ export const mockNodeStatus: NodeStatus = {
   peersOut: 12,
   peersIn: 6,
   isCustom: false,
-  version: "Conceal Core 6.9.2",
+  version: "6.7.4",
   // TODO(backend): replace with real values from the Conceal daemon `getinfo`
   difficulty: 1284560233,
   hashrate: 10704668, // difficulty / 120s block target ≈ 10.70 MH/s
   mempool: 3,
   lastBlockSecondsAgo: 47,
   avgBlockTimeSeconds: 118,
-  latencyMs: 42,
-  uptimeSeconds: 15120, // 4h 12m
   heightHistory: [1971330, 1971331, 1971332, 1971333, 1971334, 1971335, 1971336, 1971337],
   hashrateHistory: [10.21, 10.38, 10.29, 10.62, 10.55, 10.71, 10.64, 10.7],
   peersHistory: [14, 15, 14, 16, 17, 16, 18, 18],
