@@ -4,7 +4,6 @@ import type { NetworkService } from "@/lib/services/network.service";
 
 export const mockNetworkService: NetworkService = {
   async getNodeStatus() {
-    // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
     return clone(mockNodeStatus);
   },

@@ -69,3 +69,15 @@ export function useWalletDisconnect() {
     closeSession();
   };
 }
+
+export function useWalletDelete() {
+  const { closeSession } = useWalletSession();
+
+  return function deleteWallet() {
+    void (async () => {
+      await services.wallet.deleteStoredWallet();
+      resetMessageNavBadge();
+      closeSession();
+    })();
+  };
+}

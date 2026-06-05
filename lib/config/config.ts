@@ -24,6 +24,21 @@ export const SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE
 /** Sent message tx amount (remote node operator fee paid). */
 export const SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
 
+/** Full ticker label (settings + amount formatting). */
+export const COIN_TICKER_FULL = "CCX";
+/** Short Conceal symbol shown when compact ticker is enabled. */
+export const COIN_TICKER_SHORT = "₡";
+
+/** Explorer pool registry base (smart-node discovery). */
+export const PUBLIC_NODES_POOL_BASE = "https://explorer.conceal.network/pool";
+
+/** Curated nodes only: SSL + fee address + reachable (same filter for nodeList + Network UI). */
+export const CURATED_POOL_LIST_QUERY = "hasFeeAddr=true&isReachable=true&hasSSL=true";
+
+export function getCuratedPoolListUrl(poolBase: string = PUBLIC_NODES_POOL_BASE): string {
+  return `${poolBase.replace(/\/$/, "")}/list?${CURATED_POOL_LIST_QUERY}`;
+}
+
 type WalletConfigBigInt = {
   new (value: string): { valueOf(): number };
 };
@@ -37,7 +52,8 @@ export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
       "https://explorer.conceal.network/daemon/",
       "https://ccxapi.conceal.network/daemon/",
     ],
-    publicNodes: "https://explorer.conceal.network/pool",
+    publicNodes: PUBLIC_NODES_POOL_BASE,
+    curatedPoolListQuery: CURATED_POOL_LIST_QUERY,
     mainnetExplorerUrl: "https://explorer.conceal.network/",
     mainnetExplorerUrlHash:
       "https://explorer.conceal.network/index.html?hash={ID}#blockchain_transaction",

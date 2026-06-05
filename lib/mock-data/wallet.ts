@@ -15,6 +15,9 @@ import { ccxAmount, usdAmount } from "@/lib/utils";
 export const MOCK_ADDRESS =
   "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m";
 
+/** ccx7 addresses must be 98 chars for QR import URIs (export PDF). */
+export const MOCK_EXPORT_ADDRESS = MOCK_ADDRESS.padEnd(98, "0");
+
 export const mockWalletInfo: WalletInfo = {
   address: MOCK_ADDRESS,
   balanceTotal: ccxAmount(1250.5),
@@ -328,15 +331,13 @@ export const mockNodeStatus: NodeStatus = {
   peersOut: 12,
   peersIn: 6,
   isCustom: false,
-  version: "Conceal Core 6.9.2",
+  version: "6.7.4",
   // TODO(backend): replace with real values from the Conceal daemon `getinfo`
   difficulty: 1284560233,
   hashrate: 10704668, // difficulty / 120s block target ≈ 10.70 MH/s
   mempool: 3,
   lastBlockSecondsAgo: 47,
   avgBlockTimeSeconds: 118,
-  latencyMs: 42,
-  uptimeSeconds: 15120, // 4h 12m
   heightHistory: [1971330, 1971331, 1971332, 1971333, 1971334, 1971335, 1971336, 1971337],
   hashrateHistory: [10.21, 10.38, 10.29, 10.62, 10.55, 10.71, 10.64, 10.7],
   peersHistory: [14, 15, 14, 16, 17, 16, 18, 18],
@@ -354,8 +355,10 @@ export const mockSettings: WalletSettings = {
 };
 
 export const mockExportData = {
+  address: MOCK_EXPORT_ADDRESS,
   mnemonic:
     "mock amber orbit velvet zero carbon river lunar basic sample wallet conceal never real crypto placeholder safe display only",
   spendKey: "mock-spend-key-placeholder-not-real-".padEnd(98, "x"),
   viewKey: "mock-view-key-placeholder-not-real-".padEnd(98, "y"),
+  creationHeight: mockWalletInfo.creationHeight,
 };

@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
-import { ccxToNumber, cn, formatCcx, formatUsd, walletBalanceUsd } from "@/lib/utils";
+import { ccxToNumber, cn, formatCcx, formatUsd, stripTickerSuffix, walletBalanceUsd } from "@/lib/utils";
+import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
 
 type BalanceHeroProps = {
   wallet: WalletInfo;
@@ -37,7 +38,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   const availablePct = getPct(available, total);
   const changeLabel = `${market.change24hPct.toFixed(2)}%`;
   const availableLabel = useCountUp(available, {
-    formatter: (value) => formatCcx(value).replace(" CCX", ""),
+    formatter: (value) => stripTickerSuffix(formatCcx(value)),
   });
   const totalLabel = useCountUp(total, {
     formatter: (value) => formatCcx(value),
@@ -88,7 +89,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
             <p className="text-sm text-muted-foreground">Available · ready to spend</p>
             <p className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]">
               {availableLabel}
-              <span className="ml-2 align-baseline text-xl font-medium text-primary">CCX</span>
+              <TickerBadge className="ml-2 align-baseline text-xl font-medium text-primary" />
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               of <span className="font-semibold text-muted-foreground">{totalLabel}</span> total ·{" "}
@@ -145,7 +146,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
                 <span>{segment.label}</span>
               </div>
               <p className="mt-2 truncate font-mono text-lg font-bold text-white">
-                {formatCcx(segment.value).replace(" CCX", "")}
+                {stripTickerSuffix(formatCcx(segment.value))}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{segment.note}</p>
             </div>

@@ -13,10 +13,28 @@ export const walletCopy = {
   mnemonicHint: env.useMockWallet
     ? "These words are not a real wallet seed."
     : "Write these words down and store them offline. Anyone with this phrase can spend your funds.",
+  mnemonicLossWarning:
+    "I understand that if I lose this seed phrase or the related keys, this wallet and its funds will be totally unretrievable.",
+  mnemonicDoubleClickCopy: "Double-click to copy",
+  mnemonicCopied: "Copied",
+  passwordHintDisclaimer:
+    "These are recommendations for a strong password. You may continue with any password that matches.",
   exportAlertTitle: env.useMockWallet ? "Mock-only export data" : "Sensitive backup material",
   exportAlertBody: env.useMockWallet
     ? "Displayed values are placeholders for layout review only."
     : "Never share your mnemonic or private keys. Store backups offline.",
+  exportPageSubtitle: env.useMockWallet
+    ? "Back up placeholder wallet material"
+    : "Back up your encrypted wallet file or copy keys offline",
+  downloadBackupDialogTitle: "Download encrypted backup",
+  downloadBackupDialogDescription:
+    "Choose a file name and confirm your wallet password. The file is encrypted with the same password used to unlock this wallet.",
+  downloadBackupFilenameLabel: "File name",
+  downloadBackupFilenameHint: 'Saved as "{filename}" in your downloads folder.',
+  downloadBackupPasswordLabel: "Wallet password",
+  downloadBackupSuccess: "Backup downloaded.",
+  exportPdfSuccess: "PDF backup downloaded.",
+  exportPdfButton: "Export as PDF",
   passwordChanged: env.useMockWallet ? "Mock password changed." : "Wallet password updated.",
   sendConfirm: env.useMockWallet
     ? "Confirm this mock send? No transaction will be broadcast."
@@ -42,6 +60,9 @@ export const walletCopy = {
   messageSendSuccess: env.useMockWallet
     ? "Mock message sent."
     : "Message submitted to the network.",
+  disconnectConfirm: env.useMockWallet
+    ? "This clears the current mock wallet session and returns you to the open wallet screen."
+    : "This locks the wallet and returns you to the open wallet screen. Your encrypted wallet stays on this device.",
 } as const;
 
 /** HTML `required` on import fields — relaxed in mock so you can click through quickly. */

@@ -1,8 +1,9 @@
+"use client";
+
+import { useDisplayTicker } from "@/lib/ui/ticker-preference-provider";
 import { cn } from "@/lib/utils";
 
-/** Renders a formatted amount string with the "CCX" ticker in the brand orange,
- *  matching the landing hero card. Non-CCX text (numbers, "$0.045", "12 months")
- *  is passed through untouched, so it's safe to wrap any value string. */
+/** Renders a formatted amount string with the active ticker in the brand orange. */
 export function CcxAmount({
   children,
   className,
@@ -10,19 +11,24 @@ export function CcxAmount({
   children: string | number;
   className?: string;
 }) {
+  const ticker = useDisplayTicker();
+  const parts = String(children).split(new RegExp(`(${escapeRegExp(ticker)})`, "g"));
+
   return (
     <>
-      {String(children)
-        .split(/(CCX)/g)
-        .map((part, index) =>
-          part === "CCX" ? (
-            <span key={index} className={cn("text-primary", className)}>
-              CCX
-            </span>
-          ) : (
-            part
-          ),
-        )}
+      {parts.map((part, index) =>
+        part === ticker ? (
+          <span key={index} className={cn("text-primary", className)}>
+            {ticker}
+          </span>
+        ) : (
+          part
+        ),
+      )}
     </>
   );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

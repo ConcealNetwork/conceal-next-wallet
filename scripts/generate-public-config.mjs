@@ -40,6 +40,7 @@ myGlobal.config = {
         "https://ccxapi.conceal.network/daemon/"
     ],
     publicNodes: "https://explorer.conceal.network/pool",
+    curatedPoolListQuery: "hasFeeAddr=true&isReachable=true&hasSSL=true",
     mainnetExplorerUrl: "https://explorer.conceal.network/",
     mainnetExplorerUrlHash: "https://explorer.conceal.network/index.html?hash={ID}#blockchain_transaction",
     mainnetExplorerUrlBlock: "https://explorer.conceal.network/index.html?hash={ID}#blockchain_block",

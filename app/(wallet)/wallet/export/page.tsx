@@ -1,28 +1,79 @@
 "use client";
 
-import { Eye, FileDown } from "lucide-react";
+import { Eye, FileDown, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CopyButton, PageHeader, SectionCard } from "@/components/wallet/common";
 import { services } from "@/lib/services";
 import type { ExportWalletData } from "@/lib/services/wallet.service";
+import { backupDownloadFilename, downloadJsonFile } from "@/lib/ui/download-json-file";
 import { walletCopy } from "@/lib/ui/wallet-copy";
+import { formatWalletBackupMarkdown } from "@/lib/ui/wallet-export-backup";
 
 export default function ExportPage() {
   const [data, setData] = useState<ExportWalletData | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [backupName, setBackupName] = useState("wallet");
+  const [backupPassword, setBackupPassword] = useState("");
+  const [downloading, setDownloading] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   useEffect(() => {
     services.wallet.exportWallet().then(setData);
   }, []);
 
   const hidden = "•••• •••• •••• •••• •••• ••••";
+  const downloadFilename = backupDownloadFilename(backupName);
+
+  async function handleDownloadBackup(event: React.FormEvent) {
+    event.preventDefault();
+    if (!backupPassword) return;
+
+    setDownloading(true);
+    try {
+      const result = await services.wallet.downloadWalletBackup({
+        filename: backupName,
+        password: backupPassword,
+      });
+      downloadJsonFile(result.filename, result.payload);
+      toast.success(walletCopy.downloadBackupSuccess);
+      setDownloadOpen(false);
+      setBackupPassword("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to download backup.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    setExportingPdf(true);
+    try {
+      await services.wallet.exportWalletPdf();
+      toast.success(walletCopy.exportPdfSuccess);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }
 
   return (
     <>
-      <PageHeader title="Export" subtitle="Back up placeholder wallet material" />
+      <PageHeader title="Export" subtitle={walletCopy.exportPageSubtitle} />
       <Alert className="mb-6 animate-rise-in border-wallet-amber bg-wallet-amber/10 motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <AlertTitle>{walletCopy.exportAlertTitle}</AlertTitle>
         <AlertDescription>{walletCopy.exportAlertBody}</AlertDescription>
@@ -59,16 +110,21 @@ export default function ExportPage() {
                 {revealed ? "Hide" : "Reveal"}
               </Button>
               {data && (
-                <CopyButton
-                  value={`${data.mnemonic}\n${data.spendKey}\n${data.viewKey}`}
-                  label="Copy Backup"
-                />
+                <CopyButton value={formatWalletBackupMarkdown(data)} label="Copy Backup" />
               )}
-              <Button
-                type="button"
-                className="gap-2"
-                onClick={() => toast.success("Mock backup download prepared.")}
-              >
+              {data && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  disabled={exportingPdf}
+                  onClick={() => void handleExportPdf()}
+                >
+                  <FileText className="size-4" aria-hidden="true" />
+                  {exportingPdf ? "Exporting…" : walletCopy.exportPdfButton}
+                </Button>
+              )}
+              <Button type="button" className="gap-2" onClick={() => setDownloadOpen(true)}>
                 <FileDown className="size-4" aria-hidden="true" />
                 Download backup
               </Button>
@@ -76,6 +132,50 @@ export default function ExportPage() {
           </div>
         </SectionCard>
       </div>
+
+      <Dialog open={downloadOpen} onOpenChange={setDownloadOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{walletCopy.downloadBackupDialogTitle}</DialogTitle>
+            <DialogDescription>{walletCopy.downloadBackupDialogDescription}</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={(event) => void handleDownloadBackup(event)}>
+            <div className="space-y-2">
+              <Label htmlFor="backup-filename">{walletCopy.downloadBackupFilenameLabel}</Label>
+              <Input
+                id="backup-filename"
+                value={backupName}
+                onChange={(event) => setBackupName(event.target.value)}
+                placeholder="wallet"
+                autoComplete="off"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                {walletCopy.downloadBackupFilenameHint.replace("{filename}", downloadFilename)}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="backup-password">{walletCopy.downloadBackupPasswordLabel}</Label>
+              <Input
+                id="backup-password"
+                type="password"
+                value={backupPassword}
+                onChange={(event) => setBackupPassword(event.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDownloadOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={downloading || !backupPassword}>
+                {downloading ? "Downloading…" : "Download"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

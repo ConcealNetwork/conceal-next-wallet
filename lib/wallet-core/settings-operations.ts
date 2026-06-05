@@ -2,6 +2,7 @@
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
 import type { WalletSettings } from "@/lib/types";
 import { readSpeedFromSyncSpeed, syncSpeedFromReadSpeed } from "@/lib/ui/sync-speed";
+import { testNodeUrlReachability, validateNodeUrlFormat } from "@/lib/validation/node-url";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Storage } from "./Storage";
 import { getRuntimeWallet, getRuntimeWatchdog } from "./wallet-runtime";
@@ -24,17 +25,26 @@ function requireWatchdog() {
   return watchdog;
 }
 
+function defaultNodeUrl(): string {
+  return config.nodeList?.[0] ?? "https://explorer.conceal.network/daemon/";
+}
+
+function resolveActiveNodeUrl(explorer: ReturnType<typeof BlockchainExplorerProvider.getInstance>): string {
+  return explorer.getActiveNodeUrl?.() ?? defaultNodeUrl();
+}
+
 async function mapRuntimeSettings(): Promise<WalletSettings> {
   await ensureAllWalletLegacyLibs();
   const wallet = requireOpenWallet();
+  const explorer = BlockchainExplorerProvider.getInstance();
   const customNodeUrl = (await Storage.getItem("customNodeUrl", null)) as string | null;
   const useCustomNode = Boolean(customNodeUrl ?? wallet.options.customNode);
-  const defaultNodeUrl = config.nodeList?.[0] ?? "https://explorer.conceal.network/daemon/";
+  const activeNodeUrl = resolveActiveNodeUrl(explorer);
 
   return {
     ...uiOnlySettings,
     useCustomNode,
-    nodeUrl: useCustomNode ? (customNodeUrl ?? wallet.options.nodeUrl) : defaultNodeUrl,
+    nodeUrl: useCustomNode ? (customNodeUrl ?? wallet.options.nodeUrl) : activeNodeUrl,
     readMinorTx: wallet.options.checkMinerTx,
     syncSpeed: syncSpeedFromReadSpeed(wallet.options.readSpeed),
     creationHeight: wallet.creationHeight,
@@ -72,24 +82,46 @@ async function applyConnectionSettings(input: Partial<WalletSettings>) {
   const oldCustomNode = wallet.options.customNode;
   const oldNodeUrl = wallet.options.nodeUrl;
 
-  if (typeof input.useCustomNode !== "undefined" || typeof input.nodeUrl !== "undefined") {
-    applyWalletOptionUpdates(wallet, input);
+  const nextCustomNode =
+    typeof input.useCustomNode !== "undefined" ? input.useCustomNode : oldCustomNode;
 
-    if (wallet.options.customNode) {
-      await Storage.setItem("customNodeUrl", wallet.options.nodeUrl);
-    } else {
-      await Storage.remove("customNodeUrl");
-    }
-
-    watchdog.setupWorkers();
-    watchdog.signalWalletUpdate();
-
-    if (oldCustomNode !== wallet.options.customNode) {
-      await explorer.resetNodes();
-    } else if (wallet.options.customNode && oldNodeUrl !== wallet.options.nodeUrl) {
-      await explorer.resetNodes();
-    }
+  let nextNodeUrl = oldNodeUrl;
+  if (typeof input.nodeUrl !== "undefined") {
+    nextNodeUrl = input.nodeUrl;
+  } else if (nextCustomNode && !oldCustomNode) {
+    nextNodeUrl = resolveActiveNodeUrl(explorer);
   }
+
+  if (nextCustomNode) {
+    const format = validateNodeUrlFormat(nextNodeUrl);
+    if (!format.ok) {
+      throw new Error(format.errors.join(" "));
+    }
+
+    nextNodeUrl = format.normalized;
+    await testNodeUrlReachability(nextNodeUrl);
+  }
+
+  applyWalletOptionUpdates(wallet, {
+    useCustomNode: nextCustomNode,
+    nodeUrl: nextNodeUrl,
+  });
+
+  if (nextCustomNode) {
+    await Storage.setItem("customNodeUrl", nextNodeUrl);
+  } else {
+    await Storage.remove("customNodeUrl");
+  }
+
+  watchdog.setupWorkers();
+  watchdog.signalWalletUpdate();
+
+  if (oldCustomNode !== nextCustomNode || (nextCustomNode && oldNodeUrl !== nextNodeUrl)) {
+    await explorer.resetNodes();
+  }
+
+  wallet.signalChanged();
+  wallet.notify();
 }
 
 export async function getSettingsOperation(): Promise<WalletSettings> {

@@ -11,15 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
+import {
+  WalletPasswordStrengthPanel,
+} from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { cn } from "@/lib/utils";
 
 const passwordSchema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z.string().min(8, "Use at least 8 characters"),
-    confirmPassword: z.string().min(8, "Confirm the new password"),
+    newPassword: z.string().min(1, "New password is required"),
+    confirmPassword: z.string().min(1, "Confirm the new password"),
   })
   .refine((value) => value.newPassword === value.confirmPassword, {
     message: "Passwords must match",
@@ -27,25 +29,6 @@ const passwordSchema = z
   });
 
 type PasswordForm = z.infer<typeof passwordSchema>;
-
-function strength(password: string) {
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
-  if (/\d/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
-  return score;
-}
-
-const STRENGTH = [
-  { label: "Too short", className: "bg-wallet-outgoing" },
-  { label: "Weak", className: "bg-wallet-outgoing" },
-  { label: "Fair", className: "bg-primary" },
-  { label: "Good", className: "bg-primary" },
-  { label: "Strong", className: "bg-wallet-incoming" },
-];
-
-const STRENGTH_BAR_KEYS = ["strength-1", "strength-2", "strength-3", "strength-4"] as const;
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -56,7 +39,6 @@ export default function ChangePasswordPage() {
   });
 
   const newPassword = useWatch({ control: form.control, name: "newPassword" }) || "";
-  const score = strength(newPassword);
 
   async function submit(values: PasswordForm) {
     try {
@@ -108,22 +90,7 @@ export default function ChangePasswordPage() {
                 type={show ? "text" : "password"}
                 {...form.register("newPassword")}
               />
-              {newPassword.length > 0 && (
-                <div className="space-y-1">
-                  <div className="flex gap-1" aria-hidden="true">
-                    {STRENGTH_BAR_KEYS.map((key, index) => (
-                      <span
-                        key={key}
-                        className={cn(
-                          "h-1 flex-1 rounded-full transition-colors duration-200",
-                          index < score ? STRENGTH[score].className : "bg-secondary",
-                        )}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Strength: {STRENGTH[score].label}</p>
-                </div>
-              )}
+              <WalletPasswordStrengthPanel password={newPassword} />
               {form.formState.errors.newPassword && (
                 <p className="text-sm text-wallet-outgoing">
                   {form.formState.errors.newPassword.message}

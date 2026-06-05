@@ -1,8 +1,12 @@
 import type { WalletInfo } from "@/lib/types";
 
-export type CreateWalletInput = {
-  name: string;
+export type FinalizeCreateWalletInput = {
   password: string;
+};
+
+export type PrepareCreateWalletResult = {
+  mnemonic: string;
+  address: string;
 };
 
 export type OpenWalletInput = {
@@ -34,9 +38,21 @@ export type ImportWalletInput =
   | { method: "open"; password: string; label?: string };
 
 export type ExportWalletData = {
+  address: string;
   mnemonic: string;
   spendKey: string;
   viewKey: string;
+  creationHeight: number;
+};
+
+export type DownloadWalletBackupInput = {
+  filename: string;
+  password: string;
+};
+
+export type DownloadWalletBackupResult = {
+  filename: string;
+  payload: unknown;
 };
 
 export interface WalletService {
@@ -44,9 +60,14 @@ export interface WalletService {
   refreshWallet(): Promise<WalletInfo>;
   hasStoredWallet(): Promise<boolean>;
   openWallet(input?: OpenWalletInput): Promise<WalletInfo>;
-  createWallet(input: CreateWalletInput): Promise<{ wallet: WalletInfo; mnemonic: string }>;
+  prepareCreateWallet(): Promise<PrepareCreateWalletResult>;
+  finalizeCreateWallet(input: FinalizeCreateWalletInput): Promise<WalletInfo>;
+  deleteStoredWallet(): Promise<void>;
+  abortCreateWallet(): Promise<void>;
   importWallet(input: ImportWalletInput): Promise<WalletInfo>;
   exportWallet(): Promise<ExportWalletData>;
+  exportWalletPdf(): Promise<{ filename: string }>;
+  downloadWalletBackup(input: DownloadWalletBackupInput): Promise<DownloadWalletBackupResult>;
   changePassword(input: { currentPassword: string; newPassword: string }): Promise<{ ok: true }>;
   disconnect?(): Promise<void>;
 }

@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { CcxAmount, UsdAmount } from "@/lib/types";
+import { getDisplayTicker } from "@/lib/ui/ticker-preference";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -38,8 +39,10 @@ export function formatCcx(amount: CcxAmount | number, decimals = 2): string {
   return `${value.toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  })} CCX`;
+  })} ${getDisplayTicker()}`;
 }
+
+export { stripTickerSuffix } from "@/lib/ui/ticker-preference";
 
 export function formatUsd(amount: UsdAmount | number, decimals = 4): string {
   const value = typeof amount === "number" ? amount : amount.value;

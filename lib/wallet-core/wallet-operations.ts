@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
+import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 import type { ExportWalletData } from "@/lib/services/wallet.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
@@ -13,6 +14,7 @@ import { Mnemonic } from "./Mnemonic";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import { Wallet } from "./Wallet";
 import { WalletRepository } from "./WalletRepository";
+import { StorageOld } from "./StorageOld";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Storage } from "./Storage";
 import {
@@ -27,17 +29,21 @@ import {
   mapCoreDeposit,
   mapCoreMessage,
   mapWalletToInfo,
+  newWalletCreationHeight,
 } from "./mappers";
 import { InterestCalculator } from "./Interest";
 import { Deposit as CoreDeposit } from "./Transaction";
 import {
+  clearPendingWalletCreation,
   disconnectWalletRuntime,
   getCreatedMnemonic,
+  getPendingWalletCreation,
   getRuntimeWallet,
   getRuntimeWalletWorker,
   getRuntimeWatchdog,
   openWalletRuntime,
   setCreatedMnemonic,
+  setPendingWalletCreation,
 } from "./wallet-runtime";
 import { CoinUri } from "./CoinUri";
 
@@ -61,10 +67,10 @@ export async function unlockStoredWallet(password: string): Promise<WalletInfo> 
   return mapWalletToInfo(wallet, height);
 }
 
-export async function createWalletOperation(
-  name: string,
-  password: string,
-): Promise<{ wallet: WalletInfo; mnemonic: string }> {
+export async function generateWalletDraftOperation(): Promise<{
+  mnemonic: string;
+  address: string;
+}> {
   await prepareLegacyRuntime();
   const explorer = BlockchainExplorerProvider.getInstance();
   const currentHeight = await explorer.getHeight();
@@ -73,19 +79,38 @@ export async function createWalletOperation(
   const keys = Cn.create_address(seed);
   const wallet = new Wallet();
   wallet.keys = KeysRepository.fromPriv(keys.spend.sec, keys.view.sec);
-  wallet.lastHeight = clampImportHeight(undefined, currentHeight);
+  wallet.lastHeight = newWalletCreationHeight(currentHeight);
   wallet.creationHeight = wallet.lastHeight;
 
   const phrase = Mnemonic.mn_encode(wallet.keys.priv.spend, "english");
   if (phrase === null) {
     throw new Error("Failed to encode mnemonic.");
   }
-  setCreatedMnemonic(phrase);
-  await openWalletRuntime(wallet, password);
+
+  setPendingWalletCreation(wallet, phrase);
   return {
-    wallet: mapWalletToInfo(wallet, currentHeight),
     mnemonic: phrase,
+    address: wallet.getPublicAddress(),
   };
+}
+
+export function abortWalletCreationOperation(): void {
+  clearPendingWalletCreation();
+}
+
+export async function finalizeWalletCreationOperation(password: string): Promise<WalletInfo> {
+  const pending = getPendingWalletCreation();
+  if (pending === null) {
+    throw new Error("No wallet draft found. Start creation again.");
+  }
+
+  await prepareLegacyRuntime();
+  setCreatedMnemonic(pending.mnemonic);
+  await openWalletRuntime(pending.wallet, password);
+  clearPendingWalletCreation();
+
+  const height = await BlockchainExplorerProvider.getInstance().getHeight();
+  return mapWalletToInfo(pending.wallet, height);
 }
 
 export async function importWalletOperation(input: ImportWalletInput): Promise<WalletInfo> {
@@ -243,6 +268,13 @@ export async function getNodeStatusOperation(): Promise<NodeStatus> {
   const lastBlockSecondsAgo =
     info.start_time > 0 ? Math.max(0, now - info.start_time) : config.avgBlockTime;
 
+  const version =
+    typeof info.version === "string" && info.version.trim().length > 0
+      ? info.version.trim()
+      : info.status === "OK"
+        ? ""
+        : String(info.status);
+
   return {
     url: nodeUrl,
     height: walletHeight,
@@ -251,14 +283,12 @@ export async function getNodeStatusOperation(): Promise<NodeStatus> {
     peersOut: info.outgoing_connections_count ?? 0,
     peersIn: info.incoming_connections_count ?? 0,
     isCustom: Boolean(customNodeUrl),
-    version: String(info.status === "OK" ? "Conceal Core" : info.status),
+    version,
     difficulty: info.difficulty ?? 0,
     hashrate: info.difficulty > 0 ? Math.round(info.difficulty / config.avgBlockTime) : 0,
     mempool: info.transactions_pool_size ?? 0,
     lastBlockSecondsAgo,
     avgBlockTimeSeconds: config.avgBlockTime,
-    latencyMs: 0,
-    uptimeSeconds: info.start_time > 0 ? Math.max(0, now - info.start_time) : 0,
     heightHistory: [walletHeight],
     hashrateHistory: [info.difficulty > 0 ? info.difficulty / config.avgBlockTime / 1_000_000 : 0],
     peersHistory: [(info.white_peerlist_size ?? 0) + (info.grey_peerlist_size ?? 0)],
@@ -273,9 +303,37 @@ export async function exportWalletOperation(): Promise<ExportWalletData> {
   const mnemonic =
     getCreatedMnemonic() || Mnemonic.mn_encode(wallet.keys.priv.spend, "english") || "";
   return {
+    address: wallet.getPublicAddress(),
     mnemonic,
     spendKey: wallet.keys.priv.spend,
     viewKey: wallet.keys.priv.view,
+    creationHeight: wallet.creationHeight,
+  };
+}
+
+export async function exportWalletPdfOperation(): Promise<{ filename: string }> {
+  const data = await exportWalletOperation();
+  const { downloadWalletExportPdf } = await import("@/lib/ui/wallet-export-pdf");
+  const filename = await downloadWalletExportPdf(data);
+  return { filename };
+}
+
+export async function downloadWalletBackupOperation(input: {
+  filename: string;
+  password: string;
+}): Promise<{ filename: string; payload: unknown }> {
+  await ensureAllWalletLegacyLibs();
+  const verified = await WalletRepository.getLocalWalletWithPassword(input.password);
+  if (verified === null) {
+    throw new Error("Invalid password.");
+  }
+  const wallet = getRuntimeWallet();
+  if (wallet === null) {
+    throw new Error("Wallet is not open.");
+  }
+  return {
+    filename: backupDownloadFilename(input.filename),
+    payload: WalletRepository.getEncrypted(wallet, input.password),
   };
 }
 
@@ -693,6 +751,17 @@ function normalizeWalletOperationError(error: unknown, fallback: string): Error 
     return new Error(`${fallback} ${String((error as { error: unknown }).error)}`);
   }
   return new Error(fallback);
+}
+
+export async function deleteStoredWalletOperation(): Promise<void> {
+  await ensureAllWalletLegacyLibs();
+  disconnectWalletRuntime();
+  await WalletRepository.deleteLocalCopy();
+  try {
+    await StorageOld.remove("wallet");
+  } catch {
+    // best-effort legacy cleanup
+  }
 }
 
 export { disconnectWalletRuntime, hasStoredWallet } from "./wallet-runtime";
