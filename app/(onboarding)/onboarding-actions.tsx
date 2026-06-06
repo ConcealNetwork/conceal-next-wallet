@@ -251,6 +251,7 @@ export function ImportKeysForm() {
     null,
   );
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [showAdvancedViewKey, setShowAdvancedViewKey] = useState(false);
 
   // Fetch the live chain tip the first time the History step opens, so the
   // height estimate anchors on the real network height instead of the baked-in
@@ -300,6 +301,10 @@ export function ImportKeysForm() {
   }
   function goNext() {
     if (stepCanAdvance && step < WIZARD_STEPS.length) setStep((value) => value + 1);
+  }
+  function toggleAdvancedViewKey() {
+    if (showAdvancedViewKey) setPrivateViewKey(""); // closing → fall back to the derived view key
+    setShowAdvancedViewKey((value) => !value);
   }
 
   async function submit() {
@@ -432,20 +437,46 @@ export function ImportKeysForm() {
               )}
             </div>
           )}
-          <LabeledTextField
-            id="import-keys-view"
-            label="View key"
-            value={privateViewKey}
-            onChange={setPrivateViewKey}
-            placeholder={viewOnly ? "64-character hex view key" : "Leave blank if unsure"}
-            hint={
-              viewOnly
-                ? "Your private view key — 64 hexadecimal characters."
-                : "Optional — we'll work it out from your spend key."
-            }
-            invalid={privateViewKey !== "" && !viewKeyValid}
-            error="View key must be 64 hexadecimal characters."
-          />
+          {viewOnly ? (
+            <LabeledTextField
+              id="import-keys-view"
+              label="View key"
+              value={privateViewKey}
+              onChange={setPrivateViewKey}
+              placeholder="64-character hex view key"
+              hint="Your private view key — 64 hexadecimal characters."
+              invalid={privateViewKey !== "" && !viewKeyValid}
+              error="View key must be 64 hexadecimal characters."
+            />
+          ) : showAdvancedViewKey ? (
+            <div className="space-y-2">
+              <LabeledTextField
+                id="import-keys-view"
+                label="View key"
+                value={privateViewKey}
+                onChange={setPrivateViewKey}
+                placeholder="64-character hex view key"
+                hint="Only if your wallet uses a view key that isn't derived from your spend key. Most don't — leave this off and we'll work it out."
+                invalid={privateViewKey !== "" && !viewKeyValid}
+                error="View key must be 64 hexadecimal characters."
+              />
+              <button
+                type="button"
+                onClick={toggleAdvancedViewKey}
+                className="cursor-pointer text-xs text-primary underline underline-offset-4"
+              >
+                Use the derived view key instead
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleAdvancedViewKey}
+              className="cursor-pointer text-xs text-primary underline underline-offset-4"
+            >
+              Advanced: my wallet has a separate view key
+            </button>
+          )}
         </div>
       )}
 

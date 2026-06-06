@@ -59,6 +59,21 @@ describe("ImportKeysForm wizard", () => {
     expect(screen.queryByLabelText("Spend key")).not.toBeInTheDocument();
   });
 
+  it("keeps the view key behind an Advanced link in full mode", () => {
+    render(<ImportKeysForm />);
+    clickContinue(); // → Keys (full wallet)
+    expect(screen.queryByLabelText("View key")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /separate view key/i }));
+    expect(screen.getByLabelText("View key")).toBeInTheDocument();
+  });
+
+  it("always shows the view key in view-only mode (it can't be derived)", () => {
+    render(<ImportKeysForm />);
+    fireEvent.click(screen.getByRole("button", { name: /View-only/ }));
+    clickContinue();
+    expect(screen.getByLabelText("View key")).toBeInTheDocument();
+  });
+
   it("cannot advance past Keys until a valid 64-hex key is entered", () => {
     render(<ImportKeysForm />);
     clickContinue(); // → Keys
