@@ -43,12 +43,29 @@ function targetDate(preset: ImportHeightPreset, now: Date): Date | null {
   }
 }
 
-/** Estimated scan-start block for a preset. Never negative; "unsure" → 0. */
-export function estimateScanHeight(preset: ImportHeightPreset, now: Date = new Date()): number {
+/** Offline fallback tip, extrapolated from the baked-in reference. */
+function extrapolatedTip(now: Date): number {
+  return REF_HEIGHT + (now.getTime() - REF_DATE_MS) / 1000 / AVG_BLOCK_TIME_SECONDS;
+}
+
+/**
+ * Estimated scan-start block for a preset. Never negative; "unsure" → 0.
+ *
+ * Pass `tipHeight` (the live chain height) for an exact, drift-free result; when
+ * omitted we extrapolate from the reference (offline fallback). Either way the
+ * block count between the target date and now is subtracted from the tip.
+ */
+export function estimateScanHeight(
+  preset: ImportHeightPreset,
+  now: Date = new Date(),
+  tipHeight?: number | null,
+): number {
+  if (preset === "unsure") return 0;
   const target = targetDate(preset, now);
   if (target === null) return 0;
-  const deltaSeconds = (target.getTime() - REF_DATE_MS) / 1000;
-  const height = Math.floor(REF_HEIGHT + deltaSeconds / AVG_BLOCK_TIME_SECONDS);
+  const anchor = tipHeight != null && tipHeight > 0 ? tipHeight : extrapolatedTip(now);
+  const blocksSinceTarget = (now.getTime() - target.getTime()) / 1000 / AVG_BLOCK_TIME_SECONDS;
+  const height = Math.floor(anchor - blocksSinceTarget);
   return height > 0 ? height : 0;
 }
 
@@ -56,6 +73,7 @@ export function estimateScanHeight(preset: ImportHeightPreset, now: Date = new D
 export function describeScanHeight(
   preset: ImportHeightPreset,
   now: Date = new Date(),
+  tipHeight?: number | null,
 ): { text: string; range: string } {
   if (preset === "unsure") {
     return {
@@ -64,13 +82,13 @@ export function describeScanHeight(
     };
   }
   const target = targetDate(preset, now);
-  const height = estimateScanHeight(preset, now);
+  const height = estimateScanHeight(preset, now, tipHeight);
   const when =
     target === null
       ? ""
       : target.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   return {
     text: `We'll look for transactions from about ${when} onward.`,
-    range: `~block ${height.toLocaleString("en-US")} → now`,
+    range: `block ${height.toLocaleString("en-US")} → now`,
   };
 }

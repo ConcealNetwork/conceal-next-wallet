@@ -6,7 +6,10 @@ const importWallet = vi.fn();
 const openSession = vi.fn();
 
 vi.mock("@/lib/services", () => ({
-  services: { wallet: { importWallet: (input: unknown) => importWallet(input) } },
+  services: {
+    wallet: { importWallet: (input: unknown) => importWallet(input) },
+    network: { getNodeStatus: () => Promise.resolve({ networkHeight: 2_000_000 }) },
+  },
 }));
 vi.mock("@/lib/session/wallet-session", () => ({
   useWalletSession: () => ({ openSession }),

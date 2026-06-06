@@ -34,6 +34,20 @@ describe("import height presets", () => {
     expect(estimateScanHeight("older", NOW)).toBeGreaterThanOrEqual(0);
   });
 
+  it("anchors on the live chain tip when one is supplied", () => {
+    const offline = estimateScanHeight("year", NOW);
+    const live = estimateScanHeight("year", NOW, 3_000_000);
+    expect(live).toBeGreaterThan(offline); // a higher live tip → a higher start block
+    expect(live).toBeLessThan(3_000_000); // still before the tip (subtracts the year)
+    expect(live).toBeGreaterThan(2_800_000);
+  });
+
+  it("ignores a missing/invalid tip and falls back to the estimate", () => {
+    const offline = estimateScanHeight("year", NOW);
+    expect(estimateScanHeight("year", NOW, null)).toBe(offline);
+    expect(estimateScanHeight("year", NOW, 0)).toBe(offline);
+  });
+
   it("describes the readout in plain language", () => {
     expect(describeScanHeight("unsure", NOW).text).toMatch(/whole history/i);
     const year = describeScanHeight("year", NOW);

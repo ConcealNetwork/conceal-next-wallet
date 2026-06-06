@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FileKey, KeyRound, QrCode, Upload } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -245,6 +245,33 @@ export function ImportKeysForm() {
   const [exactHeight, setExactHeight] = useState("0");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [chainTip, setChainTip] = useState<number | null>(null);
+  const [tipStatus, setTipStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+
+  // Fetch the live chain tip the first time the History step opens, so the
+  // height estimate anchors on the real network height instead of the baked-in
+  // reference. Falls back to the offline estimate if the network is unreachable.
+  useEffect(() => {
+    // Guard on the data (chainTip), not the transient status: under StrictMode's
+    // double-mount the first run's cleanup cancels its fetch, so the second run
+    // must still be allowed to fetch (a status-based guard would dead-lock it).
+    if (step !== 3 || chainTip !== null) return;
+    let cancelled = false;
+    setTipStatus("loading");
+    services.network
+      .getNodeStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setChainTip(status.networkHeight);
+        setTipStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setTipStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, chainTip]);
 
   const spendKeyValid = privateKeyIsValid(privateSpendKey);
   const viewKeyValid = privateKeyIsValid(privateViewKey);
@@ -259,7 +286,7 @@ export function ImportKeysForm() {
     : spendKeyValid && (privateViewKey.trim() === "" || viewKeyValid);
   const scanHeight = showAdvancedHeight
     ? normalizeImportHeight(exactHeight)
-    : estimateScanHeight(heightPreset);
+    : estimateScanHeight(heightPreset, undefined, chainTip);
 
   // Step 1 (type) and step 3 (history) always have a valid default selection.
   const stepCanAdvance = [true, keysValid, true, passwordsMatch && !loading][step - 1];
@@ -295,7 +322,7 @@ export function ImportKeysForm() {
     }
   }
 
-  const heightInfo = describeScanHeight(heightPreset);
+  const heightInfo = describeScanHeight(heightPreset, undefined, chainTip);
 
   return (
     <div className="space-y-6">
@@ -411,8 +438,19 @@ export function ImportKeysForm() {
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-[hsl(var(--chrome))] p-3">
-              <p className="text-sm">{heightInfo.text}</p>
-              <p className="mt-2 font-mono text-xs text-muted-foreground">{heightInfo.range}</p>
+              {heightPreset !== "unsure" && tipStatus === "loading" ? (
+                <p className="text-sm text-muted-foreground">Checking the latest network height…</p>
+              ) : (
+                <>
+                  <p className="text-sm">{heightInfo.text}</p>
+                  <p className="mt-2 font-mono text-xs text-muted-foreground">
+                    {heightInfo.range}
+                    {heightPreset !== "unsure" && tipStatus === "error"
+                      ? " · estimated (offline)"
+                      : ""}
+                  </p>
+                </>
+              )}
             </div>
           )}
           <button
