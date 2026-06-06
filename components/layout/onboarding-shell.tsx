@@ -6,7 +6,16 @@ import { OnboardingHeader } from "@/components/layout/onboarding-header";
  *  can render full-bleed with its own hero treatment. */
 export function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col text-foreground">
+    <div className="relative flex min-h-screen flex-col text-foreground">
+      {/* Warm brand glow pooled behind the centered card, matching the wallet ambiance. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[680px]"
+        style={{
+          background:
+            "radial-gradient(60% 55% at 50% 28%, hsl(39 100% 50% / 0.11), transparent 72%)",
+        }}
+      />
       <OnboardingHeader />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex-1">{children}</div>
