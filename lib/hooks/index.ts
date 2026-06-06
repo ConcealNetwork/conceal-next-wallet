@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createCoalescingThrottle } from "@/lib/hooks/coalescing-throttle";
 import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provider";
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
@@ -46,19 +47,28 @@ export function useWalletLiveSync() {
   useEffect(() => {
     if (env.useMockWallet) return;
 
+    // Sync emits a 'modified' event per scanned block batch (the lastHeight
+    // setter). Coalesce those bursts into ~2 invalidations/sec so the refetch +
+    // balance recompute + re-render can't saturate the main thread — an
+    // unthrottled invalidation here froze the page during long scans.
+    const throttle = createCoalescingThrottle(() => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.network });
+    }, 500);
+
     let unsubscribe: (() => void) | undefined;
 
     void import("@/lib/wallet-core/wallet-sync-notifier").then(({ subscribeWalletSync }) => {
-      unsubscribe = subscribeWalletSync(() => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.network });
-      });
+      unsubscribe = subscribeWalletSync(() => throttle.trigger());
     });
 
-    return () => unsubscribe?.();
+    return () => {
+      unsubscribe?.();
+      throttle.cancel();
+    };
   }, [queryClient]);
 }
 
@@ -204,7 +214,10 @@ export function useNetworkStatus() {
 export function useSmartNodes(activeNodeUrl: string | undefined) {
   return useQuery({
     queryKey: [...queryKeys.network, "smart-nodes", activeNodeUrl] as const,
-    queryFn: () => fetchSmartNodes(activeNodeUrl!),
+    queryFn: () => {
+      if (!activeNodeUrl) throw new Error("useSmartNodes requires an active node URL");
+      return fetchSmartNodes(activeNodeUrl);
+    },
     enabled: Boolean(activeNodeUrl),
     ...smartNodesQueryOptions,
   });
