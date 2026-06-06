@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileKey, KeyRound, QrCode, Upload } from "lucide-react";
+import { Eye, FileKey, KeyRound, type LucideIcon, QrCode, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -224,11 +224,13 @@ function ChoiceCard({
   onSelect,
   title,
   description,
+  icon: Icon,
 }: {
   selected: boolean;
   onSelect: () => void;
   title: string;
   description: string;
+  icon: LucideIcon;
 }) {
   return (
     <button
@@ -236,20 +238,34 @@ function ChoiceCard({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        "w-full cursor-pointer rounded-xl border p-4 text-left transition-colors duration-200",
+        "flex w-full cursor-pointer items-start gap-3 rounded-xl border p-4 text-left transition-colors duration-200",
         selected ? "border-primary bg-primary/10" : "border-border hover:border-ring",
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="font-semibold">{title}</span>
-        <span
-          className={cn(
-            "size-4 shrink-0 rounded-full border",
-            selected ? "border-primary bg-primary shadow-[inset_0_0_0_3px_var(--color-card)]" : "border-border",
-          )}
-        />
-      </div>
-      <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>
+      <span
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-lg border transition-colors duration-200",
+          selected
+            ? "border-primary/40 bg-primary/15 text-primary"
+            : "border-border bg-secondary text-muted-foreground",
+        )}
+      >
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center justify-between">
+          <span className="font-semibold">{title}</span>
+          <span
+            className={cn(
+              "size-4 shrink-0 rounded-full border",
+              selected
+                ? "border-primary bg-primary shadow-[inset_0_0_0_3px_var(--color-card)]"
+                : "border-border",
+            )}
+          />
+        </span>
+        <span className="mt-1.5 block text-xs text-muted-foreground">{description}</span>
+      </span>
     </button>
   );
 }
@@ -428,12 +444,14 @@ export function ImportKeysForm() {
           <ChoiceCard
             selected={!viewOnly}
             onSelect={() => setViewOnly(false)}
+            icon={KeyRound}
             title="Full wallet"
             description="You have the secret spend key. You'll be able to send and receive."
           />
           <ChoiceCard
             selected={viewOnly}
             onSelect={() => setViewOnly(true)}
+            icon={Eye}
             title="View-only"
             description="Just watch the balance — you can't spend. Good for a phone or backup device."
           />
