@@ -559,7 +559,7 @@ export function ImportKeysForm() {
             This tells us how far back to look for past transactions — it doesn't change your
             balance. Not sure? Pick “Not sure”.
           </StepHeader>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             {IMPORT_HEIGHT_PRESETS.map((preset) => (
               <button
                 key={preset.key}
@@ -569,7 +569,7 @@ export function ImportKeysForm() {
                   setShowAdvancedHeight(false);
                 }}
                 className={cn(
-                  "min-h-9 cursor-pointer rounded-full border px-4 text-sm transition-colors duration-200",
+                  "min-h-9 min-w-0 flex-1 cursor-pointer whitespace-nowrap rounded-full border px-2 text-center text-xs transition-colors duration-200",
                   !showAdvancedHeight && heightPreset === preset.key
                     ? "border-primary bg-primary font-medium text-primary-foreground"
                     : "border-border text-muted-foreground hover:border-ring hover:text-foreground",
