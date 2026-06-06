@@ -95,6 +95,7 @@ export function ImportKeysForm() {
   const [viewOnly, setViewOnly] = useState(false);
   const [privateViewKey, setPrivateViewKey] = useState("");
   const [privateSpendKey, setPrivateSpendKey] = useState("");
+  const [importHeight, setImportHeight] = useState("0");
   const [password, setPassword] = useState("");
 
   async function submit(event: React.FormEvent) {
@@ -108,6 +109,7 @@ export function ImportKeysForm() {
         privateViewKey,
         privateSpendKey,
         password,
+        scanHeight: normalizeImportHeight(importHeight),
       };
       const wallet = await services.wallet.importWallet(input);
       openSession(wallet, "/wallet/account");
@@ -119,33 +121,62 @@ export function ImportKeysForm() {
     }
   }
 
+  // Field visibility mirrors how importWalletOperation reads the input:
+  // - view-only: the address is the only key source (Cn.decode_address) + the private view key.
+  // - full:      the private spend key is required; the view key is optional (derived from it),
+  //              and the address is ignored (derived from the keys), so it is hidden.
   return (
     <form className="space-y-4" onSubmit={submit}>
-      <div className="space-y-2">
-        <Label>Address</Label>
-        <Input
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          required={importFieldsRequired}
-        />
-      </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={viewOnly} onChange={(e) => setViewOnly(e.target.checked)} />
         View-only wallet
       </label>
-      {!viewOnly && (
+      {viewOnly ? (
         <div className="space-y-2">
-          <Label>Spend key</Label>
-          <Input value={privateSpendKey} onChange={(e) => setPrivateSpendKey(e.target.value)} />
+          <Label htmlFor="import-keys-address">Address</Label>
+          <Input
+            id="import-keys-address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            required={importFieldsRequired}
+          />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="import-keys-spend">Spend key</Label>
+          <Input
+            id="import-keys-spend"
+            value={privateSpendKey}
+            onChange={(e) => setPrivateSpendKey(e.target.value)}
+            required={importFieldsRequired}
+          />
         </div>
       )}
       <div className="space-y-2">
-        <Label>View key</Label>
-        <Input value={privateViewKey} onChange={(e) => setPrivateViewKey(e.target.value)} />
+        <Label htmlFor="import-keys-view">View key</Label>
+        <Input
+          id="import-keys-view"
+          value={privateViewKey}
+          onChange={(e) => setPrivateViewKey(e.target.value)}
+          required={viewOnly && importFieldsRequired}
+        />
       </div>
       <div className="space-y-2">
-        <Label>Encryption password</Label>
+        <Label htmlFor="import-keys-height">Import height</Label>
         <Input
+          id="import-keys-height"
+          value={importHeight}
+          onChange={(e) => setImportHeight(sanitizeImportHeightInput(e.target.value))}
+          onBlur={() => setImportHeight(String(normalizeImportHeight(importHeight)))}
+          className="w-32"
+          inputMode="numeric"
+          pattern="[0-9]*"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="import-keys-password">Encryption password</Label>
+        <Input
+          id="import-keys-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
