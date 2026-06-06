@@ -20,13 +20,29 @@ const footerLinks: FooterLink[] = [
 const linkClassName =
   "cursor-pointer rounded-sm transition-colors duration-200 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring";
 
-export function Footer({ collapsed = false }: { collapsed?: boolean }) {
+export function Footer({
+  collapsed = false,
+  inline = false,
+}: {
+  collapsed?: boolean;
+  /** Embedded in a constrained shell (onboarding): drop the full-bleed chrome
+   *  bar and align to the page column so it reads as part of the page. */
+  inline?: boolean;
+}) {
   return (
-    <footer className="border-t border-border bg-[hsl(var(--chrome))] text-sm text-muted-foreground">
+    <footer
+      className={cn(
+        "text-sm text-muted-foreground",
+        inline
+          ? "mt-10 border-t border-border/50"
+          : "border-t border-border bg-[hsl(var(--chrome))]",
+      )}
+    >
       <div
         className={cn(
-          "mx-auto flex w-full flex-col gap-4 px-4 py-6 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8",
-          collapsed ? "max-w-[1360px]" : "max-w-[1200px]",
+          "mx-auto flex w-full flex-col gap-4 py-6 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between",
+          inline ? "max-w-5xl px-0" : "px-4 sm:px-6 lg:px-8",
+          inline ? "" : collapsed ? "max-w-[1360px]" : "max-w-[1200px]",
         )}
       >
         <p>© 2018–2026 Conceal.Network</p>

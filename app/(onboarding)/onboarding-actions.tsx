@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FilterTabs } from "@/components/wallet/common";
+import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -23,6 +25,8 @@ import {
   type MnemonicImportLanguageKey,
 } from "@/lib/ui/mnemonic-import-languages";
 import { importFieldsRequired, walletCopy } from "@/lib/ui/wallet-copy";
+import { cn } from "@/lib/utils";
+import { addressIsValid, privateKeyIsValid } from "@/lib/validation/ccx";
 
 const importMethods = [
   {
@@ -80,26 +84,90 @@ export function ImportMethodCards() {
   );
 }
 
-function ImportSubmitButton({ label, loading }: { label: string; loading: boolean }) {
+function ImportSubmitButton({
+  label,
+  loading,
+  disabled = false,
+}: {
+  label: string;
+  loading: boolean;
+  disabled?: boolean;
+}) {
   return (
-    <Button type="submit" className="w-full" disabled={loading}>
+    <Button type="submit" className="w-full" disabled={loading || disabled}>
       {loading ? "Importing…" : label}
     </Button>
+  );
+}
+
+/** Labelled text input with help text that flips to an inline error when invalid. */
+function LabeledTextField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  hint,
+  invalid = false,
+  error,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  hint?: string;
+  invalid?: boolean;
+  error?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        aria-invalid={invalid || undefined}
+        className={cn(invalid && "border-wallet-outgoing")}
+      />
+      {invalid && error ? (
+        <p className="text-sm text-wallet-outgoing">{error}</p>
+      ) : hint ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      ) : null}
+    </div>
   );
 }
 
 export function ImportKeysForm() {
   const { openSession } = useWalletSession();
   const [loading, setLoading] = useState(false);
-  const [address, setAddress] = useState("");
   const [viewOnly, setViewOnly] = useState(false);
-  const [privateViewKey, setPrivateViewKey] = useState("");
+  const [address, setAddress] = useState("");
   const [privateSpendKey, setPrivateSpendKey] = useState("");
+  const [privateViewKey, setPrivateViewKey] = useState("");
   const [importHeight, setImportHeight] = useState("0");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const spendKeyValid = privateKeyIsValid(privateSpendKey);
+  const viewKeyValid = privateKeyIsValid(privateViewKey);
+  const addressValid = addressIsValid(address);
+  const passwordsMatch = password !== "" && password === confirmPassword;
+
+  // Validity mirrors how importWalletOperation reads the input:
+  // view-only → address + private view key; full → spend key (view key optional,
+  // derived from the spend key when blank).
+  const keysValid = viewOnly
+    ? addressValid && viewKeyValid
+    : spendKeyValid && (privateViewKey.trim() === "" || viewKeyValid);
+  const canSubmit = keysValid && passwordsMatch && !loading;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!canSubmit) return;
+
     setLoading(true);
     try {
       const input: ImportWalletInput = {
@@ -121,69 +189,109 @@ export function ImportKeysForm() {
     }
   }
 
-  // Field visibility mirrors how importWalletOperation reads the input:
-  // - view-only: the address is the only key source (Cn.decode_address) + the private view key.
-  // - full:      the private spend key is required; the view key is optional (derived from it),
-  //              and the address is ignored (derived from the keys), so it is hidden.
   return (
-    <form className="space-y-4" onSubmit={submit}>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={viewOnly} onChange={(e) => setViewOnly(e.target.checked)} />
-        View-only wallet
-      </label>
-      {viewOnly ? (
-        <div className="space-y-2">
-          <Label htmlFor="import-keys-address">Address</Label>
-          <Input
-            id="import-keys-address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            required={importFieldsRequired}
-          />
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <Label htmlFor="import-keys-spend">Spend key</Label>
-          <Input
-            id="import-keys-spend"
-            value={privateSpendKey}
-            onChange={(e) => setPrivateSpendKey(e.target.value)}
-            required={importFieldsRequired}
-          />
-        </div>
-      )}
+    <form className="space-y-5" onSubmit={submit}>
       <div className="space-y-2">
-        <Label htmlFor="import-keys-view">View key</Label>
-        <Input
-          id="import-keys-view"
-          value={privateViewKey}
-          onChange={(e) => setPrivateViewKey(e.target.value)}
-          required={viewOnly && importFieldsRequired}
+        <Label>Wallet type</Label>
+        <FilterTabs
+          tabs={["Full wallet", "View-only"]}
+          active={viewOnly ? "View-only" : "Full wallet"}
+          onChange={(tab) => setViewOnly(tab === "View-only")}
         />
+        <p className="text-xs text-muted-foreground">
+          {viewOnly
+            ? "Watch-only: import your address and private view key — see balances, but cannot spend."
+            : "Full access: import your private spend key. The view key is optional — derived from the spend key when left blank."}
+        </p>
       </div>
+
+      {viewOnly ? (
+        <LabeledTextField
+          id="import-keys-address"
+          label="Address"
+          value={address}
+          onChange={setAddress}
+          placeholder="ccx7…"
+          hint="Your 98-character Conceal address (starts with ccx7)."
+          invalid={address !== "" && !addressValid}
+          error="Enter a valid 98-character ccx7 address."
+        />
+      ) : (
+        <LabeledTextField
+          id="import-keys-spend"
+          label="Spend key"
+          value={privateSpendKey}
+          onChange={setPrivateSpendKey}
+          placeholder="64-character hex private spend key"
+          hint="Your private spend key — 64 hexadecimal characters."
+          invalid={privateSpendKey !== "" && !spendKeyValid}
+          error="Spend key must be 64 hexadecimal characters."
+        />
+      )}
+
+      <LabeledTextField
+        id="import-keys-view"
+        label="View key"
+        value={privateViewKey}
+        onChange={setPrivateViewKey}
+        placeholder="64-character hex private view key"
+        hint={
+          viewOnly
+            ? "Your private view key — 64 hexadecimal characters."
+            : "Optional — leave blank to derive it from your spend key."
+        }
+        invalid={privateViewKey !== "" && !viewKeyValid}
+        error="View key must be 64 hexadecimal characters."
+      />
+
       <div className="space-y-2">
         <Label htmlFor="import-keys-height">Import height</Label>
         <Input
           id="import-keys-height"
           value={importHeight}
-          onChange={(e) => setImportHeight(sanitizeImportHeightInput(e.target.value))}
+          onChange={(event) => setImportHeight(sanitizeImportHeightInput(event.target.value))}
           onBlur={() => setImportHeight(String(normalizeImportHeight(importHeight)))}
-          className="w-32"
+          className="w-40"
           inputMode="numeric"
           pattern="[0-9]*"
         />
+        <p className="text-xs text-muted-foreground">
+          Block height to start scanning from. Use one near your wallet's creation for a faster
+          sync; 0 scans from the genesis block.
+        </p>
       </div>
+
       <div className="space-y-2">
         <Label htmlFor="import-keys-password">Encryption password</Label>
         <Input
           id="import-keys-password"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete="new-password"
         />
+        <p className="text-xs text-muted-foreground">
+          Sets a new password that encrypts this wallet on this device — you'll need it to unlock
+          after a refresh.
+        </p>
+        <WalletPasswordStrengthPanel password={password} />
       </div>
-      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} />
+
+      <div className="space-y-2">
+        <Label htmlFor="import-keys-confirm">Confirm password</Label>
+        <Input
+          id="import-keys-confirm"
+          type="password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          autoComplete="new-password"
+        />
+        {confirmPassword !== "" && !passwordsMatch && (
+          <p className="text-sm text-wallet-outgoing">Passwords do not match.</p>
+        )}
+      </div>
+
+      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} disabled={!canSubmit} />
     </form>
   );
 }
