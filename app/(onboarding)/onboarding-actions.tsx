@@ -157,7 +157,7 @@ function WizardRail({
   onSelect: (n: number) => void;
 }) {
   return (
-    <ol className="flex items-center" aria-label={`Step ${step} of ${WIZARD_STEPS.length}`}>
+    <ol className="flex w-full items-center" aria-label={`Step ${step} of ${WIZARD_STEPS.length}`}>
       {WIZARD_STEPS.map((label, index) => {
         const n = index + 1;
         const done = n < step;
@@ -189,12 +189,12 @@ function WizardRail({
         const connector =
           n < WIZARD_STEPS.length ? (
             <span
-              className={cn("mx-2 h-px w-6 transition-colors duration-200", done ? "bg-primary" : "bg-border")}
+              className={cn("mx-2 h-px flex-1 transition-colors duration-200", done ? "bg-primary" : "bg-border")}
             />
           ) : null;
 
         return (
-          <li key={label} className="flex items-center">
+          <li key={label} className={cn("flex items-center", n < WIZARD_STEPS.length && "min-w-0 flex-1")}>
             {clickable ? (
               <button
                 type="button"
