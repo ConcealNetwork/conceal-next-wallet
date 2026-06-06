@@ -7,7 +7,11 @@ const openSession = vi.fn();
 
 vi.mock("@/lib/services", () => ({
   services: {
-    wallet: { importWallet: (input: unknown) => importWallet(input) },
+    wallet: {
+      importWallet: (input: unknown) => importWallet(input),
+      previewKeys: () =>
+        Promise.resolve({ address: "ccx7sampleADDR", viewKey: "deadbeefviewkey" }),
+    },
     network: { getNodeStatus: () => Promise.resolve({ networkHeight: 2_000_000 }) },
   },
 }));
@@ -63,6 +67,14 @@ describe("ImportKeysForm wizard", () => {
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
     expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+  });
+
+  it("derives and shows the address once a valid spend key is entered", async () => {
+    render(<ImportKeysForm />);
+    clickContinue(); // → Keys
+    fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
+    await waitFor(() => expect(screen.getByText(/ccx7sampleADDR/)).toBeInTheDocument());
+    expect(screen.getByText("These keys control")).toBeInTheDocument();
   });
 
   it("walks the full flow and submits keys + password + chosen scan height", async () => {

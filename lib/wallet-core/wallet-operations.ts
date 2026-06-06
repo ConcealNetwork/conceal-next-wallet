@@ -224,6 +224,20 @@ export async function importWalletOperation(input: ImportWalletInput): Promise<W
   return mapWalletToInfo(wallet, currentHeight);
 }
 
+export async function previewKeysOperation(input: {
+  spendKey: string;
+  viewKey?: string;
+}): Promise<{ address: string; viewKey: string }> {
+  await ensureAllWalletLegacyLibs();
+  const spend = input.spendKey.trim();
+  let view = (input.viewKey ?? "").trim();
+  if (view === "") {
+    view = Cn.generate_keys(CnUtils.cn_fast_hash(spend)).sec;
+  }
+  const keys = KeysRepository.fromPriv(spend, view);
+  return { address: Cn.pubkeys_to_string(keys.pub.spend, keys.pub.view), viewKey: view };
+}
+
 export async function getWalletInfoOperation(): Promise<WalletInfo> {
   await ensureAllWalletLegacyLibs();
   const wallet = getRuntimeWallet();

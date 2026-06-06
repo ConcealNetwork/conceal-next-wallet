@@ -45,6 +45,9 @@ export const realWalletService: WalletService = {
   async importWallet(input: ImportWalletInput): Promise<WalletInfo> {
     return (await walletOps()).importWalletOperation(input);
   },
+  async previewKeys(input) {
+    return (await walletOps()).previewKeysOperation(input);
+  },
   async exportWallet(): Promise<ExportWalletData> {
     return (await walletOps()).exportWalletOperation();
   },

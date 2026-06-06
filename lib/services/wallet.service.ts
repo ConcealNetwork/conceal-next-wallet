@@ -37,6 +37,16 @@ export type ImportWalletInput =
   | { method: "qr"; payload: string; password: string; label?: string }
   | { method: "open"; password: string; label?: string };
 
+export type PreviewKeysInput = {
+  spendKey: string;
+  viewKey?: string;
+};
+
+export type PreviewKeysResult = {
+  address: string;
+  viewKey: string;
+};
+
 export type ExportWalletData = {
   address: string;
   mnemonic: string;
@@ -65,6 +75,8 @@ export interface WalletService {
   deleteStoredWallet(): Promise<void>;
   abortCreateWallet(): Promise<void>;
   importWallet(input: ImportWalletInput): Promise<WalletInfo>;
+  /** Derive the public address (and effective view key) from a spend key, locally. */
+  previewKeys(input: PreviewKeysInput): Promise<PreviewKeysResult>;
   exportWallet(): Promise<ExportWalletData>;
   exportWalletPdf(): Promise<{ filename: string }>;
   downloadWalletBackup(input: DownloadWalletBackupInput): Promise<DownloadWalletBackupResult>;

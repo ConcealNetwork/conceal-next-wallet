@@ -247,6 +247,10 @@ export function ImportKeysForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [chainTip, setChainTip] = useState<number | null>(null);
   const [tipStatus, setTipStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [derivedPreview, setDerivedPreview] = useState<{ address: string; viewKey: string } | null>(
+    null,
+  );
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   // Fetch the live chain tip the first time the History step opens, so the
   // height estimate anchors on the real network height instead of the baked-in
@@ -324,6 +328,34 @@ export function ImportKeysForm() {
 
   const heightInfo = describeScanHeight(heightPreset, undefined, chainTip);
 
+  // Derive the address + view key from a valid full-wallet spend key (debounced).
+  // Real-mode only in practice; hides itself silently if the engine is unavailable.
+  useEffect(() => {
+    // Only derive on the Keys step for a valid full-wallet spend key. No state
+    // reset in the non-eligible branch — panel visibility is render-driven
+    // (spendKeyValid), so we never thrash setState on every keystroke.
+    if (step !== 2 || viewOnly || !spendKeyValid) return;
+    let cancelled = false;
+    setPreviewStatus("loading");
+    const handle = setTimeout(() => {
+      services.wallet
+        .previewKeys({ spendKey: privateSpendKey, viewKey: privateViewKey })
+        .then((preview) => {
+          if (!cancelled) {
+            setDerivedPreview(preview);
+            setPreviewStatus("ready");
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setPreviewStatus("error");
+        });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [step, viewOnly, spendKeyValid, privateSpendKey, privateViewKey]);
+
   return (
     <div className="space-y-6">
       <WizardRail step={step} />
@@ -376,6 +408,29 @@ export function ImportKeysForm() {
               invalid={privateSpendKey !== "" && !spendKeyValid}
               error="Spend key must be 64 hexadecimal characters."
             />
+          )}
+          {!viewOnly && spendKeyValid && previewStatus !== "error" && (
+            <div className="rounded-xl border border-border bg-[hsl(var(--chrome))] p-3">
+              {previewStatus === "ready" && derivedPreview ? (
+                <>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
+                    These keys control
+                  </p>
+                  <p className="mt-2 break-all font-mono text-xs">{derivedPreview.address}</p>
+                  {privateViewKey.trim() === "" && (
+                    <div className="mt-2.5 border-t border-border pt-2.5">
+                      <p className="text-[11px] text-muted-foreground">View key (auto-derived)</p>
+                      <p className="mt-0.5 break-all font-mono text-[11px]">
+                        {derivedPreview.viewKey}
+                      </p>
+                    </div>
+                  )}
+                  <p className="mt-2.5 text-[11px] text-wallet-incoming">● Valid key</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Deriving your address…</p>
+              )}
+            </div>
           )}
           <LabeledTextField
             id="import-keys-view"

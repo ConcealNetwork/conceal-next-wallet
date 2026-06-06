@@ -42,6 +42,11 @@ export const mockWalletService: WalletService = {
     void input;
     return clone(mockWalletInfo);
   },
+  async previewKeys() {
+    // Mock mode has no crypto engine; echo sample export data for UI review.
+    await mockDelay();
+    return { address: mockExportData.address, viewKey: mockExportData.viewKey };
+  },
   async exportWallet() {
     await mockDelay();
     return clone(mockExportData);
