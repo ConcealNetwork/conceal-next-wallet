@@ -74,6 +74,21 @@ describe("ImportKeysForm wizard", () => {
     expect(screen.getByLabelText("View key")).toBeInTheDocument();
   });
 
+  it("lets you click a completed step in the rail to jump back", () => {
+    render(<ImportKeysForm />);
+    clickContinue(); // → Keys
+    fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
+    clickContinue(); // → History
+    fireEvent.click(screen.getByRole("button", { name: /Go to step 1/i }));
+    expect(screen.getByRole("button", { name: /Full wallet/ })).toBeInTheDocument(); // back on Type
+  });
+
+  it("does not let you jump ahead to an unreached step", () => {
+    render(<ImportKeysForm />);
+    expect(screen.queryByRole("button", { name: /Go to step 3/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Go to step 2/i })).not.toBeInTheDocument();
+  });
+
   it("cannot advance past Keys until a valid 64-hex key is entered", () => {
     render(<ImportKeysForm />);
     clickContinue(); // → Keys

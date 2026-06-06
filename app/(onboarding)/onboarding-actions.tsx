@@ -147,37 +147,71 @@ function LabeledTextField({
 
 const WIZARD_STEPS = ["Type", "Keys", "History", "Secure"] as const;
 
-function WizardRail({ step }: { step: number }) {
+function WizardRail({
+  step,
+  isReachable,
+  onSelect,
+}: {
+  step: number;
+  isReachable: (n: number) => boolean;
+  onSelect: (n: number) => void;
+}) {
   return (
     <ol className="flex items-center" aria-label={`Step ${step} of ${WIZARD_STEPS.length}`}>
       {WIZARD_STEPS.map((label, index) => {
         const n = index + 1;
         const done = n < step;
         const current = n === step;
+        const clickable = !current && isReachable(n);
+
+        const dot = (
+          <span
+            className={cn(
+              "flex size-7 items-center justify-center rounded-full border font-mono text-[11px] font-medium transition-colors duration-200",
+              done && "border-primary bg-primary text-primary-foreground",
+              current && "border-primary text-primary",
+              !done && !current && "border-border text-muted-foreground",
+            )}
+          >
+            {done ? "✓" : n}
+          </span>
+        );
+        const text = (
+          <span
+            className={cn(
+              "ml-2 hidden text-xs transition-colors duration-200 sm:inline",
+              current ? "font-medium text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {label}
+          </span>
+        );
+        const connector =
+          n < WIZARD_STEPS.length ? (
+            <span
+              className={cn("mx-2 h-px w-6 transition-colors duration-200", done ? "bg-primary" : "bg-border")}
+            />
+          ) : null;
+
         return (
           <li key={label} className="flex items-center">
-            <span
-              aria-current={current ? "step" : undefined}
-              className={cn(
-                "flex size-6 items-center justify-center rounded-full border font-mono text-[11px] font-medium",
-                done && "border-primary bg-primary text-primary-foreground",
-                current && "border-primary text-primary",
-                !done && !current && "border-border text-muted-foreground",
-              )}
-            >
-              {done ? "✓" : n}
-            </span>
-            <span
-              className={cn(
-                "ml-1.5 hidden text-xs sm:inline",
-                current ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {label}
-            </span>
-            {n < WIZARD_STEPS.length && (
-              <span className={cn("mx-2 h-px w-5", done ? "bg-primary" : "bg-border")} />
+            {clickable ? (
+              <button
+                type="button"
+                onClick={() => onSelect(n)}
+                aria-label={`Go to step ${n}: ${label}`}
+                className="group flex cursor-pointer items-center rounded-md transition-opacity duration-200 hover:opacity-75 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {dot}
+                {text}
+              </button>
+            ) : (
+              <span aria-current={current ? "step" : undefined} className="flex items-center">
+                {dot}
+                {text}
+              </span>
             )}
+            {connector}
           </li>
         );
       })}
@@ -235,6 +269,7 @@ function StepHeader({ step, title, children }: { step: number; title: string; ch
 export function ImportKeysForm() {
   const { openSession } = useWalletSession();
   const [step, setStep] = useState(1);
+  const [maxStepReached, setMaxStepReached] = useState(1);
   const [loading, setLoading] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
   const [address, setAddress] = useState("");
@@ -300,7 +335,27 @@ export function ImportKeysForm() {
     setStep((value) => Math.max(1, value - 1));
   }
   function goNext() {
-    if (stepCanAdvance && step < WIZARD_STEPS.length) setStep((value) => value + 1);
+    if (stepCanAdvance && step < WIZARD_STEPS.length) {
+      const next = step + 1;
+      setStep(next);
+      setMaxStepReached((reached) => Math.max(reached, next));
+    }
+  }
+  // A step counts as complete if its required input is valid; type/history always are.
+  function stepIsComplete(n: number) {
+    return n === 2 ? keysValid : true;
+  }
+  // Reachable in the rail = already visited, and every earlier step is still valid
+  // (so you can't jump past a step you've since broken, e.g. a now-invalid key).
+  function isStepReachable(n: number) {
+    if (n > maxStepReached) return false;
+    for (let k = 1; k < n; k += 1) {
+      if (!stepIsComplete(k)) return false;
+    }
+    return true;
+  }
+  function goToStep(n: number) {
+    if (n !== step && isStepReachable(n)) setStep(n);
   }
   function toggleAdvancedViewKey() {
     if (showAdvancedViewKey) setPrivateViewKey(""); // closing → fall back to the derived view key
@@ -363,7 +418,7 @@ export function ImportKeysForm() {
 
   return (
     <div className="space-y-6">
-      <WizardRail step={step} />
+      <WizardRail step={step} isReachable={isStepReachable} onSelect={goToStep} />
 
       {step === 1 && (
         <div className="space-y-3">
