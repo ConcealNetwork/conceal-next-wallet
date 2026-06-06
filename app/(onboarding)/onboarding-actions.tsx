@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FilterTabs } from "@/components/wallet/common";
 import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
@@ -24,6 +23,12 @@ import {
   MNEMONIC_IMPORT_LANGUAGES,
   type MnemonicImportLanguageKey,
 } from "@/lib/ui/mnemonic-import-languages";
+import {
+  describeScanHeight,
+  estimateScanHeight,
+  IMPORT_HEIGHT_PRESETS,
+  type ImportHeightPreset,
+} from "@/lib/ui/import-height-presets";
 import { importFieldsRequired, walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 import { addressIsValid, privateKeyIsValid } from "@/lib/validation/ccx";
@@ -140,14 +145,104 @@ function LabeledTextField({
   );
 }
 
+const WIZARD_STEPS = ["Type", "Keys", "History", "Secure"] as const;
+
+function WizardRail({ step }: { step: number }) {
+  return (
+    <ol className="flex items-center" aria-label={`Step ${step} of ${WIZARD_STEPS.length}`}>
+      {WIZARD_STEPS.map((label, index) => {
+        const n = index + 1;
+        const done = n < step;
+        const current = n === step;
+        return (
+          <li key={label} className="flex items-center">
+            <span
+              aria-current={current ? "step" : undefined}
+              className={cn(
+                "flex size-6 items-center justify-center rounded-full border font-mono text-[11px] font-medium",
+                done && "border-primary bg-primary text-primary-foreground",
+                current && "border-primary text-primary",
+                !done && !current && "border-border text-muted-foreground",
+              )}
+            >
+              {done ? "✓" : n}
+            </span>
+            <span
+              className={cn(
+                "ml-1.5 hidden text-xs sm:inline",
+                current ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              {label}
+            </span>
+            {n < WIZARD_STEPS.length && (
+              <span className={cn("mx-2 h-px w-5", done ? "bg-primary" : "bg-border")} />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function ChoiceCard({
+  selected,
+  onSelect,
+  title,
+  description,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={cn(
+        "w-full cursor-pointer rounded-xl border p-4 text-left transition-colors duration-200",
+        selected ? "border-primary bg-primary/10" : "border-border hover:border-ring",
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-semibold">{title}</span>
+        <span
+          className={cn(
+            "size-4 shrink-0 rounded-full border",
+            selected ? "border-primary bg-primary shadow-[inset_0_0_0_3px_var(--color-card)]" : "border-border",
+          )}
+        />
+      </div>
+      <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>
+    </button>
+  );
+}
+
+function StepHeader({ step, title, children }: { step: number; title: string; children: string }) {
+  return (
+    <div>
+      <p className="font-mono text-xs text-muted-foreground">
+        Step {step} of {WIZARD_STEPS.length}
+      </p>
+      <h2 className="mt-0.5 text-lg font-semibold">{title}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{children}</p>
+    </div>
+  );
+}
+
 export function ImportKeysForm() {
   const { openSession } = useWalletSession();
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
   const [address, setAddress] = useState("");
   const [privateSpendKey, setPrivateSpendKey] = useState("");
   const [privateViewKey, setPrivateViewKey] = useState("");
-  const [importHeight, setImportHeight] = useState("0");
+  const [heightPreset, setHeightPreset] = useState<ImportHeightPreset>("unsure");
+  const [showAdvancedHeight, setShowAdvancedHeight] = useState(false);
+  const [exactHeight, setExactHeight] = useState("0");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -162,11 +257,22 @@ export function ImportKeysForm() {
   const keysValid = viewOnly
     ? addressValid && viewKeyValid
     : spendKeyValid && (privateViewKey.trim() === "" || viewKeyValid);
-  const canSubmit = keysValid && passwordsMatch && !loading;
+  const scanHeight = showAdvancedHeight
+    ? normalizeImportHeight(exactHeight)
+    : estimateScanHeight(heightPreset);
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!canSubmit) return;
+  // Step 1 (type) and step 3 (history) always have a valid default selection.
+  const stepCanAdvance = [true, keysValid, true, passwordsMatch && !loading][step - 1];
+
+  function goBack() {
+    setStep((value) => Math.max(1, value - 1));
+  }
+  function goNext() {
+    if (stepCanAdvance && step < WIZARD_STEPS.length) setStep((value) => value + 1);
+  }
+
+  async function submit() {
+    if (!keysValid || !passwordsMatch || loading) return;
 
     setLoading(true);
     try {
@@ -177,7 +283,7 @@ export function ImportKeysForm() {
         privateViewKey,
         privateSpendKey,
         password,
-        scanHeight: normalizeImportHeight(importHeight),
+        scanHeight,
       };
       const wallet = await services.wallet.importWallet(input);
       openSession(wallet, "/wallet/account");
@@ -189,110 +295,199 @@ export function ImportKeysForm() {
     }
   }
 
-  return (
-    <form className="space-y-5" onSubmit={submit}>
-      <div className="space-y-2">
-        <Label>Wallet type</Label>
-        <FilterTabs
-          tabs={["Full wallet", "View-only"]}
-          active={viewOnly ? "View-only" : "Full wallet"}
-          onChange={(tab) => setViewOnly(tab === "View-only")}
-        />
-        <p className="text-xs text-muted-foreground">
-          {viewOnly
-            ? "Watch-only: import your address and private view key — see balances, but cannot spend."
-            : "Full access: import your private spend key. The view key is optional — derived from the spend key when left blank."}
-        </p>
-      </div>
+  const heightInfo = describeScanHeight(heightPreset);
 
-      {viewOnly ? (
-        <LabeledTextField
-          id="import-keys-address"
-          label="Address"
-          value={address}
-          onChange={setAddress}
-          placeholder="ccx7…"
-          hint="Your 98-character Conceal address (starts with ccx7)."
-          invalid={address !== "" && !addressValid}
-          error="Enter a valid 98-character ccx7 address."
-        />
-      ) : (
-        <LabeledTextField
-          id="import-keys-spend"
-          label="Spend key"
-          value={privateSpendKey}
-          onChange={setPrivateSpendKey}
-          placeholder="64-character hex private spend key"
-          hint="Your private spend key — 64 hexadecimal characters."
-          invalid={privateSpendKey !== "" && !spendKeyValid}
-          error="Spend key must be 64 hexadecimal characters."
-        />
+  return (
+    <div className="space-y-6">
+      <WizardRail step={step} />
+
+      {step === 1 && (
+        <div className="space-y-3">
+          <StepHeader step={1} title="What are you importing?">
+            Pick the option that matches what you have.
+          </StepHeader>
+          <ChoiceCard
+            selected={!viewOnly}
+            onSelect={() => setViewOnly(false)}
+            title="Full wallet"
+            description="You have the secret spend key. You'll be able to send and receive."
+          />
+          <ChoiceCard
+            selected={viewOnly}
+            onSelect={() => setViewOnly(true)}
+            title="View-only"
+            description="Just watch the balance — you can't spend. Good for a phone or backup device."
+          />
+        </div>
       )}
 
-      <LabeledTextField
-        id="import-keys-view"
-        label="View key"
-        value={privateViewKey}
-        onChange={setPrivateViewKey}
-        placeholder="64-character hex private view key"
-        hint={
-          viewOnly
-            ? "Your private view key — 64 hexadecimal characters."
-            : "Optional — leave blank to derive it from your spend key."
-        }
-        invalid={privateViewKey !== "" && !viewKeyValid}
-        error="View key must be 64 hexadecimal characters."
-      />
+      {step === 2 && (
+        <div className="space-y-4">
+          <StepHeader step={2} title="Enter your keys">
+            A key is a long code — 64 letters and numbers. Paste it exactly, and never share your
+            spend key.
+          </StepHeader>
+          {viewOnly ? (
+            <LabeledTextField
+              id="import-keys-address"
+              label="Address"
+              value={address}
+              onChange={setAddress}
+              placeholder="ccx7…"
+              hint="Your public address — starts with ccx7."
+              invalid={address !== "" && !addressValid}
+              error="Enter a valid 98-character ccx7 address."
+            />
+          ) : (
+            <LabeledTextField
+              id="import-keys-spend"
+              label="Spend key"
+              value={privateSpendKey}
+              onChange={setPrivateSpendKey}
+              placeholder="64-character hex spend key"
+              hint="The secret that controls your funds — 64 hexadecimal characters."
+              invalid={privateSpendKey !== "" && !spendKeyValid}
+              error="Spend key must be 64 hexadecimal characters."
+            />
+          )}
+          <LabeledTextField
+            id="import-keys-view"
+            label="View key"
+            value={privateViewKey}
+            onChange={setPrivateViewKey}
+            placeholder={viewOnly ? "64-character hex view key" : "Leave blank if unsure"}
+            hint={
+              viewOnly
+                ? "Your private view key — 64 hexadecimal characters."
+                : "Optional — we'll work it out from your spend key."
+            }
+            invalid={privateViewKey !== "" && !viewKeyValid}
+            error="View key must be 64 hexadecimal characters."
+          />
+        </div>
+      )}
 
-      <div className="space-y-2">
-        <Label htmlFor="import-keys-height">Import height</Label>
-        <Input
-          id="import-keys-height"
-          value={importHeight}
-          onChange={(event) => setImportHeight(sanitizeImportHeightInput(event.target.value))}
-          onBlur={() => setImportHeight(String(normalizeImportHeight(importHeight)))}
-          className="w-40"
-          inputMode="numeric"
-          pattern="[0-9]*"
-        />
-        <p className="text-xs text-muted-foreground">
-          Block height to start scanning from. Use one near your wallet's creation for a faster
-          sync; 0 scans from the genesis block.
-        </p>
-      </div>
+      {step === 3 && (
+        <div className="space-y-3">
+          <StepHeader step={3} title="When did you first use this wallet?">
+            This tells us how far back to look for past transactions — it doesn't change your
+            balance. Not sure? Pick “Not sure”.
+          </StepHeader>
+          <div className="flex flex-wrap gap-2">
+            {IMPORT_HEIGHT_PRESETS.map((preset) => (
+              <button
+                key={preset.key}
+                type="button"
+                onClick={() => {
+                  setHeightPreset(preset.key);
+                  setShowAdvancedHeight(false);
+                }}
+                className={cn(
+                  "min-h-9 cursor-pointer rounded-full border px-4 text-sm transition-colors duration-200",
+                  !showAdvancedHeight && heightPreset === preset.key
+                    ? "border-primary bg-primary font-medium text-primary-foreground"
+                    : "border-border text-muted-foreground hover:border-ring hover:text-foreground",
+                )}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          {showAdvancedHeight ? (
+            <div className="space-y-2">
+              <Label htmlFor="import-keys-height">Exact block height</Label>
+              <Input
+                id="import-keys-height"
+                value={exactHeight}
+                onChange={(event) => setExactHeight(sanitizeImportHeightInput(event.target.value))}
+                onBlur={() => setExactHeight(String(normalizeImportHeight(exactHeight)))}
+                className="w-40"
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+              <p className="text-xs text-muted-foreground">
+                Scanning starts a few blocks before this, to be safe.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-[hsl(var(--chrome))] p-3">
+              <p className="text-sm">{heightInfo.text}</p>
+              <p className="mt-2 font-mono text-xs text-muted-foreground">{heightInfo.range}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowAdvancedHeight((value) => !value)}
+            className="cursor-pointer text-xs text-primary underline underline-offset-4"
+          >
+            {showAdvancedHeight
+              ? "Use the simple options instead"
+              : "Advanced: enter an exact block height"}
+          </button>
+        </div>
+      )}
 
-      <div className="space-y-2">
-        <Label htmlFor="import-keys-password">Encryption password</Label>
-        <Input
-          id="import-keys-password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="new-password"
-        />
-        <p className="text-xs text-muted-foreground">
-          Sets a new password that encrypts this wallet on this device — you'll need it to unlock
-          after a refresh.
-        </p>
-        <WalletPasswordStrengthPanel password={password} />
-      </div>
+      {step === 4 && (
+        <div className="space-y-4">
+          <StepHeader step={4} title="Create a device password">
+            This locks the wallet in this browser — you'll type it each time you open it. It's brand
+            new, not your old wallet's password.
+          </StepHeader>
+          <div className="space-y-2">
+            <Label htmlFor="import-keys-password">Password</Label>
+            <Input
+              id="import-keys-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="new-password"
+            />
+            <WalletPasswordStrengthPanel password={password} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="import-keys-confirm">Confirm password</Label>
+            <Input
+              id="import-keys-confirm"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              autoComplete="new-password"
+            />
+            {confirmPassword !== "" && !passwordsMatch && (
+              <p className="text-sm text-wallet-outgoing">Passwords do not match.</p>
+            )}
+          </div>
+        </div>
+      )}
 
-      <div className="space-y-2">
-        <Label htmlFor="import-keys-confirm">Confirm password</Label>
-        <Input
-          id="import-keys-confirm"
-          type="password"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          autoComplete="new-password"
-        />
-        {confirmPassword !== "" && !passwordsMatch && (
-          <p className="text-sm text-wallet-outgoing">Passwords do not match.</p>
+      <div className="flex gap-3 pt-1">
+        {step > 1 && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-2/5"
+            onClick={goBack}
+            disabled={loading}
+          >
+            Back
+          </Button>
+        )}
+        {step < WIZARD_STEPS.length ? (
+          <Button type="button" className="flex-1" onClick={goNext} disabled={!stepCanAdvance}>
+            Continue
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            className="flex-1"
+            onClick={submit}
+            disabled={!keysValid || !passwordsMatch || loading}
+          >
+            {loading ? "Importing…" : walletCopy.importWallet}
+          </Button>
         )}
       </div>
-
-      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} disabled={!canSubmit} />
-    </form>
+    </div>
   );
 }
 

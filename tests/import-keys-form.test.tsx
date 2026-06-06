@@ -16,23 +16,11 @@ import { ImportKeysForm } from "@/app/(onboarding)/onboarding-actions";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 
 const HEX64 = "a".repeat(64);
-const HEX64_B = "b".repeat(64);
 const PASSWORD = "ConcealTest1!";
 
-function submitButton() {
-  return screen.getByRole("button", { name: walletCopy.importWallet });
-}
+const clickContinue = () => fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-/** Fill a full-mode import with valid keys + matching passwords. */
-function fillValidFullImport({ height = "1500000" }: { height?: string } = {}) {
-  fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
-  fireEvent.change(screen.getByLabelText("View key"), { target: { value: HEX64_B } });
-  fireEvent.change(screen.getByLabelText("Import height"), { target: { value: height } });
-  fireEvent.change(screen.getByLabelText("Encryption password"), { target: { value: PASSWORD } });
-  fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: PASSWORD } });
-}
-
-describe("ImportKeysForm", () => {
+describe("ImportKeysForm wizard", () => {
   // setup.ts doesn't register RTL auto-cleanup, so isolate renders explicitly.
   afterEach(cleanup);
 
@@ -41,44 +29,56 @@ describe("ImportKeysForm", () => {
     openSession.mockReset();
   });
 
-  it("full import (default): hides Address (engine derives it), shows Spend key", () => {
+  it("starts on the Type step with Full / View-only choice cards", () => {
     render(<ImportKeysForm />);
-    expect(screen.queryByLabelText("Address")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Spend key")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Full wallet/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /View-only/ })).toBeInTheDocument();
+    // keys live on a later step
+    expect(screen.queryByLabelText("Spend key")).not.toBeInTheDocument();
   });
 
-  it("view-only toggle: shows Address (engine needs it), hides Spend key", () => {
+  it("full path: the Keys step shows Spend key, not Address", () => {
     render(<ImportKeysForm />);
-    fireEvent.click(screen.getByRole("button", { name: "View-only" }));
+    clickContinue(); // Full wallet is the default selection
+    expect(screen.getByLabelText("Spend key")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Address")).not.toBeInTheDocument();
+  });
+
+  it("view-only path: the Keys step shows Address, not Spend key", () => {
+    render(<ImportKeysForm />);
+    fireEvent.click(screen.getByRole("button", { name: /View-only/ }));
+    clickContinue();
     expect(screen.getByLabelText("Address")).toBeInTheDocument();
     expect(screen.queryByLabelText("Spend key")).not.toBeInTheDocument();
   });
 
-  it("keeps submit disabled until keys and passwords are valid", () => {
+  it("cannot advance past Keys until a valid 64-hex key is entered", () => {
     render(<ImportKeysForm />);
-    expect(submitButton()).toBeDisabled();
-
-    // A too-short spend key is not a valid 64-hex key.
+    clickContinue(); // → Keys
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: "abc" } });
-    fireEvent.change(screen.getByLabelText("Encryption password"), { target: { value: PASSWORD } });
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
+    expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+  });
+
+  it("walks the full flow and submits keys + password + chosen scan height", async () => {
+    render(<ImportKeysForm />);
+    clickContinue(); // → Keys
+    fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
+    clickContinue(); // → History
+
+    // use the advanced exact-height path for a deterministic value
+    fireEvent.click(screen.getByRole("button", { name: /exact block height/i }));
+    fireEvent.change(screen.getByLabelText("Exact block height"), { target: { value: "1500000" } });
+    clickContinue(); // → Secure
+
+    const importBtn = screen.getByRole("button", { name: walletCopy.importWallet });
+    expect(importBtn).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: PASSWORD } });
     fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: PASSWORD } });
-    expect(submitButton()).toBeDisabled();
-    expect(screen.getByText("Spend key must be 64 hexadecimal characters.")).toBeInTheDocument();
-  });
-
-  it("keeps submit disabled when the passwords do not match", () => {
-    render(<ImportKeysForm />);
-    fillValidFullImport();
-    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "different" } });
-    expect(submitButton()).toBeDisabled();
-    expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
-  });
-
-  it("submits valid keys and passes the chosen scan height (no forced genesis rescan)", async () => {
-    render(<ImportKeysForm />);
-    fillValidFullImport({ height: "1500000" });
-    expect(submitButton()).toBeEnabled();
-    fireEvent.click(submitButton());
+    expect(importBtn).toBeEnabled();
+    fireEvent.click(importBtn);
 
     await waitFor(() => expect(importWallet).toHaveBeenCalledTimes(1));
     expect(importWallet).toHaveBeenCalledWith(
@@ -86,7 +86,6 @@ describe("ImportKeysForm", () => {
         method: "keys",
         viewOnly: false,
         privateSpendKey: HEX64,
-        privateViewKey: HEX64_B,
         scanHeight: 1500000,
       }),
     );
