@@ -4,7 +4,6 @@ import {
   fetchCcxMarketData,
   fetchCcxPriceHistory,
   hydrateMarketHistory,
-  MARKET_SNAPSHOT_TTL_MS,
 } from "@/lib/market/coingecko";
 
 let cachedMarketData: MarketData | null = null;

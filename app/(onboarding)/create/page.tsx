@@ -157,19 +157,18 @@ export default function CreateWalletPage() {
           </AlertDialogHeader>
 
           <div className="space-y-1">
-            <div
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               onDoubleClick={() => void copyMnemonic()}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   void copyMnemonic();
                 }
               }}
-              className="cursor-pointer rounded-lg border border-wallet-amber bg-wallet-amber/10 p-3 font-mono text-sm leading-relaxed text-foreground select-all"
+              className="w-full cursor-pointer rounded-lg border border-wallet-amber bg-wallet-amber/10 p-3 text-left font-mono text-sm leading-relaxed text-foreground select-all"
             >
               {mnemonic}
-            </div>
+            </button>
             <p
               className={cn(
                 "text-xs transition-colors duration-200",

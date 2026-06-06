@@ -23,7 +23,9 @@ export function subscribeTickerPreference(listener: TickerPreferenceListener): (
 }
 
 function notifyListeners(): void {
-  listeners.forEach((listener) => listener(useShortTicker));
+  listeners.forEach((listener) => {
+    listener(useShortTicker);
+  });
 }
 
 /** Load persisted preference from IndexedDB (same key as wallet-core `TickerStore`). */

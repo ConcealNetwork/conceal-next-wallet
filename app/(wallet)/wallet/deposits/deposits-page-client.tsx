@@ -556,7 +556,7 @@ function ProjectionChart({
         </p>
       </div>
       <div className="mt-3 h-[150px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={150}>
           <AreaChart data={projection} margin={{ top: 8, right: 6, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="depositProjectionFill" x1="0" y1="0" x2="0" y2="1">

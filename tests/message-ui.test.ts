@@ -2,10 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
   conversationReceivePaymentId,
   filterConversationMessages,
-  mapTransactionToMessageUI,
+  mapTransactionToMessageUI as mapTransactionToMessageUIRaw,
   resolveConversationMatch,
 } from "@/lib/wallet-core/MessageUI";
 import { Transaction, TransactionIn, TransactionOut } from "@/lib/wallet-core/Transaction";
+
+/** Test wrapper: the mapper returns null for non-message txs; every fixture here is a
+ *  message, so assert non-null once here instead of a `!` at each call site. */
+function mapTransactionToMessageUI(
+  ...args: Parameters<typeof mapTransactionToMessageUIRaw>
+): NonNullable<ReturnType<typeof mapTransactionToMessageUIRaw>> {
+  const result = mapTransactionToMessageUIRaw(...args);
+  if (!result) {
+    throw new Error("expected mapTransactionToMessageUI to return a message");
+  }
+  return result;
+}
 
 const RECEIVER =
   "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
@@ -57,7 +69,7 @@ describe("MessageUI", () => {
         timestamp: 1_699_999_000,
         outs: [Object.assign(new TransactionOut(), { amount: 100, type: "02", rtcAmount: "x" })],
       }),
-    )!;
+    );
     expect(received.paymentIdFrom).toBe(PID);
     expect(received.paymentIdTo).toBeNull();
     expect(conversationReceivePaymentId(received)).toBe(PID.toLowerCase());
@@ -69,7 +81,7 @@ describe("MessageUI", () => {
       messageBody: "Hi",
       receiver: RECEIVER,
       paymentIdTo: PID,
-    })!;
+    });
     const received = mapTransactionToMessageUI(
       Object.assign(new Transaction(), {
         hash: "r1",
@@ -79,7 +91,7 @@ describe("MessageUI", () => {
         timestamp: 1_699_999_000,
         outs: [Object.assign(new TransactionOut(), { amount: 100, type: "02", rtcAmount: "x" })],
       }),
-    )!;
+    );
 
     const match = resolveConversationMatch(sent, []);
     expect(match.sentToAddress).toBe(RECEIVER);

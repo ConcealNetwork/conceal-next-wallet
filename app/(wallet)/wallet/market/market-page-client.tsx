@@ -84,7 +84,7 @@ export default function MarketPage() {
           <div className="flex justify-start sm:justify-end">
             <TimeframeToggle active={activeRange} onChange={setActiveRange} />
           </div>
-          <div className="mt-5 h-[340px] sm:h-[390px]">
+          <div className="mt-5 h-[390px]">
             {market.isLoading ? (
               <ChartSkeleton />
             ) : (
@@ -223,7 +223,7 @@ function PriceAreaChart({ data, range }: { data: MarketHistoryPoint[]; range: Ma
       <p className="sr-only">
         {range} CCX price chart from {formatUsd(minPrice, 4)} to {formatUsd(maxPrice, 4)}.
       </p>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={390}>
         <AreaChart data={data} margin={{ top: 12, right: 8, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="marketPriceFill" x1="0" y1="0" x2="0" y2="1">

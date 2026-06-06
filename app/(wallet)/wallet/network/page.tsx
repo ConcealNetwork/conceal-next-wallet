@@ -297,7 +297,8 @@ function PeerGraphPlaceholder() {
   });
 
   return (
-    <svg viewBox="0 0 200 190" className="h-44 w-full">
+    <svg viewBox="0 0 200 190" className="h-44 w-full" role="img">
+      <title>Network peer connections</title>
       <g stroke="hsl(var(--border))" strokeWidth="1.2" opacity="0.7">
         {dots.map(([x, y]) => (
           <line key={`pl-${x}-${y}`} x1={cx} y1={cy} x2={x} y2={y} />

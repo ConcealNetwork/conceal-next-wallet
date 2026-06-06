@@ -91,7 +91,6 @@ export function AddressBookContactPicker({
               type="button"
               role="option"
               aria-selected={selected}
-              aria-pressed={selected}
               title={entry.label}
               onClick={() => onSelect(selected ? null : entry)}
               className={cn(

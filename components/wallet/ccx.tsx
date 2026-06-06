@@ -18,6 +18,7 @@ export function CcxAmount({
     <>
       {parts.map((part, index) =>
         part === ticker ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: deterministic string split with stable order and no insertion/removal, so the index is a safe key
           <span key={index} className={cn("text-primary", className)}>
             {ticker}
           </span>
