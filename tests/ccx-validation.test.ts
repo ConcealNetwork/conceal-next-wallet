@@ -6,8 +6,9 @@ import {
   paymentIdIsValid,
 } from "@/lib/validation/ccx";
 
-const VALID_ADDRESS =
-  "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m";
+// ccx7 prefix + 94 chars = exactly 98 (see addressIsValid). Built so the length
+// is self-evidently correct; mirrors the ccx6 wrong-prefix case below.
+const VALID_ADDRESS = `ccx7${"a".repeat(94)}`;
 
 describe("ccx validation", () => {
   it("validates ccx7 addresses with exactly 98 characters", () => {

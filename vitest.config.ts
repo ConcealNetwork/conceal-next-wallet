@@ -15,6 +15,9 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Unit tests target the mock UI; pin mock mode so a real-mode `.env.local`
+    // (used to run the dev server) can't flip the suite and pull in wallet-core.
+    env: { NEXT_PUBLIC_USE_MOCK: "true" },
     include: ["tests/**/*.{test,spec}.{ts,tsx}"],
     setupFiles: ["./tests/setup.ts"],
     coverage: {

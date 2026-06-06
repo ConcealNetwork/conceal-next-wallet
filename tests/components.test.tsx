@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -76,7 +77,13 @@ describe("wallet components", () => {
 
   it("marks the active sidebar route and disconnects", () => {
     pathname = "/wallet/send";
-    render(<Sidebar />);
+    // Sidebar reads the new-messages badge via useQuery, so it needs a client.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Sidebar />
+      </QueryClientProvider>,
+    );
     expect(screen.getByRole("link", { name: /Send/ })).toHaveClass("bg-primary");
     fireEvent.click(screen.getByRole("button", { name: /Disconnect/ }));
     fireEvent.click(
