@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
+import { QrCameraScanner } from "@/components/wallet/qr-camera-scanner";
 import { services } from "@/lib/services";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -906,6 +907,7 @@ export function ImportQrForm() {
   const [payload, setPayload] = useState("");
   const [password, setPassword] = useState("");
   const [decoding, setDecoding] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   async function handleImage(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -944,8 +946,22 @@ export function ImportQrForm() {
 
   return (
     <form className="space-y-4" onSubmit={submit}>
+      {scanning ? (
+        <QrCameraScanner
+          onDecode={(decoded) => {
+            setPayload(decoded);
+            setScanning(false);
+            toast.success("QR code scanned.");
+          }}
+          onCancel={() => setScanning(false)}
+        />
+      ) : (
+        <Button type="button" variant="outline" className="w-full" onClick={() => setScanning(true)}>
+          Scan with camera
+        </Button>
+      )}
       <div className="space-y-2">
-        <Label htmlFor="qr-image">Wallet QR image</Label>
+        <Label htmlFor="qr-image">Or upload a QR image</Label>
         <Input
           id="qr-image"
           type="file"

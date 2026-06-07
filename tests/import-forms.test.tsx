@@ -52,7 +52,9 @@ describe("import forms", () => {
       fireEvent.change(screen.getByLabelText("Recovery phrase"), {
         target: { value: "too few words" },
       });
-      fireEvent.change(screen.getByLabelText("Encryption password"), { target: { value: PASSWORD } });
+      fireEvent.change(screen.getByLabelText("Encryption password"), {
+        target: { value: PASSWORD },
+      });
       fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: PASSWORD } });
       expect(submit()).toBeDisabled(); // only 3 words
       fireEvent.change(screen.getByLabelText("Recovery phrase"), { target: { value: MNEMONIC } });
@@ -62,8 +64,12 @@ describe("import forms", () => {
     it("flags mismatched passwords and blocks submit", () => {
       render(<ImportMnemonicForm />);
       fireEvent.change(screen.getByLabelText("Recovery phrase"), { target: { value: MNEMONIC } });
-      fireEvent.change(screen.getByLabelText("Encryption password"), { target: { value: PASSWORD } });
-      fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "different" } });
+      fireEvent.change(screen.getByLabelText("Encryption password"), {
+        target: { value: PASSWORD },
+      });
+      fireEvent.change(screen.getByLabelText("Confirm password"), {
+        target: { value: "different" },
+      });
       expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
       expect(submit()).toBeDisabled();
     });
@@ -73,7 +79,9 @@ describe("import forms", () => {
       fireEvent.change(screen.getByLabelText("Recovery phrase"), {
         target: { value: `  ${MNEMONIC}  ` },
       });
-      fireEvent.change(screen.getByLabelText("Encryption password"), { target: { value: PASSWORD } });
+      fireEvent.change(screen.getByLabelText("Encryption password"), {
+        target: { value: PASSWORD },
+      });
       fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: PASSWORD } });
       fireEvent.click(submit());
       await waitFor(() => expect(importWallet).toHaveBeenCalledTimes(1));
@@ -92,8 +100,12 @@ describe("import forms", () => {
     it("keeps submit disabled until a payload is present, then imports via qr", async () => {
       render(<ImportQrForm />);
       expect(submit()).toBeDisabled();
-      fireEvent.change(screen.getByLabelText("QR payload"), { target: { value: "conceal:ccx7test" } });
-      fireEvent.change(screen.getByLabelText("Encryption password"), { target: { value: PASSWORD } });
+      fireEvent.change(screen.getByLabelText("QR payload"), {
+        target: { value: "conceal:ccx7test" },
+      });
+      fireEvent.change(screen.getByLabelText("Encryption password"), {
+        target: { value: PASSWORD },
+      });
       expect(submit()).toBeEnabled();
       fireEvent.click(submit());
       await waitFor(() => expect(importWallet).toHaveBeenCalledTimes(1));
@@ -106,7 +118,9 @@ describe("import forms", () => {
       decodeQrFromFile.mockResolvedValue("conceal:ccx7decoded");
       render(<ImportQrForm />);
       const file = new File([new Uint8Array([1, 2, 3])], "wallet-qr.png", { type: "image/png" });
-      fireEvent.change(screen.getByLabelText("Wallet QR image"), { target: { files: [file] } });
+      fireEvent.change(screen.getByLabelText("Or upload a QR image"), {
+        target: { files: [file] },
+      });
       await waitFor(() =>
         expect(screen.getByLabelText("QR payload")).toHaveValue("conceal:ccx7decoded"),
       );

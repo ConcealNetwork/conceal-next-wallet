@@ -1,0 +1,116 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+
+/**
+ * Live camera QR scanner. Streams the rear camera, decodes frames with jsQR, and
+ * calls `onDecode` with the first payload found. The MediaStream is always
+ * stopped on unmount (camera light off) — and on a successful decode the parent
+ * is expected to unmount this, which triggers that cleanup.
+ *
+ * Additive: callers keep image-upload / paste as fallbacks, so a denied or
+ * missing camera never blocks the flow.
+ */
+export function QrCameraScanner({
+  onDecode,
+  onCancel,
+}: {
+  onDecode: (payload: string) => void;
+  onCancel: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const onDecodeRef = useRef(onDecode);
+  useEffect(() => {
+    onDecodeRef.current = onDecode;
+  }, [onDecode]);
+
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+    let raf = 0;
+
+    async function start() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("This browser can't access the camera. Upload a QR image instead.");
+        return;
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        const video = videoRef.current;
+        if (cancelled || !video) {
+          stream?.getTracks().forEach((track) => {
+            track.stop();
+          });
+          return;
+        }
+        video.srcObject = stream;
+        await video.play();
+        if (cancelled) return;
+
+        const { decodeQrFromImageData } = await import("@/lib/ui/qr-decode");
+        if (cancelled) return;
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        const tick = () => {
+          if (cancelled) return;
+          const v = videoRef.current;
+          if (ctx && v && v.readyState >= v.HAVE_CURRENT_DATA && v.videoWidth > 0) {
+            canvas.width = v.videoWidth;
+            canvas.height = v.videoHeight;
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+            const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const payload = decodeQrFromImageData(frame.data, frame.width, frame.height);
+            if (payload) {
+              onDecodeRef.current(payload);
+              return; // stop scanning; parent unmounts us -> cleanup stops the camera
+            }
+          }
+          raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+      } catch {
+        // If the stream came up before a later step threw, stop it now rather
+        // than leaving the camera on behind an error until unmount.
+        stream?.getTracks().forEach((track) => {
+          track.stop();
+        });
+        if (!cancelled) {
+          setError("Couldn't access the camera. Check permissions, or upload an image instead.");
+        }
+      }
+    }
+
+    void start();
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      stream?.getTracks().forEach((track) => {
+        track.stop();
+      });
+    };
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      {error ? (
+        <p className="text-sm text-wallet-outgoing" role="alert">
+          {error}
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-border bg-black">
+          <video ref={videoRef} className="aspect-square w-full object-cover" muted playsInline />
+        </div>
+      )}
+      <Button type="button" variant="outline" className="w-full" onClick={onCancel}>
+        Cancel
+      </Button>
+    </div>
+  );
+}
