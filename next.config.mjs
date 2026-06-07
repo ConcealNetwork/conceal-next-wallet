@@ -14,6 +14,10 @@ const nextConfig = {
     // next/image optimization needs a server; static export can't provide one.
     unoptimized: true,
   },
+  // Dev-only: allow clients that reach the dev server via 127.0.0.1 (Playwright
+  // e2e) to load /_next/* resources — Next blocks cross-origin dev requests by
+  // default, which otherwise stops the app hydrating under test.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   // Exposed to the client so raw asset references (CSS url(), <img src>, script tags)
   // can be prefixed with the deploy subpath — Next only prefixes Link/favicon automatically.
   env: {
