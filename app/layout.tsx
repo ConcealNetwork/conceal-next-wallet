@@ -19,8 +19,11 @@ const geistMono = localFont({
 const TITLE = "Conceal Wallet — Non-custodial CCX wallet";
 const DESCRIPTION =
   "A fast, non-custodial in-browser wallet for Conceal (CCX). Your keys are generated and stored on your device — send, receive, deposit, and message privately.";
+const SITE_URL = "https://concealnetwork.github.io/conceal-next-wallet";
+const OG_IMAGE = `${SITE_URL}/og.png`;
 
 export const metadata: Metadata = {
+  metadataBase: new URL(`${SITE_URL}/`),
   title: {
     default: TITLE,
     template: "%s · Conceal Wallet",
@@ -42,11 +45,14 @@ export const metadata: Metadata = {
     siteName: "Conceal Wallet",
     title: TITLE,
     description: DESCRIPTION,
+    url: SITE_URL,
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "Conceal Wallet" }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
+    images: [OG_IMAGE],
   },
 };
 
