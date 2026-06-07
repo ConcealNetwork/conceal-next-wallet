@@ -774,7 +774,7 @@ export async function deleteStoredWalletOperation(): Promise<void> {
   try {
     await StorageOld.remove("wallet");
   } catch {
-    // best-effort legacy cleanup
+    // best-effort legacy localStorage cleanup
   }
 }
 

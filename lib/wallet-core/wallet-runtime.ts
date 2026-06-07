@@ -30,13 +30,23 @@ export class WalletWorker {
   save() {
     return WalletRepository.save(this.wallet, this.password);
   }
+
+  shutdown() {
+    if (this.intervalSave !== 0) {
+      clearTimeout(this.intervalSave);
+      this.intervalSave = 0;
+    }
+  }
 }
 
 let cachedMnemonic = "";
 let pendingCreationWallet: Wallet | null = null;
 let pendingCreationMnemonic = "";
 
-type GlobalWithRuntimeWallet = typeof globalThis & { __ccxRuntimeWallet?: Wallet };
+type GlobalWithRuntimeWallet = typeof globalThis & {
+  __ccxRuntimeWallet?: Wallet;
+  __ccxRuntimeWatchdog?: WalletWatchdog;
+};
 
 function isWalletInstance(value: unknown): value is Wallet {
   return (
@@ -45,6 +55,31 @@ function isWalletInstance(value: unknown): value is Wallet {
     typeof (value as Wallet).availableAmount === "function" &&
     typeof (value as Wallet).getPublicAddress === "function"
   );
+}
+
+function isWatchdogInstance(value: unknown): value is WalletWatchdog {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    typeof (value as WalletWatchdog).stop === "function" &&
+    typeof (value as WalletWatchdog).setupWorkers === "function" &&
+    typeof (value as WalletWatchdog).signalWalletUpdate === "function"
+  );
+}
+
+function stopWatchdogIfRunning(watchdog: WalletWatchdog | null) {
+  if (watchdog !== null && typeof watchdog.stop === "function") {
+    watchdog.stop();
+  }
+}
+
+function shutdownExplorerRuntime() {
+  const explorer = BlockchainExplorerProvider.getInstance();
+  if (typeof explorer.shutdown === "function") {
+    explorer.shutdown();
+    return;
+  }
+  explorer.cleanupSession();
 }
 
 export function setCreatedMnemonic(mnemonic: string) {
@@ -84,28 +119,32 @@ export async function openWalletRuntime(wallet: Wallet, password: string) {
   DependencyInjectorInstance().register(Wallet.name, wallet);
   const explorer = BlockchainExplorerProvider.getInstance();
   const watchdog = explorer.start(wallet);
+  (globalThis as GlobalWithRuntimeWallet).__ccxRuntimeWatchdog = watchdog;
   DependencyInjectorInstance().register(WalletWatchdog.name, watchdog);
   DependencyInjectorInstance().register(WalletWorker.name, walletWorker);
   registerWalletSyncNotifier(wallet);
 }
 
 export function disconnectWalletRuntime() {
-  const watchdog: WalletWatchdog | null = DependencyInjectorInstance().getInstance(
-    WalletWatchdog.name,
-    "default",
-    false,
-  );
-  if (watchdog !== null) {
-    watchdog.stop();
+  const watchdog = getRuntimeWatchdog();
+  stopWatchdogIfRunning(watchdog);
+
+  const worker = getRuntimeWalletWorker();
+  if (worker !== null && typeof worker.shutdown === "function") {
+    worker.shutdown();
   }
 
-  BlockchainExplorerProvider.getInstance().cleanupSession();
+  shutdownExplorerRuntime();
 
   unregisterWalletSyncNotifier();
   delete (globalThis as GlobalWithRuntimeWallet).__ccxRuntimeWallet;
-  DependencyInjectorInstance().register(Wallet.name, undefined, "default");
-  DependencyInjectorInstance().register(WalletWorker.name, undefined, "default");
-  DependencyInjectorInstance().register(WalletWatchdog.name, undefined, "default");
+  delete (globalThis as GlobalWithRuntimeWallet).__ccxRuntimeWatchdog;
+
+  const di = DependencyInjectorInstance();
+  di.unregister(Wallet.name);
+  di.unregister(WalletWorker.name);
+  di.unregister(WalletWatchdog.name);
+
   clearCreatedMnemonic();
   clearPendingWalletCreation();
 }
@@ -136,7 +175,17 @@ export function getRuntimeWalletWorker(): WalletWorker | null {
 }
 
 export function getRuntimeWatchdog(): WalletWatchdog | null {
-  return DependencyInjectorInstance().getInstance(WalletWatchdog.name, "default", false);
+  const globalWatchdog = (globalThis as GlobalWithRuntimeWallet).__ccxRuntimeWatchdog;
+  if (isWatchdogInstance(globalWatchdog)) {
+    return globalWatchdog;
+  }
+
+  const fromDi = DependencyInjectorInstance().getInstance(WalletWatchdog.name, "default", false);
+  if (isWatchdogInstance(fromDi)) {
+    return fromDi;
+  }
+
+  return null;
 }
 
 export async function hasStoredWallet(): Promise<boolean> {

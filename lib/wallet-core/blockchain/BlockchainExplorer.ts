@@ -115,6 +115,8 @@ export interface BlockchainExplorer {
 
   cleanupSession(): void;
 
+  shutdown?(): void;
+
   // Get the current session node's fee address
   getSessionNodeFeeAddress(): Promise<string>;
 }

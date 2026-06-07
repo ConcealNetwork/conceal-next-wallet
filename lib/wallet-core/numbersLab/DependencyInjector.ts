@@ -27,6 +27,10 @@ export class DependencyInjector {
     this.values[name + "-" + subname] = object;
   }
 
+  unregister(name: string, subname: string = "default"): void {
+    delete this.values[name + "-" + subname];
+  }
+
   returnBest(name: string, subname: string): any {
     const found: any = this.searchFromRequireJs(name);
     //console.log(name, subname,found);

@@ -410,6 +410,10 @@ class ParseWorker {
   incProcessed = (value: number) => {
     this.countProcessed = this.countProcessed + value;
   };
+
+  terminate = () => {
+    this.workerProcess?.terminate();
+  };
 }
 
 class SyncWorker {
@@ -687,11 +691,19 @@ export class WalletWatchdog {
   };
 
   stop = () => {
+    this.stopped = true;
     this.releaseTxQueueWaiters();
     clearInterval(this.intervalMempool);
+    this.intervalMempool = 0;
+
+    for (let i = 0; i < this.filterWorkers.length; ++i) {
+      this.filterWorkers[i].terminate();
+    }
+    this.filterWorkers = [];
+    this.syncWorkers = [];
+
     this.blockList.getTxQueue().reset();
     this.blockList.reset();
-    this.stopped = true;
   };
 
   private queuedTxCount = (): number => {
