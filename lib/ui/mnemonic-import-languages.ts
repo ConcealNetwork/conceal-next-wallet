@@ -1,6 +1,3 @@
-// TODO: re-enable portuguese once prefix collision handling is fixed in Mnemonic.ts
-// (prefixLen: 3 with 29 duplicate 3-char prefixes in the Portuguese wordlist)
-
 export const MNEMONIC_IMPORT_LANGUAGES = [
   { key: "auto", label: "Detect automatically" },
   { key: "english", label: "English" },
@@ -12,6 +9,7 @@ export const MNEMONIC_IMPORT_LANGUAGES = [
   { key: "italian", label: "Italian" },
   { key: "japanese", label: "Japanese" },
   { key: "lojban", label: "Lojban" },
+  { key: "portuguese", label: "Portuguese" },
   { key: "russian", label: "Russian" },
   { key: "spanish", label: "Spanish" },
   { key: "ukrainian", label: "Ukrainian" },

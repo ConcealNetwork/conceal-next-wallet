@@ -22,12 +22,24 @@ export class MnemonicLang {
   trunc_words: Array<String> = [];
   name = "";
   shortLang = "";
+  // When true, mn_decode resolves words by full word rather than by their
+  // prefixLen-length prefix. Required for wordlists whose prefixes are not
+  // unique (e.g. Portuguese), where prefix matching would map a colliding word
+  // to the wrong index — and thus the wrong key.
+  fullWordMatch = false;
 
-  constructor(name: string, shortLang: string, prefixLen: number, words: Array<String>) {
+  constructor(
+    name: string,
+    shortLang: string,
+    prefixLen: number,
+    words: Array<String>,
+    fullWordMatch = false,
+  ) {
     this.prefixLen = prefixLen;
     this.words = words;
     this.name = name;
     this.shortLang = shortLang;
+    this.fullWordMatch = fullWordMatch;
     this.calculateTruncWords();
   }
 
@@ -6560,7 +6572,7 @@ export class MnemonicLang {
         "zeloso",
         "zenite",
         "zumbi",
-      ]),
+      ], true),
     );
     langs.push(
       new MnemonicLang("japanese", "ja", 4, [

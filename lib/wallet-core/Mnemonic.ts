@@ -123,18 +123,27 @@ export class Mnemonic {
       const word = wlist.pop();
       if (typeof word !== "undefined") checksum_word = word;
     }
+    // Resolve a mnemonic word to its index. prefixLen === 0 wordlists store full
+    // words; prefix wordlists match the truncated prefix — except those flagged
+    // fullWordMatch (non-unique prefixes), where an exact full-word match is
+    // preferred so a colliding word resolves to the correct key, with the prefix
+    // kept only as a fallback for truncated input.
+    const findWordIndex = (word: string) => {
+      if (wordset.prefixLen === 0) {
+        return wordset.words.indexOf(word);
+      }
+      if (wordset.fullWordMatch) {
+        const exact = wordset.words.indexOf(word);
+        if (exact !== -1) return exact;
+      }
+      return wordset.trunc_words.indexOf(word.slice(0, wordset.prefixLen));
+    };
+
     // Decode mnemonic
     for (let i = 0; i < wlist.length; i += 3) {
-      let w1, w2, w3;
-      if (wordset.prefixLen === 0) {
-        w1 = wordset.words.indexOf(wlist[i]);
-        w2 = wordset.words.indexOf(wlist[i + 1]);
-        w3 = wordset.words.indexOf(wlist[i + 2]);
-      } else {
-        w1 = wordset.trunc_words.indexOf(wlist[i].slice(0, wordset.prefixLen));
-        w2 = wordset.trunc_words.indexOf(wlist[i + 1].slice(0, wordset.prefixLen));
-        w3 = wordset.trunc_words.indexOf(wlist[i + 2].slice(0, wordset.prefixLen));
-      }
+      const w1 = findWordIndex(wlist[i]);
+      const w2 = findWordIndex(wlist[i + 1]);
+      const w3 = findWordIndex(wlist[i + 2]);
       if (w1 === -1 || w2 === -1 || w3 === -1) {
         throw "invalid word in mnemonic";
       }
