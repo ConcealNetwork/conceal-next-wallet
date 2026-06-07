@@ -1,75 +1,107 @@
 # Conceal Next Wallet
 
-Next.js App Router recreation of the Conceal CCX wallet, with a typed service layer and optional real browser wallet backend.
+[![CI](https://github.com/ConcealNetwork/conceal-next-wallet/actions/workflows/ci.yml/badge.svg)](https://github.com/ConcealNetwork/conceal-next-wallet/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
-## Modes
+A fast, **non-custodial, in-browser wallet for Conceal (CCX)** — built with
+Next.js (App Router) and React. Your keys are generated and stored **on your
+device**; nothing is sent to a server.
+
+**Live app:** https://concealnetwork.github.io/conceal-next-wallet/
+
+> ⚠️ This wallet handles real funds in real-wallet mode. It is open source and
+> under active development; review the [security policy](SECURITY.md) and use at
+> your own risk until independently audited. Always back up your recovery phrase.
+
+## Features
+
+- Create a new wallet, or import via **recovery phrase, spend/view keys,
+  encrypted backup file, or QR code** (with multi-language seed support).
+- Send and receive CCX, with QR codes and payment URIs.
+- **Deposits** (term deposits with interest), **encrypted messages**, and an
+  **address book**.
+- **Export** your wallet as an encrypted file or PDF backup.
+- **Custom node** support, sync controls, and live market + network data.
+- Security: encrypted local storage, password-gated unlock, and configurable
+  **auto-lock** on inactivity.
+
+## Security model
+
+In real-wallet mode the engine runs entirely in your browser:
+
+- Spend/view keys are derived locally and stored **encrypted** in IndexedDB
+  (the v1-compatible `"wallet"` key). They never leave your device.
+- The decrypted session is held in memory only — after a refresh (or auto-lock)
+  you unlock again with your password.
+- Blockchain sync runs in web workers against public (or your own custom) nodes.
+
+Found a vulnerability? See [SECURITY.md](SECURITY.md) — please report privately.
+
+## Two modes
 
 | Mode | Env | Behavior |
 |------|-----|----------|
-| Mock (default) | unset or `NEXT_PUBLIC_USE_MOCK=true` | UI mock data only — safe for design/E2E |
-| Real wallet | `NEXT_PUBLIC_USE_MOCK=false` | Legacy v1 engine (`lib/wallet-core`) + public daemons |
+| Mock (default) | unset or `NEXT_PUBLIC_USE_MOCK=true` | UI with mock data only — safe for design/E2E |
+| Real wallet | `NEXT_PUBLIC_USE_MOCK=false` | In-browser engine (`lib/wallet-core`) + Conceal daemons |
 
-## Run
+## Development
+
+Requires **Node 24+** and **npm 11+** (see `.nvmrc`).
 
 ```bash
 npm install
-npm run sync:legacy-libs   # copy v1 browser scripts to public/lib/
-npm run dev                # mock mode
+npm run dev          # mock mode
 ```
 
-Real wallet locally (copy `.env.example` → `.env.local`, or inline for one-off runs):
+Real wallet locally:
 
 ```bash
 cp .env.example .env.local   # sets NEXT_PUBLIC_USE_MOCK=false
 npm run dev
 ```
 
+### Quality gate
+
+CI runs all of these on every PR and push to `main`; they must pass:
+
 ```bash
-NEXT_PUBLIC_USE_MOCK=false npm run dev
+npm run types     # tsc --noEmit
+npm run lint      # Biome
+npm test          # vitest
+npm run build     # static export
 ```
 
-Refresh vendored crypto after updating `conceal-lib-js`:
+End-to-end (Playwright, dev server on :3100):
 
 ```bash
-npm run concealjs:prebuild
-npm run sync:legacy-libs
-```
-
-## Verify
-
-```bash
-npm run build
-npm run types
-npm run lint
-npm run format            # optional: auto-format scoped files
-npm test
 npx playwright install chromium   # first time only
 npm run test:e2e
 ```
 
-CI runs a non-blocking quality workflow (`.github/workflows/npm-audit.yml`): `npm audit`, typecheck, and Biome — all report-only.
-
-## Dependency policy
-
-Project [`.npmrc`](.npmrc) sets `min-release-age=7`, which blocks package versions published in the last 7 days on **`npm install`** / **`npm update`**. It does **not** apply to **`npm ci`** (lockfile is installed verbatim). Requires npm 11+ (Node 24).
-
-Production static export (GitHub Pages uses this in CI):
+### Production build (static export → GitHub Pages)
 
 ```bash
 NEXT_PUBLIC_USE_MOCK=false PAGES_BASE_PATH=/conceal-next-wallet npm run build
 ```
 
-## Backend wiring
+### Dependency policy
 
-The UI talks to typed services only:
+[`.npmrc`](.npmrc) sets `min-release-age=7`, blocking package versions published
+in the last 7 days on `npm install`/`npm update` (not on `npm ci`, which installs
+the lockfile verbatim).
+
+## Architecture
+
+The UI talks only to a typed service layer; `lib/env.ts` swaps the implementation
+by `NEXT_PUBLIC_USE_MOCK`:
 
 - Interfaces: `lib/services/*.service.ts`
-- Mocks: `lib/services/mock`
-- Real: `lib/services/real` → `lib/wallet-core` + `lib/conceal/init.ts`
-- Swap: `lib/env.ts` (`NEXT_PUBLIC_USE_MOCK` in `.env.local`) → `lib/services/index.ts`
+- Mock: `lib/services/mock` · Real: `lib/services/real` → `lib/wallet-core`
 
-Legacy browser globals manifest: `public/lib/legacy-manifest.json`
+See [`CLAUDE.md`](CLAUDE.md) for a full architecture tour and
+[`CONTRIBUTING.md`](CONTRIBUTING.md) to get started.
 
-## Safety
+## License
 
-Real mode stores an encrypted wallet in IndexedDB (v1-compatible `"wallet"` key). Keys are not persisted in React session state across reloads — unlock again after refresh. Use at your own risk until audited.
+[BSD-3-Clause](LICENSE) — derived from the Conceal / Masari / Karbo wallet
+lineage.
