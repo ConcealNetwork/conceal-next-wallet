@@ -14,7 +14,7 @@ export const mockSettingsService: SettingsService = {
     await mockDelay();
 
     if (input.useCustomNode === false) {
-      currentSettings = { ...currentSettings, useCustomNode: false };
+      currentSettings = { ...currentSettings, ...input, useCustomNode: false };
       return clone(currentSettings);
     }
 
@@ -31,6 +31,7 @@ export const mockSettingsService: SettingsService = {
 
       currentSettings = {
         ...currentSettings,
+        ...input,
         useCustomNode: true,
         nodeUrl: format.normalized,
       };

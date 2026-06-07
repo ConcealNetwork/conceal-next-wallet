@@ -39,4 +39,14 @@ describe("useIdleLock", () => {
     act(() => vi.advanceTimersByTime(5000));
     expect(onLock).not.toHaveBeenCalled();
   });
+
+  it("locks on return-to-visible when the deadline elapsed while hidden", () => {
+    const onLock = vi.fn();
+    renderHook(() => useIdleLock(1000, onLock));
+    // Simulate a throttled background tab: advance the wall clock (not the timer
+    // queue), then fire the visibility change as the tab returns to the front.
+    vi.setSystemTime(Date.now() + 5000);
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(onLock).toHaveBeenCalledTimes(1);
+  });
 });

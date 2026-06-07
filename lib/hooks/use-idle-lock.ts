@@ -14,8 +14,11 @@ const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
  * Lock the wallet after `timeoutMs` of no user activity. Any of the activity
  * events resets the countdown. Disabled when `timeoutMs <= 0` (or not finite).
  *
- * `onLock` is held in a ref so passing a fresh callback each render doesn't
- * re-subscribe the listeners or restart the countdown.
+ * Robust against background-tab timer throttling: we track the wall-clock time
+ * of the last activity and re-check the real elapsed time whenever the tab
+ * becomes visible again, locking immediately if the deadline passed while the
+ * `setTimeout` was suspended. `onLock` is held in a ref so passing a fresh
+ * callback each render doesn't re-subscribe or restart the countdown.
  */
 export function useIdleLock(timeoutMs: number, onLock: () => void): void {
   const onLockRef = useRef(onLock);
@@ -29,21 +32,50 @@ export function useIdleLock(timeoutMs: number, onLock: () => void): void {
     }
 
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const reset = () => {
-      if (timer !== undefined) clearTimeout(timer);
-      timer = setTimeout(() => onLockRef.current(), timeoutMs);
+    let lastActivity = Date.now();
+
+    const clear = () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
     };
 
-    reset();
+    // (Re)schedule based on the real time remaining since the last activity, so a
+    // throttled/suspended background timer can't extend the idle window.
+    const arm = () => {
+      clear();
+      const remaining = timeoutMs - (Date.now() - lastActivity);
+      if (remaining <= 0) {
+        onLockRef.current();
+        return;
+      }
+      timer = setTimeout(() => onLockRef.current(), remaining);
+    };
+
+    const onActivity = () => {
+      lastActivity = Date.now();
+      arm();
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        arm();
+      }
+    };
+
+    arm();
     for (const event of ACTIVITY_EVENTS) {
-      window.addEventListener(event, reset, { passive: true });
+      window.addEventListener(event, onActivity, { passive: true });
     }
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      if (timer !== undefined) clearTimeout(timer);
+      clear();
       for (const event of ACTIVITY_EVENTS) {
-        window.removeEventListener(event, reset);
+        window.removeEventListener(event, onActivity);
       }
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [timeoutMs]);
 }
