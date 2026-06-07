@@ -148,7 +148,7 @@ export type NodeStatus = {
   peersIn: number;
   isCustom: boolean;
   version: string;
-  // TODO(backend): the fields below map to Conceal daemon `getinfo`
+  // Populated from the Conceal daemon `getinfo` response (see getNodeStatusOperation).
   difficulty: number;
   hashrate: number; // hashes per second
   mempool: number; // pending tx count (tx_pool_size)
