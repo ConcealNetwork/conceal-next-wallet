@@ -161,7 +161,10 @@ export default function CreateWalletPage() {
               type="button"
               onDoubleClick={() => void copyMnemonic()}
               onKeyDown={(event) => {
-                if (event.key === "Enter") {
+                // Native buttons activate on both Enter and Space; mirror that
+                // (Space would otherwise scroll the page).
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
                   void copyMnemonic();
                 }
               }}

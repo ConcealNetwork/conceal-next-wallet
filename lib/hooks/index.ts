@@ -60,12 +60,18 @@ export function useWalletLiveSync() {
     }, 500);
 
     let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
 
     void import("@/lib/wallet-core/wallet-sync-notifier").then(({ subscribeWalletSync }) => {
+      // The effect may have been cleaned up (StrictMode double-mount, or a fast
+      // unmount) before this dynamic import resolved — don't subscribe a
+      // listener that would then leak and keep firing invalidations post-unmount.
+      if (cancelled) return;
       unsubscribe = subscribeWalletSync(() => throttle.trigger());
     });
 
     return () => {
+      cancelled = true;
       unsubscribe?.();
       throttle.cancel();
     };
