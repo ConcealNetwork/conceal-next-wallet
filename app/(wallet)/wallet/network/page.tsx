@@ -4,6 +4,7 @@ import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/wallet/common";
 import { useNetworkStatus, useSmartNodes } from "@/lib/hooks";
+import { useNetworkTelemetryHistory } from "@/lib/hooks/use-network-telemetry-history";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import { formatNodeVersion } from "@/lib/network/format-node-version";
 import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
@@ -15,6 +16,7 @@ const TELEMETRY_SKELETON_KEYS = ["height", "hashrate", "peers", "block-time"] as
 
 export default function NetworkPage() {
   const { data, isLoading } = useNetworkStatus();
+  const telemetry = useNetworkTelemetryHistory(data);
   const {
     data: smartNodes,
     isPending: smartNodesPending,
@@ -55,6 +57,15 @@ export default function NetworkPage() {
   const syncPct =
     data.networkHeight > 0 ? Math.min((data.height / data.networkHeight) * 100, 100) : 0;
   const uptimeLabel = smartNodesLoading ? "…" : formatPoolUptimeForNodeUrl(smartNodes, data.url);
+
+  // Prefer the live, client-accumulated trend; fall back to the snapshot series
+  // (multi-point in mock mode, where polling is disabled) until enough real
+  // points have been collected.
+  const heightBars = Math.min(Math.max(telemetry.height.length, data.heightHistory.length, 1), 16);
+  const hashrateSeries = telemetry.hashrate.length >= 2 ? telemetry.hashrate : data.hashrateHistory;
+  const peersSeries = telemetry.peers.length > 0 ? telemetry.peers : data.peersHistory;
+  const blockTimeSeries =
+    telemetry.blockTime.length >= 2 ? telemetry.blockTime : data.blockTimeHistory;
 
   return (
     <>
@@ -123,7 +134,7 @@ export default function NetworkPage() {
           detail={`+1 block · ${formatRelative(data.lastBlockSecondsAgo)}`}
           tone="amber"
           delay={210}
-          chart={<BlockChainStrip blocks={data.heightHistory.length} animate={animate} />}
+          chart={<BlockChainStrip blocks={heightBars} animate={animate} />}
         />
         <ChartCard
           label="Network Hashrate"
@@ -131,14 +142,14 @@ export default function NetworkPage() {
           secondaryLabel="Difficulty"
           secondaryValue={formatDifficulty(data.difficulty)}
           delay={260}
-          chart={<MiniArea values={data.hashrateHistory} color="hsl(var(--chart-1))" />}
+          chart={<MiniArea values={hashrateSeries} color="hsl(var(--chart-1))" />}
         />
         <ChartCard
           label="Connected Peers"
           value={String(data.peers)}
           detail={`${data.peersOut} out · ${data.peersIn} in`}
           delay={310}
-          chart={<MiniBars values={data.peersHistory} color="hsl(var(--chart-1))" />}
+          chart={<MiniBars values={peersSeries} color="hsl(var(--chart-1))" />}
         />
         <ChartCard
           label="Avg Block Time"
@@ -148,7 +159,7 @@ export default function NetworkPage() {
           delay={360}
           chart={
             <Sparkline
-              values={data.blockTimeHistory}
+              values={blockTimeSeries}
               color="hsl(var(--chart-2))"
               baseline={BLOCK_TARGET_SECONDS}
             />
