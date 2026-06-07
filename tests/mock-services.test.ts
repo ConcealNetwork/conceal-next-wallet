@@ -59,7 +59,7 @@ describe("mock services", () => {
       services.addressBook.deleteEntry("addr-1"),
       services.network.getNodeStatus(),
       services.settings.getSettings(),
-      services.settings.updateSettings({ autoLock: false }),
+      services.settings.updateSettings({ readMinorTx: true }),
       services.settings.optimizeWallet(),
       services.settings.resetAndRescan(),
     ]);
@@ -86,8 +86,8 @@ describe("mock services", () => {
     expect(updatedAddress.label).toBe("Updated");
     expect(deletedAddress.ok).toBe(true);
     expect(network.peers).toBeGreaterThan(0);
-    expect(settings.language).toBe("English");
-    expect(updatedSettings.autoLock).toBe(false);
+    expect(typeof settings.nodeUrl).toBe("string");
+    expect(updatedSettings.readMinorTx).toBe(true);
     expect(optimized.ok).toBe(true);
     expect(rescanned.ok).toBe(true);
   });

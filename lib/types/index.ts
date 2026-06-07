@@ -166,15 +166,12 @@ import type { SyncSpeed } from "@/lib/ui/sync-speed";
 export type { SyncSpeed };
 
 export type WalletSettings = {
-  language: string;
   useCustomNode: boolean;
   nodeUrl: string;
   /** Parallel sync intensity (maps to wallet-core options.readSpeed). */
   syncSpeed: SyncSpeed;
   /** When true, sync includes coinbase (miner) outputs — required for solo mining rewards. */
   readMinorTx: boolean;
-  autoLock: boolean;
-  biometric: boolean;
   creationHeight?: number;
   scanHeight?: number;
 };

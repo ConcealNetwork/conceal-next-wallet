@@ -222,11 +222,6 @@ export default function SettingsPage() {
         <Card className="wallet-card">
           <CardContent className="divide-y divide-border">
             <Section title="General">
-              <Row label="Language" description="Interface language">
-                <select className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring">
-                  <option>English</option>
-                </select>
-              </Row>
               <Row label="Ticker" description="Amount suffix shown across the wallet">
                 <select
                   className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
@@ -416,21 +411,6 @@ export default function SettingsPage() {
 
             {current && (
               <Section title="Security">
-                <Row label="Auto-lock wallet" description="Lock automatically after inactivity">
-                  <Switch
-                    checked={current.autoLock}
-                    onCheckedChange={(checked: boolean) => update({ autoLock: checked })}
-                  />
-                </Row>
-                <Row
-                  label="Biometric authentication"
-                  description="Unlock with biometrics where available"
-                >
-                  <Switch
-                    checked={current.biometric}
-                    onCheckedChange={(checked: boolean) => update({ biometric: checked })}
-                  />
-                </Row>
                 <Row label="Password" description="Change the local wallet password">
                   <Button
                     type="button"

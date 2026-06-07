@@ -7,12 +7,6 @@ import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvid
 import { Storage } from "./Storage";
 import { getRuntimeWallet, getRuntimeWatchdog } from "./wallet-runtime";
 
-const uiOnlySettings: Pick<WalletSettings, "language" | "autoLock" | "biometric"> = {
-  language: "English",
-  autoLock: true,
-  biometric: false,
-};
-
 function requireOpenWallet() {
   const wallet = getRuntimeWallet();
   if (wallet === null) throw new Error("Wallet is not open.");
@@ -42,7 +36,6 @@ async function mapRuntimeSettings(): Promise<WalletSettings> {
   const activeNodeUrl = resolveActiveNodeUrl(explorer);
 
   return {
-    ...uiOnlySettings,
     useCustomNode,
     nodeUrl: useCustomNode ? (customNodeUrl ?? wallet.options.nodeUrl) : activeNodeUrl,
     readMinorTx: wallet.options.checkMinerTx,
@@ -135,10 +128,6 @@ export async function updateSettingsOperation(
   const wallet = requireOpenWallet();
   const watchdog = requireWatchdog();
   const explorer = BlockchainExplorerProvider.getInstance();
-
-  if (typeof input.language !== "undefined") uiOnlySettings.language = input.language;
-  if (typeof input.autoLock !== "undefined") uiOnlySettings.autoLock = input.autoLock;
-  if (typeof input.biometric !== "undefined") uiOnlySettings.biometric = input.biometric;
 
   if (typeof input.useCustomNode !== "undefined" || typeof input.nodeUrl !== "undefined") {
     await applyConnectionSettings(input);

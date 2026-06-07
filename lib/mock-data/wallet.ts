@@ -345,13 +345,10 @@ export const mockNodeStatus: NodeStatus = {
 };
 
 export const mockSettings: WalletSettings = {
-  language: "English",
   useCustomNode: false,
   nodeUrl: "https://explorer.conceal.network/daemon/",
   syncSpeed: "medium",
   readMinorTx: false,
-  autoLock: true,
-  biometric: false,
 };
 
 export const mockExportData = {
