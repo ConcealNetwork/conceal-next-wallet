@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Capture what each form hands to the engine, and stub the session redirect.
 const importWallet = vi.fn();
 const openSession = vi.fn();
+const decodeQrFromFile = vi.fn();
 
 vi.mock("@/lib/services", () => ({
   services: {
@@ -14,6 +15,12 @@ vi.mock("@/lib/services", () => ({
 }));
 vi.mock("@/lib/session/wallet-session", () => ({
   useWalletSession: () => ({ openSession }),
+}));
+// createImageBitmap/canvas aren't available in jsdom, so stub the decode util
+// and assert the file-upload path wires its result into the payload.
+vi.mock("@/lib/ui/qr-decode", () => ({
+  decodeQrFromFile: (file: File) => decodeQrFromFile(file),
+  decodeQrFromImageData: vi.fn(),
 }));
 
 import {
@@ -35,6 +42,7 @@ describe("import forms", () => {
   beforeEach(() => {
     importWallet.mockReset().mockResolvedValue({ address: "ccx7test", balance: { atomic: 0 } });
     openSession.mockReset();
+    decodeQrFromFile.mockReset();
   });
 
   describe("ImportMnemonicForm", () => {
@@ -92,6 +100,18 @@ describe("import forms", () => {
       expect(importWallet).toHaveBeenCalledWith(
         expect.objectContaining({ method: "qr", payload: "conceal:ccx7test" }),
       );
+    });
+
+    it("decodes an uploaded QR image into the payload", async () => {
+      decodeQrFromFile.mockResolvedValue("conceal:ccx7decoded");
+      render(<ImportQrForm />);
+      const file = new File([new Uint8Array([1, 2, 3])], "wallet-qr.png", { type: "image/png" });
+      fireEvent.change(screen.getByLabelText("Wallet QR image"), { target: { files: [file] } });
+      await waitFor(() =>
+        expect(screen.getByLabelText("QR payload")).toHaveValue("conceal:ccx7decoded"),
+      );
+      expect(decodeQrFromFile).toHaveBeenCalledTimes(1);
+      expect(submit()).toBeEnabled();
     });
   });
 
