@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -706,16 +707,23 @@ export function ImportMnemonicForm() {
   const [loading, setLoading] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [importHeight, setImportHeight] = useState("0");
   const [language, setLanguage] = useState<MnemonicImportLanguageKey>("auto");
 
+  const words = mnemonic.trim().split(/\s+/).filter(Boolean);
+  const mnemonicLooksValid = words.length >= 12;
+  const passwordsMatch = password !== "" && password === confirmPassword;
+  const canSubmit = mnemonicLooksValid && passwordsMatch && !loading;
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!canSubmit) return;
     setLoading(true);
     try {
       const wallet = await services.wallet.importWallet({
         method: "mnemonic",
-        mnemonic,
+        mnemonic: mnemonic.trim(),
         password,
         language,
         scanHeight: normalizeImportHeight(importHeight),
@@ -732,12 +740,21 @@ export function ImportMnemonicForm() {
   return (
     <form className="space-y-4" onSubmit={submit}>
       <div className="space-y-2">
-        <Label>Mnemonic</Label>
-        <Input
+        <Label htmlFor="mnemonic-phrase">Recovery phrase</Label>
+        <Textarea
+          id="mnemonic-phrase"
           value={mnemonic}
           onChange={(e) => setMnemonic(e.target.value)}
+          rows={3}
+          className="font-mono"
+          placeholder="Enter your 25-word recovery phrase, separated by spaces"
           required={importFieldsRequired}
         />
+        {mnemonic.trim() !== "" && (
+          <p className="text-sm text-muted-foreground">
+            {words.length} {words.length === 1 ? "word" : "words"}
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2">
         <Label htmlFor="import-height" className="col-start-1 row-start-1">
@@ -775,15 +792,32 @@ export function ImportMnemonicForm() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label>Encryption password</Label>
+        <Label htmlFor="mnemonic-password">Encryption password</Label>
         <Input
+          id="mnemonic-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
           required
         />
+        <WalletPasswordStrengthPanel password={password} />
       </div>
-      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} />
+      <div className="space-y-2">
+        <Label htmlFor="mnemonic-confirm">Confirm password</Label>
+        <Input
+          id="mnemonic-confirm"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          autoComplete="new-password"
+          required
+        />
+        {confirmPassword !== "" && !passwordsMatch && (
+          <p className="text-sm text-wallet-outgoing">Passwords do not match.</p>
+        )}
+      </div>
+      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} disabled={!canSubmit} />
     </form>
   );
 }
@@ -852,15 +886,16 @@ export function ImportFileForm() {
         {fileName ? <p className="text-sm text-muted-foreground">Selected: {fileName}</p> : null}
       </div>
       <div className="space-y-2">
-        <Label>File password</Label>
+        <Label htmlFor="file-password">File password</Label>
         <Input
+          id="file-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
       </div>
-      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} />
+      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} disabled={!file} />
     </form>
   );
 }
@@ -870,6 +905,28 @@ export function ImportQrForm() {
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState("");
   const [password, setPassword] = useState("");
+  const [decoding, setDecoding] = useState(false);
+
+  async function handleImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setDecoding(true);
+    try {
+      const { decodeQrFromFile } = await import("@/lib/ui/qr-decode");
+      const decoded = await decodeQrFromFile(file);
+      if (decoded === null) {
+        toast.error("No QR code found in that image.");
+        return;
+      }
+      setPayload(decoded);
+      toast.success("QR code read.");
+    } catch {
+      toast.error("Could not read that image.");
+    } finally {
+      setDecoding(false);
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -888,23 +945,45 @@ export function ImportQrForm() {
   return (
     <form className="space-y-4" onSubmit={submit}>
       <div className="space-y-2">
-        <Label>QR payload</Label>
+        <Label htmlFor="qr-image">Wallet QR image</Label>
         <Input
+          id="qr-image"
+          type="file"
+          accept="image/*"
+          onChange={handleImage}
+          disabled={decoding || loading}
+        />
+        <p className="text-sm text-muted-foreground">
+          {decoding
+            ? "Reading QR code…"
+            : "Upload a photo or screenshot of your wallet QR code. The image stays on your device."}
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="qr-payload">QR payload</Label>
+        <Input
+          id="qr-payload"
           value={payload}
           onChange={(e) => setPayload(e.target.value)}
+          placeholder="Filled in from the image — or paste a payload here"
           required={importFieldsRequired}
         />
       </div>
       <div className="space-y-2">
-        <Label>Encryption password</Label>
+        <Label htmlFor="qr-password">Encryption password</Label>
         <Input
+          id="qr-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
       </div>
-      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} />
+      <ImportSubmitButton
+        label={walletCopy.importWallet}
+        loading={loading}
+        disabled={!payload.trim()}
+      />
     </form>
   );
 }
