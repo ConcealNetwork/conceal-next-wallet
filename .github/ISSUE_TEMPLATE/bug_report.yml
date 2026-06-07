@@ -1,0 +1,47 @@
+name: Bug report
+description: Report a problem with the wallet
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Never include private keys, seed/recovery
+        phrases, or passwords.** For security vulnerabilities, use the
+        [security policy](https://github.com/ConcealNetwork/conceal-next-wallet/security/policy)
+        instead of a public issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - Real wallet
+        - Mock / demo
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Browser / OS / version
+      placeholder: e.g. Chrome 138 on macOS 15
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors (optional)
+      render: shell

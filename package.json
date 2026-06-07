@@ -2,6 +2,11 @@
   "name": "conceal-next-wallet",
   "version": "0.1.0",
   "private": true,
+  "license": "BSD-3-Clause",
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
   "scripts": {
     "concealjs:prebuild": "concealjs --prebuild --out lib/conceal/concealjs && cp lib/conceal/concealjs/concealjs.js public/lib/concealjs/concealjs.js",
     "sync:legacy-libs": "node scripts/sync-legacy-libs.mjs",
