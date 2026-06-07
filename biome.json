@@ -16,7 +16,6 @@
       "e2e/**",
       "types/**",
       "!public",
-      "!design-explorations",
       "!lib/conceal/concealjs",
       "!!out",
       "!!.next"
