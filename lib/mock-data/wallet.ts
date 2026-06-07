@@ -349,6 +349,7 @@ export const mockSettings: WalletSettings = {
   nodeUrl: "https://explorer.conceal.network/daemon/",
   syncSpeed: "medium",
   readMinorTx: false,
+  autoLockMinutes: 0,
 };
 
 export const mockExportData = {

@@ -1,9 +1,12 @@
 "use client";
 
+import { toast } from "sonner";
 import { Footer } from "@/components/layout/footer";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
-import { useWalletLiveSync } from "@/lib/hooks";
+import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
+import { useWalletLiveSync, useWalletSettings } from "@/lib/hooks";
+import { useIdleLock } from "@/lib/hooks/use-idle-lock";
 import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-messages-since-open";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +14,15 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebarCollapse();
   useWalletLiveSync();
   usePrefetchMessagesForBadge();
+
+  // Auto-lock: after the configured idle window, drop the in-memory session and
+  // bounce to the unlock screen. Disabled when autoLockMinutes is 0.
+  const autoLockMinutes = useWalletSettings().data?.autoLockMinutes ?? 0;
+  const disconnect = useWalletDisconnect();
+  useIdleLock(autoLockMinutes * 60_000, () => {
+    toast.info("Locked due to inactivity.");
+    disconnect();
+  });
 
   return (
     <div className="text-foreground">

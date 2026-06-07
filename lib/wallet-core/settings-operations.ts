@@ -34,12 +34,14 @@ async function mapRuntimeSettings(): Promise<WalletSettings> {
   const customNodeUrl = (await Storage.getItem("customNodeUrl", null)) as string | null;
   const useCustomNode = Boolean(customNodeUrl ?? wallet.options.customNode);
   const activeNodeUrl = resolveActiveNodeUrl(explorer);
+  const autoLockMinutes = Number(await Storage.getItem("autoLockMinutes", 0)) || 0;
 
   return {
     useCustomNode,
     nodeUrl: useCustomNode ? (customNodeUrl ?? wallet.options.nodeUrl) : activeNodeUrl,
     readMinorTx: wallet.options.checkMinerTx,
     syncSpeed: syncSpeedFromReadSpeed(wallet.options.readSpeed),
+    autoLockMinutes,
     creationHeight: wallet.creationHeight,
     scanHeight: Math.max(0, Number(wallet.lastHeight)),
   };
@@ -128,6 +130,10 @@ export async function updateSettingsOperation(
   const wallet = requireOpenWallet();
   const watchdog = requireWatchdog();
   const explorer = BlockchainExplorerProvider.getInstance();
+
+  if (typeof input.autoLockMinutes !== "undefined") {
+    await Storage.setItem("autoLockMinutes", input.autoLockMinutes);
+  }
 
   if (typeof input.useCustomNode !== "undefined" || typeof input.nodeUrl !== "undefined") {
     await applyConnectionSettings(input);

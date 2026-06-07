@@ -411,6 +411,24 @@ export default function SettingsPage() {
 
             {current && (
               <Section title="Security">
+                <Row label="Auto-lock" description="Lock the wallet after a period of inactivity">
+                  <select
+                    className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
+                    value={String(current.autoLockMinutes)}
+                    onChange={(event) =>
+                      update(
+                        { autoLockMinutes: Number(event.target.value) },
+                        isMock ? "Mock auto-lock updated." : "Auto-lock updated.",
+                      )
+                    }
+                    aria-label="Auto-lock timeout"
+                  >
+                    <option value="0">Off</option>
+                    <option value="5">After 5 minutes</option>
+                    <option value="15">After 15 minutes</option>
+                    <option value="30">After 30 minutes</option>
+                  </select>
+                </Row>
                 <Row label="Password" description="Change the local wallet password">
                   <Button
                     type="button"

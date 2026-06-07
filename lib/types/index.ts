@@ -172,6 +172,8 @@ export type WalletSettings = {
   syncSpeed: SyncSpeed;
   /** When true, sync includes coinbase (miner) outputs — required for solo mining rewards. */
   readMinorTx: boolean;
+  /** Idle minutes before the wallet auto-locks; 0 disables auto-lock. */
+  autoLockMinutes: number;
   creationHeight?: number;
   scanHeight?: number;
 };
