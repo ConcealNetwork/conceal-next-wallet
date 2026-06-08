@@ -7,4 +7,5 @@ export const queryKeys = {
   addressBook: ["address-book"] as const,
   network: ["network"] as const,
   settings: ["settings"] as const,
+  optimizationStatus: ["optimization-status"] as const,
 };

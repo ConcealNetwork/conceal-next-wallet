@@ -8,7 +8,9 @@ import { services } from "@/lib/services";
 import { fetchSmartNodes } from "@/lib/network/smart-nodes";
 import {
   marketQueryOptions,
+  messagesQueryOptions,
   networkQueryOptions,
+  optimizationStatusQueryOptions,
   smartNodesQueryOptions,
 } from "@/lib/services/query-options";
 import type { AddressEntryInput } from "@/lib/services/address-book.service";
@@ -59,11 +61,19 @@ export function useWalletLiveSync() {
     const throttle = createCoalescingThrottle(() => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
       // exact: don't prefix-match the curated smart-nodes pool (see useSmartNodes).
       void queryClient.invalidateQueries({ queryKey: queryKeys.network, exact: true });
     }, 500);
+
+    // Messages/deposits walk the full tx list — mark stale on sync but don't refetch ~2×/sec.
+    const throttleHeavy = createCoalescingThrottle(() => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.deposits, refetchType: "none" });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages, refetchType: "none" });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.optimizationStatus,
+        refetchType: "none",
+      });
+    }, 5000);
 
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
@@ -73,13 +83,17 @@ export function useWalletLiveSync() {
       // unmount) before this dynamic import resolved — don't subscribe a
       // listener that would then leak and keep firing invalidations post-unmount.
       if (cancelled) return;
-      unsubscribe = subscribeWalletSync(() => throttle.trigger());
+      unsubscribe = subscribeWalletSync(() => {
+        throttle.trigger();
+        throttleHeavy.trigger();
+      });
     });
 
     return () => {
       cancelled = true;
       unsubscribe?.();
       throttle.cancel();
+      throttleHeavy.cancel();
     };
   }, [queryClient]);
 }
@@ -109,6 +123,7 @@ export function useMessages() {
   return useQuery({
     queryKey: queryKeys.messages,
     queryFn: () => services.messages.listMessages(),
+    ...messagesQueryOptions,
   });
 }
 
@@ -268,6 +283,16 @@ export function useWalletSettings() {
   return useQuery({ queryKey: queryKeys.settings, queryFn: () => services.settings.getSettings() });
 }
 
+export function useOptimizationStatus() {
+  const { status } = useWalletSession();
+  return useQuery({
+    queryKey: queryKeys.optimizationStatus,
+    queryFn: () => services.settings.getOptimizationStatus(),
+    enabled: status === "open",
+    ...optimizationStatusQueryOptions,
+  });
+}
+
 export function useUpdateWalletSettings() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -289,6 +314,7 @@ export function useOptimizeWallet() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.optimizationStatus });
     },
   });
 }

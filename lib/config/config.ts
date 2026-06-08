@@ -96,7 +96,7 @@ export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
     dustThreshold: new JSBigInt(String(s.dustThresholdAtomic)),
     defaultMixin: 5,
     optimizeOutputs: 100,
-    optimizeThreshold: 100,
+    optimizeThreshold: 900000000,
     messageTxAmount: new JSBigInt(String(s.messageTxAmountAtomic)),
     maxMessageSize: s.maxMessageSize,
     cryptonoteMemPoolTxLifetime: s.cryptonoteMemPoolTxLifetimeSeconds,

@@ -17,6 +17,18 @@ export const networkQueryOptions = {
   refetchInterval: env.useMockWallet ? (false as const) : NETWORK_POLL_MS,
 };
 
+/** Message list — expensive (scans all txs); not refetched on every sync tick. */
+export const messagesQueryOptions = {
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+};
+
+/** Fusion readiness — walks unspent outputs; refresh after sync or optimize. */
+export const optimizationStatusQueryOptions = {
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+};
+
 /** Pool list — fetched once when the Network page mounts; not polled or invalidated on sync. */
 export const smartNodesQueryOptions = {
   staleTime: Number.POSITIVE_INFINITY,

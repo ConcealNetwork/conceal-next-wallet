@@ -66,7 +66,7 @@ myGlobal.config = {
     dustThreshold: new JSBigInt('${s.dustThresholdAtomic}'),
     defaultMixin: 5,
     optimizeOutputs: 100,
-    optimizeThreshold: 100,
+    optimizeThreshold: 900000000,
     messageTxAmount: new JSBigInt('${s.messageTxAmountAtomic}'),
     maxMessageSize: 260,
     cryptonoteMemPoolTxLifetime: (60 * 60 * 12),

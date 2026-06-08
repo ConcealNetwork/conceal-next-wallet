@@ -523,6 +523,7 @@ export async function sendMessageOperation(input: SendMessageInput): Promise<Mes
     paymentId || undefined,
     body,
   );
+  await flushRuntimeWalletPersistence();
   const watchdog = getRuntimeWatchdog();
   if (watchdog !== null) watchdog.checkMempool();
 

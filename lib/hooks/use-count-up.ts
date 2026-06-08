@@ -62,7 +62,8 @@ export function useCountUp(target: number, options: UseCountUpOptions = {}) {
       startedAt ??= timestamp;
       const elapsed = timestamp - startedAt;
       const progress = Math.min(elapsed / durationMs, 1);
-      const value = progress < 1 ? startValue + (target - startValue) * easeOutCubic(progress) : target;
+      const value =
+        progress < 1 ? startValue + (target - startValue) * easeOutCubic(progress) : target;
       displayRef.current = value;
       setDisplayValue(value);
 

@@ -28,6 +28,7 @@ describe("mock services", () => {
       settings,
       updatedSettings,
       optimized,
+      optimizationStatus,
       rescanned,
     ] = await Promise.all([
       services.wallet.getWalletInfo(),
@@ -61,6 +62,7 @@ describe("mock services", () => {
       services.settings.getSettings(),
       services.settings.updateSettings({ readMinorTx: true }),
       services.settings.optimizeWallet(),
+      services.settings.getOptimizationStatus(),
       services.settings.resetAndRescan(),
     ]);
 
@@ -89,6 +91,9 @@ describe("mock services", () => {
     expect(typeof settings.nodeUrl).toBe("string");
     expect(updatedSettings.readMinorTx).toBe(true);
     expect(optimized.ok).toBe(true);
+    expect(optimized.optimized).toBe(true);
+    expect(optimizationStatus.isNeeded).toBe(true);
+    expect(optimizationStatus.unspentOutputs).toBeGreaterThan(0);
     expect(rescanned.ok).toBe(true);
   });
 });

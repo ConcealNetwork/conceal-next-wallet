@@ -20,6 +20,7 @@ import {
   resolveTransactionType,
   resolveUiTransactionType,
   listWalletMessages,
+  listWalletTransactions,
   sortMessagesByHeight,
   isUiMessageOut,
 } from "@/lib/wallet-core/mappers";
@@ -261,7 +262,7 @@ describe("wallet mappers", () => {
     expect(resolveTransactionType(largeSend)).toBe("send");
   });
 
-  it("does not classify sent rows as message without a decrypted message body", () => {
+  it("does not classify sent rows as message without a decrypted or stored message body", () => {
     const walletAddress = "ccx7WalletAddressExample";
     const sent = makeTx({
       hash: "sent-remote-addr",
@@ -273,6 +274,67 @@ describe("wallet mappers", () => {
 
     expect(isMessageOut(sent)).toBe(false);
     expect(mapCoreTransaction(sent, 200, walletAddress).type).toBe("send");
+  });
+
+  it("classifies sent rows as message when body is restored from sentMessages by txHash", () => {
+    const walletAddress = "ccx7WalletAddressExample";
+    const receiver =
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
+    const sent = makeTx({
+      hash: "import-sent-hash",
+      ins: [input(500_000)],
+      outs: [out(488_900)],
+    });
+    sent.remoteAddress = receiver;
+
+    const sentRecord = {
+      txHash: "import-sent-hash",
+      messageBody: "Hello from JSON backup",
+      receiver,
+    };
+
+    expect(isMessageOut(sent, sentRecord)).toBe(true);
+    const mapped = mapCoreTransaction(sent, 200, walletAddress, sentRecord);
+    expect(mapped.type).toBe("message");
+    expect(mapped.message).toBe("Hello from JSON backup");
+    expect(resolveUiTransactionType(mapped)).toBe("message");
+    expect(isUiMessageOut(mapped)).toBe(true);
+  });
+
+  it("listWalletTransactions restores sent message envelope after wallet import", () => {
+    const walletAddress = "ccx7WalletAddressExample";
+    const receiver =
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
+    const sent = makeTx({
+      hash: "import-sent-hash",
+      ins: [input(500_000)],
+      outs: [out(488_900)],
+    });
+    sent.remoteAddress = receiver;
+
+    const sentRecord = {
+      txHash: "import-sent-hash",
+      messageBody: "Hello from JSON backup",
+      receiver,
+    };
+
+    const wallet = {
+      getPublicAddress: () => walletAddress,
+      txsMem: [],
+      getTransactionsCopy: () => [sent],
+      getSentMessageRecord: (hash: string) => (hash === sentRecord.txHash ? sentRecord : undefined),
+      hydrateSentMessageBody: (tx: Transaction) => {
+        if (!tx.message && tx.hash === sentRecord.txHash) {
+          tx.message = sentRecord.messageBody;
+        }
+      },
+    } as unknown as import("@/lib/wallet-core/Wallet").Wallet;
+
+    const rows = listWalletTransactions(wallet, 200);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.type).toBe("message");
+    expect(rows[0]?.message).toBe("Hello from JSON backup");
+    expect(resolveUiTransactionType(rows[0]!)).toBe("message");
   });
 
   it("resolveUiTransactionType shows envelope for misclassified send rows", () => {

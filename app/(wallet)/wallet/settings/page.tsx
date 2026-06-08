@@ -23,6 +23,7 @@ import { useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { env } from "@/lib/env";
 import {
   useOptimizeWallet,
+  useOptimizationStatus,
   useResetAndRescan,
   useUpdateWalletSettings,
   useWalletInfo,
@@ -102,6 +103,7 @@ export default function SettingsPage() {
   const settings = useWalletSettings();
   const updateSettings = useUpdateWalletSettings();
   const optimizeWallet = useOptimizeWallet();
+  const optimizationStatus = useOptimizationStatus();
   const resetAndRescan = useResetAndRescan();
   const wallet = useWalletInfo();
   const deleteWallet = useWalletDelete();
@@ -243,10 +245,18 @@ export default function SettingsPage() {
     );
   }
 
+  const optimizationNeeded = optimizationStatus.data?.isNeeded ?? false;
+  const unspentOutputs = optimizationStatus.data?.unspentOutputs ?? 0;
+
   function handleOptimize() {
     optimizeWallet.mutate(undefined, {
-      onSuccess: () =>
-        toast.success(isMock ? "Mock optimization complete." : "Wallet optimization complete."),
+      onSuccess: (result) => {
+        if (result.optimized) {
+          toast.success(isMock ? "Mock optimization complete." : "Wallet optimization complete.");
+          return;
+        }
+        toast.info(isMock ? "Mock wallet does not need optimization." : "Nothing to optimize.");
+      },
       onError: (error: unknown) =>
         toast.error(error instanceof Error ? error.message : "Optimization failed."),
     });
@@ -281,14 +291,25 @@ export default function SettingsPage() {
                 label="Wallet optimization"
                 description="Compact transaction outputs to reduce wallet size"
               >
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={optimizeWallet.isPending}
-                  onClick={handleOptimize}
-                >
-                  {optimizeWallet.isPending ? "Optimizing…" : "Optimize Now"}
-                </Button>
+                <div className="flex w-full flex-col items-end gap-1.5 sm:w-auto">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      optimizeWallet.isPending ||
+                      optimizationStatus.isLoading ||
+                      !optimizationNeeded
+                    }
+                    onClick={handleOptimize}
+                  >
+                    {optimizeWallet.isPending ? "Optimizing…" : "Optimize Now"}
+                  </Button>
+                  {optimizationNeeded && (
+                    <p className="max-w-xs text-right text-xs text-amber-400/90 sm:max-w-sm">
+                      Optimization can be attempted — {unspentOutputs} unspent UTXOs
+                    </p>
+                  )}
+                </div>
               </Row>
             </Section>
 
