@@ -10,6 +10,7 @@ import {
   marketQueryOptions,
   messagesQueryOptions,
   networkQueryOptions,
+  optimizationStatusQueryOptions,
   smartNodesQueryOptions,
 } from "@/lib/services/query-options";
 import type { AddressEntryInput } from "@/lib/services/address-book.service";
@@ -68,6 +69,10 @@ export function useWalletLiveSync() {
     const throttleHeavy = createCoalescingThrottle(() => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.deposits, refetchType: "none" });
       void queryClient.invalidateQueries({ queryKey: queryKeys.messages, refetchType: "none" });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.optimizationStatus,
+        refetchType: "none",
+      });
     }, 5000);
 
     let unsubscribe: (() => void) | undefined;
@@ -278,6 +283,16 @@ export function useWalletSettings() {
   return useQuery({ queryKey: queryKeys.settings, queryFn: () => services.settings.getSettings() });
 }
 
+export function useOptimizationStatus() {
+  const { status } = useWalletSession();
+  return useQuery({
+    queryKey: queryKeys.optimizationStatus,
+    queryFn: () => services.settings.getOptimizationStatus(),
+    enabled: status === "open",
+    ...optimizationStatusQueryOptions,
+  });
+}
+
 export function useUpdateWalletSettings() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -299,6 +314,7 @@ export function useOptimizeWallet() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.optimizationStatus });
     },
   });
 }

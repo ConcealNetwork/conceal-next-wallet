@@ -23,6 +23,12 @@ export const messagesQueryOptions = {
   refetchOnWindowFocus: false,
 };
 
+/** Fusion readiness — walks unspent outputs; refresh after sync or optimize. */
+export const optimizationStatusQueryOptions = {
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
+};
+
 /** Pool list — fetched once when the Network page mounts; not polled or invalidated on sync. */
 export const smartNodesQueryOptions = {
   staleTime: Number.POSITIVE_INFINITY,

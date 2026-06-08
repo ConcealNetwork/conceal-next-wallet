@@ -4678,122 +4678,92 @@ var reportError = self.reportError || function (e) { console.error(e); };
           isNeeded
         };
       };
-      this.createFusionTransaction = (blockchainHeight, threshold, blockchainExplorer, obtainMixOutsCallback) => {
-        return new Promise(async (resolve, reject) => {
-          try {
-            const MAX_FUSION_OUTPUTS = config.maxFusionOutputs;
-            const fusionThreshold = config.dustThreshold;
-            const neededFee = config.minimumFee_V2;
-            if (threshold <= fusionThreshold) {
-              throw new Error("Threshold is too low");
-            }
-            const destinationAddress = this.getPublicAddress();
-            if (destinationAddress === "") {
-              throw new Error("Destination address is not set");
-            }
-            const estimateFusionInputsCount = Currency.getApproximateMaximumInputCount(
-              Currency.fusionTxMaxSize,
-              MAX_FUSION_OUTPUTS,
-              config.defaultMixin
-            );
-            if (estimateFusionInputsCount < Currency.fusionTxMinInputCount) {
-              throw new Error("Mixin count is too big");
-            }
-            const fusionInputs = this.pickRandomFusionInputs(
-              threshold,
-              blockchainHeight,
-              Currency.fusionTxMinInputCount,
-              estimateFusionInputsCount
-            );
-            if (fusionInputs.length < Currency.fusionTxMinInputCount) {
-              throw new Error("Nothing to optimize");
-            }
-            let fusionTransaction = null;
-            let transactionSize = 0;
-            let round = 0;
-            do {
-              if (round !== 0) {
-                fusionInputs.pop();
-              }
-              const inputAmounts = fusionInputs.map((input) => input.amount);
-              let mixinResult = [];
-              if (config.defaultMixin !== 0) {
-                mixinResult = await obtainMixOutsCallback(inputAmounts, config.defaultMixin + 1);
-              }
-              const inputsAmount = fusionInputs.reduce((sum, input) => sum + input.amount, 0);
-              const dsts = [
-                {
-                  address: destinationAddress,
-                  amount: inputsAmount - neededFee
-                }
-              ];
-              const data = await TransactionsExplorer.createRawTx(
-                dsts,
-                this,
-                false,
-                fusionInputs,
-                false,
-                mixinResult,
-                config.defaultMixin,
-                neededFee,
-                "",
-                "",
-                0,
-                "regular",
-                0
-              );
-              transactionSize = Currency.getApproximateTransactionSize(
-                data.signed.vin.length,
-                data.signed.vout.length,
-                config.defaultMixin
-              );
-              fusionTransaction = data;
-              round++;
-            } while (transactionSize > Currency.fusionTxMaxSize && fusionInputs.length >= Currency.fusionTxMinInputCount);
-            if (fusionInputs.length < Currency.fusionTxMinInputCount) {
-              throw new Error("Minimum input count not met");
-            }
-            if (!fusionTransaction || fusionTransaction.signed.vout.length === 0) {
-              throw new Error("Transaction has no outputs");
-            }
-            if (fusionTransaction.signed.vout.length > MAX_FUSION_OUTPUTS) {
-              throw new Error("Maximum output count exceeded");
-            }
-            if (fusionTransaction.signed.vout.length > MAX_FUSION_OUTPUTS) {
-              throw new Error("Maximum output count exceeded");
-            }
-            await blockchainExplorer.sendRawTx(fusionTransaction.raw.raw).then(() => {
-              this.addTxPrivateKeyWithTxHashAndFusion(
-                fusionTransaction.raw.hash,
-                fusionTransaction.raw.prvkey,
-                true
-              );
-              return swal({
-                type: "success",
-                title: i18n.t("global.optimize.success"),
-                confirmButtonText: i18n.t("global.optimize.confirmText")
-              });
-            }).then(() => {
-              resolve(round);
-            }).catch((error) => {
-              reject(error);
-              return swal({
-                type: "error",
-                title: i18n.t("global.optimize.error"),
-                text: error.message,
-                confirmButtonText: i18n.t("global.optimize.confirmText")
-              });
-            });
-          } catch (error) {
-            reject(error);
-            return swal({
-              type: "info",
-              title: i18n.t("global.optimize.errorInfo"),
-              text: error.message,
-              confirmButtonText: i18n.t("global.optimize.confirmText")
-            });
+      this.createFusionTransaction = async (blockchainHeight, threshold, blockchainExplorer, obtainMixOutsCallback) => {
+        const MAX_FUSION_OUTPUTS = config.maxFusionOutputs;
+        const fusionThreshold = config.dustThreshold;
+        const neededFee = config.minimumFee_V2;
+        if (threshold <= fusionThreshold) {
+          throw new Error("Threshold is too low");
+        }
+        const destinationAddress = this.getPublicAddress();
+        if (destinationAddress === "") {
+          throw new Error("Destination address is not set");
+        }
+        const estimateFusionInputsCount = Currency.getApproximateMaximumInputCount(
+          Currency.fusionTxMaxSize,
+          MAX_FUSION_OUTPUTS,
+          config.defaultMixin
+        );
+        if (estimateFusionInputsCount < Currency.fusionTxMinInputCount) {
+          throw new Error("Mixin count is too big");
+        }
+        const fusionInputs = this.pickRandomFusionInputs(
+          threshold,
+          blockchainHeight,
+          Currency.fusionTxMinInputCount,
+          estimateFusionInputsCount
+        );
+        if (fusionInputs.length < Currency.fusionTxMinInputCount) {
+          throw new Error("Nothing to optimize");
+        }
+        let fusionTransaction = null;
+        let transactionSize = 0;
+        let round = 0;
+        do {
+          if (round !== 0) {
+            fusionInputs.pop();
           }
-        });
+          const inputAmounts = fusionInputs.map((input) => input.amount);
+          let mixinResult = [];
+          if (config.defaultMixin !== 0) {
+            mixinResult = await obtainMixOutsCallback(inputAmounts, config.defaultMixin + 1);
+          }
+          const inputsAmount = fusionInputs.reduce((sum, input) => sum + input.amount, 0);
+          const dsts = [
+            {
+              address: destinationAddress,
+              amount: inputsAmount - neededFee
+            }
+          ];
+          const data = await TransactionsExplorer.createRawTx(
+            dsts,
+            this,
+            false,
+            fusionInputs,
+            false,
+            mixinResult,
+            config.defaultMixin,
+            neededFee,
+            "",
+            "",
+            0,
+            "regular",
+            0
+          );
+          transactionSize = Currency.getApproximateTransactionSize(
+            data.signed.vin.length,
+            data.signed.vout.length,
+            config.defaultMixin
+          );
+          fusionTransaction = data;
+          round++;
+        } while (transactionSize > Currency.fusionTxMaxSize && fusionInputs.length >= Currency.fusionTxMinInputCount);
+        if (fusionInputs.length < Currency.fusionTxMinInputCount) {
+          throw new Error("Minimum input count not met");
+        }
+        if (!fusionTransaction || fusionTransaction.signed.vout.length === 0) {
+          throw new Error("Transaction has no outputs");
+        }
+        if (fusionTransaction.signed.vout.length > MAX_FUSION_OUTPUTS) {
+          throw new Error("Maximum output count exceeded");
+        }
+        await blockchainExplorer.sendRawTx(fusionTransaction.raw.raw);
+        this.addTxPrivateKeyWithTxHashAndFusion(
+          fusionTransaction.raw.hash,
+          fusionTransaction.raw.prvkey,
+          true
+        );
+        return round;
       };
       this.clearTransactions = () => {
         this.txsMem = [];

@@ -177,3 +177,13 @@ export type WalletSettings = {
   creationHeight?: number;
   scanHeight?: number;
 };
+
+export type OptimizationStatus = {
+  isNeeded: boolean;
+  unspentOutputs: number;
+};
+
+export type OptimizeWalletResult = {
+  ok: true;
+  optimized: boolean;
+};

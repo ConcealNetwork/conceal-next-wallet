@@ -196,7 +196,23 @@ export async function resetAndRescanOperation(): Promise<{ ok: true }> {
   return { ok: true };
 }
 
-export async function optimizeWalletOperation(): Promise<{ ok: true }> {
+export async function getOptimizationStatusOperation(): Promise<{
+  isNeeded: boolean;
+  unspentOutputs: number;
+}> {
+  await ensureAllWalletLegacyLibs();
+  const wallet = requireOpenWallet();
+  const explorer = BlockchainExplorerProvider.getInstance();
+  const blockchainHeight = await explorer.getHeight();
+  const optimizeInfo = wallet.optimizationNeeded(blockchainHeight, config.optimizeThreshold);
+
+  return {
+    isNeeded: optimizeInfo.isNeeded,
+    unspentOutputs: optimizeInfo.numOutputs,
+  };
+}
+
+export async function optimizeWalletOperation(): Promise<{ ok: true; optimized: boolean }> {
   await ensureAllWalletLegacyLibs();
   const wallet = requireOpenWallet();
   const explorer = BlockchainExplorerProvider.getInstance();
@@ -204,7 +220,7 @@ export async function optimizeWalletOperation(): Promise<{ ok: true }> {
   const optimizeInfo = wallet.optimizationNeeded(blockchainHeight, config.optimizeThreshold);
 
   if (!optimizeInfo.isNeeded) {
-    return { ok: true };
+    return { ok: true, optimized: false };
   }
 
   await wallet.createFusionTransaction(
@@ -219,5 +235,5 @@ export async function optimizeWalletOperation(): Promise<{ ok: true }> {
     watchdog.checkMempool();
   }
 
-  return { ok: true };
+  return { ok: true, optimized: true };
 }

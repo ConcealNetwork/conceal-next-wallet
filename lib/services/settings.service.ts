@@ -1,8 +1,9 @@
-import type { WalletSettings } from "@/lib/types";
+import type { OptimizationStatus, OptimizeWalletResult, WalletSettings } from "@/lib/types";
 
 export interface SettingsService {
   getSettings(): Promise<WalletSettings>;
   updateSettings(input: Partial<WalletSettings>): Promise<WalletSettings>;
-  optimizeWallet(): Promise<{ ok: true }>;
+  getOptimizationStatus(): Promise<OptimizationStatus>;
+  optimizeWallet(): Promise<OptimizeWalletResult>;
   resetAndRescan(): Promise<{ ok: true }>;
 }

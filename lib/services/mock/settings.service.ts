@@ -40,9 +40,13 @@ export const mockSettingsService: SettingsService = {
     currentSettings = { ...currentSettings, ...input };
     return clone(currentSettings);
   },
+  async getOptimizationStatus() {
+    await mockDelay();
+    return { isNeeded: true, unspentOutputs: 142 };
+  },
   async optimizeWallet() {
     await mockDelay();
-    return { ok: true };
+    return { ok: true, optimized: true };
   },
   async resetAndRescan() {
     await mockDelay();

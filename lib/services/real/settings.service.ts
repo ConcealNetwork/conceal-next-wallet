@@ -14,6 +14,9 @@ export const realSettingsService: SettingsService = {
   async updateSettings(input: Partial<WalletSettings>): Promise<WalletSettings> {
     return (await settingsOps()).updateSettingsOperation(input);
   },
+  async getOptimizationStatus() {
+    return (await settingsOps()).getOptimizationStatusOperation();
+  },
   async optimizeWallet() {
     return (await settingsOps()).optimizeWalletOperation();
   },
