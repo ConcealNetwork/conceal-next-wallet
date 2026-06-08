@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type UseCountUpOptions = {
   durationMs?: number;
@@ -34,6 +34,12 @@ export function useCountUp(target: number, options: UseCountUpOptions = {}) {
   const { durationMs = 700, formatter } = options;
   const prefersReducedMotion = usePrefersReducedMotion();
   const [displayValue, setDisplayValue] = useState(target);
+  // Track the latest shown value (and whether we've animated once) so a new
+  // target continues from where we are instead of snapping back to 0. During
+  // sync the target updates a few times a second; restarting from 0 each time
+  // made the value visibly "reload". The entrance still counts up from 0.
+  const displayRef = useRef(target);
+  const hasAnimated = useRef(false);
 
   useIsomorphicLayoutEffect(() => {
     const mediaQuery =
@@ -41,11 +47,14 @@ export function useCountUp(target: number, options: UseCountUpOptions = {}) {
         ? window.matchMedia("(prefers-reduced-motion: reduce)")
         : null;
     if (prefersReducedMotion || mediaQuery?.matches || durationMs <= 0) {
+      hasAnimated.current = true;
+      displayRef.current = target;
       setDisplayValue(target);
       return;
     }
 
-    const startValue = 0;
+    const startValue = hasAnimated.current ? displayRef.current : 0;
+    hasAnimated.current = true;
     let animationFrame = 0;
     let startedAt: number | null = null;
 
@@ -53,15 +62,16 @@ export function useCountUp(target: number, options: UseCountUpOptions = {}) {
       startedAt ??= timestamp;
       const elapsed = timestamp - startedAt;
       const progress = Math.min(elapsed / durationMs, 1);
-      setDisplayValue(startValue + (target - startValue) * easeOutCubic(progress));
+      const value = progress < 1 ? startValue + (target - startValue) * easeOutCubic(progress) : target;
+      displayRef.current = value;
+      setDisplayValue(value);
 
       if (progress < 1) {
         animationFrame = window.requestAnimationFrame(tick);
-      } else {
-        setDisplayValue(target);
       }
     }
 
+    displayRef.current = startValue;
     setDisplayValue(startValue);
     animationFrame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(animationFrame);

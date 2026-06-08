@@ -35,7 +35,8 @@ export function useRefreshWallet() {
     onSuccess: (wallet: WalletInfo) => {
       queryClient.setQueryData(queryKeys.wallet, wallet);
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.network });
+      // exact: don't prefix-match the curated smart-nodes pool (see useSmartNodes).
+      void queryClient.invalidateQueries({ queryKey: queryKeys.network, exact: true });
     },
   });
 }
@@ -56,7 +57,8 @@ export function useWalletLiveSync() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
       void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.network });
+      // exact: don't prefix-match the curated smart-nodes pool (see useSmartNodes).
+      void queryClient.invalidateQueries({ queryKey: queryKeys.network, exact: true });
     }, 500);
 
     let unsubscribe: (() => void) | undefined;
@@ -241,7 +243,8 @@ export function useUpdateWalletSettings() {
       queryClient.setQueryData(queryKeys.settings, settings);
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.network });
+      // exact: don't prefix-match the curated smart-nodes pool (see useSmartNodes).
+      void queryClient.invalidateQueries({ queryKey: queryKeys.network, exact: true });
     },
   });
 }
@@ -264,7 +267,8 @@ export function useResetAndRescan() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.network });
+      // exact: don't prefix-match the curated smart-nodes pool (see useSmartNodes).
+      void queryClient.invalidateQueries({ queryKey: queryKeys.network, exact: true });
     },
   });
 }

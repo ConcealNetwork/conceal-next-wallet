@@ -20,10 +20,11 @@ export default function NetworkPage() {
   const {
     data: smartNodes,
     isPending: smartNodesPending,
-    isFetching: smartNodesFetching,
     isError: smartNodesError,
   } = useSmartNodes(data?.url);
-  const smartNodesLoading = smartNodesPending || smartNodesFetching;
+  // Gate on pending (no data yet), not fetching: a background refetch must never
+  // blank the live peer graph back to the blurred placeholder.
+  const smartNodesLoading = smartNodesPending;
   const prefersReducedMotion = usePrefersReducedMotion();
   const animate = !prefersReducedMotion;
   const heightLabel = useCountUp(data?.height ?? 0, {
@@ -443,7 +444,10 @@ function truncateNodeName(name: string, max = 14): string {
 // Recent blocks as a chain — each bar is a block, the newest is highlighted (and pulses).
 function BlockChainStrip({ blocks, animate }: { blocks: number; animate: boolean }) {
   const count = Math.max(blocks, 1);
-  const barKeys = useMemo(() => Array.from({ length: count }, () => crypto.randomUUID()), [count]);
+  // Stable positional keys: bars have no identity beyond their slot. Keying by
+  // content (or a fresh id per render) remounted every bar each poll — they
+  // flashed — because the series is reallocated on every sync invalidation.
+  const barKeys = useMemo(() => Array.from({ length: count }, (_, i) => `block-${i}`), [count]);
   return (
     <div className="flex h-12 items-stretch gap-1.5" aria-hidden="true">
       {barKeys.map((barKey, index) => {
@@ -587,7 +591,9 @@ function MiniArea({ values, color }: { values: number[]; color: string }) {
 
 function MiniBars({ values, color }: { values: number[]; color: string }) {
   const max = Math.max(...values, 1);
-  const barKeys = useMemo(() => values.map(() => crypto.randomUUID()), [values]);
+  // Stable positional keys (see BlockChainStrip) so bars update in place instead
+  // of remounting and flashing when the series is reallocated each poll.
+  const barKeys = values.map((_, i) => `peer-${i}`);
   return (
     <div className="flex h-12 items-end gap-1" aria-hidden="true">
       {values.map((value, index) => (
