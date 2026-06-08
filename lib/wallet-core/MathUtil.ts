@@ -38,7 +38,7 @@ export class MathUtil {
     const frac = Math.sqrt(r / (1 << 53));
     let i = (frac * max) | 0;
     // just in case rounding up to 1 occurs after sqrt
-    if (i == max) --i;
+    if (i === max) --i;
     return i;
   }
 }

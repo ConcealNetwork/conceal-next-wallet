@@ -288,7 +288,9 @@ function SmartNodesGraph({
           )}
         >
           {failed ? (
-            <p className="px-3 text-center text-xs text-muted-foreground">Curated smart nodes unavailable</p>
+            <p className="px-3 text-center text-xs text-muted-foreground">
+              Curated smart nodes unavailable
+            </p>
           ) : null}
         </div>
       )}

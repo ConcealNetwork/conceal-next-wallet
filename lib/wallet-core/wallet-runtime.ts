@@ -185,9 +185,11 @@ export function getRuntimeWallet(): Wallet | null {
     return fromDi;
   }
 
-  const worker = DependencyInjectorInstance().getInstance(WalletWorker.name, "default", false) as
-    | WalletWorker
-    | null;
+  const worker = DependencyInjectorInstance().getInstance(
+    WalletWorker.name,
+    "default",
+    false,
+  ) as WalletWorker | null;
   if (isWalletInstance(worker?.wallet)) {
     return worker.wallet;
   }

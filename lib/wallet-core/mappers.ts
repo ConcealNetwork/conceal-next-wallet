@@ -106,9 +106,7 @@ export function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amou
   return Math.abs(transaction.amount.atomic) === MESSAGE_TX_AMOUNT_ATOMIC;
 }
 
-export function isUiMessageOut(
-  transaction: Pick<UiTransaction, "message" | "amount">,
-): boolean {
+export function isUiMessageOut(transaction: Pick<UiTransaction, "message" | "amount">): boolean {
   if (!transaction.message) return false;
   return isSentMessageAmount(Math.abs(transaction.amount.atomic));
 }

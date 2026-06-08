@@ -109,7 +109,7 @@ class QRReader {
         const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
         const device = devices.filter((device) => {
           const deviceLabel = device.label.split(",")[1];
-          if (device.kind == "videoinput") {
+          if (device.kind === "videoinput") {
             return device;
           }
         });
@@ -130,7 +130,7 @@ class QRReader {
       });
 
     function showErrorMsg(error: string) {
-      if ("" + error === "DOMException: Permission denied") {
+      if (`${error}` === "DOMException: Permission denied") {
         swal({
           type: "error",
           title: i18n.t("global.permissionRequiredForCameraModal.title"),
@@ -210,7 +210,7 @@ class QRReader {
         }
 
         // Try-Catch to circumvent Firefox Bug #879717
-        if (errorName == "NS_ERROR_NOT_AVAILABLE") {
+        if (errorName === "NS_ERROR_NOT_AVAILABLE") {
           setTimeout(newDecoderFrame, 0);
         }
       }

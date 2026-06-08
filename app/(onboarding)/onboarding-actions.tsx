@@ -191,12 +191,18 @@ function WizardRail({
         const connector =
           n < WIZARD_STEPS.length ? (
             <span
-              className={cn("mx-2 h-px flex-1 transition-colors duration-200", done ? "bg-primary" : "bg-border")}
+              className={cn(
+                "mx-2 h-px flex-1 transition-colors duration-200",
+                done ? "bg-primary" : "bg-border",
+              )}
             />
           ) : null;
 
         return (
-          <li key={label} className={cn("flex items-center", n < WIZARD_STEPS.length && "min-w-0 flex-1")}>
+          <li
+            key={label}
+            className={cn("flex items-center", n < WIZARD_STEPS.length && "min-w-0 flex-1")}
+          >
             {clickable ? (
               <button
                 type="button"
@@ -303,7 +309,9 @@ export function ImportKeysForm() {
   const [derivedPreview, setDerivedPreview] = useState<{ address: string; viewKey: string } | null>(
     null,
   );
-  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
   const [showAdvancedViewKey, setShowAdvancedViewKey] = useState(false);
 
   // Fetch the live chain tip the first time the History step opens, so the
@@ -956,7 +964,12 @@ export function ImportQrForm() {
           onCancel={() => setScanning(false)}
         />
       ) : (
-        <Button type="button" variant="outline" className="w-full" onClick={() => setScanning(true)}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => setScanning(true)}
+        >
           Scan with camera
         </Button>
       )}

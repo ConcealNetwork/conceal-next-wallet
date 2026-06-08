@@ -10,23 +10,22 @@ export function TermsContent() {
 
       <h2>GENERAL DISCLAIMER - English version</h2>
       <p>
-        It is understood that interactions with Conceal Web Wallet are entirely client-side.
-        That wallet.conceal.network has no control or access to your wallet&apos;s private keys,
-        nor do they have the ability to recover your funds in any event of loss.
+        It is understood that interactions with Conceal Web Wallet are entirely client-side. That
+        wallet.conceal.network has no control or access to your wallet&apos;s private keys, nor do
+        they have the ability to recover your funds in any event of loss.
       </p>
       <p>
         In all circumstances, wallet.conceal.network, Conceal Network Core Team, Conceal Network
         promoters, or any entity affiliated with the Conceal Network project will not be liable for
-        loss or misuse of funds held using the aforementioned wallet.
-        Users also understand and agree that they are solely responsible for providing a secure
-        environment to interact with a Conceal.Network web wallet.
+        loss or misuse of funds held using the aforementioned wallet. Users also understand and
+        agree that they are solely responsible for providing a secure environment to interact with a
+        Conceal.Network web wallet.
       </p>
       <p>
         Additionally, Conceal.Network cannot, and will not, be held liable for use of funds
-        originating from or arriving to a web wallet.
-        By creating, importing, or interacting with a wallet on Conceal.Network, you implicitly
-        agree to these terms, and absolve the website owners and affiliates of any and all
-        liability.
+        originating from or arriving to a web wallet. By creating, importing, or interacting with a
+        wallet on Conceal.Network, you implicitly agree to these terms, and absolve the website
+        owners and affiliates of any and all liability.
       </p>
 
       <h1 className="text-center uppercase">Terms of Use</h1>
@@ -75,10 +74,10 @@ export function TermsContent() {
       </p>
       <ul className="list-none space-y-4 pl-0">
         <li>
-          <strong className="text-primary">Intellectual Property Infringement.</strong>{" "}
-          Activity that infringes on or violates any copyright, trademark, service mark, patent,
-          right of publicity, right of privacy, or other proprietary or intellectual property rights
-          under the law.
+          <strong className="text-primary">Intellectual Property Infringement.</strong> Activity
+          that infringes on or violates any copyright, trademark, service mark, patent, right of
+          publicity, right of privacy, or other proprietary or intellectual property rights under
+          the law.
         </li>
         <li>
           <strong className="text-primary">Cyberattack.</strong> Activity that seeks to interfere
@@ -126,9 +125,9 @@ export function TermsContent() {
 
       <h2>Limitations, Restrictions, and other terms</h2>
       <p>
-        Conceal Network&apos;s determinations of participant eligibility or any questions or disputes
-        arising from anyone&apos;s use of the Interface or any other Conceal Network rules or
-        restrictions shall be final and binding and not subject to challenge or appeal.
+        Conceal Network&apos;s determinations of participant eligibility or any questions or
+        disputes arising from anyone&apos;s use of the Interface or any other Conceal Network rules
+        or restrictions shall be final and binding and not subject to challenge or appeal.
       </p>
       <p>
         Without notice to you, Conceal Network reserves the right to suspend or terminate your
@@ -143,52 +142,52 @@ export function TermsContent() {
         additional terms or conditions applicable to such claims process.
       </p>
       <p>
-        You are responsible for paying all transaction fees associated with claiming any onchain asset
-        including any token made available on the Protocol. &ldquo;Transaction Fees&rdquo; means the
-        fees required to be paid to execute a transaction on the Protocol, sometimes known as
-        &ldquo;gas fees.&rdquo;
+        You are responsible for paying all transaction fees associated with claiming any onchain
+        asset including any token made available on the Protocol. &ldquo;Transaction Fees&rdquo;
+        means the fees required to be paid to execute a transaction on the Protocol, sometimes known
+        as &ldquo;gas fees.&rdquo;
       </p>
       <p>
         Transactions processed by the blockchain are irreversible. You acknowledge that any
-        transaction you initiate by connecting your wallet to the Protocol using the Interface may be
-        irrevocable.
+        transaction you initiate by connecting your wallet to the Protocol using the Interface may
+        be irrevocable.
       </p>
       <p>
-        Conceal Network is not responsible for any problems or technical malfunction of any telephone,
-        Internet or blockchain network or lines, online systems, servers, providers, computer
-        equipment, software, or messaging platform, or as a result of technical problems or traffic
-        congestion on the Internet, any website, or any application, or any combination thereof,
-        including, without limitation, any resulting error in computing qualifying actions or any
-        unavailability of Interface features, or any injury or damage to any participant&apos;s or
-        any other person&apos;s computer or mobile device related to or resulting from participation
-        in features available through the Interface. If, for any reason, the Interface is not
-        capable of running as planned, including due to errors of any kind or nature, infection by
-        computer viruses, bugs, tampering, unauthorized intervention, fraud, technical failures, or
-        any other causes beyond the control of Conceal Network which corrupt or affect the
-        administration, security, fairness, integrity, or proper conduct of the Interface features,
-        Conceal Network reserves the right in its sole discretion to cancel, terminate, modify, or
-        suspend the Interface features or otherwise respond to the circumstances as Conceal Network
-        deems appropriate.
+        Conceal Network is not responsible for any problems or technical malfunction of any
+        telephone, Internet or blockchain network or lines, online systems, servers, providers,
+        computer equipment, software, or messaging platform, or as a result of technical problems or
+        traffic congestion on the Internet, any website, or any application, or any combination
+        thereof, including, without limitation, any resulting error in computing qualifying actions
+        or any unavailability of Interface features, or any injury or damage to any
+        participant&apos;s or any other person&apos;s computer or mobile device related to or
+        resulting from participation in features available through the Interface. If, for any
+        reason, the Interface is not capable of running as planned, including due to errors of any
+        kind or nature, infection by computer viruses, bugs, tampering, unauthorized intervention,
+        fraud, technical failures, or any other causes beyond the control of Conceal Network which
+        corrupt or affect the administration, security, fairness, integrity, or proper conduct of
+        the Interface features, Conceal Network reserves the right in its sole discretion to cancel,
+        terminate, modify, or suspend the Interface features or otherwise respond to the
+        circumstances as Conceal Network deems appropriate.
       </p>
 
       <h2>Changes to any program made available through the interface</h2>
       <p>
-        Conceal Network reserves the right to change, update and/or discontinue, in whole or in part,
-        either temporarily or permanently, any portion of the Interface or any program made available
-        through the Interface and/or any policy, FAQ, guidelines, at any time in its sole discretion
-        and without advance notice to you. Conceal Network will not be liable to you in the event of
-        any modification, suspension, or discontinuance of the Interface or any features made
-        available through the Interface. Unless otherwise specified, any changes or modifications
-        will be effective immediately upon posting the revisions to these Terms of Use, and you waive
-        any right you may have to receive specific notice of such changes or modifications. If we
-        change or modify these Terms of Use, we will revise the &ldquo;last updated&rdquo; date
-        located at the top of these Terms of Use. If you continue to participate in the Interface,
-        including by receiving any promotional points, using points, or otherwise participating in the
-        Interface in any way after a change to these Terms of Use, you will be deemed to have read,
-        understood, and unconditionally consented and agreed to such changes; therefore, you should
-        review these Terms of Use and applicable policies and guidelines frequently to understand the
-        terms and conditions that apply to your use of the Interface. If you do not agree to the
-        Terms of Use, you must stop using the Interface.
+        Conceal Network reserves the right to change, update and/or discontinue, in whole or in
+        part, either temporarily or permanently, any portion of the Interface or any program made
+        available through the Interface and/or any policy, FAQ, guidelines, at any time in its sole
+        discretion and without advance notice to you. Conceal Network will not be liable to you in
+        the event of any modification, suspension, or discontinuance of the Interface or any
+        features made available through the Interface. Unless otherwise specified, any changes or
+        modifications will be effective immediately upon posting the revisions to these Terms of
+        Use, and you waive any right you may have to receive specific notice of such changes or
+        modifications. If we change or modify these Terms of Use, we will revise the &ldquo;last
+        updated&rdquo; date located at the top of these Terms of Use. If you continue to participate
+        in the Interface, including by receiving any promotional points, using points, or otherwise
+        participating in the Interface in any way after a change to these Terms of Use, you will be
+        deemed to have read, understood, and unconditionally consented and agreed to such changes;
+        therefore, you should review these Terms of Use and applicable policies and guidelines
+        frequently to understand the terms and conditions that apply to your use of the Interface.
+        If you do not agree to the Terms of Use, you must stop using the Interface.
       </p>
 
       <h2>Release of claims</h2>
@@ -204,47 +203,47 @@ export function TermsContent() {
         You agree to hold harmless, release, defend, and indemnify us and our officers, directors,
         employees, contractors, agents, affiliates, and subsidiaries from and against all claims,
         damages, obligations, losses, liabilities, costs, and expenses arising from: (a) your access
-        and use of the Interface; (b) your violation of any term or condition of these terms of
-        use, the right of any third party, or any other applicable law, rule, or regulation; and
-        (c) any other party&apos;s access and use of the Interface with your assistance or using any
-        device or account that you own or control.
+        and use of the Interface; (b) your violation of any term or condition of these terms of use,
+        the right of any third party, or any other applicable law, rule, or regulation; and (c) any
+        other party&apos;s access and use of the Interface with your assistance or using any device
+        or account that you own or control.
       </p>
 
       <h2>Limitation of Liability</h2>
       <p>
         Under no circumstances shall we or any of our officers, directors, employees, contractors,
         agents, affiliates, or subsidiaries be liable to you for any indirect, punitive, incidental,
-        special, consequential, or exemplary damages, including (but not limited to) damages for loss
-        of profits, goodwill, use, data, or other intangible property, arising out of or relating to
-        any access or use of the Interface, nor will we be responsible for any damage, loss, or
-        injury resulting from hacking, tampering, or other unauthorized access or use of the Interface
-        or the information contained within it. We assume no liability or responsibility for any: (a)
-        errors, mistakes, or inaccuracies of content; (b) personal injury or property damage, of any
-        nature whatsoever, resulting from any access or use of the Interface; (c) unauthorized
-        access or use of any secure server or database in our control, or the use of any information
-        or data stored therein; (d) interruption or cessation of function related to the Interface;
-        (e) bugs, viruses, trojan horses, or the like that may be transmitted to or through the
-        Interface; (f) errors or omissions in, or loss or damage incurred as a result of the use of,
-        any content made available through the Interface; and (g) the defamatory, offensive, or
-        illegal conduct of any third party. Under no circumstances shall we or any of our officers,
-        directors, employees, contractors, agents, affiliates, or subsidiaries be liable to you for
-        any claims, proceedings, liabilities, obligations, damages, losses, or costs in an amount
-        exceeding the amount you paid to us in exchange for access to and use of the Interface, or
-        $100.00, whichever is greater. This limitation of liability applies regardless of whether
-        the alleged liability is based on contract, tort, negligence, strict liability, or any other
-        basis, and even if we have been advised of the possibility of such liability. Some
-        jurisdictions do not allow the exclusion of certain warranties or the limitation or exclusion
-        of certain liabilities and damages. Accordingly, some of the disclaimers and limitations set
-        forth in this Agreement may not apply to you. This limitation of liability shall apply to the
-        fullest extent permitted by law.
+        special, consequential, or exemplary damages, including (but not limited to) damages for
+        loss of profits, goodwill, use, data, or other intangible property, arising out of or
+        relating to any access or use of the Interface, nor will we be responsible for any damage,
+        loss, or injury resulting from hacking, tampering, or other unauthorized access or use of
+        the Interface or the information contained within it. We assume no liability or
+        responsibility for any: (a) errors, mistakes, or inaccuracies of content; (b) personal
+        injury or property damage, of any nature whatsoever, resulting from any access or use of the
+        Interface; (c) unauthorized access or use of any secure server or database in our control,
+        or the use of any information or data stored therein; (d) interruption or cessation of
+        function related to the Interface; (e) bugs, viruses, trojan horses, or the like that may be
+        transmitted to or through the Interface; (f) errors or omissions in, or loss or damage
+        incurred as a result of the use of, any content made available through the Interface; and
+        (g) the defamatory, offensive, or illegal conduct of any third party. Under no circumstances
+        shall we or any of our officers, directors, employees, contractors, agents, affiliates, or
+        subsidiaries be liable to you for any claims, proceedings, liabilities, obligations,
+        damages, losses, or costs in an amount exceeding the amount you paid to us in exchange for
+        access to and use of the Interface, or $100.00, whichever is greater. This limitation of
+        liability applies regardless of whether the alleged liability is based on contract, tort,
+        negligence, strict liability, or any other basis, and even if we have been advised of the
+        possibility of such liability. Some jurisdictions do not allow the exclusion of certain
+        warranties or the limitation or exclusion of certain liabilities and damages. Accordingly,
+        some of the disclaimers and limitations set forth in this Agreement may not apply to you.
+        This limitation of liability shall apply to the fullest extent permitted by law.
       </p>
 
       <h2>Governing law and forum choice/class action waiver</h2>
       <p>
         These Terms of Use and any action related thereto will be governed by, and all disputes
-        arising under, relating to, or in connection with these Terms shall be resolved in accordance
-        with, the laws of Singapore, without regard to the conflicts of law provisions of such
-        jurisdiction.
+        arising under, relating to, or in connection with these Terms shall be resolved in
+        accordance with, the laws of Singapore, without regard to the conflicts of law provisions of
+        such jurisdiction.
       </p>
       <p>
         All disputes arising out of or in connection with the Interface or otherwise in connection
@@ -260,18 +259,19 @@ export function TermsContent() {
         party or its assets.
       </p>
       <p>
-        Any claim or dispute arising under these Terms will take place on an individual basis without
-        resort to any form of class or representative action (the &ldquo;Class Action Waiver&rdquo;).
-        THE CLASS ACTION WAIVER PRECLUDES YOU FROM PARTICIPATING IN OR BEING REPRESENTED IN ANY
-        CLASS ARBITRATION, CLASS ACTION OR ANY OTHER TYPE OF REPRESENTATIVE PROCEEDING WITH RESPECT
-        TO THE SERVICES OR THIS AGREEMENT. YOU AGREE TO NO CLASS ARBITRATION OR ARBITRATION IN WHICH
-        AN INDIVIDUAL ATTEMPTS TO RESOLVE ANY DISPUTE AS A REPRESENTATIVE OF ANOTHER INDIVIDUAL OR
-        GROUP OF INDIVIDUALS. FURTHER, ANY DISPUTE CANNOT BE BROUGHT AS A CLASS OR OTHER TYPE OF
-        REPRESENTATIVE ACTION, WHETHER WITHIN OR OUTSIDE OF ARBITRATION, OR ON BEHALF OF ANY OTHER
-        INDIVIDUAL OR GROUP OF INDIVIDUALS. Regardless of anything else in these Terms to the
-        contrary, the validity and effect of the Class Action Waiver may be determined only by an
-        arbitrator or arbitrators, not by a court or referee. You hereby waive any objection based on
-        forum non conveniens, and you hereby waive personal service of any and all process.
+        Any claim or dispute arising under these Terms will take place on an individual basis
+        without resort to any form of class or representative action (the &ldquo;Class Action
+        Waiver&rdquo;). THE CLASS ACTION WAIVER PRECLUDES YOU FROM PARTICIPATING IN OR BEING
+        REPRESENTED IN ANY CLASS ARBITRATION, CLASS ACTION OR ANY OTHER TYPE OF REPRESENTATIVE
+        PROCEEDING WITH RESPECT TO THE SERVICES OR THIS AGREEMENT. YOU AGREE TO NO CLASS ARBITRATION
+        OR ARBITRATION IN WHICH AN INDIVIDUAL ATTEMPTS TO RESOLVE ANY DISPUTE AS A REPRESENTATIVE OF
+        ANOTHER INDIVIDUAL OR GROUP OF INDIVIDUALS. FURTHER, ANY DISPUTE CANNOT BE BROUGHT AS A
+        CLASS OR OTHER TYPE OF REPRESENTATIVE ACTION, WHETHER WITHIN OR OUTSIDE OF ARBITRATION, OR
+        ON BEHALF OF ANY OTHER INDIVIDUAL OR GROUP OF INDIVIDUALS. Regardless of anything else in
+        these Terms to the contrary, the validity and effect of the Class Action Waiver may be
+        determined only by an arbitrator or arbitrators, not by a court or referee. You hereby waive
+        any objection based on forum non conveniens, and you hereby waive personal service of any
+        and all process.
       </p>
 
       <footer className="not-prose mt-8 border-t border-border pt-6">

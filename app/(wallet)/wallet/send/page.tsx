@@ -26,7 +26,13 @@ import {
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
 import { COIN_FEE_ATOMIC, COIN_UNIT_PLACES, REMOTE_NODE_FEE_ATOMIC } from "@/lib/config/config";
 import { useCountUp } from "@/lib/hooks/use-count-up";
-import { useMarketData, useAddressBook, useSendTransaction, useTransactions, useWalletInfo } from "@/lib/hooks";
+import {
+  useMarketData,
+  useAddressBook,
+  useSendTransaction,
+  useTransactions,
+  useWalletInfo,
+} from "@/lib/hooks";
 import type { AddressEntry } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxToNumber, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils";

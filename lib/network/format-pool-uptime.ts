@@ -30,7 +30,10 @@ export function formatSmartNodeUptime(node: SmartNode | undefined): string {
 }
 
 /** Match pool list row where url.host equals the connected node URL host. */
-export function formatPoolUptimeForNodeUrl(nodes: SmartNode[] | undefined, nodeUrl: string): string {
+export function formatPoolUptimeForNodeUrl(
+  nodes: SmartNode[] | undefined,
+  nodeUrl: string,
+): string {
   if (!nodes?.length || !nodeUrl.trim()) return "—";
   return formatSmartNodeUptime(findPoolNodeForUrl(nodes, nodeUrl));
 }

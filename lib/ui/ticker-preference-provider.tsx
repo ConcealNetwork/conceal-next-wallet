@@ -20,11 +20,7 @@ type TickerPreferenceContextValue = {
 const TickerPreferenceContext = createContext<TickerPreferenceContextValue | null>(null);
 
 export function useDisplayTicker(): string {
-  return useSyncExternalStore(
-    subscribeTickerPreference,
-    getDisplayTicker,
-    () => COIN_TICKER_FULL,
-  );
+  return useSyncExternalStore(subscribeTickerPreference, getDisplayTicker, () => COIN_TICKER_FULL);
 }
 
 export function TickerPreferenceProvider({ children }: { children: React.ReactNode }) {

@@ -19,12 +19,7 @@ const publicLib = join(root, "public", "lib");
 const CORE_FILES = ["biginteger.js", "nacl-fast.min.js", "nacl-util.min.js"];
 
 /** Loaded on demand via ensureWalletExtendedLibs() when export/workers run. */
-const EXTENDED_FILES = [
-  "base58.js",
-  "cn_utils_native.js",
-  "FileSaver.min.js",
-  "kjua-0.1.1.min.js",
-];
+const EXTENDED_FILES = ["base58.js", "cn_utils_native.js", "FileSaver.min.js", "kjua-0.1.1.min.js"];
 
 /** Worker entry only — never load as a page <script> (emscripten auto-runs main). */
 const WORKER_ONLY_FILES = ["decoder.min.js"];

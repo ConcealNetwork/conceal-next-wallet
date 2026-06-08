@@ -5,7 +5,11 @@ import { readSpeedFromSyncSpeed, syncSpeedFromReadSpeed } from "@/lib/ui/sync-sp
 import { testNodeUrlReachability, validateNodeUrlFormat } from "@/lib/validation/node-url";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Storage } from "./Storage";
-import { flushRuntimeWalletPersistence, getRuntimeWallet, getRuntimeWatchdog } from "./wallet-runtime";
+import {
+  flushRuntimeWalletPersistence,
+  getRuntimeWallet,
+  getRuntimeWatchdog,
+} from "./wallet-runtime";
 
 function requireOpenWallet() {
   const wallet = getRuntimeWallet();
@@ -23,7 +27,9 @@ function defaultNodeUrl(): string {
   return config.nodeList?.[0] ?? "https://explorer.conceal.network/daemon/";
 }
 
-function resolveActiveNodeUrl(explorer: ReturnType<typeof BlockchainExplorerProvider.getInstance>): string {
+function resolveActiveNodeUrl(
+  explorer: ReturnType<typeof BlockchainExplorerProvider.getInstance>,
+): string {
   return explorer.getActiveNodeUrl?.() ?? defaultNodeUrl();
 }
 

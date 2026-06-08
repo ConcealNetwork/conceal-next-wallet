@@ -11,9 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
-import {
-  WalletPasswordStrengthPanel,
-} from "@/components/wallet/password-strength-bars";
+import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 

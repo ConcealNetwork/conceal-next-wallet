@@ -11,13 +11,21 @@ export const PASSWORD_STRENGTH_LEVELS = [
 ] as const;
 
 export const WALLET_PASSWORD_HINTS = [
-  { id: "length", label: "More than 15 characters", test: (password: string) => password.length > 15 },
+  {
+    id: "length",
+    label: "More than 15 characters",
+    test: (password: string) => password.length > 15,
+  },
   {
     id: "mixed",
     label: "Upper and lower case letters",
     test: (password: string) => /[A-Z]/.test(password) && /[a-z]/.test(password),
   },
-  { id: "letter", label: "At least one letter", test: (password: string) => /[A-Za-z]/.test(password) },
+  {
+    id: "letter",
+    label: "At least one letter",
+    test: (password: string) => /[A-Za-z]/.test(password),
+  },
   { id: "digit", label: "At least one digit", test: (password: string) => /\d/.test(password) },
   {
     id: "symbol",

@@ -30,10 +30,7 @@ import {
 } from "@/lib/hooks";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
-import {
-  TICKER_OPTIONS,
-  useTickerPreference,
-} from "@/lib/ui/ticker-preference-provider";
+import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
 import { getNodeUrlFormatHints } from "@/lib/validation/node-url";
 import { cn } from "@/lib/utils";
 

@@ -47,7 +47,9 @@ declare const concealjs: any;
 /** Set by applyWalletNetworkConfig() after legacy scripts load (v1 global). */
 declare const config: import("@/lib/config/config").WalletNetworkConfig;
 
-declare const kjua: (options: Record<string, unknown>) => HTMLCanvasElement | HTMLImageElement | string;
+declare const kjua: (
+  options: Record<string, unknown>,
+) => HTMLCanvasElement | HTMLImageElement | string;
 
 declare const jsPDF: new (
   orientation?: "portrait" | "landscape" | "p" | "l" | Record<string, unknown>,
@@ -72,14 +74,7 @@ declare const jsPDF: new (
   splitTextToSize: (text: string, maxWidth: number) => string | string[];
   line: (x1: number, y1: number, x2: number, y2: number) => void;
   rect: (x: number, y: number, w: number, h: number, style?: string) => void;
-  addImage: (
-    imageData: string,
-    format: string,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ) => void;
+  addImage: (imageData: string, format: string, x: number, y: number, w: number, h: number) => void;
   save: (filename: string) => void;
 };
 

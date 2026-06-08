@@ -6,7 +6,11 @@ import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provide
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
 import { fetchSmartNodes } from "@/lib/network/smart-nodes";
-import { marketQueryOptions, networkQueryOptions, smartNodesQueryOptions } from "@/lib/services/query-options";
+import {
+  marketQueryOptions,
+  networkQueryOptions,
+  smartNodesQueryOptions,
+} from "@/lib/services/query-options";
 import type { AddressEntryInput } from "@/lib/services/address-book.service";
 import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
