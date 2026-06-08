@@ -1973,6 +1973,7 @@ export namespace CnTransactions {
     unlock_time: number = 0,
     rct: boolean,
     message: string,
+    messageTo: string | undefined,
     ttl: number,
     transactionType: string,
     term: number,
@@ -2234,12 +2235,7 @@ export namespace CnTransactions {
       // Encrypt message and add it to the extra
       // CCX has only 1 destination for messages anyways
       if (message) {
-        let messageAddress: string | null = null;
-        for (let i = 0; i < dsts.length; i++) {
-          if (dsts[i].address !== senderAddress) {
-            messageAddress = dsts[i].address;
-          }
-        }
+        const messageAddress = messageTo;
 
         if (messageAddress) {
           const destKeys = Cn.decode_address(messageAddress);
@@ -2676,6 +2672,7 @@ export namespace CnTransactions {
       unlock_time,
       rct,
       message,
+      messageTo,
       ttl,
       transactionType,
       term,

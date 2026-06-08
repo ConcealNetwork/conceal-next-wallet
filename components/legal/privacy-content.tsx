@@ -13,10 +13,9 @@ export function PrivacyContent() {
       <h3>1. Your Personal Information.</h3>
       <p>
         This application does not require registration. No personal information is collected,
-        retained, or requested. Location access is not sought.
-        No person from the Publisher or those affiliated with the Conceal Network Project will ever
-        request your data, keys, donations, or information relating to your wallet&apos;s security
-        or usage.
+        retained, or requested. Location access is not sought. No person from the Publisher or those
+        affiliated with the Conceal Network Project will ever request your data, keys, donations, or
+        information relating to your wallet&apos;s security or usage.
       </p>
 
       <h3>2. Camera</h3>
@@ -41,8 +40,8 @@ export function PrivacyContent() {
         visible. The wallet&apos;s underlying operation does not take place on a centralized server.
         In considering this wallet and how transactions are processed, users should understand there
         is no entity with the ability to revert transactions or stop those that are pending. Users
-        should be incredibly detailed when inputting addresses and amounts as once the transaction is
-        authorized, it is final in every sense.
+        should be incredibly detailed when inputting addresses and amounts as once the transaction
+        is authorized, it is final in every sense.
       </p>
 
       <h3>5. Usage Statistics</h3>
@@ -62,10 +61,10 @@ export function PrivacyContent() {
       <h3>7. More Info</h3>
       <p>
         This wallet is based on the client side{" "}
-        <a href="https://wallet.conceal.network">wallet.conceal.network</a>. Terms of use and further
-        information can be found there. The mobile wallet Publisher is producing this application to
-        the benefit of the Conceal Community. It is completely open source and can be replicated by
-        any project. Licensing and other documentation is available on GitHub at{" "}
+        <a href="https://wallet.conceal.network">wallet.conceal.network</a>. Terms of use and
+        further information can be found there. The mobile wallet Publisher is producing this
+        application to the benefit of the Conceal Community. It is completely open source and can be
+        replicated by any project. Licensing and other documentation is available on GitHub at{" "}
         <a href="https://github.com/ConcealNetwork/conceal-web-wallet">
           https://github.com/ConcealNetwork/conceal-web-wallet
         </a>

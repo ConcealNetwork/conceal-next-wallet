@@ -15,7 +15,9 @@ export function OnboardingHeader() {
           className="flex items-center gap-3 rounded-xl transition-opacity duration-200 hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Wallet className="size-5 shrink-0 text-primary" aria-hidden="true" />
-          <span className="whitespace-nowrap text-lg font-bold text-foreground">Conceal Wallet</span>
+          <span className="whitespace-nowrap text-lg font-bold text-foreground">
+            Conceal Wallet
+          </span>
         </Link>
         <BackNav />
       </div>

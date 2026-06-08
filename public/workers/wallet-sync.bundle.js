@@ -24,7 +24,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       const r = _MathUtil.randomUint32() % (1 << 53);
       const frac = Math.sqrt(r / (1 << 53));
       let i = frac * max | 0;
-      if (i == max) --i;
+      if (i === max) --i;
       return i;
     }
   };
@@ -1635,7 +1635,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return rv;
     }
     CnTransactions2.genRct = genRct;
-    function construct_tx(keys, sources, dsts, senderAddress, fee_amount, payment_id, pid_encrypt, realDestViewKey, unlock_time = 0, rct, message, ttl, transactionType, term) {
+    function construct_tx(keys, sources, dsts, senderAddress, fee_amount, payment_id, pid_encrypt, realDestViewKey, unlock_time = 0, rct, message, messageTo, ttl, transactionType, term) {
       try {
         console.log("Starting transaction construction...");
         const txkey = Cn.random_keypair();
@@ -1841,12 +1841,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           additional_tx_public_keys
         );
         if (message) {
-          let messageAddress = null;
-          for (let i2 = 0; i2 < dsts.length; i2++) {
-            if (dsts[i2].address !== senderAddress) {
-              messageAddress = dsts[i2].address;
-            }
-          }
+          const messageAddress = messageTo;
           if (messageAddress) {
             const destKeys = Cn.decode_address(messageAddress);
             const derivation = CnNativeBride.generate_key_derivation(
@@ -2164,6 +2159,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         unlock_time,
         rct,
         message,
+        messageTo,
         ttl,
         transactionType,
         term
@@ -2354,6 +2350,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.ttl = 0;
       // TTL timestamp (absolute UNIX timestamp in seconds)
       this.remoteAddress = "";
+      /** Set at sync from TransactionsExplorer.isMinerTx (raw vin.length === 0). */
+      this.minerReward = false;
       this.export = () => {
         const data = {
           blockHeight: this.blockHeight,
@@ -2382,6 +2380,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         if (this.messageViewed) data.messageViewed = this.messageViewed;
         if (this.ttl !== 0) data.ttl = this.ttl;
         if (this.remoteAddress !== "") data.remoteAddress = this.remoteAddress;
+        if (this.minerReward) data.minerReward = this.minerReward;
         return data;
       };
       this.getAmount = () => {
@@ -2497,6 +2496,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     if (typeof raw.messageViewed !== "undefined") transac.messageViewed = raw.messageViewed;
     if (typeof raw.ttl !== "undefined") transac.ttl = raw.ttl;
     if (typeof raw.remoteAddress !== "undefined") transac.remoteAddress = raw.remoteAddress;
+    if (typeof raw.minerReward === "boolean") transac.minerReward = raw.minerReward;
     return transac;
   };
   var Transaction = _Transaction;
@@ -3304,6 +3304,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           transaction.fees = rawTransaction.fee;
         }
         transaction.fusion = rawTransaction.vin.length > Currency.fusionTxMinInputCount && rawTransaction.vout.length <= config.maxFusionOutputs && rawTransaction.vin.length / rawTransaction.vout.length > config.fusionTxMinInOutCountRatio && rawTransaction.vin.some((vin) => vin.type != "03") && rawTransaction.vout.some((vout) => vout.target.type != "03") && (transaction.fees === 0 || transaction.fees === parseInt(config.minimumFee_V2));
+        transaction.minerReward = _TransactionsExplorer.isMinerTx(rawTransaction);
         transaction.outs = outs;
         transaction.ins = ins;
         transactionData.transaction = transaction;
@@ -3755,6 +3756,76 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
   };
 
+  // lib/config/wallet-network-scalars.mjs
+  var walletNetworkScalars = {
+    coinUnitPlaces: 6,
+    coinFeeAtomic: 1e3,
+    minimumFeeV2Atomic: 1e3,
+    remoteNodeFeeAtomic: 1e4,
+    feePerKBAtomic: 1e3,
+    dustThresholdAtomic: 10,
+    messageTxAmountAtomic: 100,
+    depositMinAmountCoin: 1,
+    depositMinTermMonth: 1,
+    depositMinTermBlock: 21900,
+    depositMaxTermMonth: 12,
+    depositSmallWithdrawFee: 10,
+    avgBlockTime: 120,
+    maxMessageSize: 260,
+    cryptonoteMemPoolTxLifetimeSeconds: 60 * 60 * 12
+  };
+
+  // lib/config/config.ts
+  var walletNetworkScalars2 = walletNetworkScalars;
+  var COIN_UNIT_PLACES = walletNetworkScalars2.coinUnitPlaces;
+  var COIN_FEE_ATOMIC = walletNetworkScalars2.coinFeeAtomic;
+  var REMOTE_NODE_FEE_ATOMIC = walletNetworkScalars2.remoteNodeFeeAtomic;
+  var DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC = walletNetworkScalars2.depositSmallWithdrawFee;
+  var DEPOSIT_MIN_TERM_MONTH = walletNetworkScalars2.depositMinTermMonth;
+  var DEPOSIT_MAX_TERM_MONTH = walletNetworkScalars2.depositMaxTermMonth;
+  var DEPOSIT_MIN_TERM_BLOCK = walletNetworkScalars2.depositMinTermBlock;
+  var AVG_BLOCK_TIME_SECONDS = walletNetworkScalars2.avgBlockTime;
+  var MAX_MESSAGE_SIZE = walletNetworkScalars2.maxMessageSize;
+  var MAX_TTL_MINUTES = walletNetworkScalars2.cryptonoteMemPoolTxLifetimeSeconds / 60;
+  var MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars2.messageTxAmountAtomic;
+  var SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE_NODE_FEE_ATOMIC;
+  var SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
+
+  // lib/wallet-core/wallet-conversation-persistence.ts
+  function walletHasTransaction(wallet, hash) {
+    if (!hash) return false;
+    if (wallet.findWithTxHash(hash) !== null) return true;
+    return wallet.txsMem.some((tx) => tx.hash === hash);
+  }
+  function rehydrateWalletConversationMetadata(wallet) {
+    for (const transaction of wallet.txsMem.concat(wallet.getTransactionsCopy())) {
+      wallet.hydrateSentMessageBody(transaction);
+    }
+  }
+  function restoreSentMessageTransactionStubs(wallet) {
+    for (const record of wallet.listSentMessageRecords()) {
+      if (!record.txHash || walletHasTransaction(wallet, record.txHash)) continue;
+      const transaction = new Transaction();
+      transaction.hash = record.txHash;
+      transaction.txPubKey = record.txHash;
+      transaction.blockHeight = 0;
+      transaction.timestamp = Math.floor(Date.now() / 1e3);
+      transaction.remoteAddress = record.receiver ?? "";
+      transaction.message = record.messageBody;
+      if (record.paymentIdTo) transaction.paymentId = record.paymentIdTo;
+      else if (record.paymentId) transaction.paymentId = record.paymentId;
+      const input = new TransactionIn();
+      input.amount = SENT_MESSAGE_AMOUNT_SELF_ATOMIC;
+      input.type = "02";
+      transaction.ins = [input];
+      wallet.addNewMemTx(transaction);
+    }
+  }
+  function prepareWalletConversationData(wallet) {
+    restoreSentMessageTransactionStubs(wallet);
+    rehydrateWalletConversationMetadata(wallet);
+  }
+
   // lib/wallet-core/sent-messages.ts
   function normalizeEntry(item) {
     if (!item || typeof item !== "object") return null;
@@ -3946,12 +4017,24 @@ var reportError = self.reportError || function (e) { console.error(e); };
         for (const withdrawal of this.withdrawals) {
           withdrawals.push(withdrawal.export());
         }
-        for (const transaction of this.transactions) {
+        const pushExportedTransaction = (transaction) => {
           const exported = transaction.export();
           if (transaction.hash && this.sentMessageRecords.has(transaction.hash) && exported.message) {
             delete exported.message;
           }
           transactions.push(exported);
+        };
+        const seenHashes = /* @__PURE__ */ new Set();
+        const seenPubKeys = /* @__PURE__ */ new Set();
+        for (const transaction of this.transactions) {
+          if (transaction.hash) seenHashes.add(transaction.hash);
+          if (transaction.txPubKey) seenPubKeys.add(transaction.txPubKey);
+          pushExportedTransaction(transaction);
+        }
+        for (const transaction of this.txsMem) {
+          if (transaction.hash && seenHashes.has(transaction.hash)) continue;
+          if (transaction.txPubKey && seenPubKeys.has(transaction.txPubKey)) continue;
+          pushExportedTransaction(transaction);
         }
         const data = {
           deposits,
@@ -4792,13 +4875,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
         wallet.sentMessageRecords = indexSentMessageRecords(
           normalizeSentMessagesFromRaw(raw.sentMessages)
         );
-        for (const transaction of wallet.transactions) {
-          wallet.hydrateSentMessageBody(transaction);
-        }
-        for (const transaction of wallet.txsMem) {
-          wallet.hydrateSentMessageBody(transaction);
-        }
       }
+      prepareWalletConversationData(wallet);
       wallet.recalculateKeyImages();
       return wallet;
     }

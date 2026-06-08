@@ -140,6 +140,7 @@ export class WalletRepository {
     );
   }
 
+  /** Encrypts `wallet.exportToRaw()` — includes optional v3 fields `addressBook` / `sentMessages`. */
   static getEncrypted(wallet: Wallet, password: string): RawFullyEncryptedWallet {
     if (password.length > 32) password = password.substr(0, 32);
     if (password.length < 32) {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { env } from "@/lib/env";
+import { useQueryClient } from "@/lib/hooks/query-provider";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
@@ -62,22 +63,36 @@ export function OpenWalletForm() {
 
 export function useWalletDisconnect() {
   const { closeSession } = useWalletSession();
+  const queryClient = useQueryClient();
 
   return function disconnect() {
-    void services.wallet.disconnect?.();
-    resetMessageNavBadge();
-    closeSession();
+    void (async () => {
+      try {
+        await services.wallet.disconnect?.();
+        queryClient.clear();
+        resetMessageNavBadge();
+        closeSession();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to disconnect wallet.");
+      }
+    })();
   };
 }
 
 export function useWalletDelete() {
   const { closeSession } = useWalletSession();
+  const queryClient = useQueryClient();
 
   return function deleteWallet() {
     void (async () => {
-      await services.wallet.deleteStoredWallet();
-      resetMessageNavBadge();
-      closeSession();
+      try {
+        await services.wallet.deleteStoredWallet();
+        queryClient.clear();
+        resetMessageNavBadge();
+        closeSession();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to delete wallet.");
+      }
     })();
   };
 }

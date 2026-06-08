@@ -79,17 +79,22 @@ export class AppState {
       false,
     );
 
-    if (walletWatchdog !== null) {
+    if (walletWatchdog !== null && typeof walletWatchdog.stop === "function") {
       walletWatchdog.stop();
     }
 
     // Clean up the blockchain explorer session to ensure fresh node selection on next connection
     const blockchainExplorer = BlockchainExplorerProvider.getInstance();
-    blockchainExplorer.cleanupSession();
+    if (typeof blockchainExplorer.shutdown === "function") {
+      blockchainExplorer.shutdown();
+    } else {
+      blockchainExplorer.cleanupSession();
+    }
 
-    DependencyInjectorInstance().register(Wallet.name, undefined, "default");
-    DependencyInjectorInstance().register(WalletWorker.name, undefined, "default");
-    DependencyInjectorInstance().register(WalletWatchdog.name, undefined, "default");
+    const di = DependencyInjectorInstance();
+    di.unregister(Wallet.name);
+    di.unregister(WalletWorker.name);
+    di.unregister(WalletWatchdog.name);
     $("body").removeClass("connected");
     $("body").removeClass("viewOnlyWallet");
   }

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AmountText, FilterTabs, StatCard, TransactionRow } from "@/components/wallet/common";
@@ -8,6 +8,9 @@ import { ccxAmount } from "@/lib/utils";
 const push = vi.fn();
 let pathname = "/wallet/account";
 const closeSession = vi.fn();
+const { disconnect } = vi.hoisted(() => ({
+  disconnect: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
@@ -18,10 +21,19 @@ vi.mock("@/lib/session/wallet-session", () => ({
   useWalletSession: () => ({ closeSession }),
 }));
 
+vi.mock("@/lib/services", () => ({
+  services: {
+    wallet: {
+      disconnect,
+    },
+  },
+}));
+
 describe("wallet components", () => {
   beforeEach(() => {
     pathname = "/wallet/account";
     closeSession.mockClear();
+    disconnect.mockClear();
   });
 
   it("renders StatCard content", () => {
@@ -75,7 +87,7 @@ describe("wallet components", () => {
     expect(onChange).toHaveBeenCalledWith("Sent");
   });
 
-  it("marks the active sidebar route and disconnects", () => {
+  it("marks the active sidebar route and disconnects", async () => {
     pathname = "/wallet/send";
     // Sidebar reads the new-messages badge via useQuery, so it needs a client.
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -89,6 +101,9 @@ describe("wallet components", () => {
     fireEvent.click(
       within(screen.getByRole("alertdialog")).getByRole("button", { name: "Disconnect" }),
     );
-    expect(closeSession).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(disconnect).toHaveBeenCalled();
+      expect(closeSession).toHaveBeenCalled();
+    });
   });
 });

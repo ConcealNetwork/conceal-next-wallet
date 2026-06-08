@@ -9,7 +9,6 @@ import {
 import {
   clampImportHeight,
   deriveIndicativeDepositApr,
-  hasMessageEnvelopeIn,
   isMessageIn,
   isMessageOut,
   isMessageTransactionExpired,
@@ -33,6 +32,7 @@ function makeTx(
     fusion: boolean;
     fees: number;
     hash: string;
+    minerReward: boolean;
   }> = {},
 ) {
   const tx = new Transaction();
@@ -43,6 +43,7 @@ function makeTx(
   tx.hash = overrides.hash ?? "abc";
   tx.timestamp = 1_700_000_000;
   tx.blockHeight = 100;
+  tx.minerReward = overrides.minerReward ?? false;
   return tx;
 }
 
@@ -86,7 +87,7 @@ describe("wallet mappers", () => {
 
     const minerOut = out(2_000_000);
     minerOut.rtcAmount = "";
-    const miner = makeTx({ outs: [minerOut] });
+    const miner = makeTx({ outs: [minerOut], minerReward: true });
     expect(resolveTransactionType(miner)).toBe("miner");
 
     const send = makeTx({ ins: [input(500_000)], outs: [out(100_000)] });
@@ -102,12 +103,16 @@ describe("wallet mappers", () => {
     const messageTx = makeTx({ hash: "msg-1", ins: [], outs: [messageOut] });
     messageTx.message = "Hello";
     expect(isMessageIn(messageTx)).toBe(true);
-    expect(hasMessageEnvelopeIn(messageTx)).toBe(true);
     expect(resolveTransactionType(messageTx)).toBe("message");
+
+    const envelopeOnly = makeTx({ hash: "msg-envelope", ins: [], outs: [messageOut] });
+    expect(envelopeOnly.isCoinbase()).toBe(true);
+    expect(envelopeOnly.minerReward).toBe(false);
+    expect(resolveTransactionType(envelopeOnly)).toBe("receive");
 
     const minerOut = out(2_000_000);
     minerOut.rtcAmount = "";
-    const miner = makeTx({ outs: [minerOut] });
+    const miner = makeTx({ outs: [minerOut], minerReward: true });
     expect(resolveTransactionType(miner)).toBe("miner");
 
     const send = makeTx({ ins: [input(500_000)], outs: [out(100_000)] });
@@ -148,7 +153,7 @@ describe("wallet mappers", () => {
     const minerOut = out(3_000_000);
     minerOut.rtcAmount = "";
     const miner = mapCoreTransaction(
-      makeTx({ outs: [minerOut], hash: "miner-tx" }),
+      makeTx({ outs: [minerOut], hash: "miner-tx", minerReward: true }),
       200,
       walletAddress,
     );
@@ -256,7 +261,7 @@ describe("wallet mappers", () => {
     expect(resolveTransactionType(largeSend)).toBe("send");
   });
 
-  it("detects sent messages via remoteAddress before message body is synced", () => {
+  it("does not classify sent rows as message without a decrypted message body", () => {
     const walletAddress = "ccx7WalletAddressExample";
     const sent = makeTx({
       hash: "sent-remote-addr",
@@ -266,9 +271,8 @@ describe("wallet mappers", () => {
     sent.remoteAddress =
       "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
 
-    expect(isMessageOut(sent)).toBe(true);
-    expect(mapCoreTransaction(sent, 200, walletAddress).type).toBe("message");
-    expect(mapCoreTransaction(sent, 200, walletAddress).outgoing).toBe(true);
+    expect(isMessageOut(sent)).toBe(false);
+    expect(mapCoreTransaction(sent, 200, walletAddress).type).toBe("send");
   });
 
   it("resolveUiTransactionType shows envelope for misclassified send rows", () => {
@@ -326,7 +330,7 @@ describe("wallet mappers", () => {
     expect(messages[0]?.threadKey).toBe(`${receiver}:pid123`);
   });
 
-  it("listWalletMessages includes sent txs without stored body (envelope only)", () => {
+  it("listWalletMessages skips sent txs without a decrypted or stored message body", () => {
     const walletAddress = "ccx7WalletAddressExample";
     const sent = makeTx({
       hash: "sent-no-body",
@@ -345,10 +349,7 @@ describe("wallet mappers", () => {
       hydrateSentMessageBody: () => {},
     } as unknown as import("@/lib/wallet-core/Wallet").Wallet;
 
-    const messages = listWalletMessages(wallet);
-    expect(messages).toHaveLength(1);
-    expect(messages[0]?.direction).toBe("sent");
-    expect(messages[0]?.hasBody).toBe(false);
+    expect(listWalletMessages(wallet)).toHaveLength(0);
   });
 
   it("sortMessagesByHeight puts received before sent when block and time tie", () => {
@@ -385,5 +386,40 @@ describe("wallet mappers", () => {
 
     const sorted = sortMessagesByHeight([sent, received]);
     expect(sorted.map((m) => m.direction)).toEqual(["received", "sent"]);
+  });
+
+  it("sortMessagesByHeight puts pending mempool messages last in the thread", () => {
+    const confirmed: import("@/lib/types").Message = {
+      id: "confirmed",
+      direction: "received",
+      counterpartyName: "Alice",
+      counterpartyAddress: "recv:abc",
+      body: "Earlier",
+      hasBody: true,
+      paymentIdFrom: "pid",
+      paymentIdTo: null,
+      timestamp: "2026-06-04T09:00:00.000Z",
+      unread: false,
+      blockHeight: 2_087_700,
+      threadKey: "t",
+    };
+    const pending: import("@/lib/types").Message = {
+      id: "pending",
+      direction: "sent",
+      counterpartyName: "Alice",
+      counterpartyAddress: "ccx7abc",
+      body: "Just sent",
+      hasBody: true,
+      sentTo: "ccx7abc",
+      paymentIdFrom: null,
+      paymentIdTo: "pid",
+      timestamp: "2026-06-04T09:55:00.000Z",
+      unread: false,
+      blockHeight: 0,
+      threadKey: "t",
+    };
+
+    const sorted = sortMessagesByHeight([pending, confirmed]);
+    expect(sorted.map((m) => m.id)).toEqual(["confirmed", "pending"]);
   });
 });

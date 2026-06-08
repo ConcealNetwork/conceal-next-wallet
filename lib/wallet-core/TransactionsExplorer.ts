@@ -721,6 +721,8 @@ export class TransactionsExplorer {
         rawTransaction.vout.some((vout) => vout.target.type != "03") &&
         (transaction.fees === 0 || transaction.fees === parseInt(config.minimumFee_V2));
 
+      transaction.minerReward = TransactionsExplorer.isMinerTx(rawTransaction);
+
       // fill the transaction info
       transaction.outs = outs;
       transaction.ins = ins;

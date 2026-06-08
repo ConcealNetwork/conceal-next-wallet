@@ -871,6 +871,16 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
     this.nodeWorkers.cleanupSession();
   }
 
+  shutdown = (): void => {
+    this.nodeWorkers.cleanupSession();
+    this.nodeWorkers.stop();
+    this.initialized = false;
+    this.cacheHeight = 0;
+    this.cacheInfo = null;
+    this.lastTimeRetrieveHeight = 0;
+    this.lastTimeRetrieveInfo = 0;
+  };
+
   getActiveNodeUrl(): string | null {
     return this.nodeWorkers.getActiveSessionUrl();
   }

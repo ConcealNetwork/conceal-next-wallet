@@ -95,9 +95,7 @@ export function AddressBookContactPicker({
               onClick={() => onSelect(selected ? null : entry)}
               className={cn(
                 "flex w-[4.5rem] shrink-0 cursor-pointer flex-col items-center gap-1.5 rounded-xl border p-2 transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-                selected
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-ring/50",
+                selected ? "border-primary bg-primary/10" : "border-border hover:border-ring/50",
               )}
             >
               <ContactAvatar entry={entry} className="size-10 rounded-lg text-sm" />

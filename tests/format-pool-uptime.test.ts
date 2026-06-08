@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { formatPoolUptimeForNodeUrl, formatSmartNodeUptime } from "@/lib/network/format-pool-uptime";
+import {
+  formatPoolUptimeForNodeUrl,
+  formatSmartNodeUptime,
+} from "@/lib/network/format-pool-uptime";
 import { nodeUrlToPoolHost, poolEntryMatchesNodeUrl } from "@/lib/network/smart-nodes";
 import type { SmartNode } from "@/lib/types";
 

@@ -2,7 +2,7 @@ import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
 import type { AddressEntry } from "@/lib/types";
 import type { AddressEntryInput } from "@/lib/services/address-book.service";
 import { addressIsValid, paymentIdIsValid } from "@/lib/validation/ccx";
-import { getRuntimeWallet } from "./wallet-runtime";
+import { flushRuntimeWalletPersistence, getRuntimeWallet } from "./wallet-runtime";
 
 function requireOpenWallet() {
   const wallet = getRuntimeWallet();
@@ -60,6 +60,7 @@ export async function createAddressEntryOperation(input: AddressEntryInput): Pro
     id: `addr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     ...validated,
   });
+  await flushRuntimeWalletPersistence();
   return toAddressEntry(entry);
 }
 
@@ -72,6 +73,7 @@ export async function updateAddressEntryOperation(
   const validated = validateEntryInput(input);
   const updated = wallet.updateAddressEntry(id, validated);
   if (updated === null) throw new Error("Address book entry not found.");
+  await flushRuntimeWalletPersistence();
   return toAddressEntry(updated);
 }
 
@@ -81,5 +83,6 @@ export async function deleteAddressEntryOperation(id: string): Promise<{ ok: tru
   if (!wallet.deleteAddressEntry(id)) {
     throw new Error("Address book entry not found.");
   }
+  await flushRuntimeWalletPersistence();
   return { ok: true };
 }

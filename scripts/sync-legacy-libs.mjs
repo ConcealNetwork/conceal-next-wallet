@@ -18,14 +18,11 @@ const publicLib = join(root, "public", "lib");
 /** Loaded by ensureWalletRuntimeLibs() — required for wallet-core crypto + storage. */
 const CORE_FILES = ["biginteger.js", "nacl-fast.min.js", "nacl-util.min.js"];
 
-/** Loaded on demand via ensureWalletExtendedLibs() when export/QR/workers run. */
-const EXTENDED_FILES = [
-  "base58.js",
-  "cn_utils_native.js",
-  "FileSaver.min.js",
-  "kjua-0.1.1.min.js",
-  "decoder.min.js",
-];
+/** Loaded on demand via ensureWalletExtendedLibs() when export/workers run. */
+const EXTENDED_FILES = ["base58.js", "cn_utils_native.js", "FileSaver.min.js", "kjua-0.1.1.min.js"];
+
+/** Worker entry only — never load as a page <script> (emscripten auto-runs main). */
+const WORKER_ONLY_FILES = ["decoder.min.js"];
 
 /** Required by wallet-sync-entrypoint.js importScripts (v1 worker parity). */
 const WORKER_LIB_FILES = ["require.js", "crypto.js", "sha3.js", "nacl-fast.js"];
@@ -63,6 +60,7 @@ mkdirSync(publicLib, { recursive: true });
 
 for (const file of CORE_FILES) copyFile(file);
 for (const file of EXTENDED_FILES) copyFile(file);
+for (const file of WORKER_ONLY_FILES) copyFile(file);
 for (const file of WORKER_LIB_FILES) {
   const src = join(legacyLib, file);
   if (existsSync(src)) copyFile(file);
@@ -94,14 +92,16 @@ const manifest = {
   core: CORE_FILES.map((f) => `/lib/${f}`),
   coreConcealjs: "/lib/concealjs/concealjs.js",
   extended: EXTENDED_FILES.map((f) => `/lib/${f}`),
+  workerOnly: WORKER_ONLY_FILES.map((f) => `/lib/${f}`),
   optional: OPTIONAL_FILES.map((f) => `/lib/${f}`),
   polyfills: OPTIONAL_DIRS.map((d) => `/lib/${d}/`),
   workers: ["/workers/wallet-sync-entrypoint.js", "/workers/wallet-sync.bundle.js"],
   skippedUiLegacy: SKIPPED_UI_LEGACY,
   notes: {
     core: "ensureWalletRuntimeLibs() in lib/conceal/init.ts",
-    extended:
-      "ensureWalletExtendedLibs() — export download, kjua QR, QR import scanner, sync workers",
+    extended: "ensureWalletExtendedLibs() — export download, kjua QR, sync workers",
+    workerOnly:
+      "decoder.min.js — Web Worker entry only (v1 QRReader); v3 QR uses jsQR in lib/ui/qr-decode.ts",
     workers:
       "WalletWatchdog loads /workers/wallet-sync-entrypoint.js (esbuild bundle + importScripts globals)",
     skipped: "Replaced by Next.js, React, sonner, qrcode.react, etc.",

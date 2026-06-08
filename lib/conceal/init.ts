@@ -22,9 +22,11 @@ const EXTENDED_SCRIPT_ORDER = [
   "/lib/base58.js",
   "/lib/kjua-0.1.1.min.js",
   "/lib/FileSaver.min.js",
-  "/lib/decoder.min.js",
   "/lib/cn_utils_native.js",
 ] as const;
+
+/** Worker-only (zbar via emscripten) — must NOT be injected as a page <script>; v3 QR uses jsQR. */
+export const DECODER_WORKER_URL = publicAssetPath("/lib/decoder.min.js");
 
 let loadPromise: Promise<void> | null = null;
 let extendedLoadPromise: Promise<void> | null = null;
@@ -85,8 +87,9 @@ export function ensureWalletRuntimeLibs(): Promise<void> {
 }
 
 /**
- * Extra v1 globals: base58, kjua (QR), FileSaver (export .wallet), decoder (QR scan),
- * cn_utils_native (sync workers). Run after ensureWalletRuntimeLibs().
+ * Extra v1 globals: base58, kjua (QR), FileSaver (export .wallet), cn_utils_native
+ * (sync workers). Run after ensureWalletRuntimeLibs().
+ * decoder.min.js is worker-only (legacy QRReader); camera/file QR in v3 uses jsQR.
  */
 export function ensureWalletExtendedLibs(): Promise<void> {
   if (typeof window === "undefined") {

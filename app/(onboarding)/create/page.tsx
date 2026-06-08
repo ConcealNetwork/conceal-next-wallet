@@ -193,7 +193,10 @@ export default function CreateWalletPage() {
           </label>
 
           <AlertDialogFooter>
-            <AlertDialogAction disabled={!acknowledged || finalizing} onClick={() => void handleFinish()}>
+            <AlertDialogAction
+              disabled={!acknowledged || finalizing}
+              onClick={() => void handleFinish()}
+            >
               {finalizing ? "Saving…" : "OK"}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -6,6 +6,7 @@
 import type { RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import type { Wallet } from "./Wallet";
+import { rehydrateWalletConversationMetadata } from "./wallet-conversation-persistence";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 
 /** Re-fetch blocks for in-wallet txs that are missing a hash (v1 open/import path). */
@@ -50,4 +51,5 @@ export async function updateWalletTransactions(wallet: Wallet): Promise<void> {
 export async function prepareWalletForOpen(wallet: Wallet): Promise<void> {
   wallet.recalculateIfNotViewOnly();
   await updateWalletTransactions(wallet);
+  rehydrateWalletConversationMetadata(wallet);
 }

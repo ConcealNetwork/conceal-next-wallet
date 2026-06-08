@@ -119,7 +119,11 @@ function writeSection(
   return y + lines.length * 4.2 + 5;
 }
 
-function drawPrintHeader(doc: InstanceType<typeof jsPDF>, pageWidth: number, margin: number): number {
+function drawPrintHeader(
+  doc: InstanceType<typeof jsPDF>,
+  pageWidth: number,
+  margin: number,
+): number {
   const headerHeight = 16;
 
   doc.setFillColor(...PDF_THEME.headerFill);
@@ -214,7 +218,11 @@ export async function downloadWalletExportPdf(data: ExportWalletData): Promise<s
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...PDF_THEME.mutedText);
-  doc.text("Keep this document offline. Anyone with these keys can spend your funds.", margin, warningY);
+  doc.text(
+    "Keep this document offline. Anyone with these keys can spend your funds.",
+    margin,
+    warningY,
+  );
 
   doc.save(PDF_FILENAME);
   return PDF_FILENAME;

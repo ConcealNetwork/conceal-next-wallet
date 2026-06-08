@@ -19,8 +19,7 @@ export const mockSettingsService: SettingsService = {
     }
 
     const enablingCustom = input.useCustomNode === true;
-    const updatingCustomUrl =
-      currentSettings.useCustomNode && typeof input.nodeUrl !== "undefined";
+    const updatingCustomUrl = currentSettings.useCustomNode && typeof input.nodeUrl !== "undefined";
 
     if (enablingCustom || updatingCustomUrl) {
       const rawUrl = input.nodeUrl ?? currentSettings.nodeUrl;

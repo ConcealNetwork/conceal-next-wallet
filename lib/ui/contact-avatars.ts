@@ -11,6 +11,7 @@ export const CONTACT_AVATARS: ContactAvatar[] = [
   { id: "jay", label: "Jay" },
   { id: "mining-pool", label: "Mining pool" },
   { id: "cold-storage", label: "Cold storage" },
+  { id: "cham", label: "Cham" },
 ];
 
 export function contactAvatarPath(avatarId: string): string {

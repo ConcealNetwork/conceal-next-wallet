@@ -1,4 +1,4 @@
- import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { backupDownloadFilename, sanitizeBackupFilename } from "@/lib/ui/download-json-file";
 
 describe("download-json-file", () => {

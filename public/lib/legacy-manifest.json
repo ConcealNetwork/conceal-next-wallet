@@ -11,7 +11,9 @@
     "/lib/base58.js",
     "/lib/cn_utils_native.js",
     "/lib/FileSaver.min.js",
-    "/lib/kjua-0.1.1.min.js",
+    "/lib/kjua-0.1.1.min.js"
+  ],
+  "workerOnly": [
     "/lib/decoder.min.js"
   ],
   "optional": [
@@ -37,7 +39,8 @@
   ],
   "notes": {
     "core": "ensureWalletRuntimeLibs() in lib/conceal/init.ts",
-    "extended": "ensureWalletExtendedLibs() — export download, kjua QR, QR import scanner, sync workers",
+    "extended": "ensureWalletExtendedLibs() — export download, kjua QR, sync workers",
+    "workerOnly": "decoder.min.js — Web Worker entry only (v1 QRReader); v3 QR uses jsQR in lib/ui/qr-decode.ts",
     "workers": "WalletWatchdog loads /workers/wallet-sync-entrypoint.js (esbuild bundle + importScripts globals)",
     "skipped": "Replaced by Next.js, React, sonner, qrcode.react, etc."
   }

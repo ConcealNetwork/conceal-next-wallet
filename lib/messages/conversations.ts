@@ -25,20 +25,48 @@ export function inboundPaymentId(
   return normalizePaymentId(message.paymentIdTo ?? undefined) || null;
 }
 
+export function findContactForMessage(
+  addressBook: AddressEntry[],
+  message: Message,
+): AddressEntry | undefined {
+  return findContactForMessages(addressBook, [message]);
+}
+
+/** Address book row for message list avatars — received: PID only; sent: PID then recipient address. */
+export function buildMessageListContactEntry(
+  message: Message,
+  addressBook: AddressEntry[],
+): AddressEntry {
+  const contact = findContactForMessage(addressBook, message);
+  return {
+    id: contact?.id ?? message.id,
+    label: contact?.label ?? message.counterpartyName,
+    address: contact?.address ?? message.counterpartyAddress,
+    paymentId: contact?.paymentId ?? message.paymentIdFrom ?? message.paymentIdTo ?? undefined,
+    avatar: contact?.avatar,
+  };
+}
+
+function findContactByPaymentId(
+  addressBook: AddressEntry[],
+  paymentId: string | null | undefined,
+): AddressEntry | undefined {
+  const pid = normalizePaymentId(paymentId ?? undefined);
+  if (!pid) return undefined;
+  return addressBook.find((entry) => normalizePaymentId(entry.paymentId) === pid);
+}
+
 export function findContactForMessages(
   addressBook: AddressEntry[],
   messages: Message[],
 ): AddressEntry | undefined {
   for (const message of messages) {
-    const pid = inboundPaymentId(message);
-    if (pid) {
-      const byPid = addressBook.find((entry) => normalizePaymentId(entry.paymentId) === pid);
-      if (byPid) return byPid;
-    }
+    const byPid = findContactByPaymentId(addressBook, inboundPaymentId(message));
+    if (byPid) return byPid;
   }
   for (const message of messages) {
-    const sentTo =
-      message.sentTo ?? (message.direction === "sent" ? message.counterpartyAddress : null);
+    if (message.direction !== "sent") continue;
+    const sentTo = message.sentTo ?? message.counterpartyAddress;
     if (
       sentTo &&
       !sentTo.startsWith("recv:") &&
@@ -48,10 +76,6 @@ export function findContactForMessages(
       const byAddress = addressBook.find((entry) => entry.address === sentTo);
       if (byAddress) return byAddress;
     }
-  }
-  const withAddress = messages.find((message) => addressIsValid(message.counterpartyAddress));
-  if (withAddress) {
-    return addressBook.find((entry) => entry.address === withAddress.counterpartyAddress);
   }
   return undefined;
 }
@@ -182,6 +206,10 @@ export function resolveThreadKey(message: Message, addressBook: AddressEntry[]):
 
 export function canReplyToConversation(conversation: MessageConversation): boolean {
   return addressIsValid(conversation.address);
+}
+
+export function countReceivedMessages(messages: readonly Message[]): number {
+  return messages.filter((message) => message.direction === "received").length;
 }
 
 export function sortMessagesNewestFirst(messages: Message[]): Message[] {

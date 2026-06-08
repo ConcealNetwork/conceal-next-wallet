@@ -29,6 +29,7 @@ export const mockMessageService: MessageService = {
   },
   async markRead(id) {
     await mockDelay();
-    return clone(mockMessages.find((message) => message.id === id) ?? mockMessages[0]);
+    const message = mockMessages.find((entry) => entry.id === id) ?? mockMessages[0];
+    return { ...clone(message), unread: false };
   },
 };

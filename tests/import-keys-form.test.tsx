@@ -9,8 +9,7 @@ vi.mock("@/lib/services", () => ({
   services: {
     wallet: {
       importWallet: (input: unknown) => importWallet(input),
-      previewKeys: () =>
-        Promise.resolve({ address: "ccx7sampleADDR", viewKey: "deadbeefviewkey" }),
+      previewKeys: () => Promise.resolve({ address: "ccx7sampleADDR", viewKey: "deadbeefviewkey" }),
     },
     network: { getNodeStatus: () => Promise.resolve({ networkHeight: 2_000_000 }) },
   },

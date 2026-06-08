@@ -30,10 +30,7 @@ import {
 } from "@/lib/hooks";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
-import {
-  TICKER_OPTIONS,
-  useTickerPreference,
-} from "@/lib/ui/ticker-preference-provider";
+import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
 import { getNodeUrlFormatHints } from "@/lib/validation/node-url";
 import { cn } from "@/lib/utils";
 
@@ -113,19 +110,22 @@ export default function SettingsPage() {
   const isMock = env.useMockWallet;
 
   const [creationHeight, setCreationHeight] = useState("");
-  const [scanHeight, setScanHeight] = useState("");
+  const [creationHeightDirty, setCreationHeightDirty] = useState(false);
   const [nodeUrl, setNodeUrl] = useState("");
   const [nodeUrlDirty, setNodeUrlDirty] = useState(false);
   const nodeUrlHints = getNodeUrlFormatHints(nodeUrl);
 
+  const syncedHeight = wallet.data?.currentHeight ?? current?.scanHeight ?? 0;
+
   useEffect(() => {
     if (!current) return;
-    setCreationHeight(String(current.creationHeight ?? wallet.data?.creationHeight ?? 0));
-    setScanHeight(String(current.scanHeight ?? wallet.data?.currentHeight ?? 0));
+    if (!creationHeightDirty) {
+      setCreationHeight(String(current.creationHeight ?? 0));
+    }
     if (!nodeUrlDirty) {
       setNodeUrl(current.nodeUrl);
     }
-  }, [current, nodeUrlDirty, wallet.data?.creationHeight, wallet.data?.currentHeight]);
+  }, [current, nodeUrlDirty, creationHeightDirty]);
 
   function settingsSavedMessage() {
     return isMock ? "Mock settings updated." : "Settings updated.";
@@ -183,27 +183,64 @@ export default function SettingsPage() {
 
   function applyHeights() {
     const parsedCreation = parseInt(creationHeight, 10);
-    const parsedScan = parseInt(scanHeight, 10);
-    if (Number.isNaN(parsedCreation) || Number.isNaN(parsedScan)) {
-      toast.error("Enter valid block heights.");
+    if (Number.isNaN(parsedCreation)) {
+      toast.error("Enter a valid creation height.");
       return;
     }
-    update(
-      { creationHeight: parsedCreation, scanHeight: parsedScan },
-      isMock ? "Mock wallet updated." : "Wallet heights updated.",
+    updateSettings.mutate(
+      { creationHeight: parsedCreation },
+      {
+        onSuccess: (next) => {
+          setCreationHeight(String(next.creationHeight ?? parsedCreation));
+          setCreationHeightDirty(false);
+          toast.success(
+            isMock
+              ? "Mock wallet updated."
+              : "Creation height updated — rescanning from that block.",
+          );
+        },
+        onError: (error: unknown) =>
+          toast.error(error instanceof Error ? error.message : "Settings update failed."),
+      },
     );
   }
 
   function handleResetAndRescan() {
-    resetAndRescan.mutate(undefined, {
-      onSuccess: () => {
-        toast.success(
-          isMock ? "Mock rescan started." : "Wallet reset — rescanning from creation height.",
-        );
+    const runReset = () => {
+      resetAndRescan.mutate(undefined, {
+        onSuccess: () => {
+          toast.success(
+            isMock ? "Mock rescan started." : "Wallet reset — rescanning from creation height.",
+          );
+        },
+        onError: (error: unknown) =>
+          toast.error(error instanceof Error ? error.message : "Rescan failed."),
+      });
+    };
+
+    if (!creationHeightDirty) {
+      runReset();
+      return;
+    }
+
+    const parsedCreation = parseInt(creationHeight, 10);
+    if (Number.isNaN(parsedCreation)) {
+      toast.error("Enter a valid creation height.");
+      return;
+    }
+
+    updateSettings.mutate(
+      { creationHeight: parsedCreation },
+      {
+        onSuccess: (next) => {
+          setCreationHeight(String(next.creationHeight ?? parsedCreation));
+          setCreationHeightDirty(false);
+          runReset();
+        },
+        onError: (error: unknown) =>
+          toast.error(error instanceof Error ? error.message : "Settings update failed."),
       },
-      onError: (error: unknown) =>
-        toast.error(error instanceof Error ? error.message : "Rescan failed."),
-    });
+    );
   }
 
   function handleOptimize() {
@@ -334,25 +371,36 @@ export default function SettingsPage() {
                     onCheckedChange={(checked: boolean) => update({ readMinorTx: checked })}
                   />
                 </Row>
-                <Row label="Block heights" description="Creation height / current synced height">
+                <Row
+                  label="Block heights"
+                  description="Creation height (editable while syncing) / current synced height"
+                >
                   <div className="flex gap-2">
                     <Input
                       value={creationHeight}
-                      onChange={(event) => setCreationHeight(event.target.value)}
+                      disabled={updateSettings.isPending}
+                      onChange={(event) => {
+                        setCreationHeight(event.target.value);
+                        setCreationHeightDirty(true);
+                      }}
                       className="w-32"
                       aria-label="Creation height"
                       inputMode="numeric"
                     />
                     <Input
-                      value={scanHeight}
-                      onChange={(event) => setScanHeight(event.target.value)}
+                      value={String(syncedHeight)}
+                      readOnly
+                      disabled
                       className="w-32"
                       aria-label="Current synced height"
                       inputMode="numeric"
                     />
                   </div>
                 </Row>
-                <Row label="Maintenance" description="Apply height changes or rescan the chain">
+                <Row
+                  label="Maintenance"
+                  description="Update applies creation height and restarts the scan from that block"
+                >
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"

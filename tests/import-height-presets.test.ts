@@ -14,8 +14,8 @@ describe("import height presets", () => {
   });
 
   it("orders presets from most recent (highest block) to oldest", () => {
-    const heights = (["month", "year", "1-2y", "older", "unsure"] as ImportHeightPreset[]).map((p) =>
-      estimateScanHeight(p, NOW),
+    const heights = (["month", "year", "1-2y", "older", "unsure"] as ImportHeightPreset[]).map(
+      (p) => estimateScanHeight(p, NOW),
     );
     // strictly decreasing
     for (let i = 1; i < heights.length; i++) {

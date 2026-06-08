@@ -6,7 +6,11 @@ import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provide
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
 import { fetchSmartNodes } from "@/lib/network/smart-nodes";
-import { marketQueryOptions, networkQueryOptions, smartNodesQueryOptions } from "@/lib/services/query-options";
+import {
+  marketQueryOptions,
+  networkQueryOptions,
+  smartNodesQueryOptions,
+} from "@/lib/services/query-options";
 import type { AddressEntryInput } from "@/lib/services/address-book.service";
 import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
@@ -121,6 +125,35 @@ export function useSendMessage() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+    },
+  });
+}
+
+export function useMarkMessageRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.messages.markRead(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.messages });
+      const previous = queryClient.getQueryData<Message[]>(queryKeys.messages);
+      queryClient.setQueryData<Message[]>(queryKeys.messages, (current) =>
+        (current ?? []).map((message) =>
+          message.id === id ? { ...message, unread: false } : message,
+        ),
+      );
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.messages, context.previous);
+      }
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Message[]>(queryKeys.messages, (current) =>
+        (current ?? []).map((message) =>
+          message.id === updated.id ? { ...message, unread: false } : message,
+        ),
+      );
     },
   });
 }
@@ -265,8 +298,10 @@ export function useResetAndRescan() {
   return useMutation({
     mutationFn: () => services.settings.resetAndRescan(),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
       // exact: don't prefix-match the curated smart-nodes pool (see useSmartNodes).
       void queryClient.invalidateQueries({ queryKey: queryKeys.network, exact: true });
     },

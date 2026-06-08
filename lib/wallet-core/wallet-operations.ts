@@ -40,6 +40,7 @@ import {
   getPendingWalletCreation,
   getRuntimeWallet,
   getRuntimeWalletWorker,
+  flushRuntimeWalletPersistence,
   getRuntimeWatchdog,
   openWalletRuntime,
   setCreatedMnemonic,
@@ -184,6 +185,7 @@ export async function importWalletOperation(input: ImportWalletInput): Promise<W
         throw new Error("Wallet file decrypted but key data is incomplete.");
       }
       await openWalletRuntime(wallet, input.password);
+      await flushRuntimeWalletPersistence();
       return mapWalletToInfo(wallet, currentHeight);
     }
     case "qr": {
@@ -337,17 +339,28 @@ export async function downloadWalletBackupOperation(input: {
   password: string;
 }): Promise<{ filename: string; payload: unknown }> {
   await ensureAllWalletLegacyLibs();
+
   const verified = await WalletRepository.getLocalWalletWithPassword(input.password);
   if (verified === null) {
     throw new Error("Invalid password.");
   }
+
   const wallet = getRuntimeWallet();
   if (wallet === null) {
     throw new Error("Wallet is not open.");
   }
+
+  // Persist latest in-memory state (contacts, sent message copies) using the verified password.
+  await WalletRepository.save(wallet, input.password);
+
+  const persisted = await WalletRepository.getLocalWalletWithPassword(input.password);
+  if (persisted === null) {
+    throw new Error("Invalid password.");
+  }
+
   return {
     filename: backupDownloadFilename(input.filename),
-    payload: WalletRepository.getEncrypted(wallet, input.password),
+    payload: WalletRepository.getEncrypted(persisted, input.password),
   };
 }
 
@@ -769,12 +782,12 @@ function normalizeWalletOperationError(error: unknown, fallback: string): Error 
 
 export async function deleteStoredWalletOperation(): Promise<void> {
   await ensureAllWalletLegacyLibs();
-  disconnectWalletRuntime();
+  await disconnectWalletRuntime();
   await WalletRepository.deleteLocalCopy();
   try {
     await StorageOld.remove("wallet");
   } catch {
-    // best-effort legacy cleanup
+    // best-effort legacy localStorage cleanup
   }
 }
 

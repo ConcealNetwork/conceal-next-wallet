@@ -4,7 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
-import { ccxToNumber, cn, formatCcx, formatUsd, stripTickerSuffix, walletBalanceUsd } from "@/lib/utils";
+import {
+  ccxToNumber,
+  cn,
+  formatCcx,
+  formatUsd,
+  stripTickerSuffix,
+  walletBalanceUsd,
+} from "@/lib/utils";
 import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
 
 type BalanceHeroProps = {

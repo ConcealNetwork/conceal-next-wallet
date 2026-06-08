@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { useQuery } from "@/lib/hooks/query-provider";
 import { queryKeys } from "@/lib/hooks/query-keys";
+import { countReceivedMessages } from "@/lib/messages/conversations";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import {
@@ -35,12 +36,12 @@ function useWalletSynced(): boolean {
   return info.currentHeight >= info.networkHeight - 1;
 }
 
-/** +N nav badge when total messages increase after the wallet is synced. */
+/** +N nav badge when received messages increase after the wallet is synced. */
 export function useNewMessagesSinceOpen(): number {
   const messages = useMessages();
   const pathname = usePathname();
   const isSynced = useWalletSynced();
-  const count = messages.data?.length ?? 0;
+  const count = countReceivedMessages(messages.data ?? []);
 
   useEffect(() => {
     if (!isSynced || messages.data === undefined) return;
@@ -61,7 +62,7 @@ export function useAcknowledgeMessagesSinceOpen(): () => void {
   const messages = useMessages();
   return () => {
     if (messages.data !== undefined) {
-      acknowledgeMessages(messages.data.length);
+      acknowledgeMessages(countReceivedMessages(messages.data));
     }
   };
 }

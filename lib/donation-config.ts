@@ -1,7 +1,4 @@
-import {
-  COIN_TICKER_FULL,
-  WALLET_DONATION_ADDRESS,
-} from "@/lib/config/config";
+import { COIN_TICKER_FULL, WALLET_DONATION_ADDRESS } from "@/lib/config/config";
 
 const MONERO_DONATION_ADDRESS =
   "41gW3g6qVxoTqRQAZwNpREfYntrmH31PvJLxKVfU7hGySukxB2YVMn3exzoEfV6pAy2GzubVKZpTrRfYJnMCrjG421e8WbY";
@@ -39,9 +36,7 @@ export const DONATION_SOLE_METHOD_DESCRIPTIONS: Record<DonationMethodKey, string
   apple: "Donate using Apple Pay",
 };
 
-export function getDonationMethodsDescription(
-  enabledMethods: DonationMethodKey[],
-): string {
+export function getDonationMethodsDescription(enabledMethods: DonationMethodKey[]): string {
   if (enabledMethods.length === 1) {
     return DONATION_SOLE_METHOD_DESCRIPTIONS[enabledMethods[0]];
   }

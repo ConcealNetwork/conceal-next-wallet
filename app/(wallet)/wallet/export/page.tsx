@@ -109,9 +109,7 @@ export default function ExportPage() {
                 <Eye className="size-4" aria-hidden="true" />
                 {revealed ? "Hide" : "Reveal"}
               </Button>
-              {data && (
-                <CopyButton value={formatWalletBackupMarkdown(data)} label="Copy Backup" />
-              )}
+              {data && <CopyButton value={formatWalletBackupMarkdown(data)} label="Copy Backup" />}
               {data && (
                 <Button
                   type="button"

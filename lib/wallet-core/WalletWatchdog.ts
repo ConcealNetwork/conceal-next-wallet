@@ -410,6 +410,10 @@ class ParseWorker {
   incProcessed = (value: number) => {
     this.countProcessed = this.countProcessed + value;
   };
+
+  terminate = () => {
+    this.workerProcess?.terminate();
+  };
 }
 
 class SyncWorker {
@@ -686,12 +690,24 @@ export class WalletWatchdog {
     this.dispatchParseOwned(range);
   };
 
+  /** Pause sync (legacy v1 behaviour) — workers stay alive so start() can resume. */
   stop = () => {
     this.releaseTxQueueWaiters();
     clearInterval(this.intervalMempool);
+    this.intervalMempool = 0;
     this.blockList.getTxQueue().reset();
     this.blockList.reset();
     this.stopped = true;
+  };
+
+  /** Full teardown on wallet lock / disconnect. */
+  shutdown = () => {
+    this.stop();
+    for (let i = 0; i < this.filterWorkers.length; ++i) {
+      this.filterWorkers[i].terminate();
+    }
+    this.filterWorkers = [];
+    this.syncWorkers = [];
   };
 
   private queuedTxCount = (): number => {
