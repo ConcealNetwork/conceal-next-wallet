@@ -16,6 +16,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import { prepareWalletConversationData } from "./wallet-conversation-persistence";
 import {
   indexSentMessageRecords,
   normalizeSentMessagesFromRaw,
@@ -108,8 +109,15 @@ export type RawWallet = {
   creationHeight?: number;
   options?: RawWalletOptions;
   coinAddressPrefix?: any;
+  /**
+   * v3 only — saved contacts for conversations (optional; omitted in v1 backups).
+   * v1 `loadFromRaw` never reads this key, so v1 → v3 and v3 → v1 file import stay compatible.
+   */
   addressBook?: RawAddressEntry[];
-  /** Sender-only outgoing message copies (optional; ignored by wallet v1). */
+  /**
+   * v3 only — sender copies of outgoing message bodies (optional; omitted in v1 backups).
+   * On-chain payload is only decryptable by the receiver; the sender must keep local copies.
+   */
   sentMessages?: RawSentMessageRecord[];
 };
 export type RawFullyEncryptedWallet = {
@@ -158,13 +166,28 @@ export class Wallet extends Observable {
     for (const withdrawal of this.withdrawals) {
       withdrawals.push(withdrawal.export());
     }
-    for (const transaction of this.transactions) {
+    const pushExportedTransaction = (transaction: Transaction) => {
       const exported = transaction.export();
       // Keep sender message bodies out of tx entries so wallet v1 is unaffected.
       if (transaction.hash && this.sentMessageRecords.has(transaction.hash) && exported.message) {
         delete exported.message;
       }
       transactions.push(exported);
+    };
+
+    const seenHashes = new Set<string>();
+    const seenPubKeys = new Set<string>();
+
+    for (const transaction of this.transactions) {
+      if (transaction.hash) seenHashes.add(transaction.hash);
+      if (transaction.txPubKey) seenPubKeys.add(transaction.txPubKey);
+      pushExportedTransaction(transaction);
+    }
+
+    for (const transaction of this.txsMem) {
+      if (transaction.hash && seenHashes.has(transaction.hash)) continue;
+      if (transaction.txPubKey && seenPubKeys.has(transaction.txPubKey)) continue;
+      pushExportedTransaction(transaction);
     }
 
     const data: RawWallet = {
@@ -268,13 +291,9 @@ export class Wallet extends Observable {
       wallet.sentMessageRecords = indexSentMessageRecords(
         normalizeSentMessagesFromRaw(raw.sentMessages),
       );
-      for (const transaction of wallet.transactions) {
-        wallet.hydrateSentMessageBody(transaction);
-      }
-      for (const transaction of wallet.txsMem) {
-        wallet.hydrateSentMessageBody(transaction);
-      }
     }
+
+    prepareWalletConversationData(wallet);
 
     wallet.recalculateKeyImages();
     return wallet;

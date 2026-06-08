@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import {
   BarChart3,
   BookOpen,
@@ -176,7 +177,13 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
+function SidebarContent({
+  collapsed = false,
+  onNavigate,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
   const newMessages = useNewMessagesSinceOpen();
   const acknowledgeMessages = useAcknowledgeMessagesSinceOpen();
 
@@ -186,6 +193,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
         <Link
           href="/wallet/account"
           aria-label="Conceal Wallet"
+          onClick={onNavigate}
           className="flex min-h-10 cursor-pointer items-center gap-3 rounded-xl px-3 transition-opacity duration-200 hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Wallet className="size-5 shrink-0 text-primary" aria-hidden="true" />
@@ -207,12 +215,19 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
             item={item}
             collapsed={collapsed}
             badge={item.href === "/wallet/messages" ? newMessages : undefined}
-            onNavigate={item.href === "/wallet/messages" ? acknowledgeMessages : undefined}
+            onNavigate={
+              item.href === "/wallet/messages"
+                ? () => {
+                    acknowledgeMessages();
+                    onNavigate?.();
+                  }
+                : onNavigate
+            }
           />
         ))}
         <div className="my-4 border-t border-border" />
         {bottomNav.map((item) => (
-          <NavLink key={item.href} item={item} collapsed={collapsed} />
+          <NavLink key={item.href} item={item} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
       </nav>
       <DisconnectButton collapsed={collapsed} />
@@ -222,6 +237,8 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
 
 export function Sidebar() {
   const { collapsed, toggle } = useSidebarCollapse();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const closeMobileNav = useCallback(() => setMobileOpen(false), []);
   const EdgeToggleIcon = collapsed ? ChevronRight : ChevronLeft;
 
   return (
@@ -246,14 +263,14 @@ export function Sidebar() {
         </TooltipProvider>
       </aside>
       <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur-sm lg:hidden">
-        <Sheet>
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button type="button" variant="ghost" size="icon" aria-label="Open navigation">
               <Menu className="size-5" aria-hidden="true" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[290px] border-border bg-[hsl(var(--chrome))] p-0">
-            <SidebarContent />
+            <SidebarContent onNavigate={closeMobileNav} />
           </SheetContent>
         </Sheet>
         <p className="ml-3 text-base font-semibold">Conceal Wallet</p>

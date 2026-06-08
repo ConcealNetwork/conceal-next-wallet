@@ -69,19 +69,17 @@ function getTxAmount(tx: Transaction): number {
   return Math.abs(tx.getAmount());
 }
 
-function isOutgoingTx(tx: Transaction): boolean {
-  return tx.getAmount() < 0 || tx.ins.length > 0;
-}
-
 function isSentMessageAmount(amount: number): boolean {
   return amount === SENT_MESSAGE_AMOUNT_SELF_ATOMIC || amount === SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC;
 }
 
-export function isMessageTransactionSent(tx: Transaction): boolean {
-  if (!isOutgoingTx(tx)) return false;
-  if (isSentMessageAmount(getTxAmount(tx))) return true;
-  if (tx.remoteAddress !== "") return true;
-  return false;
+export function isMessageTransactionSent(
+  tx: Transaction,
+  sentRecord?: RawSentMessageRecord,
+): boolean {
+  const hasBody = !!(tx.message?.trim() || sentRecord?.messageBody?.trim());
+  if (!hasBody) return false;
+  return isSentMessageAmount(getTxAmount(tx));
 }
 
 export function isMessageTransactionReceived(tx: Transaction): boolean {
@@ -116,7 +114,7 @@ export function mapTransactionToMessageUI(
   tx: Transaction,
   sentRecord?: RawSentMessageRecord,
 ): MessageUI | null {
-  const sent = isMessageTransactionSent(tx);
+  const sent = isMessageTransactionSent(tx, sentRecord);
   const received = isMessageTransactionReceived(tx);
   if (!sent && !received) return null;
 

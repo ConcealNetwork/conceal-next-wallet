@@ -5,7 +5,7 @@ import { readSpeedFromSyncSpeed, syncSpeedFromReadSpeed } from "@/lib/ui/sync-sp
 import { testNodeUrlReachability, validateNodeUrlFormat } from "@/lib/validation/node-url";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Storage } from "./Storage";
-import { getRuntimeWallet, getRuntimeWatchdog } from "./wallet-runtime";
+import { flushRuntimeWalletPersistence, getRuntimeWallet, getRuntimeWatchdog } from "./wallet-runtime";
 
 function requireOpenWallet() {
   const wallet = getRuntimeWallet();
@@ -155,6 +155,7 @@ export async function updateSettingsOperation(
       if (creationHeight < 0) creationHeight = 0;
       if (creationHeight > maxHeight) creationHeight = maxHeight;
       wallet.creationHeight = creationHeight;
+      wallet.lastHeight = creationHeight;
     }
 
     if (typeof input.scanHeight !== "undefined") {
@@ -184,6 +185,7 @@ export async function resetAndRescanOperation(): Promise<{ ok: true }> {
 
   wallet.signalChanged();
   wallet.notify();
+  await flushRuntimeWalletPersistence();
 
   return { ok: true };
 }

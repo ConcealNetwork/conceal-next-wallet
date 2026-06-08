@@ -123,6 +123,35 @@ export function useSendMessage() {
   });
 }
 
+export function useMarkMessageRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.messages.markRead(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.messages });
+      const previous = queryClient.getQueryData<Message[]>(queryKeys.messages);
+      queryClient.setQueryData<Message[]>(queryKeys.messages, (current) =>
+        (current ?? []).map((message) =>
+          message.id === id ? { ...message, unread: false } : message,
+        ),
+      );
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.messages, context.previous);
+      }
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Message[]>(queryKeys.messages, (current) =>
+        (current ?? []).map((message) =>
+          message.id === updated.id ? { ...message, unread: false } : message,
+        ),
+      );
+    },
+  });
+}
+
 export function useDeposits() {
   return useQuery({
     queryKey: queryKeys.deposits,
@@ -262,8 +291,11 @@ export function useResetAndRescan() {
   return useMutation({
     mutationFn: () => services.settings.resetAndRescan(),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
       void queryClient.invalidateQueries({ queryKey: queryKeys.network });
     },
   });

@@ -1,4 +1,4 @@
-/** Nav badge: +N when total message count grows since first synced snapshot. */
+/** Nav badge: +N when received message count grows since first synced snapshot. */
 
 let messageCountAtSync: number | null = null;
 
@@ -6,7 +6,7 @@ export function resetMessageNavBadge(): void {
   messageCountAtSync = null;
 }
 
-/** First time the wallet is synced this session, snapshot total message count. */
+/** First time the wallet is synced this session, snapshot received message count. */
 export function recordMessageCountAtSync(count: number): void {
   if (messageCountAtSync === null) {
     messageCountAtSync = count;

@@ -69,5 +69,5 @@ export const realWalletService: WalletService = {
 export async function disconnectWalletRuntime() {
   await ensureAllWalletLegacyLibs();
   const { disconnectWalletRuntime: disconnect } = await import("@/lib/wallet-core/wallet-runtime");
-  disconnect();
+  await disconnect();
 }

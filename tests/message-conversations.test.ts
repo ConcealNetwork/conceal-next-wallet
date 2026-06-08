@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildMessageConversations, resolveThreadKey } from "@/lib/messages/conversations";
+import {
+  buildMessageConversations,
+  buildMessageListContactEntry,
+  countReceivedMessages,
+  resolveThreadKey,
+} from "@/lib/messages/conversations";
 import type { AddressEntry, Message } from "@/lib/types";
 
 const CONTACT_ADDRESS =
@@ -77,5 +82,68 @@ describe("message conversations", () => {
       body: "x",
     });
     expect(resolveThreadKey(received, addressBook)).toBe(`${CONTACT_ADDRESS}:${PID}`);
+  });
+
+  it("counts only received messages for nav badge", () => {
+    const messages = [
+      msg({ id: "r1", direction: "received", body: "a" }),
+      msg({ id: "s1", direction: "sent", body: "b" }),
+      msg({ id: "r2", direction: "received", body: "c" }),
+    ];
+    expect(countReceivedMessages(messages)).toBe(2);
+  });
+
+  it("resolves received list contact by payment id for avatar and label", () => {
+    const received = msg({
+      id: "r1",
+      direction: "received",
+      body: "Deposit ref",
+      paymentIdFrom: PID,
+      paymentIdTo: null,
+      counterpartyName: `PID ${PID.slice(0, 8)}…`,
+      counterpartyAddress: `recv:${PID}`,
+      threadKey: `recv:${PID}:${PID}`,
+    });
+
+    const entry = buildMessageListContactEntry(received, addressBook);
+    expect(entry.label).toBe("Kraken Exchange");
+    expect(entry.avatar).toBe("kraken");
+    expect(entry.address).toBe(CONTACT_ADDRESS);
+  });
+
+  it("does not match received sender by counterparty address (stealth)", () => {
+    const aliceAddress =
+      "ccx7AliceWalletAddr2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQ";
+    const aliceBook: AddressEntry[] = [
+      { id: "addr-2", label: "Alice", address: aliceAddress, avatar: "alice" },
+    ];
+    const received = msg({
+      id: "r1",
+      direction: "received",
+      body: "hi",
+      paymentIdFrom: null,
+      counterpartyName: "From abc12345…",
+      counterpartyAddress: aliceAddress,
+    });
+
+    const entry = buildMessageListContactEntry(received, aliceBook);
+    expect(entry.label).toBe("From abc12345…");
+    expect(entry.avatar).toBeUndefined();
+  });
+
+  it("resolves sent list contact by recipient address when pid is absent", () => {
+    const sent = msg({
+      id: "s1",
+      direction: "sent",
+      body: "ping",
+      sentTo: CONTACT_ADDRESS,
+      counterpartyAddress: CONTACT_ADDRESS,
+      paymentIdFrom: null,
+      paymentIdTo: null,
+    });
+
+    const entry = buildMessageListContactEntry(sent, addressBook);
+    expect(entry.label).toBe("Kraken Exchange");
+    expect(entry.avatar).toBe("kraken");
   });
 });

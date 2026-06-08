@@ -37,13 +37,8 @@ function sentTx(hash: string, body?: string): Transaction {
 }
 
 describe("MessageUI", () => {
-  it("maps sent tx without local body", () => {
-    const row = mapTransactionToMessageUI(sentTx("h1"));
-    expect(row?.type).toBe("sent");
-    expect(row?.hasBody).toBe(false);
-    expect(row?.sentTo).toBe(RECEIVER);
-    expect(row?.paymentIdFrom).toBeNull();
-    expect(row?.paymentIdTo).toBe(PID);
+  it("ignores sent tx without message body or stored record", () => {
+    expect(mapTransactionToMessageUIRaw(sentTx("h1"))).toBeNull();
   });
 
   it("maps sent tx with stored record body", () => {

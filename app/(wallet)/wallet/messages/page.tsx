@@ -22,9 +22,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton, PageHeader } from "@/components/wallet/common";
 import { MAX_MESSAGE_SIZE, MAX_TTL_MINUTES } from "@/lib/config/config";
-import { useAddressBook, useMessages, useSendMessage } from "@/lib/hooks";
+import { useAddressBook, useMarkMessageRead, useMessages, useSendMessage } from "@/lib/hooks";
 import {
   buildConversationFromMessage,
+  buildMessageListContactEntry,
   canReplyToConversation,
   type MessageConversation,
   sortMessagesNewestFirst,
@@ -46,6 +47,7 @@ export default function MessagesPage() {
   const messages = useMessages();
   const addressBook = useAddressBook();
   const send = useSendMessage();
+  const markRead = useMarkMessageRead();
   const [query, setQuery] = useState("");
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [readThreads, setReadThreads] = useState<Set<string>>(new Set());
@@ -145,6 +147,9 @@ export default function MessagesPage() {
     setReadThreads((prev) => new Set(prev).add(message.threadKey));
     setDraft("");
     setThreadViewMd(false);
+    if (message.direction === "received" && message.unread) {
+      markRead.mutate(message.id);
+    }
   }
 
   function messageSendError(error: unknown) {
@@ -452,26 +457,7 @@ function MessageListItem({
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const contact =
-    addressBook.find(
-      (entry) =>
-        (message.paymentIdFrom &&
-          entry.paymentId &&
-          entry.paymentId.toLowerCase() === message.paymentIdFrom.toLowerCase()) ||
-        (message.paymentIdTo &&
-          entry.paymentId &&
-          entry.paymentId.toLowerCase() === message.paymentIdTo.toLowerCase()) ||
-        (message.sentTo && entry.address === message.sentTo) ||
-        entry.address === message.counterpartyAddress,
-    ) ?? null;
-
-  const entry: AddressEntry = {
-    id: message.id,
-    label: contact?.label ?? message.counterpartyName,
-    address: contact?.address ?? message.counterpartyAddress,
-    paymentId: contact?.paymentId ?? message.paymentIdFrom ?? message.paymentIdTo ?? undefined,
-    avatar: contact?.avatar,
-  };
+  const entry = buildMessageListContactEntry(message, addressBook);
 
   const preview = message.hasBody
     ? message.body
@@ -501,7 +487,7 @@ function MessageListItem({
                   : "font-medium",
               )}
             >
-              <span className="truncate">{message.counterpartyName}</span>
+              <span className="truncate">{entry.label}</span>
               {message.ttlExpiresAt ? (
                 <MessageTtlExpiryLabel expiresAt={message.ttlExpiresAt} />
               ) : null}

@@ -162,6 +162,8 @@ export class Transaction {
   messageViewed: boolean = false;
   ttl: number = 0; // TTL timestamp (absolute UNIX timestamp in seconds)
   remoteAddress: string = "";
+  /** Set at sync from TransactionsExplorer.isMinerTx (raw vin.length === 0). */
+  minerReward: boolean = false;
 
   static fromRaw = (raw: any) => {
     const transac = new Transaction();
@@ -190,6 +192,7 @@ export class Transaction {
     if (typeof raw.messageViewed !== "undefined") transac.messageViewed = raw.messageViewed;
     if (typeof raw.ttl !== "undefined") transac.ttl = raw.ttl;
     if (typeof raw.remoteAddress !== "undefined") transac.remoteAddress = raw.remoteAddress;
+    if (typeof raw.minerReward === "boolean") transac.minerReward = raw.minerReward;
     return transac;
   };
 
@@ -221,6 +224,7 @@ export class Transaction {
     if (this.messageViewed) data.messageViewed = this.messageViewed;
     if (this.ttl !== 0) data.ttl = this.ttl;
     if (this.remoteAddress !== "") data.remoteAddress = this.remoteAddress;
+    if (this.minerReward) data.minerReward = this.minerReward;
     return data;
   };
 

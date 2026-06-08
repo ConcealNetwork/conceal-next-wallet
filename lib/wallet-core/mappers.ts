@@ -82,26 +82,19 @@ function isSentMessageAmount(amount: number): boolean {
   return amount === SENT_MESSAGE_AMOUNT_SELF_ATOMIC || amount === SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC;
 }
 
-function isOutgoingTx(tx: CoreTransaction): boolean {
-  return tx.getAmount() < 0 || tx.ins.length > 0;
-}
-
-/** Incoming message: wallet received the 0.0001 CCX envelope. */
-export function hasMessageEnvelopeIn(tx: CoreTransaction): boolean {
-  return tx.outs.some((out) => out.type !== "03" && out.amount === MESSAGE_TX_AMOUNT_ATOMIC);
-}
-
 export function isMessageIn(tx: CoreTransaction): boolean {
   if (!tx.message) return false;
   return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC;
 }
 
 export function isMessageOut(tx: CoreTransaction): boolean {
-  if (!isOutgoingTx(tx)) return false;
-  if (isSentMessageAmount(getTxAmount(tx))) return true;
-  // Stamped when sending via sendMessageOperation (survives sync before body decrypt).
-  if (tx.remoteAddress !== "") return true;
-  return false;
+  if (!tx.message) return false;
+  return isSentMessageAmount(getTxAmount(tx));
+}
+
+/** Miner reward — TransactionsExplorer.isMinerTx (chain coinbase: no vin). Not same as isCoinbase(). */
+export function isMinerRewardTx(tx: CoreTransaction): boolean {
+  return tx.minerReward === true;
 }
 
 export function isWalletMessageTx(tx: CoreTransaction): boolean {
@@ -114,19 +107,10 @@ export function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amou
 }
 
 export function isUiMessageOut(
-  transaction: Pick<UiTransaction, "type" | "message" | "amount" | "outgoing">,
+  transaction: Pick<UiTransaction, "message" | "amount">,
 ): boolean {
-  if (transaction.type === "message" && transaction.outgoing) return true;
-  const amount = Math.abs(transaction.amount.atomic);
-  if (isSentMessageAmount(amount)) return true;
-  if (
-    transaction.type === "send" &&
-    transaction.message &&
-    amount <= SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC
-  ) {
-    return true;
-  }
-  return false;
+  if (!transaction.message) return false;
+  return isSentMessageAmount(Math.abs(transaction.amount.atomic));
 }
 
 /** Effective type for UI (icon, tabs, labels). */
@@ -141,7 +125,7 @@ export function resolveTransactionType(tx: CoreTransaction): TransactionType {
   if (tx.isWithdrawal) return "withdrawal";
   if (tx.isFusion) return "fusion";
   if (isWalletMessageTx(tx)) return "message";
-  if (tx.isCoinbase()) return "miner";
+  if (isMinerRewardTx(tx)) return "miner";
   return tx.getAmount() < 0 ? "send" : "receive";
 }
 
@@ -290,11 +274,18 @@ export function listWalletMessages(wallet: Wallet): UiMessage[] {
   return listWalletMessagesFromUI(wallet);
 }
 
+/** Confirmed blocks sort ascending; mempool (0) sorts last as the newest thread row. */
+function messageChronologyHeight(blockHeight: number): number {
+  return blockHeight > 0 ? blockHeight : Number.MAX_SAFE_INTEGER;
+}
+
 export function compareMessagesChronological(
   a: Pick<UiMessage, "blockHeight" | "timestamp" | "direction" | "id">,
   b: Pick<UiMessage, "blockHeight" | "timestamp" | "direction" | "id">,
 ): number {
-  if (a.blockHeight !== b.blockHeight) return a.blockHeight - b.blockHeight;
+  const heightA = messageChronologyHeight(a.blockHeight);
+  const heightB = messageChronologyHeight(b.blockHeight);
+  if (heightA !== heightB) return heightA - heightB;
 
   const timeA = new Date(a.timestamp).getTime();
   const timeB = new Date(b.timestamp).getTime();
