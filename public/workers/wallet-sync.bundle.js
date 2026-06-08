@@ -24,7 +24,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       const r = _MathUtil.randomUint32() % (1 << 53);
       const frac = Math.sqrt(r / (1 << 53));
       let i = frac * max | 0;
-      if (i == max) --i;
+      if (i === max) --i;
       return i;
     }
   };
