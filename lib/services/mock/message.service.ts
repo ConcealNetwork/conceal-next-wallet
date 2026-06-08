@@ -1,7 +1,7 @@
 import { mockMessages } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
 import type { MessageService } from "@/lib/services/message.service";
-import { buildMessageThreadKey } from "@/lib/wallet-core/mappers";
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 
 export const mockMessageService: MessageService = {
   async listMessages() {

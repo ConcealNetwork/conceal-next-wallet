@@ -34,7 +34,7 @@ import type { AddressEntry, Message } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, timeAgo, truncateAddress } from "@/lib/utils";
 import { addressIsValid, generatePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
-import { buildMessageThreadKey } from "@/lib/wallet-core/mappers";
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 
 const TTL_STEP = 5;
 

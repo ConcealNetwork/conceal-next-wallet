@@ -20,7 +20,10 @@ import {
   mapTransactionToMessageUI,
   messageUIToApiMessage,
 } from "./MessageUI";
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { RawSentMessageRecord } from "./sent-messages";
+
+export { buildMessageThreadKey };
 
 export function clampImportHeight(scanHeight: number | undefined, currentHeight: number): number {
   let height = scanHeight ?? 0;
@@ -87,8 +90,9 @@ export function isMessageIn(tx: CoreTransaction): boolean {
   return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC;
 }
 
-export function isMessageOut(tx: CoreTransaction): boolean {
-  if (!tx.message) return false;
+export function isMessageOut(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
+  const hasBody = !!(tx.message?.trim() || sentRecord?.messageBody?.trim());
+  if (!hasBody) return false;
   return isSentMessageAmount(getTxAmount(tx));
 }
 
@@ -97,8 +101,11 @@ export function isMinerRewardTx(tx: CoreTransaction): boolean {
   return tx.minerReward === true;
 }
 
-export function isWalletMessageTx(tx: CoreTransaction): boolean {
-  return isMessageIn(tx) || isMessageOut(tx);
+export function isWalletMessageTx(
+  tx: CoreTransaction,
+  sentRecord?: RawSentMessageRecord,
+): boolean {
+  return isMessageIn(tx) || isMessageOut(tx, sentRecord);
 }
 
 export function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amount">): boolean {
@@ -118,11 +125,14 @@ export function resolveUiTransactionType(transaction: UiTransaction): Transactio
 }
 
 /** Classify a synced core transaction for the UI (matches Transaction.ts getters). */
-export function resolveTransactionType(tx: CoreTransaction): TransactionType {
+export function resolveTransactionType(
+  tx: CoreTransaction,
+  sentRecord?: RawSentMessageRecord,
+): TransactionType {
   if (tx.isDeposit) return "deposit";
   if (tx.isWithdrawal) return "withdrawal";
   if (tx.isFusion) return "fusion";
-  if (isWalletMessageTx(tx)) return "message";
+  if (isWalletMessageTx(tx, sentRecord)) return "message";
   if (isMinerRewardTx(tx)) return "miner";
   return tx.getAmount() < 0 ? "send" : "receive";
 }
@@ -143,14 +153,23 @@ export function resolveTransactionDisplayAmount(
   return absolute;
 }
 
+function resolveStoredMessageBody(
+  tx: CoreTransaction,
+  sentRecord?: RawSentMessageRecord,
+): string | undefined {
+  const body = tx.message?.trim() || sentRecord?.messageBody?.trim();
+  return body || undefined;
+}
+
 export function mapCoreTransaction(
   tx: CoreTransaction,
   blockchainHeight: number,
   walletAddress: string,
+  sentRecord?: RawSentMessageRecord,
 ): UiTransaction {
-  const messageOut = isMessageOut(tx);
+  const messageOut = isMessageOut(tx, sentRecord);
   const messageIn = isMessageIn(tx);
-  const type = messageOut || messageIn ? "message" : resolveTransactionType(tx);
+  const type = messageOut || messageIn ? "message" : resolveTransactionType(tx, sentRecord);
   const displayAtomic = resolveTransactionDisplayAmount(tx, type);
   const confirmations = tx.blockHeight === 0 ? 0 : Math.max(0, blockchainHeight - tx.blockHeight);
 
@@ -167,7 +186,7 @@ export function mapCoreTransaction(
       : new Date().toISOString(),
     confirmations,
     paymentId: tx.paymentId || undefined,
-    message: tx.message || undefined,
+    message: resolveStoredMessageBody(tx, sentRecord),
     ...(messageOut ? { outgoing: true } : {}),
   };
 }
@@ -176,7 +195,8 @@ export function listWalletTransactions(wallet: Wallet, blockchainHeight: number)
   const address = wallet.getPublicAddress();
   return wallet.txsMem.concat(wallet.getTransactionsCopy().reverse()).map((tx) => {
     wallet.hydrateSentMessageBody(tx);
-    return mapCoreTransaction(tx, blockchainHeight, address);
+    const sentRecord = wallet.getSentMessageRecord(tx.hash);
+    return mapCoreTransaction(tx, blockchainHeight, address, sentRecord);
   });
 }
 
@@ -184,10 +204,6 @@ export function listWalletTransactions(wallet: Wallet, blockchainHeight: number)
 export function isMessageTransactionExpired(tx: CoreTransaction): boolean {
   if (!tx.ttl || tx.ttl <= 0 || tx.blockHeight !== 0) return false;
   return Math.floor(Date.now() / 1000) >= tx.ttl;
-}
-
-export function buildMessageThreadKey(address: string, paymentId?: string): string {
-  return `${address.trim()}:${normalizePaymentId(paymentId)}`;
 }
 
 export function resolveThreadKeyFromMeta(

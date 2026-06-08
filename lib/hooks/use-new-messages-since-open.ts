@@ -6,6 +6,7 @@ import { useQuery } from "@/lib/hooks/query-provider";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { countReceivedMessages } from "@/lib/messages/conversations";
 import { services } from "@/lib/services";
+import { messagesQueryOptions } from "@/lib/services/query-options";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import {
   acknowledgeMessages,
@@ -22,10 +23,12 @@ function useWalletInfo() {
   });
 }
 
-function useMessages() {
+function useMessages(enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.messages,
     queryFn: () => services.messages.listMessages(),
+    enabled,
+    ...messagesQueryOptions,
   });
 }
 
@@ -38,9 +41,9 @@ function useWalletSynced(): boolean {
 
 /** +N nav badge when received messages increase after the wallet is synced. */
 export function useNewMessagesSinceOpen(): number {
-  const messages = useMessages();
-  const pathname = usePathname();
   const isSynced = useWalletSynced();
+  const messages = useMessages(isSynced);
+  const pathname = usePathname();
   const count = countReceivedMessages(messages.data ?? []);
 
   useEffect(() => {
@@ -59,7 +62,8 @@ export function useNewMessagesSinceOpen(): number {
 }
 
 export function useAcknowledgeMessagesSinceOpen(): () => void {
-  const messages = useMessages();
+  const isSynced = useWalletSynced();
+  const messages = useMessages(isSynced);
   return () => {
     if (messages.data !== undefined) {
       acknowledgeMessages(countReceivedMessages(messages.data));
@@ -67,7 +71,9 @@ export function useAcknowledgeMessagesSinceOpen(): () => void {
   };
 }
 
+/** Warm the message list for the nav badge only after sync — avoids scanning all txs during block scans. */
 export function usePrefetchMessagesForBadge() {
-  useMessages();
-  useWalletInfo();
+  const { status } = useWalletSession();
+  const isSynced = useWalletSynced();
+  useMessages(status === "open" && isSynced);
 }
