@@ -35,7 +35,7 @@ export class CoinUri {
       const temp = data.replace(/&/g, "?").trim();
       const exploded = temp.split("?");
 
-      if (exploded.length == 0) throw "missing_address";
+      if (exploded.length === 0) throw "missing_address";
 
       if (exploded[0].length !== CoinUri.coinAddressLength) throw "invalid_address_length";
 
@@ -115,7 +115,7 @@ export class CoinUri {
       const data = str.replace(CoinUri.coinWalletPrefix, "").trim();
       const exploded = data.split("?");
 
-      if (exploded.length == 0) throw "missing_address";
+      if (exploded.length === 0) throw "missing_address";
 
       if (exploded[0].length !== CoinUri.coinAddressLength) throw "invalid_address_length";
 

@@ -101,10 +101,7 @@ export function isMinerRewardTx(tx: CoreTransaction): boolean {
   return tx.minerReward === true;
 }
 
-export function isWalletMessageTx(
-  tx: CoreTransaction,
-  sentRecord?: RawSentMessageRecord,
-): boolean {
+export function isWalletMessageTx(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
   return isMessageIn(tx) || isMessageOut(tx, sentRecord);
 }
 
