@@ -95,7 +95,7 @@ export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
     feePerKB: new JSBigInt(String(s.feePerKBAtomic)),
     dustThreshold: new JSBigInt(String(s.dustThresholdAtomic)),
     defaultMixin: 5,
-    optimizeOutputs: 60,
+    optimizeOutputs: 100,
     optimizeThreshold: 900000000,
     messageTxAmount: new JSBigInt(String(s.messageTxAmountAtomic)),
     maxMessageSize: s.maxMessageSize,

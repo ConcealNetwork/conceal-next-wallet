@@ -65,7 +65,7 @@ myGlobal.config = {
     feePerKB: new JSBigInt('${s.feePerKBAtomic}'),
     dustThreshold: new JSBigInt('${s.dustThresholdAtomic}'),
     defaultMixin: 5,
-    optimizeOutputs: 60,
+    optimizeOutputs: 100,
     optimizeThreshold: 900000000,
     messageTxAmount: new JSBigInt('${s.messageTxAmountAtomic}'),
     maxMessageSize: 260,
