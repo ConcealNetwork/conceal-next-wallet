@@ -2114,7 +2114,7 @@ export namespace CnTransactions {
         }
         tx.vin.push(input_to_key);
       }
-      const outputs_money = JSBigInt.ZERO;
+      let outputs_money = JSBigInt.ZERO;
       let out_index = 0;
       const amountKeys = []; //rct only
 
@@ -2202,6 +2202,7 @@ export namespace CnTransactions {
             },
           };
           tx.vout.push(depositOut);
+          outputs_money = outputs_money.add(new JSBigInt(dsts[i].amount));
           ++out_index;
           ++i;
           out_ephemeral_pub = Cn.derive_public_key(out_derivation, out_index, destKeys.spend);
@@ -2217,6 +2218,7 @@ export namespace CnTransactions {
           },
         };
         tx.vout.push(out);
+        outputs_money = outputs_money.add(new JSBigInt(dsts[i].amount));
         ++out_index;
 
         /*
@@ -2276,7 +2278,7 @@ export namespace CnTransactions {
         tx.extra = tx.extra + TX_EXTRA_TAGS.TTL_TAG + ttlSize + ttlStr;
       }
 
-      if (outputs_money.add(fee_amount).compare(inputs_money) > 0) {
+      if (transactionType !== "withdraw" && outputs_money.add(fee_amount).compare(inputs_money) > 0) {
         throw (
           "outputs money (" +
           Cn.formatMoneyFull(outputs_money) +
