@@ -29,6 +29,9 @@ export const COIN_TICKER_FULL = "CCX";
 /** Short Conceal symbol shown when compact ticker is enabled. */
 export const COIN_TICKER_SHORT = "₡";
 
+/** Payment QR / URI prefix (empty string to match Conceal Desktop Wallet, should evolve to "conceal:"). */
+export const COIN_URI_PREFIX = "";
+
 /** Explorer pool registry base (smart-node discovery). */
 export const PUBLIC_NODES_POOL_BASE = "https://explorer.conceal.network/pool";
 
@@ -119,7 +122,7 @@ export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
     coinSymbolShort: "₡",
     openAliasPrefix: "ccx",
     coinName: "Conceal",
-    coinUriPrefix: "conceal:",
+    coinUriPrefix: COIN_URI_PREFIX,
 
     donationAddress: WALLET_DONATION_ADDRESS,
     donationAddresses: [...WALLET_DONATION_ADDRESSES],

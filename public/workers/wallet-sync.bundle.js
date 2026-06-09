@@ -1747,7 +1747,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
           tx.vin.push(input_to_key);
         }
-        const outputs_money = JSBigInt.ZERO;
+        let outputs_money = JSBigInt.ZERO;
         let out_index = 0;
         const amountKeys = [];
         let num_stdaddresses = 0;
@@ -1819,6 +1819,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
               }
             };
             tx.vout.push(depositOut);
+            outputs_money = outputs_money.add(new JSBigInt(dsts[i].amount));
             ++out_index;
             ++i;
             out_ephemeral_pub = Cn.derive_public_key(out_derivation, out_index, destKeys.spend);
@@ -1833,6 +1834,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             }
           };
           tx.vout.push(out);
+          outputs_money = outputs_money.add(new JSBigInt(dsts[i].amount));
           ++out_index;
         }
         tx.extra = CnTransactions2.add_pub_key_to_extra(tx.extra, txkey.pub);
@@ -1875,7 +1877,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           const ttlSize = CnUtils.encode_varint(ttlStr.length / 2);
           tx.extra = tx.extra + TX_EXTRA_TAGS.TTL_TAG + ttlSize + ttlStr;
         }
-        if (outputs_money.add(fee_amount).compare(inputs_money) > 0) {
+        if (transactionType !== "withdraw" && outputs_money.add(fee_amount).compare(inputs_money) > 0) {
           throw "outputs money (" + Cn.formatMoneyFull(outputs_money) + ") + fee (" + Cn.formatMoneyFull(fee_amount) + ") > inputs money (" + Cn.formatMoneyFull(inputs_money) + ")";
         }
         if (!rct) {

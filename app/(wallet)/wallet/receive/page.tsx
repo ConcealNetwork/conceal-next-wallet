@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
+import { COIN_URI_PREFIX } from "@/lib/config/config";
 import { useDeposits, useTransactions, useWalletInfo } from "@/lib/hooks";
 import { formatCcx, timeAgo, truncateAddress } from "@/lib/utils";
 
@@ -16,7 +17,7 @@ function buildPaymentUri(address: string, amount: string, paymentId: string, mes
   if (paymentId) params.set("paymentId", paymentId);
   if (message) params.set("message", message);
   const query = params.toString();
-  return query ? `conceal:${address}?${query}` : address;
+  return query ? `${COIN_URI_PREFIX}${address}?${query}` : address;
 }
 
 export default function ReceivePage() {
