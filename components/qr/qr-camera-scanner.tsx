@@ -1,5 +1,8 @@
 "use client";
 
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
