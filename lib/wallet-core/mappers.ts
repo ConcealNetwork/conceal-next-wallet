@@ -81,18 +81,24 @@ function getTxAmount(tx: CoreTransaction): number {
   return Math.abs(tx.getAmount());
 }
 
-function isSentMessageAmount(amount: number): boolean {
+/** Sent message envelope: self node (10100) or remote node (+ fee → 11100) atomic. */
+export function isSentMessageAmount(amount: number): boolean {
   return amount === SENT_MESSAGE_AMOUNT_SELF_ATOMIC || amount === SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC;
 }
 
+function txHasMessage(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
+  return !!(tx.message?.trim() || sentRecord?.messageBody?.trim());
+}
+
+/** Incoming message: has message + 100 atomic to recipient. */
 export function isMessageIn(tx: CoreTransaction): boolean {
   if (!tx.message) return false;
   return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC;
 }
 
+/** Outgoing message: has message + envelope amount (10100 / 11100 atomic). */
 export function isMessageOut(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
-  const hasBody = !!(tx.message?.trim() || sentRecord?.messageBody?.trim());
-  if (!hasBody) return false;
+  if (!txHasMessage(tx, sentRecord)) return false;
   return isSentMessageAmount(getTxAmount(tx));
 }
 

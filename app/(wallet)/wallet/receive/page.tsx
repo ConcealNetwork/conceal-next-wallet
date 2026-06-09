@@ -4,20 +4,20 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
 import { useDeposits, useTransactions, useWalletInfo } from "@/lib/hooks";
-import { formatCcx, timeAgo, truncateAddress } from "@/lib/utils";
+import { CoinUri } from "@/lib/wallet-core/CoinUri";
+import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
+import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
 
-function buildPaymentUri(address: string, amount: string, paymentId: string, message: string) {
-  const params = new URLSearchParams();
-  if (amount) params.set("amount", amount);
-  if (paymentId) params.set("paymentId", paymentId);
-  if (message) params.set("message", message);
-  const query = params.toString();
-  return query ? `conceal:${address}?${query}` : address;
-}
+const QR_LOGOS = [
+  { id: "orange", label: "Conceal orange mark", src: "/brand/conceal-mark-orange.svg" },
+  { id: "steel", label: "Conceal steel mark", src: "/brand/conceal-mark.svg" },
+  { id: "coin", label: "CCX coin", src: "/brand/conceal-logo.svg" },
+] as const;
 
 export default function ReceivePage() {
   const wallet = useWalletInfo();
@@ -26,13 +26,34 @@ export default function ReceivePage() {
   const [amount, setAmount] = useState("");
   const [paymentId, setPaymentId] = useState("");
   const [message, setMessage] = useState("");
+  const [v1Qr, setV1Qr] = useState(false);
+  const [qrLogo, setQrLogo] = useState<(typeof QR_LOGOS)[number]["src"]>(QR_LOGOS[0].src);
 
   const address = wallet.data?.address ?? "";
+  const amountNum = Number.parseFloat(amount);
+  const hasPaymentLink = Number.isFinite(amountNum) && amountNum > 0;
   const hasRequest = Boolean(amount || paymentId || message);
-  const paymentUri = useMemo(
-    () => buildPaymentUri(address, amount, paymentId, message),
-    [address, amount, paymentId, message],
-  );
+  const paymentUri = useMemo(() => {
+    if (!address) return "";
+    return CoinUri.encodeTx(
+      address,
+      paymentId || null,
+      amount || null,
+      null,
+      message || null,
+      v1Qr ? "v1" : "v3",
+    );
+  }, [address, amount, message, paymentId, v1Qr]);
+  const paymentPageUrl = useMemo(() => {
+    if (!hasPaymentLink || !address) return "";
+    return buildPaymentSendUrl({
+      address,
+      amount,
+      paymentId,
+      message,
+      v1: v1Qr,
+    });
+  }, [address, amount, hasPaymentLink, message, paymentId, v1Qr]);
   const received = (transactions.data ?? [])
     .filter((transaction) => transaction.type === "receive")
     .slice(0, 5);
@@ -53,15 +74,55 @@ export default function ReceivePage() {
                   <p className="break-all rounded-xl bg-secondary p-4 font-mono text-sm text-foreground">
                     {address}
                   </p>
-                  <CopyButton value={address} label="Copy Address" />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <CopyButton value={address} label="Copy Address" />
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="v1-qr"
+                        checked={v1Qr}
+                        onCheckedChange={setV1Qr}
+                        aria-label="QR encode for V1"
+                      />
+                      <Label htmlFor="v1-qr" className="cursor-pointer text-sm font-normal">
+                        QR encode for V1
+                      </Label>
+                    </div>
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    {hasRequest
-                      ? `QR now encodes a payment request${amount ? ` for ${amount} CCX` : ""}.`
-                      : "Scan the QR to send CCX to this address."}
+                    {v1Qr
+                      ? hasRequest
+                        ? `QR now encodes a payment request${amount ? ` for ${amount} CCX` : ""}, no prefix: compatible with web wallet V1.`
+                        : "QR encodes your address with no prefix — compatible with web wallet V1."
+                      : hasRequest
+                        ? `QR now encodes a payment request${amount ? ` for ${amount} CCX` : ""}.`
+                        : "Scan the QR to send CCX to this address."}
                   </p>
                 </div>
-                <div className="mx-auto shrink-0 rounded-2xl bg-white p-4">
-                  <WalletQrCode value={paymentUri} size={180} />
+                <div className="mx-auto flex shrink-0 flex-col items-center gap-3">
+                  <div className="rounded-2xl bg-white p-4">
+                    <WalletQrCode value={paymentUri} size={180} logoSrc={qrLogo} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {QR_LOGOS.map((logo) => (
+                      <button
+                        key={logo.id}
+                        type="button"
+                        aria-pressed={qrLogo === logo.src}
+                        aria-label={logo.label}
+                        onClick={() => setQrLogo(logo.src)}
+                        className={cn(
+                          "grid size-10 cursor-pointer place-items-center rounded-xl border border-border bg-secondary transition-colors duration-200 hover:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                          qrLogo === logo.src && "border-primary ring-1 ring-primary",
+                        )}
+                      >
+                        <img
+                          src={withBasePath(logo.src)}
+                          alt=""
+                          className="size-6 object-contain"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </SectionCard>
@@ -104,17 +165,17 @@ export default function ReceivePage() {
                   />
                 </div>
               </div>
-              {hasRequest ? (
+              {hasPaymentLink ? (
                 <div className="mt-4 space-y-3 rounded-xl bg-secondary p-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Payment link
                   </p>
-                  <p className="break-all font-mono text-sm text-foreground">{paymentUri}</p>
-                  <CopyButton value={paymentUri} label="Copy Payment Link" />
+                  <p className="break-all font-mono text-sm text-foreground">{paymentPageUrl}</p>
+                  <CopyButton value={paymentPageUrl} label="Copy Payment Link" />
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Fill any field above to generate a shareable payment link and update the QR.
+                  Enter an amount to get a shareable payment link and update the QR.
                 </p>
               )}
             </SectionCard>

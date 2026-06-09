@@ -9,6 +9,7 @@ import { env } from "@/lib/env";
 import { useQueryClient } from "@/lib/hooks/query-provider";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { getSafeNextPath } from "@/lib/ui/payment-link";
 import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
 
 export function OpenWalletForm() {
@@ -26,7 +27,7 @@ export function OpenWalletForm() {
     setLoading(true);
     try {
       const wallet = await services.wallet.openWallet({ password });
-      openSession(wallet, "/wallet/account");
+      openSession(wallet, getSafeNextPath() ?? "/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to open wallet.");
     } finally {

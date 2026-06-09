@@ -262,7 +262,7 @@ describe("wallet mappers", () => {
     expect(resolveTransactionType(largeSend)).toBe("send");
   });
 
-  it("does not classify sent rows as message without a decrypted or stored message body", () => {
+  it("does not classify sent rows as message without message body at envelope amount", () => {
     const walletAddress = "ccx7WalletAddressExample";
     const sent = makeTx({
       hash: "sent-remote-addr",
@@ -353,6 +353,21 @@ describe("wallet mappers", () => {
     expect(isUiMessageOut(sentMessage)).toBe(true);
   });
 
+  it("resolveUiTransactionType keeps send rows with envelope amount but no message body", () => {
+    const envelopeOnly: import("@/lib/types").Transaction = {
+      id: "env",
+      hash: "env",
+      type: "send",
+      amount: { atomic: SENT_MESSAGE_AMOUNT_SELF_ATOMIC },
+      address: "ccx7Recipient",
+      timestamp: new Date().toISOString(),
+      confirmations: 3,
+    };
+
+    expect(resolveUiTransactionType(envelopeOnly)).toBe("send");
+    expect(isUiMessageOut(envelopeOnly)).toBe(false);
+  });
+
   it("listWalletMessages hydrates sender body from wallet sentMessages records", () => {
     const walletAddress = "ccx7WalletAddressExample";
     const receiver =
@@ -392,7 +407,7 @@ describe("wallet mappers", () => {
     expect(messages[0]?.threadKey).toBe(`${receiver}:pid123`);
   });
 
-  it("listWalletMessages skips sent txs without a decrypted or stored message body", () => {
+  it("listWalletMessages skips sent txs without message body at envelope amount", () => {
     const walletAddress = "ccx7WalletAddressExample";
     const sent = makeTx({
       hash: "sent-no-body",

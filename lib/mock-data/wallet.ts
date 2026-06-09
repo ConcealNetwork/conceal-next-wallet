@@ -12,11 +12,12 @@ import type {
 } from "@/lib/types";
 import { ccxAmount, usdAmount } from "@/lib/utils";
 
+/** ccx7 addresses must be 98 chars (CoinUri, QR codes, export PDF). */
 export const MOCK_ADDRESS =
-  "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m";
+  "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m00000000000000000";
 
-/** ccx7 addresses must be 98 chars for QR import URIs (export PDF). */
-export const MOCK_EXPORT_ADDRESS = MOCK_ADDRESS.padEnd(98, "0");
+/** @deprecated Alias for MOCK_ADDRESS — kept for callers that used the padded export form. */
+export const MOCK_EXPORT_ADDRESS = MOCK_ADDRESS;
 
 export const mockWalletInfo: WalletInfo = {
   address: MOCK_ADDRESS,
@@ -51,7 +52,7 @@ export const mockTransactions: Transaction[] = [
     // TODO(backend): replace mock hash with the walletd transaction hash.
     hash: "8c3f6fbb51e79ff33f90bb1a41635e27f9d67a2acaa55fc5b5a968c9d42f011a",
     type: "receive",
-    amount: ccxAmount(100),
+    amount: { atomic: 100 },
     address: "ccx7IncomingA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
     timestamp: "2026-05-22T01:20:00.000Z",
     confirmations: 12,

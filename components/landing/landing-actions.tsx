@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { getSafeNextPath } from "@/lib/ui/payment-link";
 
 type OpenWalletContextValue = {
   openWallet: () => Promise<void>;
@@ -46,7 +47,7 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
       const wallet = await services.wallet.openWallet(
         env.useMockWallet ? {} : { password: passwordValue },
       );
-      openSession(wallet, "/wallet/account");
+      openSession(wallet, getSafeNextPath() ?? "/wallet/account");
       setUnlockDialogOpen(false);
       setPassword("");
     } catch (error) {
@@ -55,6 +56,13 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!getSafeNextPath()) return;
+    void services.wallet.hasStoredWallet().then((hasStored) => {
+      if (hasStored) setUnlockDialogOpen(true);
+    });
+  }, []);
 
   async function openWallet() {
     if (env.useMockWallet) {

@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
-import { QrCameraScanner } from "@/components/wallet/qr-camera-scanner";
+import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
 import { services } from "@/lib/services";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";

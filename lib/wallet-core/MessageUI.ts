@@ -1,9 +1,5 @@
 import type { Message as ApiMessage } from "@/lib/types";
-import {
-  MESSAGE_TX_AMOUNT_ATOMIC,
-  SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC,
-  SENT_MESSAGE_AMOUNT_SELF_ATOMIC,
-} from "@/lib/config/config";
+import { isMessageIn, isMessageOut } from "@/lib/wallet-core/mappers";
 import { addressIsValid, normalizePaymentId } from "@/lib/validation/ccx";
 import type { RawSentMessageRecord } from "./sent-messages";
 import { buildConversationTrackingId } from "./sent-messages";
@@ -65,30 +61,19 @@ export class MessageUI {
   }
 }
 
-function getTxAmount(tx: Transaction): number {
-  return Math.abs(tx.getAmount());
-}
-
-function isSentMessageAmount(amount: number): boolean {
-  return amount === SENT_MESSAGE_AMOUNT_SELF_ATOMIC || amount === SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC;
-}
-
 export function isMessageTransactionSent(
   tx: Transaction,
   sentRecord?: RawSentMessageRecord,
 ): boolean {
-  const hasBody = !!(tx.message?.trim() || sentRecord?.messageBody?.trim());
-  if (!hasBody) return false;
-  return isSentMessageAmount(getTxAmount(tx));
+  return isMessageOut(tx, sentRecord);
 }
 
 export function isMessageTransactionReceived(tx: Transaction): boolean {
-  if (!tx.message) return false;
-  return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC;
+  return isMessageIn(tx);
 }
 
-export function isMessageTransaction(tx: Transaction): boolean {
-  return isMessageTransactionSent(tx) || isMessageTransactionReceived(tx);
+export function isMessageTransaction(tx: Transaction, sentRecord?: RawSentMessageRecord): boolean {
+  return isMessageIn(tx) || isMessageOut(tx, sentRecord);
 }
 
 function readTxPaymentId(tx: Transaction, sentRecord?: RawSentMessageRecord): string | null {

@@ -17,7 +17,7 @@ export class DependencyInjector {
   values: any = {};
 
   getInstance(name: string, subname: string = "default", createIfPossible: boolean = true): any {
-    if (typeof this.values[name + "-" + subname] != "undefined")
+    if (typeof this.values[name + "-" + subname] !== "undefined")
       return this.values[name + "-" + subname];
     if (createIfPossible) return this.returnBest(name, subname);
     return null;
@@ -54,7 +54,7 @@ export class DependencyInjector {
     for (const containerName in loaded) {
       const container = loaded[containerName];
       //console.log('type', typeof container, container, container[name]);
-      if (typeof container[name] != "undefined") {
+      if (typeof container[name] !== "undefined") {
         if (!DependencyInjector.debug) return container[name];
         else {
           if (dependency != null) {

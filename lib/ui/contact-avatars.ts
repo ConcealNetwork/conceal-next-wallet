@@ -5,13 +5,15 @@ export type ContactAvatar = {
 
 /** Built-in avatar slugs — each maps to `/brand/contacts/{id}.png` (256×256). */
 export const CONTACT_AVATARS: ContactAvatar[] = [
-  { id: "kraken", label: "Kraken" },
   { id: "alice", label: "Alice" },
-  { id: "john", label: "John" },
-  { id: "jay", label: "Jay" },
-  { id: "mining-pool", label: "Mining pool" },
-  { id: "cold-storage", label: "Cold storage" },
   { id: "cham", label: "Cham" },
+  { id: "cold-storage", label: "Cold storage" },
+  { id: "conceal", label: "Conceal" },
+  { id: "hot-wallet", label: "Hot wallet" },
+  { id: "jay", label: "Jay" },
+  { id: "john", label: "John" },
+  { id: "kraken", label: "Kraken" },
+  { id: "mining-pool", label: "Mining pool" },
 ];
 
 export function contactAvatarPath(avatarId: string): string {
