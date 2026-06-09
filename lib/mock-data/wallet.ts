@@ -12,11 +12,12 @@ import type {
 } from "@/lib/types";
 import { ccxAmount, usdAmount } from "@/lib/utils";
 
+/** ccx7 addresses must be 98 chars (CoinUri, QR codes, export PDF). */
 export const MOCK_ADDRESS =
-  "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m";
+  "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m00000000000000000";
 
-/** ccx7 addresses must be 98 chars for QR import URIs (export PDF). */
-export const MOCK_EXPORT_ADDRESS = MOCK_ADDRESS.padEnd(98, "0");
+/** @deprecated Alias for MOCK_ADDRESS — kept for callers that used the padded export form. */
+export const MOCK_EXPORT_ADDRESS = MOCK_ADDRESS;
 
 export const mockWalletInfo: WalletInfo = {
   address: MOCK_ADDRESS,
