@@ -72,10 +72,7 @@ export function isMessageTransactionReceived(tx: Transaction): boolean {
   return isMessageIn(tx);
 }
 
-export function isMessageTransaction(
-  tx: Transaction,
-  sentRecord?: RawSentMessageRecord,
-): boolean {
+export function isMessageTransaction(tx: Transaction, sentRecord?: RawSentMessageRecord): boolean {
   return isMessageIn(tx) || isMessageOut(tx, sentRecord);
 }
 

@@ -19,11 +19,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CcxAmount } from "@/components/wallet/ccx";
+import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import {
   AddressBookContactPicker,
   findAddressBookContactByAddress,
 } from "@/components/wallet/address-book-contact-picker";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
+import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { COIN_FEE_ATOMIC, COIN_UNIT_PLACES, REMOTE_NODE_FEE_ATOMIC } from "@/lib/config/config";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import {
@@ -115,6 +117,21 @@ export default function SendPage() {
     form.setValue("address", entry?.address ?? "", { shouldValidate: true });
   }
 
+  function applyScannedSendDraft(draft: ScannedSendDraft) {
+    form.setValue("address", draft.address, { shouldValidate: true });
+    if (draft.amount !== undefined && draft.amount > 0) {
+      form.setValue("amount", draft.amount, { shouldValidate: true });
+    }
+    if (draft.paymentId) {
+      form.setValue("paymentId", draft.paymentId, { shouldValidate: true });
+    }
+    if (draft.message) {
+      form.setValue("message", draft.message, { shouldValidate: true });
+    }
+    const match = findAddressBookContactByAddress(addressBook.data ?? [], draft.address);
+    setSelectedContactId(match?.id ?? null);
+  }
+
   function confirmSend() {
     if (!review) return;
     send.mutate(review, {
@@ -144,12 +161,20 @@ export default function SendPage() {
                   selectedId={selectedContactId}
                   onSelect={pickContact}
                 />
-                <Input
-                  id="address"
-                  placeholder="ccx7 ..."
-                  autoComplete="off"
-                  {...form.register("address")}
-                />
+                <div className="relative">
+                  <Input
+                    id="address"
+                    placeholder="ccx7 ..."
+                    autoComplete="off"
+                    className="max-sm:pr-10"
+                    {...form.register("address")}
+                  />
+                  <AddressQrScanButton
+                    className="absolute right-1 top-1/2 -translate-y-1/2 sm:hidden"
+                    disabled={send.isPending}
+                    onScan={applyScannedSendDraft}
+                  />
+                </div>
                 {form.formState.errors.address ? (
                   <p className="text-sm text-wallet-outgoing">
                     {form.formState.errors.address.message}

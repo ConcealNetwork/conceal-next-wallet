@@ -11,7 +11,13 @@ import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/
 import { useDeposits, useTransactions, useWalletInfo } from "@/lib/hooks";
 import { CoinUri } from "@/lib/wallet-core/CoinUri";
 import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
-import { formatCcx, timeAgo, truncateAddress } from "@/lib/utils";
+import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
+
+const QR_LOGOS = [
+  { id: "orange", label: "Conceal orange mark", src: "/brand/conceal-mark-orange.svg" },
+  { id: "steel", label: "Conceal steel mark", src: "/brand/conceal-mark.svg" },
+  { id: "coin", label: "CCX coin", src: "/brand/conceal-logo.svg" },
+] as const;
 
 export default function ReceivePage() {
   const wallet = useWalletInfo();
@@ -21,6 +27,7 @@ export default function ReceivePage() {
   const [paymentId, setPaymentId] = useState("");
   const [message, setMessage] = useState("");
   const [v1Qr, setV1Qr] = useState(false);
+  const [qrLogo, setQrLogo] = useState<(typeof QR_LOGOS)[number]["src"]>(QR_LOGOS[0].src);
 
   const address = wallet.data?.address ?? "";
   const amountNum = Number.parseFloat(amount);
@@ -91,8 +98,31 @@ export default function ReceivePage() {
                         : "Scan the QR to send CCX to this address."}
                   </p>
                 </div>
-                <div className="mx-auto shrink-0 rounded-2xl bg-white p-4">
-                  <WalletQrCode value={paymentUri} size={180} />
+                <div className="mx-auto flex shrink-0 flex-col items-center gap-3">
+                  <div className="rounded-2xl bg-white p-4">
+                    <WalletQrCode value={paymentUri} size={180} logoSrc={qrLogo} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {QR_LOGOS.map((logo) => (
+                      <button
+                        key={logo.id}
+                        type="button"
+                        aria-pressed={qrLogo === logo.src}
+                        aria-label={logo.label}
+                        onClick={() => setQrLogo(logo.src)}
+                        className={cn(
+                          "grid size-10 cursor-pointer place-items-center rounded-xl border border-border bg-secondary transition-colors duration-200 hover:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                          qrLogo === logo.src && "border-primary ring-1 ring-primary",
+                        )}
+                      >
+                        <img
+                          src={withBasePath(logo.src)}
+                          alt=""
+                          className="size-6 object-contain"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </SectionCard>

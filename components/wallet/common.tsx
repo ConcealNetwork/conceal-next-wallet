@@ -1,12 +1,12 @@
 "use client";
 
 import { Check, Clipboard, Inbox } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
 import { cloneElement, isValidElement, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CcxAmount } from "@/components/wallet/ccx";
+import { DottedQrCode } from "@/components/qr/dotted-qr";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
 
@@ -304,24 +304,26 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
   );
 }
 
-export function WalletQrCode({ value, size = 180 }: { value: string; size?: number }) {
-  // High error-correction (level H) leaves room to knock out the centre for the
-  // Conceal mark without breaking scannability.
-  const logo = Math.round(size * 0.24);
+export function WalletQrCode({
+  value,
+  size = 180,
+  logoSrc,
+}: {
+  value: string;
+  size?: number;
+  /** Public path of the centre logo. Defaults to the orange Conceal mark. */
+  logoSrc?: string;
+}) {
+  // Level-H error correction leaves headroom for the underlying logo and the
+  // dot styling without breaking scannability.
   return (
     <div className="inline-flex rounded-2xl bg-white p-4">
-      <QRCodeSVG
+      <DottedQrCode
         value={value}
         size={size}
-        level="H"
         fgColor="#171513"
         bgColor="#ffffff"
-        imageSettings={{
-          src: withBasePath("/brand/conceal-mark-orange.svg"),
-          height: logo,
-          width: logo,
-          excavate: true,
-        }}
+        logoSrc={withBasePath(logoSrc ?? "/brand/conceal-mark-orange.svg")}
       />
     </div>
   );

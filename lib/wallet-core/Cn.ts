@@ -2278,7 +2278,10 @@ export namespace CnTransactions {
         tx.extra = tx.extra + TX_EXTRA_TAGS.TTL_TAG + ttlSize + ttlStr;
       }
 
-      if (transactionType !== "withdraw" && outputs_money.add(fee_amount).compare(inputs_money) > 0) {
+      if (
+        transactionType !== "withdraw" &&
+        outputs_money.add(fee_amount).compare(inputs_money) > 0
+      ) {
         throw (
           "outputs money (" +
           Cn.formatMoneyFull(outputs_money) +

@@ -26,8 +26,7 @@ export function getSafeNextPath(search?: string): string | undefined {
 
 /** v3: `/base/wallet/send?address&amount…` — v1: `/#!send?address&amount&txDesc…` */
 export function buildPaymentSendUrl(input: PaymentLinkInput): string {
-  const origin =
-    input.origin ?? (typeof window !== "undefined" ? window.location.origin : "");
+  const origin = input.origin ?? (typeof window !== "undefined" ? window.location.origin : "");
   const params = new URLSearchParams();
   params.set("address", input.address);
   params.set("amount", input.amount);
@@ -45,9 +44,7 @@ export function buildPaymentSendUrl(input: PaymentLinkInput): string {
   return `${origin}${basePath}/wallet/send?${params.toString()}`;
 }
 
-export function parsePaymentSendDraft(
-  search?: string,
-): PaymentSendDraft | null {
+export function parsePaymentSendDraft(search?: string): PaymentSendDraft | null {
   const params = new URLSearchParams(
     search ?? (typeof window !== "undefined" ? window.location.search : ""),
   );

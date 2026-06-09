@@ -118,7 +118,9 @@ describe("import forms", () => {
     });
 
     it("decodes an uploaded QR image into the payload", async () => {
-      decodeQrFromFile.mockResolvedValue(`conceal.ccx7${"c".repeat(94)}?spend_key=${"d".repeat(64)}`);
+      decodeQrFromFile.mockResolvedValue(
+        `conceal.ccx7${"c".repeat(94)}?spend_key=${"d".repeat(64)}`,
+      );
       render(<ImportQrForm />);
       const file = new File([new Uint8Array([1, 2, 3])], "wallet-qr.png", { type: "image/png" });
       fireEvent.change(screen.getByLabelText("Or upload a QR image"), {

@@ -1,6 +1,6 @@
 import { act, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { QrCameraScanner } from "@/components/wallet/qr-camera-scanner";
+import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
 
 const stop = vi.fn();
 const getUserMedia = vi.fn();

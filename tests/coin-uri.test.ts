@@ -42,9 +42,7 @@ describe("CoinUri.encodeTx", () => {
   });
 
   it("v1 omits prefix", () => {
-    expect(CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v1")).toBe(
-      `${ADDRESS}${QUERY}`,
-    );
+    expect(CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v1")).toBe(`${ADDRESS}${QUERY}`);
   });
 });
 
