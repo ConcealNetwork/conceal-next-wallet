@@ -87,7 +87,7 @@ myGlobal.config = {
     coinSymbolShort: '₡',
     openAliasPrefix: "ccx",
     coinName: 'Conceal',
-    coinUriPrefix: '',
+    coinUriPrefix: 'conceal:',
     donationAddress: 'ccx7V4LeUXy2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQg84zbNrPduTX2whZ5pacfj',
     donationAddresses: [
         'ccx7NzuofXxcypov8Yqm2A118xT17HereBFjp3RScjzM7wncf8BRcnHZbACy63sWD71L7NmkJRgQKXFE3weCfAh31RAVFHgttf',

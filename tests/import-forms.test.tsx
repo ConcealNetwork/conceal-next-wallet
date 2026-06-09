@@ -101,7 +101,7 @@ describe("import forms", () => {
       render(<ImportQrForm />);
       expect(submit()).toBeDisabled();
       fireEvent.change(screen.getByLabelText("QR payload"), {
-        target: { value: "conceal:ccx7test" },
+        target: { value: `conceal.ccx7${"a".repeat(94)}?spend_key=${"b".repeat(64)}` },
       });
       fireEvent.change(screen.getByLabelText("Encryption password"), {
         target: { value: PASSWORD },
@@ -110,19 +110,24 @@ describe("import forms", () => {
       fireEvent.click(submit());
       await waitFor(() => expect(importWallet).toHaveBeenCalledTimes(1));
       expect(importWallet).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "qr", payload: "conceal:ccx7test" }),
+        expect.objectContaining({
+          method: "qr",
+          payload: `conceal.ccx7${"a".repeat(94)}?spend_key=${"b".repeat(64)}`,
+        }),
       );
     });
 
     it("decodes an uploaded QR image into the payload", async () => {
-      decodeQrFromFile.mockResolvedValue("conceal:ccx7decoded");
+      decodeQrFromFile.mockResolvedValue(`conceal.ccx7${"c".repeat(94)}?spend_key=${"d".repeat(64)}`);
       render(<ImportQrForm />);
       const file = new File([new Uint8Array([1, 2, 3])], "wallet-qr.png", { type: "image/png" });
       fireEvent.change(screen.getByLabelText("Or upload a QR image"), {
         target: { files: [file] },
       });
       await waitFor(() =>
-        expect(screen.getByLabelText("QR payload")).toHaveValue("conceal:ccx7decoded"),
+        expect(screen.getByLabelText("QR payload")).toHaveValue(
+          `conceal.ccx7${"c".repeat(94)}?spend_key=${"d".repeat(64)}`,
+        ),
       );
       expect(decodeQrFromFile).toHaveBeenCalledTimes(1);
       expect(submit()).toBeEnabled();

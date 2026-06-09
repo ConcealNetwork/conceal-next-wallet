@@ -16,11 +16,28 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import { COIN_URI_PREFIX } from "@/lib/config/config";
+
 export class CoinUri {
   static coinTxPrefix = "conceal."; //legacy, used to be 'conceal:', but the char ':' was creating scanning issue
   static coinAddressPrefix = "ccx7"; //coin Address prefix, to check address , without using coinTxPrefix
   static coinWalletPrefix = "conceal."; //legacy, used to be 'conceal:'
   static coinAddressLength = 98;
+
+  /** First URI segment (before ?) → bare ccx7 address. */
+  static resolveTxAddress(firstSegment: string): string {
+    const seg = firstSegment.trim();
+    if (seg.startsWith(CoinUri.coinAddressPrefix)) {
+      return seg;
+    }
+    if (seg.startsWith(CoinUri.coinTxPrefix + CoinUri.coinAddressPrefix)) {
+      return seg.slice(CoinUri.coinTxPrefix.length);
+    }
+    if (seg.startsWith(COIN_URI_PREFIX + CoinUri.coinAddressPrefix)) {
+      return seg.slice(COIN_URI_PREFIX.length);
+    }
+    throw "missing_prefix";
+  }
 
   static decodeTx(str: string): {
     address: string;
@@ -29,51 +46,48 @@ export class CoinUri {
     amount?: string;
     description?: string;
   } | null {
-    if (str.startsWith(CoinUri.coinAddressPrefix)) {
-      // legacy code use to check .coinTxPrefix
-      const data = str; //legacy .replace(this.coinTxPrefix,'');
-      const temp = data.replace(/&/g, "?").trim();
-      const exploded = temp.split("?");
+    const temp = str.replace(/&/g, "?").trim();
+    const exploded = temp.split("?");
 
-      if (exploded.length === 0) throw "missing_address";
+    if (exploded.length === 0) throw "missing_address";
 
-      if (exploded[0].length !== CoinUri.coinAddressLength) throw "invalid_address_length";
+    const address = CoinUri.resolveTxAddress(exploded[0]);
 
-      const decodedUri: any = {
-        address: exploded[0],
-      };
+    if (address.length !== CoinUri.coinAddressLength) throw "invalid_address_length";
 
-      for (let i = 0; i < exploded.length; ++i) {
-        const optionParts = exploded[i].split("=");
-        if (optionParts.length === 2) {
-          switch (optionParts[0].trim()) {
-            case "payment_id":
-              decodedUri.paymentId = optionParts[1];
-              break;
-            case "tx_payment_id":
-              decodedUri.paymentId = optionParts[1];
-              break;
-            case "recipient_name":
-              decodedUri.recipientName = optionParts[1];
-              break;
-            case "amount":
-              decodedUri.amount = optionParts[1];
-              break;
-            case "tx_amount":
-              decodedUri.amount = optionParts[1];
-              break;
-            case "tx_description":
-              decodedUri.description = optionParts[1];
-              break;
-            case "label":
-              decodedUri.description = optionParts[1];
-              break;
-          }
+    const decodedUri: any = {
+      address,
+    };
+
+    for (let i = 0; i < exploded.length; ++i) {
+      const optionParts = exploded[i].split("=");
+      if (optionParts.length === 2) {
+        switch (optionParts[0].trim()) {
+          case "payment_id":
+            decodedUri.paymentId = optionParts[1];
+            break;
+          case "tx_payment_id":
+            decodedUri.paymentId = optionParts[1];
+            break;
+          case "recipient_name":
+            decodedUri.recipientName = optionParts[1];
+            break;
+          case "amount":
+            decodedUri.amount = optionParts[1];
+            break;
+          case "tx_amount":
+            decodedUri.amount = optionParts[1];
+            break;
+          case "tx_description":
+            decodedUri.description = optionParts[1];
+            break;
+          case "label":
+            decodedUri.description = optionParts[1];
+            break;
         }
       }
-      return decodedUri;
     }
-    throw "missing_prefix";
+    return decodedUri;
   }
 
   static isTxValid(str: string) {
@@ -91,8 +105,9 @@ export class CoinUri {
     amount: string | null = null,
     recipientName: string | null = null,
     description: string | null = null,
+    version: "v1" | "v3" = "v3",
   ): string {
-    let encoded = address; //legacy this.coinTxPrefix + address;
+    let encoded = version === "v3" ? COIN_URI_PREFIX + address : address;
     if (address.length !== CoinUri.coinAddressLength) throw "invalid_address_length";
 
     if (paymentId !== null) encoded += "?payment_id=" + paymentId;
@@ -100,6 +115,17 @@ export class CoinUri {
     if (recipientName !== null) encoded += "?recipient_name=" + recipientName;
     if (description !== null) encoded += "?label=" + description;
     return encoded;
+  }
+
+  static stripWalletPrefix(str: string): string | null {
+    const trimmed = str.trim();
+    if (trimmed.startsWith(CoinUri.coinWalletPrefix)) {
+      return trimmed.slice(CoinUri.coinWalletPrefix.length).trim();
+    }
+    if (trimmed.startsWith("conceal:")) {
+      return trimmed.slice("conceal:".length).trim();
+    }
+    return null;
   }
 
   static decodeWallet(str: string): {
@@ -111,53 +137,52 @@ export class CoinUri {
     nonce?: string;
     encryptMethod?: string;
   } {
-    if (str.startsWith(CoinUri.coinWalletPrefix)) {
-      const data = str.replace(CoinUri.coinWalletPrefix, "").trim();
-      const exploded = data.split("?");
+    const data = CoinUri.stripWalletPrefix(str);
+    if (data === null) throw "missing_prefix";
 
-      if (exploded.length === 0) throw "missing_address";
+    const exploded = data.split("?");
 
-      if (exploded[0].length !== CoinUri.coinAddressLength) throw "invalid_address_length";
+    if (exploded.length === 0) throw "missing_address";
 
-      const decodedUri: any = {
-        address: exploded[0],
-      };
+    if (exploded[0].length !== CoinUri.coinAddressLength) throw "invalid_address_length";
 
-      for (let i = 1; i < exploded.length; ++i) {
-        const optionParts = exploded[i].split("=");
-        if (optionParts.length === 2) {
-          switch (optionParts[0].trim()) {
-            case "spend_key":
-              decodedUri.spendKey = optionParts[1];
-              break;
-            case "view_key":
-              decodedUri.viewKey = optionParts[1];
-              break;
-            case "mnemonic_seed":
-              decodedUri.mnemonicSeed = optionParts[1];
-              break;
-            case "height":
-              decodedUri.height = optionParts[1];
-              break;
-            case "nonce":
-              decodedUri.nonce = optionParts[1];
-              break;
-            case "encrypt_method":
-              decodedUri.encryptMethod = optionParts[1];
-              break;
-          }
+    const decodedUri: any = {
+      address: exploded[0],
+    };
+
+    for (let i = 1; i < exploded.length; ++i) {
+      const optionParts = exploded[i].split("=");
+      if (optionParts.length === 2) {
+        switch (optionParts[0].trim()) {
+          case "spend_key":
+            decodedUri.spendKey = optionParts[1];
+            break;
+          case "view_key":
+            decodedUri.viewKey = optionParts[1];
+            break;
+          case "mnemonic_seed":
+            decodedUri.mnemonicSeed = optionParts[1];
+            break;
+          case "height":
+            decodedUri.height = optionParts[1];
+            break;
+          case "nonce":
+            decodedUri.nonce = optionParts[1];
+            break;
+          case "encrypt_method":
+            decodedUri.encryptMethod = optionParts[1];
+            break;
         }
       }
-
-      if (
-        typeof decodedUri.mnemonicSeed !== "undefined" ||
-        typeof decodedUri.spendKey !== "undefined" ||
-        (typeof decodedUri.viewKey !== "undefined" && typeof decodedUri.address !== "undefined")
-      ) {
-        return decodedUri;
-      } else throw "missing_seeds";
     }
-    throw "missing_prefix";
+
+    if (
+      typeof decodedUri.mnemonicSeed !== "undefined" ||
+      typeof decodedUri.spendKey !== "undefined" ||
+      (typeof decodedUri.viewKey !== "undefined" && typeof decodedUri.address !== "undefined")
+    ) {
+      return decodedUri;
+    } else throw "missing_seeds";
   }
 
   static isWalletValid(str: string) {

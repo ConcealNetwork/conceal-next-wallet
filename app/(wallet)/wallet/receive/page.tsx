@@ -4,21 +4,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
-import { COIN_URI_PREFIX } from "@/lib/config/config";
 import { useDeposits, useTransactions, useWalletInfo } from "@/lib/hooks";
+import { CoinUri } from "@/lib/wallet-core/CoinUri";
 import { formatCcx, timeAgo, truncateAddress } from "@/lib/utils";
-
-function buildPaymentUri(address: string, amount: string, paymentId: string, message: string) {
-  const params = new URLSearchParams();
-  if (amount) params.set("amount", amount);
-  if (paymentId) params.set("paymentId", paymentId);
-  if (message) params.set("message", message);
-  const query = params.toString();
-  return query ? `${COIN_URI_PREFIX}${address}?${query}` : address;
-}
 
 export default function ReceivePage() {
   const wallet = useWalletInfo();
@@ -27,13 +19,21 @@ export default function ReceivePage() {
   const [amount, setAmount] = useState("");
   const [paymentId, setPaymentId] = useState("");
   const [message, setMessage] = useState("");
+  const [v1Qr, setV1Qr] = useState(false);
 
   const address = wallet.data?.address ?? "";
   const hasRequest = Boolean(amount || paymentId || message);
-  const paymentUri = useMemo(
-    () => buildPaymentUri(address, amount, paymentId, message),
-    [address, amount, paymentId, message],
-  );
+  const paymentUri = useMemo(() => {
+    if (!address) return "";
+      return CoinUri.encodeTx(
+        address,
+        paymentId || null,
+        amount || null,
+        null,
+        message || null,
+        v1Qr ? "v1" : "v3",
+      );
+  }, [address, amount, message, paymentId, v1Qr]);
   const received = (transactions.data ?? [])
     .filter((transaction) => transaction.type === "receive")
     .slice(0, 5);
@@ -54,11 +54,28 @@ export default function ReceivePage() {
                   <p className="break-all rounded-xl bg-secondary p-4 font-mono text-sm text-foreground">
                     {address}
                   </p>
-                  <CopyButton value={address} label="Copy Address" />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <CopyButton value={address} label="Copy Address" />
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="v1-qr"
+                        checked={v1Qr}
+                        onCheckedChange={setV1Qr}
+                        aria-label="QR encode for V1"
+                      />
+                      <Label htmlFor="v1-qr" className="cursor-pointer text-sm font-normal">
+                        QR encode for V1
+                      </Label>
+                    </div>
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    {hasRequest
-                      ? `QR now encodes a payment request${amount ? ` for ${amount} CCX` : ""}.`
-                      : "Scan the QR to send CCX to this address."}
+                    {v1Qr
+                      ? hasRequest
+                        ? `QR now encodes a payment request${amount ? ` for ${amount} CCX` : ""}, no prefix: compatible with web wallet V1.`
+                        : "QR encodes your address with no prefix — compatible with web wallet V1."
+                      : hasRequest
+                        ? `QR now encodes a payment request${amount ? ` for ${amount} CCX` : ""}.`
+                        : "Scan the QR to send CCX to this address."}
                   </p>
                 </div>
                 <div className="mx-auto shrink-0 rounded-2xl bg-white p-4">

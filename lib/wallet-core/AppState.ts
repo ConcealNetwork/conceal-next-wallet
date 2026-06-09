@@ -18,7 +18,6 @@
 
 import { DependencyInjectorInstance } from "./numbersLab/DependencyInjector";
 import { Wallet } from "./Wallet";
-import { Transaction, Deposit } from "./Transaction";
 import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Observable } from "./numbersLab/Observable";
 import { WalletRepository } from "./WalletRepository";
