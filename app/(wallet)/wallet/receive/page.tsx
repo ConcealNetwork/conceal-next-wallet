@@ -10,6 +10,7 @@ import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
 import { useDeposits, useTransactions, useWalletInfo } from "@/lib/hooks";
 import { CoinUri } from "@/lib/wallet-core/CoinUri";
+import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
 import { formatCcx, timeAgo, truncateAddress } from "@/lib/utils";
 
 export default function ReceivePage() {
@@ -22,18 +23,30 @@ export default function ReceivePage() {
   const [v1Qr, setV1Qr] = useState(false);
 
   const address = wallet.data?.address ?? "";
+  const amountNum = Number.parseFloat(amount);
+  const hasPaymentLink = Number.isFinite(amountNum) && amountNum > 0;
   const hasRequest = Boolean(amount || paymentId || message);
   const paymentUri = useMemo(() => {
     if (!address) return "";
-      return CoinUri.encodeTx(
-        address,
-        paymentId || null,
-        amount || null,
-        null,
-        message || null,
-        v1Qr ? "v1" : "v3",
-      );
+    return CoinUri.encodeTx(
+      address,
+      paymentId || null,
+      amount || null,
+      null,
+      message || null,
+      v1Qr ? "v1" : "v3",
+    );
   }, [address, amount, message, paymentId, v1Qr]);
+  const paymentPageUrl = useMemo(() => {
+    if (!hasPaymentLink || !address) return "";
+    return buildPaymentSendUrl({
+      address,
+      amount,
+      paymentId,
+      message,
+      v1: v1Qr,
+    });
+  }, [address, amount, hasPaymentLink, message, paymentId, v1Qr]);
   const received = (transactions.data ?? [])
     .filter((transaction) => transaction.type === "receive")
     .slice(0, 5);
@@ -122,17 +135,17 @@ export default function ReceivePage() {
                   />
                 </div>
               </div>
-              {hasRequest ? (
+              {hasPaymentLink ? (
                 <div className="mt-4 space-y-3 rounded-xl bg-secondary p-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Payment link
                   </p>
-                  <p className="break-all font-mono text-sm text-foreground">{paymentUri}</p>
-                  <CopyButton value={paymentUri} label="Copy Payment Link" />
+                  <p className="break-all font-mono text-sm text-foreground">{paymentPageUrl}</p>
+                  <CopyButton value={paymentPageUrl} label="Copy Payment Link" />
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Fill any field above to generate a shareable payment link and update the QR.
+                  Enter an amount to get a shareable payment link and update the QR.
                 </p>
               )}
             </SectionCard>

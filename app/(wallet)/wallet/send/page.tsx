@@ -34,6 +34,7 @@ import {
   useWalletInfo,
 } from "@/lib/hooks";
 import type { AddressEntry } from "@/lib/types";
+import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxToNumber, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils";
 
@@ -65,6 +66,7 @@ export default function SendPage() {
   const send = useSendTransaction();
   const [review, setReview] = useState<SendForm | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [paymentLinkApplied, setPaymentLinkApplied] = useState(false);
 
   const available = wallet.data ? ccxToNumber(wallet.data.available) : 0;
   const price = market.data?.price.value ?? 0;
@@ -86,6 +88,27 @@ export default function SendPage() {
     const match = findAddressBookContactByAddress(addressBook.data ?? [], address);
     setSelectedContactId(match?.id ?? null);
   }, [address, addressBook.data]);
+
+  useEffect(() => {
+    if (paymentLinkApplied) return;
+    const draft = parsePaymentSendDraft();
+    if (!draft) return;
+
+    const values: SendForm = {
+      address: draft.address,
+      amount: draft.amount,
+      paymentId: draft.paymentId ?? "",
+      message: draft.message ?? "",
+    };
+    form.reset(values);
+    setReview(values);
+    setPaymentLinkApplied(true);
+    toast.success("Payment request loaded — confirm to send.");
+
+    const url = new URL(window.location.href);
+    url.search = "";
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  }, [form, paymentLinkApplied]);
 
   function pickContact(entry: AddressEntry | null) {
     setSelectedContactId(entry?.id ?? null);
