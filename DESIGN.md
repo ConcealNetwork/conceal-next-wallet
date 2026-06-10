@@ -56,6 +56,14 @@ shadcn theme tokens below — **never ad-hoc hex** for foundational surfaces.
 - Use theme tokens (`bg-card`, `text-muted-foreground`, `border-border`) — no raw palette hex.
 - One accent only (orange). No competing accent colors, no glassmorphism on every surface.
 
+### Compact nav / card pills
+Small circular indicators used in sidebar nav and card headers — same **18×18px** footprint.
+
+- **Notification pill** (`NavMessageBadge`): orange fill (`bg-primary`), `text-[10px] font-bold`, `+N` label, no border. Trailing nav indicator for new messages.
+- **Info pill** (`InfoPillButton`): inset fill (`bg-secondary/95`), `border-border`, `text-foreground`, serif italic **`i`** at `text-xs` (12px) `font-bold`. Opens contextual help or calculators. Place in `SectionCard` header via `headerAction` (`CardAction` slot — top-right of the card title row). Do not use `bg-white` — light foreground text disappears on a white fill.
+
+Both pills: `rounded-full`, `shadow-sm`, `cursor-pointer`, `focus-visible:ring-2 focus-visible:ring-ring`, `transition-colors duration-200`.
+
 ### Legal / auxiliary pages (Terms, Privacy, Support)
 - Shared layout: sticky footer at viewport bottom (`flex min-h-screen flex-col` + `flex-1` content).
 - Content column `max-w-3xl`; long-form pages use `prose prose-invert`, short pages use `PageHeader` + `SectionCard`.

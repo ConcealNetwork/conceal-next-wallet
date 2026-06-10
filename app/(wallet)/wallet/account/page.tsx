@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BalanceHero, BalanceHeroSkeleton } from "@/components/wallet/balance-hero";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
+import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types";
 import {
@@ -45,12 +46,6 @@ export default function AccountPage() {
   const deposits = useDeposits();
   const refresh = useRefreshWallet();
   const info = wallet.data;
-  const isSyncing =
-    info !== undefined && info.networkHeight > 0 && info.currentHeight < info.networkHeight - 1;
-  const syncPct =
-    info && info.networkHeight > 0
-      ? Math.min(100, Math.round((info.currentHeight / info.networkHeight) * 100))
-      : 0;
 
   const totals = (transactions.data ?? []).reduce(
     (acc, transaction) => {
@@ -92,15 +87,7 @@ export default function AccountPage() {
           </Button>
         }
       />
-      {isSyncing && info && (
-        <div
-          className="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground"
-          role="status"
-        >
-          Syncing blockchain… block {info.currentHeight.toLocaleString()} /{" "}
-          {info.networkHeight.toLocaleString()} ({syncPct}%)
-        </div>
-      )}
+      <WalletSyncingBanner />
       {wallet.isError && (
         <div
           className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"

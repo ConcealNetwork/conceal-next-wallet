@@ -212,9 +212,16 @@ export function countReceivedMessages(messages: readonly Message[]): number {
   return messages.filter((message) => message.direction === "received").length;
 }
 
+/** Mempool/pending messages (blockHeight === 0) sort to the top as the newest. */
+function listSortHeight(blockHeight: number): number {
+  return blockHeight > 0 ? blockHeight : Number.MAX_SAFE_INTEGER;
+}
+
 export function sortMessagesNewestFirst(messages: Message[]): Message[] {
   return [...messages].sort((a, b) => {
-    if (a.blockHeight !== b.blockHeight) return b.blockHeight - a.blockHeight;
+    const ha = listSortHeight(a.blockHeight);
+    const hb = listSortHeight(b.blockHeight);
+    if (ha !== hb) return hb - ha;
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
 }

@@ -2278,16 +2278,16 @@ export namespace CnTransactions {
         tx.extra = tx.extra + TX_EXTRA_TAGS.TTL_TAG + ttlSize + ttlStr;
       }
 
-      if (
-        transactionType !== "withdraw" &&
-        outputs_money.add(fee_amount).compare(inputs_money) > 0
-      ) {
+      const balanceOk =
+        ttl !== 0
+          ? outputs_money.compare(inputs_money) <= 0
+          : outputs_money.add(fee_amount).compare(inputs_money) <= 0;
+      if (transactionType !== "withdraw" && !balanceOk) {
         throw (
           "outputs money (" +
           Cn.formatMoneyFull(outputs_money) +
-          ") + fee (" +
-          Cn.formatMoneyFull(fee_amount) +
-          ") > inputs money (" +
+          (ttl === 0 ? ") + fee (" + Cn.formatMoneyFull(fee_amount) + ")" : ")") +
+          " > inputs money (" +
           Cn.formatMoneyFull(inputs_money) +
           ")"
         );

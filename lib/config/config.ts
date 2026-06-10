@@ -15,6 +15,8 @@ export const DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC = walletNetworkScalars.depositSma
 export const DEPOSIT_MIN_TERM_MONTH = walletNetworkScalars.depositMinTermMonth;
 export const DEPOSIT_MAX_TERM_MONTH = walletNetworkScalars.depositMaxTermMonth;
 export const DEPOSIT_MIN_TERM_BLOCK = walletNetworkScalars.depositMinTermBlock;
+/** Base APR per deposit tier (V3 model): [<10k, 10k–20k, ≥20k CCX]. */
+export const DEPOSIT_RATE_V3: readonly [number, number, number] = [0.029, 0.039, 0.049];
 export const AVG_BLOCK_TIME_SECONDS = walletNetworkScalars.avgBlockTime;
 export const MAX_MESSAGE_SIZE = walletNetworkScalars.maxMessageSize;
 export const MAX_TTL_MINUTES = walletNetworkScalars.cryptonoteMemPoolTxLifetimeSeconds / 60;
@@ -135,7 +137,7 @@ export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
     depositMinTermBlock: s.depositMinTermBlock,
     depositMaxTermMonth: s.depositMaxTermMonth,
     depositSmallWithdrawFee: s.depositSmallWithdrawFee,
-    depositRateV3: [0.029, 0.039, 0.049],
+    depositRateV3: [...DEPOSIT_RATE_V3],
 
     PRETTY_AMOUNTS: [
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600,

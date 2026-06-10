@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addressIsValid,
   generatePaymentId,
+  isSendToSelf,
   normalizePaymentId,
   paymentIdIsValid,
   privateKeyIsValid,
@@ -48,5 +49,15 @@ describe("ccx validation", () => {
   it("normalizes payment ids to lowercase trimmed strings", () => {
     expect(normalizePaymentId("  ABCD  ")).toBe("abcd");
     expect(normalizePaymentId(undefined)).toBe("");
+  });
+
+  it("detects send-to-self when addresses match", () => {
+    const addr = `ccx7${"a".repeat(94)}`;
+    expect(isSendToSelf(addr, addr)).toBe(true);
+    expect(isSendToSelf(`  ${addr}  `, addr)).toBe(true);
+    expect(isSendToSelf(addr, `ccx7${"b".repeat(94)}`)).toBe(false);
+    expect(isSendToSelf("", addr)).toBe(false);
+    expect(isSendToSelf(addr, "")).toBe(false);
+    expect(isSendToSelf("", "")).toBe(false);
   });
 });

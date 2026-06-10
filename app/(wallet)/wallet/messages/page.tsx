@@ -21,8 +21,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton, PageHeader } from "@/components/wallet/common";
+import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { MAX_MESSAGE_SIZE, MAX_TTL_MINUTES } from "@/lib/config/config";
-import { useAddressBook, useMarkMessageRead, useMessages, useSendMessage } from "@/lib/hooks";
+import {
+  useAddressBook,
+  useMarkMessageRead,
+  useMessages,
+  useSendMessage,
+  useWalletInfo,
+  useWalletSyncStatus,
+} from "@/lib/hooks";
 import {
   buildConversationFromMessage,
   buildMessageListContactEntry,
@@ -33,7 +41,12 @@ import {
 import type { AddressEntry, Message } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, timeAgo, truncateAddress } from "@/lib/utils";
-import { addressIsValid, generatePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
+import {
+  addressIsValid,
+  generatePaymentId,
+  isSendToSelf,
+  paymentIdIsValid,
+} from "@/lib/validation/ccx";
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 
 const TTL_STEP = 5;
@@ -48,6 +61,8 @@ export default function MessagesPage() {
   const addressBook = useAddressBook();
   const send = useSendMessage();
   const markRead = useMarkMessageRead();
+  const wallet = useWalletInfo();
+  const { isSyncing } = useWalletSyncStatus();
   const [query, setQuery] = useState("");
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [readThreads, setReadThreads] = useState<Set<string>>(new Set());
@@ -62,6 +77,8 @@ export default function MessagesPage() {
   const [threadViewMd, setThreadViewMd] = useState(false);
   const [pendingOutgoing, setPendingOutgoing] = useState<PendingOutgoing | null>(null);
   const ttlNoticeShownRef = useRef(false);
+
+  const composeToSelf = isSendToSelf(recipient, wallet.data?.address ?? "");
 
   const allMessages = useMemo(() => sortMessagesNewestFirst(messages.data ?? []), [messages.data]);
 
@@ -234,12 +251,19 @@ export default function MessagesPage() {
         title="Messages"
         subtitle="Private wallet messages and sent memos"
         action={
-          <Button type="button" className="gap-2" onClick={() => setCompose(true)}>
+          <Button
+            type="button"
+            className="gap-2"
+            onClick={() => setCompose(true)}
+            disabled={isSyncing}
+          >
             <Plus className="size-4" aria-hidden="true" />
             New Message
           </Button>
         }
       />
+
+      <WalletSyncingBanner />
 
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <div className="wallet-card messages-inbox-height grid grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
@@ -354,6 +378,9 @@ export default function MessagesPage() {
                 placeholder="ccx7 …"
                 autoComplete="off"
               />
+              {composeToSelf ? (
+                <p className="text-sm text-wallet-amber">This is your own wallet address</p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">

@@ -73,6 +73,10 @@ self.onmessage = (data: MessageEvent) => {
       const addedHashes = new Set<string>();
 
       const tryProcessTx = (rawTransaction: RawDaemon_Transaction): void => {
+        if (!currentWallet) {
+          return;
+        }
+
         if (!rawTransaction?.height) {
           return;
         }
@@ -86,17 +90,17 @@ self.onmessage = (data: MessageEvent) => {
         }
 
         const isOwned =
-          screenedOwned || TransactionsExplorer.ownsTx(rawTransaction, currentWallet!);
+          screenedOwned || TransactionsExplorer.ownsTx(rawTransaction, currentWallet);
         if (!isOwned) {
           return;
         }
 
-        const txData = TransactionsExplorer.parse(rawTransaction, currentWallet!);
+        const txData = TransactionsExplorer.parse(rawTransaction, currentWallet);
 
-        if (txData && txData.transaction) {
-          currentWallet!.addNew(txData.transaction);
-          currentWallet!.addDeposits(txData.deposits);
-          currentWallet!.addWithdrawals(txData.withdrawals);
+        if (txData?.transaction) {
+          currentWallet.addNew(txData.transaction);
+          currentWallet.addDeposits(txData.deposits);
+          currentWallet.addWithdrawals(txData.withdrawals);
           transactions.push(txData.export());
         }
 

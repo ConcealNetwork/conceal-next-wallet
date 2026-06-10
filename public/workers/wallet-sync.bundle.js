@@ -1877,8 +1877,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
           const ttlSize = CnUtils.encode_varint(ttlStr.length / 2);
           tx.extra = tx.extra + TX_EXTRA_TAGS.TTL_TAG + ttlSize + ttlStr;
         }
-        if (transactionType !== "withdraw" && outputs_money.add(fee_amount).compare(inputs_money) > 0) {
-          throw "outputs money (" + Cn.formatMoneyFull(outputs_money) + ") + fee (" + Cn.formatMoneyFull(fee_amount) + ") > inputs money (" + Cn.formatMoneyFull(inputs_money) + ")";
+        const balanceOk = ttl !== 0 ? outputs_money.compare(inputs_money) <= 0 : outputs_money.add(fee_amount).compare(inputs_money) <= 0;
+        if (transactionType !== "withdraw" && !balanceOk) {
+          throw "outputs money (" + Cn.formatMoneyFull(outputs_money) + (ttl === 0 ? ") + fee (" + Cn.formatMoneyFull(fee_amount) + ")" : ")") + " > inputs money (" + Cn.formatMoneyFull(inputs_money) + ")";
         }
         if (!rct) {
           for (i = 0; i < sources.length; ++i) {
@@ -4970,6 +4971,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
         const addedHashes = /* @__PURE__ */ new Set();
         const tryProcessTx = (rawTransaction) => {
+          if (!currentWallet) {
+            return;
+          }
           if (!rawTransaction?.height) {
             return;
           }
@@ -4984,7 +4988,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             return;
           }
           const txData = TransactionsExplorer.parse(rawTransaction, currentWallet);
-          if (txData && txData.transaction) {
+          if (txData?.transaction) {
             currentWallet.addNew(txData.transaction);
             currentWallet.addDeposits(txData.deposits);
             currentWallet.addWithdrawals(txData.withdrawals);

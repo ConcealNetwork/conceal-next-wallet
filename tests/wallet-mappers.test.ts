@@ -332,9 +332,13 @@ describe("wallet mappers", () => {
 
     const rows = listWalletTransactions(wallet, 200);
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.type).toBe("message");
-    expect(rows[0]?.message).toBe("Hello from JSON backup");
-    expect(resolveUiTransactionType(rows[0]!)).toBe("message");
+    const row = rows[0];
+    expect(row?.type).toBe("message");
+    expect(row?.message).toBe("Hello from JSON backup");
+    if (!row) {
+      throw new Error("expected one transaction row");
+    }
+    expect(resolveUiTransactionType(row)).toBe("message");
   });
 
   it("resolveUiTransactionType shows envelope for misclassified send rows", () => {

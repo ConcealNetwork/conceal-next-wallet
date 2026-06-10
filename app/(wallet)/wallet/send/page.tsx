@@ -25,6 +25,7 @@ import {
   findAddressBookContactByAddress,
 } from "@/components/wallet/address-book-contact-picker";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
+import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { walletNetworkScalars } from "@/lib/config/config";
 import { useCountUp } from "@/lib/hooks/use-count-up";
@@ -34,10 +35,12 @@ import {
   useSendTransaction,
   useTransactions,
   useWalletInfo,
+  useWalletSyncStatus,
 } from "@/lib/hooks";
 import type { AddressEntry } from "@/lib/types";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
 import { walletCopy } from "@/lib/ui/wallet-copy";
+import { isSendToSelf } from "@/lib/validation/ccx";
 import {
   ccxToNumber,
   CCX_PRECISION_DECIMAL_DISPLAY,
@@ -70,6 +73,7 @@ type SendForm = z.infer<typeof sendSchema>;
 
 export default function SendPage() {
   const wallet = useWalletInfo();
+  const { isSyncing } = useWalletSyncStatus();
   const addressBook = useAddressBook();
   const market = useMarketData();
   const transactions = useTransactions();
@@ -92,6 +96,7 @@ export default function SendPage() {
   const amount = useWatch({ control: form.control, name: "amount" }) || 0;
   const message = useWatch({ control: form.control, name: "message" }) || "";
   const address = useWatch({ control: form.control, name: "address" }) || "";
+  const sendToSelf = isSendToSelf(address, wallet.data?.address ?? "");
   const recentSent = (transactions.data ?? [])
     .filter((transaction) => transaction.type === "send")
     .slice(0, 5);
@@ -157,6 +162,7 @@ export default function SendPage() {
   return (
     <>
       <PageHeader title="Send CCX" subtitle="Transfer Conceal Coins to another address" />
+      <WalletSyncingBanner />
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
           <SectionCard
@@ -188,6 +194,10 @@ export default function SendPage() {
                 {form.formState.errors.address ? (
                   <p className="text-sm text-wallet-outgoing">
                     {form.formState.errors.address.message}
+                  </p>
+                ) : sendToSelf ? (
+                  <p className="text-sm text-wallet-amber">
+                    Cannot send to your own wallet address
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
@@ -268,7 +278,7 @@ export default function SendPage() {
               <Button
                 type="submit"
                 className="w-full active:scale-[0.98] motion-reduce:active:scale-100"
-                disabled={send.isPending}
+                disabled={send.isPending || sendToSelf || isSyncing}
               >
                 Review Send
               </Button>
@@ -342,7 +352,11 @@ export default function SendPage() {
           {review ? (
             <div className="space-y-3 text-sm">
               <Row label="To" value={truncateAddress(review.address, 10, 8)} mono />
-              <Row label="Amount" value={formatCcx(review.amount)} mono />
+              <Row
+                label="Amount"
+                value={formatCcx(review.amount, CCX_PRECISION_DECIMAL_DISPLAY)}
+                mono
+              />
               <Row label="Network fee" value={formatCcx(NETWORK_FEE, 6)} mono />
               <Row label="Remote node fee" value={formatCcx(REMOTE_NODE_FEE, 6)} mono />
               <div className="my-1 border-t border-border" />

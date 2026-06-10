@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoPillButton } from "@/components/ui/info-pill-button";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
+import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import {
   useCreateDeposit,
   useDepositConstraints,
@@ -47,6 +49,7 @@ import type { CreateDepositInput } from "@/lib/services/deposit.service";
 import type { Deposit } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxToNumber, cn, formatCcx, truncateAddress } from "@/lib/utils";
+import { InterestCalculatorDialog } from "./interest-calculator-dialog";
 
 const ResponsiveContainer = dynamic(
   () => import("recharts").then((mod) => mod.ResponsiveContainer),
@@ -87,6 +90,7 @@ export default function DepositsPageClient() {
   const constraints = useDepositConstraints();
   const createDeposit = useCreateDeposit();
   const [open, setOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
   const [view, setView] = useState<DepositView>("cards");
 
   const openDeposits = useMemo(() => data.filter((deposit) => deposit.status !== "spent"), [data]);
@@ -135,14 +139,7 @@ export default function DepositsPageClient() {
         }
       />
 
-      {constraints.data?.isWalletSyncing ? (
-        <div
-          className="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground"
-          role="status"
-        >
-          Wallet is syncing — create and withdraw are disabled until the chain is caught up.
-        </div>
-      ) : null}
+      <WalletSyncingBanner hint="create and withdraw are disabled until the chain is caught up" />
 
       {constraints.data?.hasPendingDeposit ? (
         <div
@@ -154,7 +151,16 @@ export default function DepositsPageClient() {
       ) : null}
 
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
-        <SectionCard title="Summary" description="Locked CCX, maturity timing, and blended APR">
+        <SectionCard
+          title="Summary"
+          description="Locked CCX, maturity timing, and blended APR"
+          headerAction={
+            <InfoPillButton
+              onClick={() => setCalcOpen(true)}
+              aria-label="Open deposit interest calculator"
+            />
+          }
+        >
           <DepositsSummary deposits={openDeposits} />
         </SectionCard>
       </div>
@@ -206,6 +212,8 @@ export default function DepositsPageClient() {
           });
         }}
       />
+
+      <InterestCalculatorDialog open={calcOpen} onOpenChange={setCalcOpen} />
     </>
   );
 }
