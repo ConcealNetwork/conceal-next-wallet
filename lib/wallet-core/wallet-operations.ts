@@ -305,10 +305,10 @@ export async function getNodeStatusOperation(): Promise<NodeStatus> {
     mempool: info.transactions_pool_size ?? 0,
     lastBlockSecondsAgo,
     avgBlockTimeSeconds: config.avgBlockTime,
-    heightHistory: [walletHeight],
-    hashrateHistory: [info.difficulty > 0 ? info.difficulty / config.avgBlockTime / 1_000_000 : 0],
+    heightHistory: [networkHeight],
+    hashrateHistory: [info.difficulty > 0 ? Math.round(info.difficulty / config.avgBlockTime) : 0],
     peersHistory: [(info.white_peerlist_size ?? 0) + (info.grey_peerlist_size ?? 0)],
-    blockTimeHistory: [config.avgBlockTime],
+    blockTimeHistory: [lastBlockSecondsAgo],
   };
 }
 

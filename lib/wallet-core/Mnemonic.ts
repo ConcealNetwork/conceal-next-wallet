@@ -148,7 +148,7 @@ export class Mnemonic {
         throw "invalid word in mnemonic";
       }
       const x = w1 + n * ((n - w1 + w2) % n) + n * n * ((n - w2 + w3) % n);
-      if (x % n != w1)
+      if (x % n !== w1)
         throw "Something went wrong when decoding your private key, please try again";
       out += Mnemonic.mn_swap_endian_4byte(("0000000" + x.toString(16)).slice(-8));
     }

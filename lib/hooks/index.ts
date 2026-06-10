@@ -41,8 +41,6 @@ export function useRefreshWallet() {
     onSuccess: (wallet: WalletInfo) => {
       queryClient.setQueryData(queryKeys.wallet, wallet);
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      // exact: don't prefix-match the curated smart-nodes pool (see useSmartNodes).
-      void queryClient.invalidateQueries({ queryKey: queryKeys.network, exact: true });
     },
   });
 }
@@ -61,8 +59,6 @@ export function useWalletLiveSync() {
     const throttle = createCoalescingThrottle(() => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      // exact: don't prefix-match the curated smart-nodes pool (see useSmartNodes).
-      void queryClient.invalidateQueries({ queryKey: queryKeys.network, exact: true });
     }, 500);
 
     // Messages/deposits walk the full tx list — mark stale on sync but don't refetch ~2×/sec.
@@ -259,9 +255,11 @@ export function useDeleteAddressEntry() {
 }
 
 export function useNetworkStatus() {
+  const { status } = useWalletSession();
   return useQuery({
     queryKey: queryKeys.network,
     queryFn: () => services.network.getNodeStatus(),
+    enabled: status === "open",
     ...networkQueryOptions,
   });
 }

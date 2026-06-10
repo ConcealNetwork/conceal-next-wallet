@@ -340,8 +340,7 @@ function MarketSummaryHybrid({
   const prefersReducedMotion = usePrefersReducedMotion();
   const available = ccxToNumber(walletInfo.available);
   const locked = ccxToNumber(walletInfo.lockedDeposits);
-  const staking = ccxToNumber(walletInfo.staking);
-  const holdingsTotal = available + locked + staking;
+  const holdingsTotal = available + locked;
   const portfolioUsd = walletBalanceUsd(walletInfo.balanceTotal, market.price.value);
   const marketPriceLabel = useCountUp(market.price.value, {
     formatter: (value) => formatUsd(value, 3),
@@ -360,13 +359,6 @@ function MarketSummaryHybrid({
       className: "text-wallet-deposit",
       stroke: "hsl(var(--chart-1))",
       dotClassName: "bg-wallet-deposit",
-    },
-    {
-      label: "Staking",
-      value: staking,
-      className: "text-wallet-incoming",
-      stroke: "hsl(var(--chart-2))",
-      dotClassName: "bg-wallet-incoming",
     },
   ];
   let offset = 25;

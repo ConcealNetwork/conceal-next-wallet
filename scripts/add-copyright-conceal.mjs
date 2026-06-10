@@ -10,13 +10,7 @@ const YEAR = new Date().getFullYear();
 const HEADER = `// Copyright (c) ${YEAR} Conceal Network, Conceal Devs
 // SPDX-License-Identifier: BSD-3-Clause`;
 
-const SKIP_DIRS = [
-  "lib/wallet-core/",
-  "public/lib/",
-  "public/workers/",
-  "out/",
-  "node_modules/",
-];
+const SKIP_DIRS = ["lib/wallet-core/", "public/lib/", "public/workers/", "out/", "node_modules/"];
 
 const SKIP_EXT = new Set([
   ".svg",

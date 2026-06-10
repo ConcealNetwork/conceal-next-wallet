@@ -26,7 +26,7 @@ import {
 } from "@/components/wallet/address-book-contact-picker";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
-import { COIN_FEE_ATOMIC, COIN_UNIT_PLACES, REMOTE_NODE_FEE_ATOMIC } from "@/lib/config/config";
+import { walletNetworkScalars } from "@/lib/config/config";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import {
   useMarketData,
@@ -38,11 +38,19 @@ import {
 import type { AddressEntry } from "@/lib/types";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { ccxToNumber, formatCcx, formatUsd, timeAgo, truncateAddress } from "@/lib/utils";
+import {
+  ccxToNumber,
+  CCX_PRECISION_DECIMAL_DISPLAY,
+  formatCcx,
+  formatUsd,
+  timeAgo,
+  truncateAddress,
+} from "@/lib/utils";
 
-const NETWORK_FEE = COIN_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
-const REMOTE_NODE_FEE = REMOTE_NODE_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
-const SEND_FEES = NETWORK_FEE + REMOTE_NODE_FEE;
+const NETWORK_FEE = walletNetworkScalars.coinFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
+const REMOTE_NODE_FEE =
+  walletNetworkScalars.remoteNodeFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
+const SEND_FEE = NETWORK_FEE + REMOTE_NODE_FEE;
 
 const sendSchema = z.object({
   address: z
@@ -72,7 +80,9 @@ export default function SendPage() {
 
   const available = wallet.data ? ccxToNumber(wallet.data.available) : 0;
   const price = market.data?.price.value ?? 0;
-  const availableLabel = useCountUp(available, { formatter: (value) => formatCcx(value) });
+  const availableLabel = useCountUp(available, {
+    formatter: (value) => formatCcx(value, CCX_PRECISION_DECIMAL_DISPLAY),
+  });
 
   const form = useForm<SendForm>({
     resolver: zodResolver(sendSchema),
@@ -192,25 +202,27 @@ export default function SendPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      form.setValue("amount", Number(available.toFixed(2)), {
-                        shouldValidate: true,
-                      })
+                      form.setValue(
+                        "amount",
+                        Number(available.toFixed(CCX_PRECISION_DECIMAL_DISPLAY)),
+                        { shouldValidate: true },
+                      )
                     }
                     className="cursor-pointer rounded-sm text-xs font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    Max: {availableLabel}
+                    Max: {formatCcx(available, CCX_PRECISION_DECIMAL_DISPLAY)}
                   </button>
                 </div>
                 <Input
                   id="amount"
                   type="number"
-                  step="0.01"
-                  placeholder="0.00"
+                  step={10 ** -CCX_PRECISION_DECIMAL_DISPLAY}
+                  placeholder={`0.${"0".repeat(CCX_PRECISION_DECIMAL_DISPLAY)}`}
                   {...form.register("amount", { valueAsNumber: true })}
                 />
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">≈ {formatUsd(amount * price)} USD</span>
-                  {amount + SEND_FEES > available && amount > 0 ? (
+                  {amount + SEND_FEE > available && amount > 0 ? (
                     <span className="text-wallet-outgoing">Exceeds available balance</span>
                   ) : null}
                 </div>
@@ -249,7 +261,7 @@ export default function SendPage() {
               <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3 text-sm">
                 <span className="text-muted-foreground">Estimated fees</span>
                 <span className="font-mono">
-                  <CcxAmount>{formatCcx(SEND_FEES, 6)}</CcxAmount>
+                  <CcxAmount>{formatCcx(SEND_FEE, 6)}</CcxAmount>
                 </span>
               </div>
 
@@ -334,8 +346,8 @@ export default function SendPage() {
               <Row label="Network fee" value={formatCcx(NETWORK_FEE, 6)} mono />
               <Row label="Remote node fee" value={formatCcx(REMOTE_NODE_FEE, 6)} mono />
               <div className="my-1 border-t border-border" />
-              <Row label="Total" value={formatCcx(review.amount + SEND_FEES, 6)} mono strong />
-              <Row label="≈ USD" value={formatUsd((review.amount + SEND_FEES) * price)} />
+              <Row label="Total" value={formatCcx(review.amount + SEND_FEE, 6)} mono strong />
+              <Row label="≈ USD" value={formatUsd((review.amount + SEND_FEE) * price)} />
               {review.paymentId ? (
                 <Row label="Payment ID" value={truncateAddress(review.paymentId, 8, 6)} mono />
               ) : null}

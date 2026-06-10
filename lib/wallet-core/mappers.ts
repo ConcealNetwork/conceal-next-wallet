@@ -69,7 +69,6 @@ export function mapWalletToInfo(wallet: Wallet, networkHeight: number): WalletIn
     available: { atomic: available },
     pending: { atomic: pending },
     lockedDeposits: { atomic: locked },
-    staking: { atomic: 0 },
     withdrawable: { atomic: withdrawable },
     creationHeight: w.creationHeight,
     currentHeight: walletHeight,

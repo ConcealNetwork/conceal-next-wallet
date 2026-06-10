@@ -27,7 +27,7 @@ export class Observable {
     if (!(eventType in this.observers)) return;
 
     for (const i in this.observers[eventType]) {
-      if (this.observers[eventType][i] == callback) {
+      if (this.observers[eventType][i] === callback) {
         this.observers[eventType].splice(i, 1);
         break;
       }

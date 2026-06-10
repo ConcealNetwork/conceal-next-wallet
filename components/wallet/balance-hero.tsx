@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
 import {
   ccxToNumber,
+  CCX_PRECISION_DECIMAL_DISPLAY,
   cn,
   formatCcx,
   formatUsd,
@@ -29,19 +31,19 @@ type Segment = {
   note: string;
 };
 
-const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Staking"] as const;
+const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Withdrawable"] as const;
 
 export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
+  const [availableHovered, setAvailableHovered] = useState(false);
   const available = ccxToNumber(wallet.available);
   const total = ccxToNumber(wallet.balanceTotal);
   const pending = ccxToNumber(wallet.pending);
   const locked = ccxToNumber(wallet.lockedDeposits);
-  const staking = ccxToNumber(wallet.staking);
+  const withdrawable = ccxToNumber(wallet.withdrawable);
   const activeDeposits = deposits.filter((deposit) => deposit.status === "active");
   const soonestUnlockDays = activeDeposits.length
     ? Math.min(...activeDeposits.map((deposit) => deposit.unlocksInDays))
     : null;
-  const stakingApr = getRepresentativeApr(activeDeposits);
   const availablePct = getPct(available, total);
   const changeLabel = `${market.change24hPct.toFixed(2)}%`;
   const availableLabel = useCountUp(available, {
@@ -79,12 +81,12 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
       note: soonestUnlockDays === null ? "no active lock" : `unlocks in ${soonestUnlockDays} days`,
     },
     {
-      label: "Staking",
-      value: staking,
-      pct: getPct(staking, total),
+      label: "Withdrawable",
+      value: withdrawable,
+      pct: getPct(withdrawable, total),
       dotClassName: "bg-wallet-incoming",
       barClassName: "bg-wallet-incoming",
-      note: stakingApr === null ? "earning" : `earning · ${formatApr(stakingApr)} APR`,
+      note: withdrawable > 0 ? "ready to claim" : "no matured deposits",
     },
   ];
 
@@ -94,8 +96,14 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Available · ready to spend</p>
-            <p className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]">
-              {availableLabel}
+            <p
+              className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]"
+              onMouseEnter={() => setAvailableHovered(true)}
+              onMouseLeave={() => setAvailableHovered(false)}
+            >
+              {availableHovered
+                ? stripTickerSuffix(formatCcx(available, CCX_PRECISION_DECIMAL_DISPLAY))
+                : availableLabel}
               <TickerBadge className="ml-2 align-baseline text-xl font-medium text-primary" />
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -236,18 +244,4 @@ function BalanceSparkline({ values, className }: { values: number[]; className?:
 
 function getPct(value: number, total: number) {
   return total > 0 ? (value / total) * 100 : 0;
-}
-
-function getRepresentativeApr(deposits: Deposit[]) {
-  const totalAmount = deposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0);
-  if (totalAmount <= 0) return null;
-
-  return (
-    deposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount) * deposit.apr, 0) /
-    totalAmount
-  );
-}
-
-function formatApr(value: number) {
-  return `${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
 }

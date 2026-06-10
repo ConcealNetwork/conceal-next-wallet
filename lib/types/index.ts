@@ -12,11 +12,10 @@ export type WalletInfo = {
   available: CcxAmount;
   pending: CcxAmount;
   lockedDeposits: CcxAmount;
-  staking: CcxAmount;
   withdrawable: CcxAmount;
   trends?: Partial<
     Record<
-      "balanceTotal" | "available" | "pending" | "lockedDeposits" | "staking" | "withdrawable",
+      "balanceTotal" | "available" | "pending" | "lockedDeposits" | "withdrawable",
       WalletStatTrend
     >
   >;

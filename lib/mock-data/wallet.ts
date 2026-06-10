@@ -25,7 +25,6 @@ export const mockWalletInfo: WalletInfo = {
   available: ccxAmount(634.75),
   pending: ccxAmount(15.75),
   lockedDeposits: ccxAmount(500),
-  staking: ccxAmount(100),
   withdrawable: ccxAmount(734.75),
   trends: {
     balanceTotal: {
@@ -35,10 +34,6 @@ export const mockWalletInfo: WalletInfo = {
     available: {
       trend: [602.4, 611.2, 608.75, 620.5, 628.1, 626.9, 634.75],
       changePct: 1.78,
-    },
-    staking: {
-      trend: [92, 94.5, 95.25, 97, 98.4, 99.1, 100],
-      changePct: 3.12,
     },
   },
   creationHeight: 1971774,
@@ -340,7 +335,9 @@ export const mockNodeStatus: NodeStatus = {
   lastBlockSecondsAgo: 47,
   avgBlockTimeSeconds: 118,
   heightHistory: [1971330, 1971331, 1971332, 1971333, 1971334, 1971335, 1971336, 1971337],
-  hashrateHistory: [10.21, 10.38, 10.29, 10.62, 10.55, 10.71, 10.64, 10.7],
+  hashrateHistory: [
+    10_210_000, 10_380_000, 10_290_000, 10_620_000, 10_550_000, 10_710_000, 10_640_000, 10_700_000,
+  ],
   peersHistory: [14, 15, 14, 16, 17, 16, 18, 18],
   blockTimeHistory: [124, 117, 121, 113, 119, 110, 122, 118],
 };
