@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
 import { MARKET_SNAPSHOT_TTL_MS } from "@/lib/market/coingecko";
 
-const NETWORK_POLL_MS = 15_000;
+const NETWORK_POLL_MS = 60_000;
 const MARKET_CHART_STALE_MS = 30 * 60 * 1000;
 
 export const marketQueryOptions = {
@@ -14,7 +14,10 @@ export const marketHistoryQueryOptions = {
 };
 
 export const networkQueryOptions = {
+  /** Daemon `getinfo` — slow-moving stats; polled, not tied to block sync. */
   refetchInterval: env.useMockWallet ? (false as const) : NETWORK_POLL_MS,
+  staleTime: NETWORK_POLL_MS,
+  refetchOnWindowFocus: false,
 };
 
 /** Message list — expensive (scans all txs); not refetched on every sync tick. */

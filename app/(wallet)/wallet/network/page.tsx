@@ -4,7 +4,11 @@ import { useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/wallet/common";
 import { useNetworkStatus, useSmartNodes } from "@/lib/hooks";
-import { useNetworkTelemetryHistory } from "@/lib/hooks/use-network-telemetry-history";
+import { useNetworkTelemetry } from "@/lib/hooks/network-telemetry-provider";
+import {
+  ensureSparklinePoints,
+  normalizeHashrateChartSeries,
+} from "@/lib/hooks/use-network-telemetry-history";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import { formatNodeVersion } from "@/lib/network/format-node-version";
 import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
@@ -16,7 +20,7 @@ const TELEMETRY_SKELETON_KEYS = ["height", "hashrate", "peers", "block-time"] as
 
 export default function NetworkPage() {
   const { data, isLoading } = useNetworkStatus();
-  const telemetry = useNetworkTelemetryHistory(data);
+  const { history: telemetry, hashrateChart } = useNetworkTelemetry();
   const {
     data: smartNodes,
     isPending: smartNodesPending,
@@ -63,10 +67,15 @@ export default function NetworkPage() {
   // (multi-point in mock mode, where polling is disabled) until enough real
   // points have been collected.
   const heightBars = Math.min(Math.max(telemetry.height.length, data.heightHistory.length, 1), 16);
-  const hashrateSeries = telemetry.hashrate.length >= 2 ? telemetry.hashrate : data.hashrateHistory;
+  const hashrateSeries = ensureSparklinePoints(
+    telemetry.hashrate.length >= 2
+      ? hashrateChart
+      : normalizeHashrateChartSeries(data.hashrateHistory),
+  );
   const peersSeries = telemetry.peers.length > 0 ? telemetry.peers : data.peersHistory;
-  const blockTimeSeries =
-    telemetry.blockTime.length >= 2 ? telemetry.blockTime : data.blockTimeHistory;
+  const blockTimeSeries = ensureSparklinePoints(
+    telemetry.blockTime.length >= 2 ? telemetry.blockTime : data.blockTimeHistory,
+  );
 
   return (
     <>
@@ -154,7 +163,7 @@ export default function NetworkPage() {
         />
         <ChartCard
           label="Avg Block Time"
-          value={`${Math.round(data.avgBlockTimeSeconds)} s`}
+          value={`${Math.round(data.lastBlockSecondsAgo)} s`}
           detail={`target ${BLOCK_TARGET_SECONDS} s`}
           tone="incoming"
           delay={360}

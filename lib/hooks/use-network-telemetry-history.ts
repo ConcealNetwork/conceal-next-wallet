@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import type { NodeStatus } from "@/lib/types";
 
 /** How many recent readings to keep for the telemetry sparklines. */
@@ -13,7 +10,12 @@ export type NetworkTelemetryHistory = {
   blockTime: number[];
 };
 
-const EMPTY: NetworkTelemetryHistory = { height: [], hashrate: [], peers: [], blockTime: [] };
+export const EMPTY_NETWORK_TELEMETRY: NetworkTelemetryHistory = {
+  height: [],
+  hashrate: [],
+  peers: [],
+  blockTime: [],
+};
 
 function append(series: number[], value: number): number[] {
   const next = series.length >= TELEMETRY_MAX_POINTS ? series.slice(1) : series.slice();
@@ -22,23 +24,39 @@ function append(series: number[], value: number): number[] {
 }
 
 /**
- * Accumulate node-status readings into short history series so the network
- * telemetry sparklines show real trends. The daemon `getinfo` is a snapshot, so
- * the trend has to be built client-side, one point per poll (the effect fires
- * only when React Query hands back a new `data` reference).
+ * Append one daemon snapshot to the rolling telemetry series.
+ * Block time uses `lastBlockSecondsAgo` (observed, climbs until the next block).
  */
-export function useNetworkTelemetryHistory(data: NodeStatus | undefined): NetworkTelemetryHistory {
-  const [history, setHistory] = useState<NetworkTelemetryHistory>(EMPTY);
+export function accumulateNetworkTelemetry(
+  prev: NetworkTelemetryHistory,
+  data: NodeStatus,
+): NetworkTelemetryHistory {
+  return {
+    height: append(prev.height, data.networkHeight),
+    hashrate: append(prev.hashrate, data.hashrate),
+    peers: append(prev.peers, data.peers),
+    blockTime: append(prev.blockTime, data.lastBlockSecondsAgo),
+  };
+}
 
-  useEffect(() => {
-    if (!data) return;
-    setHistory((prev) => ({
-      height: append(prev.height, data.height),
-      hashrate: append(prev.hashrate, data.hashrate),
-      peers: append(prev.peers, data.peers),
-      blockTime: append(prev.blockTime, data.avgBlockTimeSeconds),
-    }));
-  }, [data]);
+/**
+ * Map raw hashrate samples to a 0–100 sparkline band centered on the rolling
+ * mean so small network swings stay visible on the chart.
+ */
+export function normalizeHashrateChartSeries(values: number[]): number[] {
+  if (values.length === 0) return [];
+  if (values.length === 1) return [50, 50];
 
-  return history;
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const deviations = values.map((value) => value - mean);
+  const maxDeviation = Math.max(...deviations.map(Math.abs), mean * 0.002, 1);
+
+  return deviations.map((deviation) => 50 + (deviation / maxDeviation) * 35);
+}
+
+/** Ensure sparkline components always receive at least two points. */
+export function ensureSparklinePoints(values: number[]): number[] {
+  if (values.length >= 2) return values;
+  if (values.length === 1) return [values[0], values[0]];
+  return values;
 }
