@@ -4,7 +4,14 @@ import { Check, Clipboard, Inbox } from "lucide-react";
 import { cloneElement, isValidElement, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { DottedQrCode } from "@/components/qr/dotted-qr";
 import type { Transaction, TransactionType } from "@/lib/types";
@@ -33,6 +40,7 @@ export function PageHeader({
 export function SectionCard({
   title,
   description,
+  headerAction,
   children,
   footer,
   fill = false,
@@ -40,6 +48,7 @@ export function SectionCard({
 }: {
   title?: string;
   description?: string;
+  headerAction?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   /** Stretch to fill the parent height and pin the footer to the bottom.
@@ -49,10 +58,11 @@ export function SectionCard({
 }) {
   return (
     <Card className={cn("wallet-card", fill && "flex h-full flex-col", className)}>
-      {(title || description) && (
+      {(title || description || headerAction) && (
         <CardHeader>
           {title && <CardTitle>{title}</CardTitle>}
           {description && <CardDescription>{description}</CardDescription>}
+          {headerAction ? <CardAction>{headerAction}</CardAction> : null}
         </CardHeader>
       )}
       <CardContent className={cn(fill && "flex flex-1 flex-col")}>{children}</CardContent>

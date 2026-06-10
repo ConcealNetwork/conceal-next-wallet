@@ -40,10 +40,11 @@ export function walletBalanceUsd(balance: CcxAmount, priceUsd: number): number {
 export function formatCcx(
   amount: CcxAmount | number,
   decimals = CCX_HUMAIN_DECIMAL_DISPLAY,
+  trimTrailingZeros = false,
 ): string {
   const value = typeof amount === "number" ? amount : ccxToNumber(amount);
   return `${value.toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
+    minimumFractionDigits: trimTrailingZeros ? 0 : decimals,
     maximumFractionDigits: decimals,
   })} ${getDisplayTicker()}`;
 }

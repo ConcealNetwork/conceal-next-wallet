@@ -5,6 +5,9 @@ describe("wallet utils", () => {
   it("formats CCX amounts from atomic units", () => {
     expect(formatCcx(ccxAmount(1250.5))).toBe("1,250.50 CCX");
     expect(formatCcx(7.5, 6)).toBe("7.500000 CCX");
+    expect(formatCcx(617.25, 6, true)).toBe("617.25 CCX");
+    expect(formatCcx(12962.25, 6, true)).toBe("12,962.25 CCX");
+    expect(formatCcx(7.5, 6, true)).toBe("7.5 CCX");
   });
 
   it("formats USD amounts", () => {
