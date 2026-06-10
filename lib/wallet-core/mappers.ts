@@ -187,6 +187,7 @@ export function mapCoreTransaction(
     timestamp: tx.timestamp
       ? new Date(tx.timestamp * 1000).toISOString()
       : new Date().toISOString(),
+    blockHeight: tx.blockHeight,
     confirmations,
     paymentId: tx.paymentId || undefined,
     message: resolveStoredMessageBody(tx, sentRecord),

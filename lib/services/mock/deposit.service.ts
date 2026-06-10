@@ -55,6 +55,7 @@ export const mockDepositService: DepositService = {
       amount: ccxAmount(0),
       address: MOCK_ADDRESS,
       timestamp: new Date().toISOString(),
+      blockHeight: 0,
       confirmations: 0,
     };
   },

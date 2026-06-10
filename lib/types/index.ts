@@ -47,6 +47,8 @@ export type Transaction = {
   amount: CcxAmount;
   address: string;
   timestamp: string;
+  /** Block height at inclusion; 0 while pending in the mempool. */
+  blockHeight: number;
   confirmations: number;
   paymentId?: string;
   message?: string;

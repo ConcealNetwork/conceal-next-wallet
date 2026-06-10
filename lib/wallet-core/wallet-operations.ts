@@ -438,6 +438,7 @@ export async function sendTransactionOperation(input: SendTransactionInput): Pro
       amount: { atomic: amountAtomic },
       address: input.address,
       timestamp: new Date().toISOString(),
+      blockHeight: 0,
       confirmations: 0,
       paymentId: input.paymentId,
       message: input.message,
@@ -762,6 +763,7 @@ export async function withdrawDepositOperation(input: WithdrawDepositInput): Pro
       amount: { atomic: coreDeposit.amount + coreDeposit.interest },
       address: wallet.getPublicAddress(),
       timestamp: new Date().toISOString(),
+      blockHeight: 0,
       confirmations: 0,
     }
   );

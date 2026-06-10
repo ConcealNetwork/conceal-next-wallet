@@ -50,6 +50,7 @@ export const mockTransactions: Transaction[] = [
     amount: { atomic: 100 },
     address: "ccx7IncomingA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
     timestamp: "2026-05-22T01:20:00.000Z",
+    blockHeight: 1_971_325,
     confirmations: 12,
     message: "Invoice payment",
   },
@@ -61,6 +62,7 @@ export const mockTransactions: Transaction[] = [
     amount: ccxAmount(50),
     address: "ccx7OutgoingB2zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
     timestamp: "2026-05-21T18:10:00.000Z",
+    blockHeight: 1_971_313,
     confirmations: 24,
     paymentId: "a".repeat(64),
   },
@@ -72,6 +74,7 @@ export const mockTransactions: Transaction[] = [
     amount: ccxAmount(200),
     address: MOCK_ADDRESS,
     timestamp: "2026-05-20T11:45:00.000Z",
+    blockHeight: 1_971_252,
     confirmations: 85,
   },
   {
@@ -82,6 +85,7 @@ export const mockTransactions: Transaction[] = [
     amount: ccxAmount(75),
     address: "ccx7IncomingC3zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
     timestamp: "2026-05-18T09:00:00.000Z",
+    blockHeight: 1_971_217,
     confirmations: 120,
   },
   {
@@ -92,6 +96,7 @@ export const mockTransactions: Transaction[] = [
     amount: ccxAmount(25),
     address: "ccx7OutgoingD4zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
     timestamp: "2026-05-17T16:30:00.000Z",
+    blockHeight: 1_971_193,
     confirmations: 144,
   },
   {
@@ -102,6 +107,7 @@ export const mockTransactions: Transaction[] = [
     amount: ccxAmount(150),
     address: MOCK_ADDRESS,
     timestamp: "2026-05-14T13:35:00.000Z",
+    blockHeight: 1_971_017,
     confirmations: 320,
   },
   {
@@ -112,6 +118,7 @@ export const mockTransactions: Transaction[] = [
     amount: ccxAmount(500),
     address: MOCK_ADDRESS,
     timestamp: "2026-04-28T07:15:00.000Z",
+    blockHeight: 1_970_437,
     confirmations: 900,
   },
   {
@@ -122,6 +129,7 @@ export const mockTransactions: Transaction[] = [
     amount: ccxAmount(100),
     address: "ccx7OutgoingE5zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m",
     timestamp: "2026-04-22T22:05:00.000Z",
+    blockHeight: 1_970_057,
     confirmations: 1280,
   },
 ];

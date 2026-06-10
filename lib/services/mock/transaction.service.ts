@@ -20,6 +20,7 @@ export const mockTransactionService: TransactionService = {
       amount: ccxAmount(input.amount),
       address: input.address,
       timestamp: "2026-05-22T03:00:00.000Z",
+      blockHeight: 0,
       confirmations: 0,
       paymentId: input.paymentId,
       message: input.message,

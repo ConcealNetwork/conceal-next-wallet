@@ -625,13 +625,22 @@ function TransactionDetailsDialog({
             icon={CalendarClock}
           />
           <DetailRow
-            label="Confirmations"
-            value={transaction.confirmations.toLocaleString("en-US")}
+            label="Height"
+            value={formatHeightWithConfirmations(
+              transaction.blockHeight,
+              transaction.confirmations,
+            )}
           />
           <DetailRow label="Status" value={status} />
           <DetailRow label="Payment ID" value={transaction.paymentId ?? "Not provided"} />
           <DetailRow label="Message" value={transaction.message ?? "Not provided"} />
-          <DetailRow label="Transaction Hash" value={transaction.hash} icon={Hash} mono />
+          <DetailRow
+            label="Transaction Hash"
+            value={transaction.hash}
+            icon={Hash}
+            mono
+            copyValue={transaction.hash}
+          />
         </dl>
 
         <div className="rounded-xl border border-border bg-secondary/60 p-4">
@@ -642,7 +651,7 @@ function TransactionDetailsDialog({
                 {transaction.address}
               </p>
             </div>
-            <CopyButton value={transaction.address} label="Copy address" />
+            <CopyButton value={transaction.address} label="Copy address" iconOnly />
           </div>
         </div>
       </DialogContent>
@@ -655,11 +664,13 @@ function DetailRow({
   value,
   icon: Icon,
   mono,
+  copyValue,
 }: {
   label: string;
   value: string;
   icon?: LucideIcon;
   mono?: boolean;
+  copyValue?: string;
 }) {
   return (
     <div className="grid gap-1 rounded-xl border border-border bg-secondary/60 p-3 sm:grid-cols-[140px_1fr] sm:gap-4">
@@ -669,14 +680,24 @@ function DetailRow({
       </dt>
       <dd
         className={cn(
-          "min-w-0 wrap-break-word text-sm text-foreground",
+          "min-w-0 text-sm text-foreground",
+          copyValue ? "flex items-start justify-between gap-2" : "wrap-break-word",
           mono && "break-all font-mono",
         )}
       >
-        {value}
+        <span className="min-w-0 wrap-break-word">{value}</span>
+        {copyValue ? (
+          <CopyButton value={copyValue} label={`Copy ${label.toLowerCase()}`} iconOnly />
+        ) : null}
       </dd>
     </div>
   );
+}
+
+function formatHeightWithConfirmations(blockHeight: number, confirmations: number): string {
+  const height = blockHeight > 0 ? blockHeight.toLocaleString("en-US") : "Pending";
+  const confLabel = confirmations === 1 ? "confirmation" : "confirmations";
+  return `${height} (${confirmations.toLocaleString("en-US")} ${confLabel})`;
 }
 
 function StatusPill({ status }: { status: TransactionStatus }) {

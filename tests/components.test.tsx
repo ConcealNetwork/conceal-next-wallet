@@ -71,6 +71,7 @@ describe("wallet components", () => {
           amount: ccxAmount(100),
           address: "ccx7abcdefghijklmnopqrstuvwxyz",
           timestamp: "2026-05-22T00:00:00.000Z",
+          blockHeight: 1_971_325,
           confirmations: 12,
         }}
       />,

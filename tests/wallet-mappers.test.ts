@@ -150,6 +150,7 @@ describe("wallet mappers", () => {
     expect(fusion.type).toBe("fusion");
     expect(fusion.amount.atomic).toBe(1000);
     expect(fusion.address).toBe(walletAddress);
+    expect(fusion.blockHeight).toBe(100);
 
     const minerOut = out(3_000_000);
     minerOut.rtcAmount = "";
@@ -349,6 +350,7 @@ describe("wallet mappers", () => {
       amount: { atomic: SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC },
       address: "",
       timestamp: new Date().toISOString(),
+      blockHeight: 100,
       confirmations: 10,
       message: "Hello",
     };
@@ -365,6 +367,7 @@ describe("wallet mappers", () => {
       amount: { atomic: SENT_MESSAGE_AMOUNT_SELF_ATOMIC },
       address: "ccx7Recipient",
       timestamp: new Date().toISOString(),
+      blockHeight: 97,
       confirmations: 3,
     };
 
