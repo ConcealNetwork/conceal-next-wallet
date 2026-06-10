@@ -4971,6 +4971,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
         const addedHashes = /* @__PURE__ */ new Set();
         const tryProcessTx = (rawTransaction) => {
+          if (!currentWallet) {
+            return;
+          }
           if (!rawTransaction?.height) {
             return;
           }
@@ -4985,7 +4988,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             return;
           }
           const txData = TransactionsExplorer.parse(rawTransaction, currentWallet);
-          if (txData && txData.transaction) {
+          if (txData?.transaction) {
             currentWallet.addNew(txData.transaction);
             currentWallet.addDeposits(txData.deposits);
             currentWallet.addWithdrawals(txData.withdrawals);
