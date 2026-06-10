@@ -38,6 +38,7 @@ import {
 import type { AddressEntry } from "@/lib/types";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
 import { walletCopy } from "@/lib/ui/wallet-copy";
+import { isSendToSelf } from "@/lib/validation/ccx";
 import {
   ccxToNumber,
   CCX_PRECISION_DECIMAL_DISPLAY,
@@ -92,6 +93,7 @@ export default function SendPage() {
   const amount = useWatch({ control: form.control, name: "amount" }) || 0;
   const message = useWatch({ control: form.control, name: "message" }) || "";
   const address = useWatch({ control: form.control, name: "address" }) || "";
+  const sendToSelf = isSendToSelf(address, wallet.data?.address ?? "");
   const recentSent = (transactions.data ?? [])
     .filter((transaction) => transaction.type === "send")
     .slice(0, 5);
@@ -189,6 +191,10 @@ export default function SendPage() {
                   <p className="text-sm text-wallet-outgoing">
                     {form.formState.errors.address.message}
                   </p>
+                ) : sendToSelf ? (
+                  <p className="text-sm text-wallet-amber">
+                    Cannot send to your own wallet address
+                  </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     Enter the recipient&apos;s CCX address (98 characters, starts with ccx7)
@@ -268,7 +274,7 @@ export default function SendPage() {
               <Button
                 type="submit"
                 className="w-full active:scale-[0.98] motion-reduce:active:scale-100"
-                disabled={send.isPending}
+                disabled={send.isPending || sendToSelf}
               >
                 Review Send
               </Button>

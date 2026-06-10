@@ -7,6 +7,13 @@ export function addressIsValid(address: string): boolean {
   return trimmed.startsWith(CCX_ADDRESS_PREFIX) && trimmed.length === CCX_ADDRESS_LENGTH;
 }
 
+export function isSendToSelf(inputAddress: string, walletAddress: string): boolean {
+  const input = inputAddress.trim();
+  const wallet = walletAddress.trim();
+  if (!input || !wallet) return false;
+  return input === wallet;
+}
+
 /** A Conceal private spend/view key is 64 hexadecimal characters. */
 export function privateKeyIsValid(key: string): boolean {
   return CCX_PRIVATE_KEY_PATTERN.test(key.trim());
