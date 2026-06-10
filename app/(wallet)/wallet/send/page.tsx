@@ -79,6 +79,7 @@ export default function SendPage() {
   const transactions = useTransactions();
   const send = useSendTransaction();
   const [review, setReview] = useState<SendForm | null>(null);
+  const [selfSendFromLink, setSelfSendFromLink] = useState<SendForm | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [paymentLinkApplied, setPaymentLinkApplied] = useState(false);
 
@@ -110,6 +111,8 @@ export default function SendPage() {
     if (paymentLinkApplied) return;
     const draft = parsePaymentSendDraft();
     if (!draft) return;
+    const walletAddress = wallet.data?.address;
+    if (!walletAddress) return;
 
     const values: SendForm = {
       address: draft.address,
@@ -118,14 +121,19 @@ export default function SendPage() {
       message: draft.message ?? "",
     };
     form.reset(values);
-    setReview(values);
     setPaymentLinkApplied(true);
-    toast.success("Payment request loaded — confirm to send.");
 
     const url = new URL(window.location.href);
     url.search = "";
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
-  }, [form, paymentLinkApplied]);
+
+    if (isSendToSelf(draft.address, walletAddress)) {
+      setSelfSendFromLink(values);
+    } else {
+      setReview(values);
+      toast.success("Payment request loaded — confirm to send.");
+    }
+  }, [form, paymentLinkApplied, wallet.data?.address]);
 
   function pickContact(entry: AddressEntry | null) {
     setSelectedContactId(entry?.id ?? null);
@@ -342,6 +350,33 @@ export default function SendPage() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={selfSendFromLink !== null}
+        onOpenChange={(open) => !open && setSelfSendFromLink(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{walletCopy.sendToSelfFromLinkTitle}</DialogTitle>
+            <DialogDescription>{walletCopy.sendToSelfFromLinkDescription}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setSelfSendFromLink(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!selfSendFromLink) return;
+                setReview(selfSendFromLink);
+                setSelfSendFromLink(null);
+              }}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={review !== null} onOpenChange={(open) => !open && setReview(null)}>
         <DialogContent>

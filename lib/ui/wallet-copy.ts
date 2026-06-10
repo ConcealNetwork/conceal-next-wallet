@@ -39,6 +39,9 @@ export const walletCopy = {
   sendConfirm: env.useMockWallet
     ? "Confirm this mock send? No transaction will be broadcast."
     : "Confirm and broadcast this transaction?",
+  sendToSelfFromLinkTitle: "Send to yourself?",
+  sendToSelfFromLinkDescription:
+    "This payment link points to your own wallet address. Are you sure you want to send to yourself?",
   sendSuccess: env.useMockWallet
     ? "Mock transaction submitted. No CCX was sent."
     : "Transaction submitted to the network.",
