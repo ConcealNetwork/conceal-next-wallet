@@ -25,7 +25,6 @@ export const mockWalletInfo: WalletInfo = {
   available: ccxAmount(634.75),
   pending: ccxAmount(15.75),
   lockedDeposits: ccxAmount(500),
-  staking: ccxAmount(100),
   withdrawable: ccxAmount(734.75),
   trends: {
     balanceTotal: {
@@ -35,10 +34,6 @@ export const mockWalletInfo: WalletInfo = {
     available: {
       trend: [602.4, 611.2, 608.75, 620.5, 628.1, 626.9, 634.75],
       changePct: 1.78,
-    },
-    staking: {
-      trend: [92, 94.5, 95.25, 97, 98.4, 99.1, 100],
-      changePct: 3.12,
     },
   },
   creationHeight: 1971774,

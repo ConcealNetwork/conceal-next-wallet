@@ -31,7 +31,7 @@ type Segment = {
   note: string;
 };
 
-const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Staking"] as const;
+const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Withdrawable"] as const;
 
 export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   const [availableHovered, setAvailableHovered] = useState(false);
@@ -39,12 +39,11 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   const total = ccxToNumber(wallet.balanceTotal);
   const pending = ccxToNumber(wallet.pending);
   const locked = ccxToNumber(wallet.lockedDeposits);
-  const staking = ccxToNumber(wallet.staking);
+  const withdrawable = ccxToNumber(wallet.withdrawable);
   const activeDeposits = deposits.filter((deposit) => deposit.status === "active");
   const soonestUnlockDays = activeDeposits.length
     ? Math.min(...activeDeposits.map((deposit) => deposit.unlocksInDays))
     : null;
-  const stakingApr = getRepresentativeApr(activeDeposits);
   const availablePct = getPct(available, total);
   const changeLabel = `${market.change24hPct.toFixed(2)}%`;
   const availableLabel = useCountUp(available, {
@@ -82,12 +81,12 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
       note: soonestUnlockDays === null ? "no active lock" : `unlocks in ${soonestUnlockDays} days`,
     },
     {
-      label: "Staking",
-      value: staking,
-      pct: getPct(staking, total),
+      label: "Withdrawable",
+      value: withdrawable,
+      pct: getPct(withdrawable, total),
       dotClassName: "bg-wallet-incoming",
       barClassName: "bg-wallet-incoming",
-      note: stakingApr === null ? "earning" : `earning · ${formatApr(stakingApr)} APR`,
+      note: withdrawable > 0 ? "ready to claim" : "no matured deposits",
     },
   ];
 
@@ -245,18 +244,4 @@ function BalanceSparkline({ values, className }: { values: number[]; className?:
 
 function getPct(value: number, total: number) {
   return total > 0 ? (value / total) * 100 : 0;
-}
-
-function getRepresentativeApr(deposits: Deposit[]) {
-  const totalAmount = deposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0);
-  if (totalAmount <= 0) return null;
-
-  return (
-    deposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount) * deposit.apr, 0) /
-    totalAmount
-  );
-}
-
-function formatApr(value: number) {
-  return `${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
 }
