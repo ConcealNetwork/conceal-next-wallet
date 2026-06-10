@@ -2689,7 +2689,6 @@ var reportError = self.reportError || function (e) { console.error(e); };
      * @returns The calculated interest amount in atomic units
      */
     static calculateInterest(amount, term, lockHeight) {
-      const m_coin = Math.pow(10, config.coinUnitPlaces);
       if (lockHeight === _InterestCalculator.BLOCK_WITH_MISSING_INTEREST) {
         lockHeight = lockHeight + term;
       }
@@ -3939,7 +3938,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     removeObserver(eventType, callback) {
       if (!(eventType in this.observers)) return;
       for (const i in this.observers[eventType]) {
-        if (this.observers[eventType][i] == callback) {
+        if (this.observers[eventType][i] === callback) {
           this.observers[eventType].splice(i, 1);
           break;
         }
