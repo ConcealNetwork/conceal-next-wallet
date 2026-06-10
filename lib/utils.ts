@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { COIN_UNIT_PLACES } from "@/lib/config/config";
 import type { CcxAmount, UsdAmount } from "@/lib/types";
 import { getDisplayTicker } from "@/lib/ui/ticker-preference";
 
@@ -16,7 +17,9 @@ export function withBasePath(path: string): string {
   return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
 }
 
-export const CCX_ATOMIC_UNITS = 1_000_000;
+export const CCX_ATOMIC_UNITS = 10 ** COIN_UNIT_PLACES;
+export const CCX_HUMAIN_DECIMAL_DISPLAY = 2;
+export const CCX_PRECISION_DECIMAL_DISPLAY = COIN_UNIT_PLACES;
 
 export function ccxAmount(ccx: number): CcxAmount {
   return { atomic: Math.round(ccx * CCX_ATOMIC_UNITS) };
@@ -34,7 +37,10 @@ export function walletBalanceUsd(balance: CcxAmount, priceUsd: number): number {
   return ccxToNumber(balance) * priceUsd;
 }
 
-export function formatCcx(amount: CcxAmount | number, decimals = 2): string {
+export function formatCcx(
+  amount: CcxAmount | number,
+  decimals = CCX_HUMAIN_DECIMAL_DISPLAY,
+): string {
   const value = typeof amount === "number" ? amount : ccxToNumber(amount);
   return `${value.toLocaleString("en-US", {
     minimumFractionDigits: decimals,

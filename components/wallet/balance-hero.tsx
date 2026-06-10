@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
 import {
   ccxToNumber,
+  CCX_PRECISION_DECIMAL_DISPLAY,
   cn,
   formatCcx,
   formatUsd,
@@ -32,6 +34,7 @@ type Segment = {
 const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Staking"] as const;
 
 export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
+  const [availableHovered, setAvailableHovered] = useState(false);
   const available = ccxToNumber(wallet.available);
   const total = ccxToNumber(wallet.balanceTotal);
   const pending = ccxToNumber(wallet.pending);
@@ -94,8 +97,14 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Available · ready to spend</p>
-            <p className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]">
-              {availableLabel}
+            <p
+              className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]"
+              onMouseEnter={() => setAvailableHovered(true)}
+              onMouseLeave={() => setAvailableHovered(false)}
+            >
+              {availableHovered
+                ? stripTickerSuffix(formatCcx(available, CCX_PRECISION_DECIMAL_DISPLAY))
+                : availableLabel}
               <TickerBadge className="ml-2 align-baseline text-xl font-medium text-primary" />
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
