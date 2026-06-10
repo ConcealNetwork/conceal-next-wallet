@@ -47,8 +47,7 @@ import {
   truncateAddress,
 } from "@/lib/utils";
 
-const NETWORK_FEE =
-  walletNetworkScalars.coinFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
+const NETWORK_FEE = walletNetworkScalars.coinFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
 const REMOTE_NODE_FEE =
   walletNetworkScalars.remoteNodeFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
 const SEND_FEE = NETWORK_FEE + REMOTE_NODE_FEE;

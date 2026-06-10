@@ -41,7 +41,6 @@ class QRReader {
 
     if (!this.support()) return false;
 
-    const streaming = false;
     const self = this;
 
     this.webcam = document.querySelector("#cameraVideoFluxForDelivery");
@@ -106,9 +105,7 @@ class QRReader {
     navigator.mediaDevices
       .enumerateDevices()
       .then((devices) => {
-        const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
         const device = devices.filter((device) => {
-          const deviceLabel = device.label.split(",")[1];
           if (device.kind === "videoinput") {
             return device;
           }

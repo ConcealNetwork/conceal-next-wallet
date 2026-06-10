@@ -95,6 +95,7 @@ export class CoinUri {
       CoinUri.decodeTx(str);
       return true;
     } catch (e) {
+      console.error(e);
       return false;
     }
   }
@@ -190,6 +191,7 @@ export class CoinUri {
       CoinUri.decodeWallet(str);
       return true;
     } catch (e) {
+      console.error(e);
       return false;
     }
   }
