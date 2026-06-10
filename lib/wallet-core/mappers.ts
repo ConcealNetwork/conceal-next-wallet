@@ -12,6 +12,7 @@ import type {
   TransactionType,
   WalletInfo,
 } from "@/lib/types";
+import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
 import { addressIsValid, normalizePaymentId } from "@/lib/validation/ccx";
 import type { Deposit as CoreDeposit, Transaction as CoreTransaction } from "./Transaction";
 import type { RawAddressEntry, Wallet } from "./Wallet";
@@ -384,7 +385,7 @@ export function getWalletDepositConstraints(
   const coinFee = Number(network.coinFee);
   const unlocked = wallet.availableAmount(networkHeight);
   const maxDepositAmount = Math.floor((unlocked - coinFee) / currencyDivider);
-  const isWalletSyncing = walletHeight + 2 < networkHeight;
+  const isWalletSyncing = isWalletHeightSyncing(walletHeight, networkHeight);
 
   return {
     maxDepositAmount,

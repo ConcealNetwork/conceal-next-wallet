@@ -1877,7 +1877,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           const ttlSize = CnUtils.encode_varint(ttlStr.length / 2);
           tx.extra = tx.extra + TX_EXTRA_TAGS.TTL_TAG + ttlSize + ttlStr;
         }
-        var balanceOk = ttl !== 0 ? outputs_money.compare(inputs_money) <= 0 : outputs_money.add(fee_amount).compare(inputs_money) <= 0;
+        const balanceOk = ttl !== 0 ? outputs_money.compare(inputs_money) <= 0 : outputs_money.add(fee_amount).compare(inputs_money) <= 0;
         if (transactionType !== "withdraw" && !balanceOk) {
           throw "outputs money (" + Cn.formatMoneyFull(outputs_money) + (ttl === 0 ? ") + fee (" + Cn.formatMoneyFull(fee_amount) + ")" : ")") + " > inputs money (" + Cn.formatMoneyFull(inputs_money) + ")";
         }

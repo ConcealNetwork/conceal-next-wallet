@@ -21,6 +21,7 @@ import type { Message, WalletInfo, WalletSettings } from "@/lib/types";
 import { sortMessagesNewestFirst } from "@/lib/messages/conversations";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { isWalletSyncing, walletSyncPercent } from "@/lib/ui/wallet-sync";
 
 export { queryKeys };
 
@@ -32,6 +33,16 @@ export function useWalletInfo() {
     enabled: status === "open",
     placeholderData: walletInfo ?? undefined,
   });
+}
+
+export function useWalletSyncStatus() {
+  const wallet = useWalletInfo();
+  const info = wallet.data;
+  return {
+    info,
+    isSyncing: isWalletSyncing(info),
+    syncPct: walletSyncPercent(info),
+  };
 }
 
 export function useRefreshWallet() {

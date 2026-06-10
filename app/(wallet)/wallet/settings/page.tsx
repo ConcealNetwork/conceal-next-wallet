@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/wallet/common";
+import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { env } from "@/lib/env";
 import {
@@ -28,6 +29,7 @@ import {
   useUpdateWalletSettings,
   useWalletInfo,
   useWalletSettings,
+  useWalletSyncStatus,
 } from "@/lib/hooks";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
@@ -106,6 +108,7 @@ export default function SettingsPage() {
   const optimizationStatus = useOptimizationStatus();
   const resetAndRescan = useResetAndRescan();
   const wallet = useWalletInfo();
+  const { isSyncing } = useWalletSyncStatus();
   const deleteWallet = useWalletDelete();
   const ticker = useTickerPreference();
   const current = settings.data;
@@ -265,6 +268,7 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" subtitle="Change your parameters here" />
+      <WalletSyncingBanner hint="optimization is disabled until the chain is caught up" />
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <Card className="wallet-card">
           <CardContent className="divide-y divide-border">
@@ -298,17 +302,22 @@ export default function SettingsPage() {
                     disabled={
                       optimizeWallet.isPending ||
                       optimizationStatus.isLoading ||
-                      !optimizationNeeded
+                      !optimizationNeeded ||
+                      isSyncing
                     }
                     onClick={handleOptimize}
                   >
                     {optimizeWallet.isPending ? "Optimizing…" : "Optimize Now"}
                   </Button>
-                  {optimizationNeeded && (
+                  {isSyncing ? (
+                    <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
+                      Wait for sync to finish before optimizing.
+                    </p>
+                  ) : optimizationNeeded ? (
                     <p className="max-w-xs text-right text-xs text-amber-400/90 sm:max-w-sm">
                       Optimization can be attempted — {unspentOutputs} unspent UTXOs
                     </p>
-                  )}
+                  ) : null}
                 </div>
               </Row>
             </Section>

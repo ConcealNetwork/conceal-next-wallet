@@ -72,10 +72,7 @@ export function InterestCalculatorDialog({
   const amountIsValid = Number.isFinite(ccx) && ccx >= 1;
   const months = Number(term) || 1;
   const tierIdx = getTierIndex(amountIsValid ? ccx : 0);
-  const { interestCcx, earPct, eirPct } = computeInterest(
-    amountIsValid ? ccx : 0,
-    months,
-  );
+  const { interestCcx, earPct, eirPct } = computeInterest(amountIsValid ? ccx : 0, months);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,18 +82,15 @@ export function InterestCalculatorDialog({
             <Calculator className="size-5 text-primary" aria-hidden="true" />
             Deposit Calculator
           </DialogTitle>
-          <DialogDescription>
-            Estimate earnings -- based on interest model V3.
-          </DialogDescription>
+          <DialogDescription>Estimate earnings -- based on interest model V3.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
           <div className="rounded-xl border border-border bg-secondary/60 p-4">
             <p className="text-sm font-medium text-muted-foreground">Interest Tiers</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Base APR from{" "}
-              <code className="text-foreground">depositRateV3</code>{" "}
-              — annualised at max term (12 months)
+              Base APR from <code className="text-foreground">depositRateV3</code> — annualised at
+              max term (12 months)
             </p>
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-sm">
@@ -113,9 +107,7 @@ export function InterestCalculatorDialog({
                     <tr
                       key={tier.label}
                       className={
-                        tierIdx === idx
-                          ? "font-semibold text-foreground"
-                          : "text-muted-foreground"
+                        tierIdx === idx ? "font-semibold text-foreground" : "text-muted-foreground"
                       }
                     >
                       <td className={`py-1.5 pr-3 ${tier.color}`}>{tier.label}</td>
@@ -171,8 +163,16 @@ export function InterestCalculatorDialog({
             </div>
 
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-              <CalcResult label="Effective APR" value={amountIsValid ? `${earPct.toFixed(2)}%` : "—"} tone="amber" />
-              <CalcResult label="Period Rate" value={amountIsValid ? `${eirPct.toFixed(2)}%` : "—"} tone="amber" />
+              <CalcResult
+                label="Effective APR"
+                value={amountIsValid ? `${earPct.toFixed(2)}%` : "—"}
+                tone="amber"
+              />
+              <CalcResult
+                label="Period Rate"
+                value={amountIsValid ? `${eirPct.toFixed(2)}%` : "—"}
+                tone="amber"
+              />
               <CalcResult
                 label="Est. Interest"
                 value={amountIsValid ? formatCcx(interestCcx, COIN_UNIT_PLACES, true) : "—"}
@@ -210,11 +210,7 @@ function CalcResult({
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className={`mt-1 truncate font-mono text-sm font-semibold ${toneClass}`}>
-        {tone === "incoming" || tone === "deposit" ? (
-          <CcxAmount>{value}</CcxAmount>
-        ) : (
-          value
-        )}
+        {tone === "incoming" || tone === "deposit" ? <CcxAmount>{value}</CcxAmount> : value}
       </dd>
     </div>
   );

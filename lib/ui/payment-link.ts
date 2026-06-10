@@ -10,10 +10,7 @@ function encodePaymentMessage(message: string): string {
 
 function decodePaymentMessage(raw: string): string {
   if (!raw.startsWith(PAYMENT_MESSAGE_ENC_PREFIX)) return raw;
-  const b64 = raw
-    .slice(PAYMENT_MESSAGE_ENC_PREFIX.length)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
+  const b64 = raw.slice(PAYMENT_MESSAGE_ENC_PREFIX.length).replace(/-/g, "+").replace(/_/g, "/");
   const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
   const binary = atob(padded);
   const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));

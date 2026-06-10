@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
+import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import {
   useCreateDeposit,
   useDepositConstraints,
@@ -138,14 +139,7 @@ export default function DepositsPageClient() {
         }
       />
 
-      {constraints.data?.isWalletSyncing ? (
-        <div
-          className="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground"
-          role="status"
-        >
-          Wallet is syncing — create and withdraw are disabled until the chain is caught up.
-        </div>
-      ) : null}
+      <WalletSyncingBanner hint="create and withdraw are disabled until the chain is caught up" />
 
       {constraints.data?.hasPendingDeposit ? (
         <div

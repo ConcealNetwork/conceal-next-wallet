@@ -43,7 +43,14 @@ import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
-import { ccxToNumber, cn, formatCcx, timeAgo, truncateAddress, CCX_PRECISION_DECIMAL_DISPLAY } from "@/lib/utils";
+import {
+  ccxToNumber,
+  cn,
+  formatCcx,
+  timeAgo,
+  truncateAddress,
+  CCX_PRECISION_DECIMAL_DISPLAY,
+} from "@/lib/utils";
 
 const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals", "Messages"];
 const pageSizes = ["10", "25", "50"];
@@ -602,7 +609,9 @@ function TransactionDetailsDialog({
           <div>
             <p className="text-sm text-muted-foreground">Signed Amount</p>
             <p className={cn("mt-1 font-mono text-3xl font-bold", meta.amountClassName)}>
-              <CcxAmount>{formatSignedAmount(transaction, CCX_PRECISION_DECIMAL_DISPLAY)}</CcxAmount>
+              <CcxAmount>
+                {formatSignedAmount(transaction, CCX_PRECISION_DECIMAL_DISPLAY)}
+              </CcxAmount>
             </p>
           </div>
           <StatusPill status={status} />
@@ -703,9 +712,7 @@ function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
       return true;
     case "Received":
       return (
-        effectiveType === "receive" ||
-        effectiveType === "miner" ||
-        effectiveType === "withdrawal"
+        effectiveType === "receive" || effectiveType === "miner" || effectiveType === "withdrawal"
       );
     case "Sent":
       return effectiveType === "send" || effectiveType === "fusion";

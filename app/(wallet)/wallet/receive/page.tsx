@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
+import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { useDeposits, useTransactions, useWalletInfo } from "@/lib/hooks";
 import { CoinUri } from "@/lib/wallet-core/CoinUri";
 import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
@@ -62,6 +63,7 @@ export default function ReceivePage() {
   return (
     <>
       <PageHeader title="Receive CCX" subtitle="Share your address or QR code to receive funds" />
+      <WalletSyncingBanner />
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
