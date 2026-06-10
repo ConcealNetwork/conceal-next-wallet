@@ -342,7 +342,7 @@ export default function SendPage() {
           {review ? (
             <div className="space-y-3 text-sm">
               <Row label="To" value={truncateAddress(review.address, 10, 8)} mono />
-              <Row label="Amount" value={formatCcx(review.amount)} mono />
+              <Row label="Amount" value={formatCcx(review.amount, CCX_PRECISION_DECIMAL_DISPLAY)} mono />
               <Row label="Network fee" value={formatCcx(NETWORK_FEE, 6)} mono />
               <Row label="Remote node fee" value={formatCcx(REMOTE_NODE_FEE, 6)} mono />
               <div className="my-1 border-t border-border" />

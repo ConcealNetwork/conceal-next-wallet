@@ -42,7 +42,7 @@ import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { isUiMessageIn, isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
-import { ccxToNumber, cn, formatCcx, timeAgo, truncateAddress } from "@/lib/utils";
+import { ccxToNumber, cn, formatCcx, timeAgo, truncateAddress, CCX_PRECISION_DECIMAL_DISPLAY } from "@/lib/utils";
 
 const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals"];
 const pageSizes = ["10", "25", "50"];
@@ -568,7 +568,7 @@ function TransactionDetailsDialog({
           <div>
             <p className="text-sm text-muted-foreground">Signed Amount</p>
             <p className={cn("mt-1 font-mono text-3xl font-bold", meta.amountClassName)}>
-              <CcxAmount>{formatSignedAmount(transaction)}</CcxAmount>
+              <CcxAmount>{formatSignedAmount(transaction, CCX_PRECISION_DECIMAL_DISPLAY)}</CcxAmount>
             </p>
           </div>
           <StatusPill status={status} />
@@ -655,11 +655,11 @@ function getTransactionStatus(confirmations: number): TransactionStatus {
   return confirmations >= 10 ? "Confirmed" : "Pending";
 }
 
-function formatSignedAmount(transaction: Transaction) {
+function formatSignedAmount(transaction: Transaction, decimals?: number) {
   const effectiveType = resolveUiTransactionType(transaction);
   const meta = transactionMeta[effectiveType];
   const sign = effectiveType === "message" && isUiMessageOut(transaction) ? "−" : meta.sign;
-  return `${sign}${formatCcx(transaction.amount)}`;
+  return `${sign}${formatCcx(transaction.amount, decimals)}`;
 }
 
 function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
