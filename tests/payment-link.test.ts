@@ -14,7 +14,19 @@ describe("buildPaymentSendUrl", () => {
       origin: "https://wallet.example",
     });
     expect(url).toBe(
-      `https://wallet.example/wallet/send?address=${encodeURIComponent(ADDRESS)}&amount=10&paymentId=abc&message=hi`,
+      `https://wallet.example/wallet/send?address=${encodeURIComponent(ADDRESS)}&amount=10&paymentId=abc&message=b64.aGk`,
+    );
+  });
+
+  it("leaves v3 message out when empty", () => {
+    const url = buildPaymentSendUrl({
+      address: ADDRESS,
+      amount: "10",
+      v1: false,
+      origin: "https://wallet.example",
+    });
+    expect(url).toBe(
+      `https://wallet.example/wallet/send?address=${encodeURIComponent(ADDRESS)}&amount=10`,
     );
   });
 
@@ -44,6 +56,19 @@ describe("parsePaymentSendDraft", () => {
       address: ADDRESS,
       amount: 12.5,
       paymentId: "pid",
+      message: "hello",
+    });
+  });
+
+  it("reads v3 encoded message", () => {
+    const params = new URLSearchParams({
+      address: ADDRESS,
+      amount: "12.5",
+      message: "b64.aGVsbG8",
+    });
+    expect(parsePaymentSendDraft(params.toString())).toEqual({
+      address: ADDRESS,
+      amount: 12.5,
       message: "hello",
     });
   });

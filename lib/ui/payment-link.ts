@@ -1,3 +1,25 @@
+const PAYMENT_MESSAGE_ENC_PREFIX = "b64.";
+
+function encodePaymentMessage(message: string): string {
+  const bytes = new TextEncoder().encode(message);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  const b64 = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `${PAYMENT_MESSAGE_ENC_PREFIX}${b64}`;
+}
+
+function decodePaymentMessage(raw: string): string {
+  if (!raw.startsWith(PAYMENT_MESSAGE_ENC_PREFIX)) return raw;
+  const b64 = raw
+    .slice(PAYMENT_MESSAGE_ENC_PREFIX.length)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 export type PaymentSendDraft = {
   address: string;
   amount: number;
@@ -32,8 +54,9 @@ export function buildPaymentSendUrl(input: PaymentLinkInput): string {
   params.set("amount", input.amount);
   if (input.paymentId?.trim()) params.set("paymentId", input.paymentId.trim());
   if (input.message?.trim()) {
-    if (input.v1) params.set("txDesc", input.message.trim());
-    else params.set("message", input.message.trim());
+    const message = input.message.trim();
+    if (input.v1) params.set("txDesc", message);
+    else params.set("message", encodePaymentMessage(message));
   }
 
   if (input.v1) {
@@ -57,7 +80,8 @@ export function parsePaymentSendDraft(search?: string): PaymentSendDraft | null 
 
   const paymentId =
     params.get("paymentId")?.trim() || params.get("payment_id")?.trim() || undefined;
-  const message = params.get("message")?.trim() || params.get("txDesc")?.trim() || undefined;
+  const messageRaw = params.get("message")?.trim() || params.get("txDesc")?.trim() || undefined;
+  const message = messageRaw ? decodePaymentMessage(messageRaw) : undefined;
 
   return { address, amount, paymentId, message };
 }
