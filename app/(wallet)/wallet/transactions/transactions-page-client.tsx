@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PaginationCarousel } from "@/components/ui/pagination-carousel";
 import {
   Select,
   SelectContent,
@@ -41,10 +42,10 @@ import {
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Transaction, TransactionType } from "@/lib/types";
-import { isUiMessageIn, isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
+import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
 import { ccxToNumber, cn, formatCcx, timeAgo, truncateAddress, CCX_PRECISION_DECIMAL_DISPLAY } from "@/lib/utils";
 
-const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals"];
+const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals", "Messages"];
 const pageSizes = ["10", "25", "50"];
 
 type TransactionStatus = "Confirmed" | "Pending";
@@ -122,7 +123,10 @@ export default function TransactionsPageClient() {
   const [active, setActive] = useState("All");
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState("10");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selected, setSelected] = useState<Transaction | null>(null);
+
+  const size = Number(pageSize);
 
   const filtered = useMemo(() => {
     return data
@@ -145,10 +149,32 @@ export default function TransactionsPageClient() {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [active, data, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / size));
+  const safePage = Math.min(currentPage, totalPages);
+
   const visibleTransactions = useMemo(
-    () => filtered.slice(0, Number(pageSize)),
-    [filtered, pageSize],
+    () => filtered.slice((safePage - 1) * size, safePage * size),
+    [filtered, safePage, size],
   );
+
+  function goToPage(page: number) {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  }
+
+  function handleActiveChange(tab: string) {
+    setActive(tab);
+    setCurrentPage(1);
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setCurrentPage(1);
+  }
+
+  function handlePageSizeChange(value: string) {
+    setPageSize(value);
+    setCurrentPage(1);
+  }
 
   const groupedTransactions = useMemo(() => {
     const groups = new Map<DateGroup, Transaction[]>(dateGroups.map((label) => [label, []]));
@@ -211,20 +237,20 @@ export default function TransactionsPageClient() {
           />
           <Input
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => handleSearchChange(event.target.value)}
             placeholder="Search transactions..."
             className="pl-9"
             aria-label="Search transactions"
           />
         </div>
-        <Select value={pageSize} onValueChange={setPageSize}>
+        <Select value={pageSize} onValueChange={handlePageSizeChange}>
           <SelectTrigger className="md:w-[178px]" aria-label="Transactions per page">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {pageSizes.map((size) => (
-              <SelectItem key={size} value={size}>
-                Show: {size} per page
+            {pageSizes.map((s) => (
+              <SelectItem key={s} value={s}>
+                Show: {s} per page
               </SelectItem>
             ))}
           </SelectContent>
@@ -235,11 +261,11 @@ export default function TransactionsPageClient() {
           title={`${filtered.length} transactions found`}
           description={
             filtered.length > visibleTransactions.length
-              ? `Showing ${visibleTransactions.length} of ${filtered.length}`
+              ? `Page ${safePage} of ${totalPages} · Showing ${visibleTransactions.length} of ${filtered.length}`
               : "Grouped by transaction date"
           }
         >
-          <FilterTabs tabs={tabs} active={active} onChange={setActive} />
+          <FilterTabs tabs={tabs} active={active} onChange={handleActiveChange} />
           <div className="mt-5">
             {groupedTransactions.length > 0 ? (
               <div className="space-y-6">
@@ -262,6 +288,14 @@ export default function TransactionsPageClient() {
           </div>
         </SectionCard>
       </div>
+      {totalPages > 1 && (
+        <PaginationCarousel
+          currentPage={safePage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          ariaLabel="Transaction pages"
+        />
+      )}
       <TransactionDetailsDialog
         transaction={selected}
         onOpenChange={(open) => !open && setSelected(null)}
@@ -671,15 +705,16 @@ function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
       return (
         effectiveType === "receive" ||
         effectiveType === "miner" ||
-        effectiveType === "withdrawal" ||
-        isUiMessageIn(transaction)
+        effectiveType === "withdrawal"
       );
     case "Sent":
-      return effectiveType === "send" || effectiveType === "fusion" || isUiMessageOut(transaction);
+      return effectiveType === "send" || effectiveType === "fusion";
     case "Deposits":
       return transaction.type === "deposit";
     case "Withdrawals":
       return transaction.type === "withdrawal";
+    case "Messages":
+      return effectiveType === "message";
     default:
       return true;
   }
