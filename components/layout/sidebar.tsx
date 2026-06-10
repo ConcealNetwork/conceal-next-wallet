@@ -52,8 +52,8 @@ const mainNav = [
   { href: "/wallet/transactions", label: "Transactions", icon: WalletCards },
   { href: "/wallet/send", label: "Send", icon: Send },
   { href: "/wallet/receive", label: "Receive", icon: QrCode },
-  { href: "/wallet/messages", label: "Messages", icon: Mail },
   { href: "/wallet/deposits", label: "Deposits", icon: Coins },
+  { href: "/wallet/messages", label: "Messages", icon: Mail },
   { href: "/wallet/address-book", label: "Address Book", icon: BookOpen },
 ];
 
