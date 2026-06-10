@@ -12,10 +12,13 @@
 ## Test plan
 
 <!-- How did you verify this? Commands run, scenarios covered. -->
+- [ ] `npm run dev`
+- [ ] `npm run test`
+- [ ] `npm run build` `npx serve ./out/`
 
 ## Checklist
 
-- [ ] `npm run types`, `npm run lint`, and `npm test` pass
+- [ ] `npm run types`, `npm run lint`, `npm run format` and `npm test` pass
 - [ ] `npm run build` succeeds (if the change affects the build)
 - [ ] Service-layer changes update the interface **and** both the mock and real implementations
 - [ ] Docs updated if behavior changed
