@@ -1,6 +1,6 @@
 // @ts-nocheck
 /*
- * Copyright (c) 2018-2025 Conceal Community, Conceal.Network & Conceal Devs
+ * Copyright (c) 2018-2026 Conceal Network, Conceal Devs
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
  *
@@ -36,12 +36,9 @@ declare function logDebugMsg(...args: any[]): void;
 export class InterestCalculator {
   // Constants from C++ implementation
   private static readonly DEPOSIT_MIN_TERM = 5040; // One week
-  private static readonly DEPOSIT_MAX_TERM = 12 * 21900; // One year
   private static readonly DEPOSIT_MAX_TERM_V1 = 64800 * 20; // Five years
   private static readonly DEPOSIT_MIN_TERM_V3 = 21900; // One month
-  private static readonly DEPOSIT_MAX_TERM_V3 = 12 * 21900; // One year
   private static readonly DEPOSIT_HEIGHT_V3 = 413400; // Height when V3 deposit rates were activated
-  private static readonly DEPOSIT_HEIGHT_V4 = 1162162; // Height when deposit terms were enforced
   private static readonly DEPOSIT_MIN_TOTAL_RATE_FACTOR = 0; // Constant rate
   private static readonly DEPOSIT_MAX_TOTAL_RATE = 4; // Legacy deposits
   private static readonly BLOCK_WITH_MISSING_INTEREST = 425799; // Block with special handling

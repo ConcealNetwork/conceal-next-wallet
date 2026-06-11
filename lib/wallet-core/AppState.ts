@@ -66,12 +66,6 @@ export class AppState {
   }
 
   static disconnect() {
-    const wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
-    const walletWorker: WalletWorker = DependencyInjectorInstance().getInstance(
-      WalletWorker.name,
-      "default",
-      false,
-    );
     const walletWatchdog: WalletWatchdog = DependencyInjectorInstance().getInstance(
       WalletWatchdog.name,
       "default",
@@ -128,7 +122,7 @@ export class AppState {
 
           BlockchainExplorerProvider.getInstance()
             .initialize()
-            .then((success) => {
+            .then(() => {
               $("#pageLoading").hide();
 
               setTimeout(() => {
@@ -152,7 +146,7 @@ export class AppState {
                   if (memoryWallet === null) {
                     // Migration and wallet loading logic
                     WalletRepository.migrateWallet()
-                      .then((isSuccess) => {
+                      .then(() => {
                         return WalletRepository.getLocalWalletWithPassword(savePassword);
                       })
                       .then((wallet: Wallet | null) => {

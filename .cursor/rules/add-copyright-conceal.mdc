@@ -1,5 +1,5 @@
 ---
-description: Add Conceal short copyright header when user invokes /add-copyright-conceal
+description: Add Conceal copyright header when user invokes /add-copyright-conceal
 alwaysApply: false
 ---
 
@@ -9,22 +9,25 @@ When the user asks to add copyright (e.g. `/add-copyright-conceal`, `@add-copyri
 
 1. **Target** — the file they named or have open. If unclear, ask once.
 2. **Skip** if the file already contains `Copyright` or `SPDX-License-Identifier` in the first 30 lines.
-3. **Skip** `lib/wallet-core/**` — those files use the legacy full BSD block; never replace or shorten them.
-4. **Insert** this two-line header (year = current calendar year):
+3. **Header by path:**
+   - **`lib/wallet-core/**`** — insert the **legacy full BSD block** (same as ported v1 files such as `Wallet.ts`). Never replace or shorten an existing full block; never use the short two-line header here.
+   - **Everything else** — insert the short two-line header (year = current calendar year):
 
 ```typescript
 // Copyright (c) <YEAR> Conceal Network, Conceal Devs
 // SPDX-License-Identifier: BSD-3-Clause
 ```
 
-5. **Placement** — keep any leading directives on line 1, then the header, then a blank line, then the rest:
+4. **Placement** — keep any leading directives on line 1, then the header, then a blank line, then the rest:
    - `"use client";` or `"use server";` (React)
    - `#!/usr/bin/env …` (scripts)
    - `// @ts-nocheck`
-6. **Prefer the script** when a path is known:
+5. **Prefer the script** when a path is known:
 
 ```bash
 node scripts/add-copyright-conceal.mjs <path>
 ```
 
-7. **Do not** add headers to generated/vendor files: `public/lib/**`, `public/workers/**`, `out/**`, `node_modules/**`, `*.lock`, `*.svg`, `*.png`, `*.ico`.
+The script picks short vs full block automatically from the path.
+
+6. **Do not** add headers to generated/vendor files: `public/lib/**`, `public/workers/**`, `out/**`, `node_modules/**`, `*.lock`, `*.svg`, `*.png`, `*.ico`.

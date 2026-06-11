@@ -553,7 +553,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
     CnUtils2.hex_xor = hex_xor;
     function trimRight(str, char) {
-      while (str[str.length - 1] == char) str = str.slice(0, -1);
+      while (str[str.length - 1] === char) str = str.slice(0, -1);
       return str;
     }
     CnUtils2.trimRight = trimRight;
@@ -614,39 +614,39 @@ var reportError = self.reportError || function (e) { console.error(e); };
     CnUtils2.encode_rct_ecdh = encode_rct_ecdh;
   })(CnUtils || (CnUtils = {}));
   var CnNativeBride;
-  ((CnNativeBride3) => {
+  ((CnNativeBride2) => {
     function sc_reduce32(hex) {
       return concealjs.crypto.sc_reduce32(hex);
     }
-    CnNativeBride3.sc_reduce32 = sc_reduce32;
+    CnNativeBride2.sc_reduce32 = sc_reduce32;
     function derive_secret_key(derivation, out_index, sec) {
       return concealjs.crypto.derive_secret_key(derivation, out_index, sec);
     }
-    CnNativeBride3.derive_secret_key = derive_secret_key;
+    CnNativeBride2.derive_secret_key = derive_secret_key;
     function hash_to_ec(key) {
       return concealjs.crypto.hash_to_ec160(key);
     }
-    CnNativeBride3.hash_to_ec = hash_to_ec;
+    CnNativeBride2.hash_to_ec = hash_to_ec;
     function hash_to_ec_2(key) {
       return concealjs.crypto.hash_to_ec32(key);
     }
-    CnNativeBride3.hash_to_ec_2 = hash_to_ec_2;
+    CnNativeBride2.hash_to_ec_2 = hash_to_ec_2;
     function generate_key_image_2(pub, sec) {
       return concealjs.crypto.generate_key_image(pub, sec);
     }
-    CnNativeBride3.generate_key_image_2 = generate_key_image_2;
+    CnNativeBride2.generate_key_image_2 = generate_key_image_2;
     function sc_add(scalar1, scalar2) {
       return concealjs.crypto.sc_add(scalar1, scalar2);
     }
-    CnNativeBride3.sc_add = sc_add;
+    CnNativeBride2.sc_add = sc_add;
     function sc_sub(scalar1, scalar2) {
       return concealjs.crypto.sc_sub(scalar1, scalar2);
     }
-    CnNativeBride3.sc_sub = sc_sub;
+    CnNativeBride2.sc_sub = sc_sub;
     function sc_mulsub(sigc, sec, k) {
       return concealjs.crypto.sc_mulsub(sigc, sec, k);
     }
-    CnNativeBride3.sc_mulsub = sc_mulsub;
+    CnNativeBride2.sc_mulsub = sc_mulsub;
     function sc_mulsub_bin(sigc_bin, sec_bin, k_bin) {
       return concealjs.crypto.sc_mulsub(
         CnUtils.bintohex(sigc_bin),
@@ -654,7 +654,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         CnUtils.bintohex(k_bin)
       );
     }
-    CnNativeBride3.sc_mulsub_bin = sc_mulsub_bin;
+    CnNativeBride2.sc_mulsub_bin = sc_mulsub_bin;
     function generate_ring_signature(prefix_hash, k_image, keys, sec, real_index) {
       if (k_image.length !== STRUCT_SIZES.KEY_IMAGE * 2) {
         throw "invalid key image length";
@@ -676,7 +676,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         real_index
       );
     }
-    CnNativeBride3.generate_ring_signature = generate_ring_signature;
+    CnNativeBride2.generate_ring_signature = generate_ring_signature;
     function generate_signature(prefixHash, publicKey, secretKey) {
       if (prefixHash.length !== HASH_SIZE * 2 || !CnUtils.valid_hex(prefixHash)) {
         throw new Error("Invalid prefix hash length or format");
@@ -689,15 +689,15 @@ var reportError = self.reportError || function (e) { console.error(e); };
       }
       return concealjs.crypto.generate_signature(prefixHash, publicKey, secretKey);
     }
-    CnNativeBride3.generate_signature = generate_signature;
+    CnNativeBride2.generate_signature = generate_signature;
     function generate_key_derivation(pub, sec) {
       return concealjs.crypto.generate_key_derivation(pub, sec);
     }
-    CnNativeBride3.generate_key_derivation = generate_key_derivation;
+    CnNativeBride2.generate_key_derivation = generate_key_derivation;
     function derive_public_key(derivation, output_idx_in_tx, pubSpend) {
       return concealjs.crypto.derive_public_key(derivation, output_idx_in_tx, pubSpend);
     }
-    CnNativeBride3.derive_public_key = derive_public_key;
+    CnNativeBride2.derive_public_key = derive_public_key;
     function verify_signature(prefixHash, publicKey, signature) {
       if (prefixHash.length !== HASH_SIZE * 2 || !CnUtils.valid_hex(prefixHash)) {
         return false;
@@ -715,7 +715,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return false;
       }
     }
-    CnNativeBride3.verify_signature = verify_signature;
+    CnNativeBride2.verify_signature = verify_signature;
     function checkTxProof(prefixHash, R, A, D, sig) {
       if (prefixHash.length !== HASH_SIZE * 2 || !CnUtils.valid_hex(prefixHash)) {
         return false;
@@ -739,7 +739,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return false;
       }
     }
-    CnNativeBride3.checkTxProof = checkTxProof;
+    CnNativeBride2.checkTxProof = checkTxProof;
   })(CnNativeBride || (CnNativeBride = {}));
   var Cn;
   ((Cn2) => {
@@ -963,29 +963,28 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return C;
     }
     CnTransactions2.zeroCommit = zeroCommit;
-    function decodeRctSimple(rv, sk, i, mask, hwdev = null) {
+    function decodeRctSimple(rv, sk, i) {
       const ecdh_info = CnUtils.decode_rct_ecdh(rv.ecdhInfo[i], sk);
       const amount = ecdh_info.amount;
-      const C = rv.outPk[i].mask;
       return CnUtils.h2d(amount);
     }
     CnTransactions2.decodeRctSimple = decodeRctSimple;
-    function decode_ringct(rv, pub, sec, i, mask, amount, derivation) {
+    function decode_ringct(rv, pub, sec, i, amount, derivation) {
       if (derivation === null) derivation = CnNativeBride.generate_key_derivation(pub, sec);
       const scalar1 = CnUtils.derivation_to_scalar(derivation, i);
       try {
         switch (rv.type) {
           case 2 /* Simple */:
-            amount = CnTransactions2.decodeRctSimple(rv, scalar1, i, mask);
+            amount = CnTransactions2.decodeRctSimple(rv, scalar1, i);
             break;
           case 1 /* Full */:
-            amount = CnTransactions2.decodeRctSimple(rv, scalar1, i, mask);
+            amount = CnTransactions2.decodeRctSimple(rv, scalar1, i);
             break;
           case 4 /* SimpleBulletproof */:
-            amount = CnTransactions2.decodeRctSimple(rv, scalar1, i, mask);
+            amount = CnTransactions2.decodeRctSimple(rv, scalar1, i);
             break;
           case 3 /* FullBulletproof */:
-            amount = CnTransactions2.decodeRctSimple(rv, scalar1, i, mask);
+            amount = CnTransactions2.decodeRctSimple(rv, scalar1, i);
             break;
           default:
             logDebugMsg("Unsupported rc type", rv.type);
@@ -1338,7 +1337,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return bb;
     }
     CnTransactions2.genBorromean = genBorromean;
-    function proveRange(commitMaskObj, amount, nrings, enc_seed, exponent) {
+    function proveRange(commitMaskObj, amount, nrings) {
       const size = 2;
       let C = CnVars.I;
       let mask = CnVars.Z;
@@ -1421,7 +1420,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (i === 0) {
         rv.cc = c_old;
       }
-      while (i != index) {
+      while (i !== index) {
         rv.ss[i][0] = CnRandom.random_scalar();
         rv.ss[i][1] = CnRandom.random_scalar();
         toHash[1] = pk[i][0];
@@ -1494,7 +1493,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     function serializeRangeProofsClassic(rv) {
       let buf = "";
       const p = rv.p;
-      if (p && p.rangeSigs.length)
+      if (p?.rangeSigs.length)
         for (let i = 0; i < p.rangeSigs.length; i++) {
           for (let j = 0; j < p.rangeSigs[i].bsig.s.length; j++) {
             for (let l = 0; l < p.rangeSigs[i].bsig.s[j].length; l++) {
@@ -1573,10 +1572,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (p) {
         const nrings = 64;
         for (let i = 0; i < outAmounts.length; i++) {
-          const teststart = (/* @__PURE__ */ new Date()).getTime();
-          if (!bulletproof)
-            p.rangeSigs[i] = CnTransactions2.proveRange(cmObj, outAmounts[i], nrings, 0, 0);
-          const testfinish = (/* @__PURE__ */ new Date()).getTime() - teststart;
+          const teststart = Date.now();
+          if (!bulletproof) p.rangeSigs[i] = CnTransactions2.proveRange(cmObj, outAmounts[i], nrings);
+          const testfinish = Date.now() - teststart;
           logDebugMsg("Time take for range proof " + i + ": " + testfinish);
           rv.outPk[i] = cmObj.C;
           sumout = CnNativeBride.sc_add(sumout, cmObj.mask);
@@ -1635,7 +1633,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return rv;
     }
     CnTransactions2.genRct = genRct;
-    function construct_tx(keys, sources, dsts, senderAddress, fee_amount, payment_id, pid_encrypt, realDestViewKey, unlock_time = 0, rct, message, messageTo, ttl, transactionType, term) {
+    function construct_tx(keys, sources, dsts, _senderAddress, fee_amount, payment_id, pid_encrypt, realDestViewKey, unlock_time = 0, rct, message, messageTo, ttl, transactionType, term) {
       try {
         console.log("Starting transaction construction...");
         const txkey = Cn.random_keypair();
@@ -1772,7 +1770,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
         }
         logDebugMsg("Destinations resume:", unique_dst_addresses, num_stdaddresses, num_subaddresses);
-        if (num_stdaddresses == 0 && num_subaddresses == 1) {
+        if (num_stdaddresses === 0 && num_subaddresses === 1) {
           const uniqueSubaddressDecoded = Cn.decode_address(single_dest_subaddress);
           txkey.pub = CnUtils.ge_scalarmult(uniqueSubaddressDecoded.spend, txkey.sec);
         }
@@ -1804,7 +1802,6 @@ var reportError = self.reportError || function (e) { console.error(e); };
             amountKeys.push(CnUtils.derivation_to_scalar(out_derivation, out_index));
           }
           let out_ephemeral_pub = Cn.derive_public_key(out_derivation, out_index, destKeys.spend);
-          let out;
           if (transactionType === "deposit" && i === 0) {
             const depositOut = {
               amount: dsts[i].amount,
@@ -1824,7 +1821,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             ++i;
             out_ephemeral_pub = Cn.derive_public_key(out_derivation, out_index, destKeys.spend);
           }
-          out = {
+          const out = {
             amount: dsts[i].amount,
             target: {
               type: "txout_to_key",
@@ -1996,7 +1993,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       }
     }
     CnTransactions2.construct_tx = construct_tx;
-    function create_transaction(pub_keys, sec_keys, dsts, senderAddress, outputs, mix_outs = [], fake_outputs_count, fee_amount, payment_id, pid_encrypt, realDestViewKey, unlock_time = 0, rct, message, messageTo, ttl, transactionType, term) {
+    function create_transaction(pub_keys, sec_keys, dsts, _senderAddress, outputs, mix_outs = [], fake_outputs_count, fee_amount, payment_id, pid_encrypt, realDestViewKey, unlock_time = 0, rct, message, messageTo, ttl, transactionType, term) {
       let i, j;
       if (dsts.length === 0) {
         throw "Destinations empty";
@@ -2154,7 +2151,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         keys,
         sources,
         dsts,
-        senderAddress,
+        _senderAddress,
         fee_amount,
         payment_id,
         pid_encrypt,
@@ -2401,7 +2398,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return amount;
       };
       this.isCoinbase = () => {
-        return this.outs.length == 1 && this.outs[0].rtcAmount === "";
+        return this.outs.length === 1 && this.outs[0].rtcAmount === "";
       };
       this.isConfirmed = (blockchainHeight) => {
         if (this.blockHeight === 0) {
@@ -2783,18 +2780,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
   // Constants from C++ implementation
   _InterestCalculator.DEPOSIT_MIN_TERM = 5040;
   // One week
-  _InterestCalculator.DEPOSIT_MAX_TERM = 12 * 21900;
-  // One year
   _InterestCalculator.DEPOSIT_MAX_TERM_V1 = 64800 * 20;
   // Five years
   _InterestCalculator.DEPOSIT_MIN_TERM_V3 = 21900;
   // One month
-  _InterestCalculator.DEPOSIT_MAX_TERM_V3 = 12 * 21900;
-  // One year
   _InterestCalculator.DEPOSIT_HEIGHT_V3 = 413400;
   // Height when V3 deposit rates were activated
-  _InterestCalculator.DEPOSIT_HEIGHT_V4 = 1162162;
-  // Height when deposit terms were enforced
   _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR = 0;
   // Constant rate
   _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE = 4;
@@ -2893,7 +2884,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       }
       try {
         return rawTransaction.vout[0].amount !== 0;
-      } catch (err) {
+      } catch {
         return false;
       }
     }
@@ -2905,9 +2896,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
         const vout = {
           type: out.target.type
         };
-        if (out.target.type == "02" && typeof txout_k.key !== "undefined") {
+        if (out.target.type === "02" && typeof txout_k.key !== "undefined") {
           vout.key = txout_k.key;
-        } else if (out.target.type == "03" && typeof txout_k.keys !== "undefined") {
+        } else if (out.target.type === "03" && typeof txout_k.keys !== "undefined") {
           vout.keys = txout_k.keys;
         }
         vouts.push(vout);
@@ -3033,7 +3024,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       decryptedMessage = new TextDecoder().decode(_buf);
       mlen -= TX_EXTRA_MESSAGE_CHECKSUM_SIZE;
       for (let i = 0; i < TX_EXTRA_MESSAGE_CHECKSUM_SIZE; i++) {
-        if (_buf[mlen + i] != 0) {
+        if (_buf[mlen + i] !== 0) {
           return null;
         }
       }
@@ -3132,11 +3123,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
           wallet.keys.pub.spend
         );
         let mine_output = false;
-        if (out.target.type == "02" && typeof txout_k.key !== "undefined") {
-          mine_output = txout_k.key == generated_tx_pubkey;
-        } else if (out.target.type == "03" && typeof txout_k.keys !== "undefined") {
+        if (out.target.type === "02" && typeof txout_k.key !== "undefined") {
+          mine_output = txout_k.key === generated_tx_pubkey;
+        } else if (out.target.type === "03" && typeof txout_k.keys !== "undefined") {
           for (let iKey = 0; iKey < txout_k.keys.length; iKey++) {
-            if (txout_k.keys[iKey] == generated_tx_pubkey) {
+            if (txout_k.keys[iKey] === generated_tx_pubkey) {
               mine_output = true;
             }
           }
@@ -3147,13 +3138,13 @@ var reportError = self.reportError || function (e) { console.error(e); };
             transactionOut.globalIndex = rawTransaction.output_indexes[output_idx_in_tx];
           else transactionOut.globalIndex = output_idx_in_tx;
           transactionOut.amount = amount;
-          if (out.target.type == "02" && typeof txout_k.key !== "undefined") {
+          if (out.target.type === "02" && typeof txout_k.key !== "undefined") {
             transactionOut.pubKey = txout_k.key;
             transactionOut.type = "02";
-          } else if (out.target.type == "03" && typeof txout_k.keys !== "undefined") {
+          } else if (out.target.type === "03" && typeof txout_k.keys !== "undefined") {
             transactionOut.pubKey = generated_tx_pubkey;
             transactionOut.type = "03";
-            if (out.target.data && out.target.data.term) {
+            if (out.target.data?.term) {
               const deposit = new Deposit();
               if (typeof rawTransaction.height !== "undefined")
                 deposit.blockHeight = rawTransaction.height;
@@ -3202,27 +3193,27 @@ var reportError = self.reportError || function (e) { console.error(e); };
         for (let iIn = 0; iIn < rawTransaction.vin.length; ++iIn) {
           const vin = rawTransaction.vin[iIn];
           let wasAdded = false;
-          if (vin.value && vin.value.k_image && keyImages.indexOf(vin.value.k_image) !== -1) {
+          if (vin.value?.k_image && keyImages.indexOf(vin.value.k_image) !== -1) {
             const walletOuts = wallet.getAllOuts();
             for (const ut of walletOuts) {
               if (wasAdded) {
                 console.log(ut.keyImage, "=", vin.value.k_image);
               }
-              if (ut.keyImage == vin.value.k_image) {
+              if (ut.keyImage === vin.value.k_image) {
                 const transactionIn = new TransactionIn();
                 transactionIn.amount = ut.amount;
                 transactionIn.keyImage = ut.keyImage;
-                if (vin.type == "03") {
-                  if (vin.value && vin.value.term) {
+                if (vin.type === "03") {
+                  if (vin.value?.term) {
                     const withdrawal = new Deposit();
-                    withdrawal.globalOutputIndex = vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
+                    withdrawal.globalOutputIndex = vin.value?.outputIndex ? vin.value.outputIndex : 0;
                     if (typeof rawTransaction.height !== "undefined")
                       withdrawal.blockHeight = rawTransaction.height;
                     if (typeof rawTransaction.hash !== "undefined")
                       withdrawal.txHash = rawTransaction.hash;
                     if (typeof rawTransaction.ts !== "undefined")
                       withdrawal.timestamp = rawTransaction.ts;
-                    withdrawal.term = vin.value && vin.value.term ? vin.value.term : 0;
+                    withdrawal.term = vin.value?.term ? vin.value.term : 0;
                     withdrawal.amount = transactionIn.amount;
                     withdrawals.push(withdrawal);
                     wasAdded = true;
@@ -3233,11 +3224,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
               }
             }
           }
-          if (!wasAdded && vin.type == "03") {
+          if (!wasAdded && vin.type === "03") {
             const transactionIn = new TransactionIn();
             transactionIn.type = "03";
-            transactionIn.term = vin.value && vin.value.term ? vin.value.term : 0;
-            if (vin.value && vin.value.amount) {
+            transactionIn.term = vin.value?.term ? vin.value.term : 0;
+            if (vin.value?.amount) {
               transactionIn.amount = parseInt(vin.value.amount);
             }
             ins.push(transactionIn);
@@ -3246,9 +3237,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
             if (typeof rawTransaction.hash !== "undefined") withdrawal.txHash = rawTransaction.hash;
             if (typeof rawTransaction.height !== "undefined")
               withdrawal.blockHeight = rawTransaction.height;
-            if (vin.value && vin.value.amount) withdrawal.amount = parseInt(vin.value?.amount);
-            withdrawal.globalOutputIndex = vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
-            withdrawal.term = vin.value && vin.value.term ? vin.value.term : 0;
+            if (vin.value?.amount) withdrawal.amount = parseInt(vin.value.amount);
+            withdrawal.globalOutputIndex = vin.value?.outputIndex ? vin.value.outputIndex : 0;
+            withdrawal.term = vin.value?.term ? vin.value.term : 0;
             withdrawals.push(withdrawal);
             wasAdded = true;
           }
@@ -3275,8 +3266,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
               const transactionIn = new TransactionIn();
               transactionIn.amount = -txOut.amount;
               transactionIn.keyImage = txOut.keyImage;
-              if (vin.type == "03") {
-                if (vin.value && vin.value.term) {
+              if (vin.type === "03") {
+                if (vin.value?.term) {
                 }
               }
               ins.push(transactionIn);
@@ -3305,7 +3296,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         } else {
           transaction.fees = rawTransaction.fee;
         }
-        transaction.fusion = rawTransaction.vin.length > Currency.fusionTxMinInputCount && rawTransaction.vout.length <= config.maxFusionOutputs && rawTransaction.vin.length / rawTransaction.vout.length > config.fusionTxMinInOutCountRatio && rawTransaction.vin.some((vin) => vin.type != "03") && rawTransaction.vout.some((vout) => vout.target.type != "03") && (transaction.fees === 0 || transaction.fees === parseInt(config.minimumFee_V2));
+        transaction.fusion = rawTransaction.vin.length > Currency.fusionTxMinInputCount && rawTransaction.vout.length <= config.maxFusionOutputs && rawTransaction.vin.length / rawTransaction.vout.length > config.fusionTxMinInOutCountRatio && rawTransaction.vin.some((vin) => vin.type !== "03") && rawTransaction.vout.some((vout) => vout.target.type !== "03") && (transaction.fees === 0 || transaction.fees === parseInt(config.minimumFee_V2));
         transaction.minerReward = _TransactionsExplorer.isMinerTx(rawTransaction);
         transaction.outs = outs;
         transaction.ins = ins;
@@ -3563,7 +3554,6 @@ var reportError = self.reportError || function (e) { console.error(e); };
         const totalInterest = deposit.interest;
         const totalAmount = lockedAmount + totalInterest;
         const pid_encrypt = false;
-        const paymentId2 = "";
         if (deposit.unlockHeight > blockchainHeight) {
           reject(new Error("Deposit is still locked"));
           return;
@@ -3622,11 +3612,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
               lotsMixOuts,
               mixin,
               neededFee,
-              paymentId2,
+              paymentId,
               message,
               ttl,
-              "withdraw",
-              deposit.term
+              transactionType,
+              term
             ).then(
               (data) => {
                 resolve(data);
@@ -3736,7 +3726,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
           if (!globalIndexCounts.has(mixout.global_index)) {
             globalIndexCounts.set(mixout.global_index, []);
           }
-          globalIndexCounts.get(mixout.global_index).push(i);
+          const bucket = globalIndexCounts.get(mixout.global_index);
+          if (bucket) bucket.push(i);
         }
       }
       for (const [globalIndex, objectIndices] of Array.from(globalIndexCounts.entries())) {
@@ -4149,7 +4140,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         if (previous.remoteAddress && !next.remoteAddress) next.remoteAddress = previous.remoteAddress;
         if (previous.paymentId && !next.paymentId) next.paymentId = previous.paymentId;
       };
-      this.getAll = (forceReload = false) => {
+      this.getAll = (_forceReload = false) => {
         return this.transactions.slice();
       };
       this.getAllOuts = () => {
@@ -4187,7 +4178,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
               transaction.messageViewed = existMem.messageViewed || transaction.messageViewed;
               this.preserveMessageTransactionMeta(transaction, existMem);
               const trIndex = this.txsMem.indexOf(existMem);
-              if (trIndex != -1) {
+              if (trIndex !== -1) {
                 this.txsMem.splice(trIndex, 1);
               }
             }
@@ -4220,7 +4211,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
       this.addDeposit = (deposit) => {
         let foundMatch = false;
         for (let i = 0; i < this.deposits.length; ++i) {
-          if (this.deposits[i].txHash == deposit.txHash) {
+          if (this.deposits[i].txHash === deposit.txHash) {
             this.deposits[i] = deposit;
             foundMatch = true;
             break;
@@ -4471,7 +4462,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         };
       };
       // Returns the deposit with the earliest unlock date (not spent)
-      this.earliestUnlockableDeposit = (currHeight) => {
+      this.earliestUnlockableDeposit = (_currHeight) => {
         let earliest = null;
         for (const deposit of this.deposits) {
           if (deposit.isSpent()) continue;
@@ -4504,7 +4495,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
               let derivation = "";
               try {
                 derivation = concealjs.crypto.generate_key_derivation(tx.txPubKey, this.keys.priv.view);
-              } catch (e) {
+              } catch {
                 continue;
               }
               for (const out of tx.outs) {
@@ -4533,10 +4524,10 @@ var reportError = self.reportError || function (e) { console.error(e); };
             for (let iIn = 0; iIn < this.transactions[iTx].ins.length; ++iIn) {
               const vin = this.transactions[iTx].ins[iIn];
               if (vin.amount < 0) {
-                if (this.keyImages.indexOf(vin.keyImage) != -1) {
+                if (this.keyImages.indexOf(vin.keyImage) !== -1) {
                   const walletOuts = this.getAllOuts();
                   for (const ut of walletOuts) {
-                    if (ut.keyImage == vin.keyImage) {
+                    if (ut.keyImage === vin.keyImage) {
                       this.transactions[iTx].ins[iIn].amount = ut.amount;
                       this.transactions[iTx].ins[iIn].keyImage = ut.keyImage;
                       this.signalChanged();

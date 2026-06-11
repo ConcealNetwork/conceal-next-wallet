@@ -26,7 +26,7 @@ import { AppState } from "./AppState";
 import { DependencyInjectorInstance } from "./numbersLab/DependencyInjector";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import { WalletWatchdog } from "./WalletWatchdog";
-import { type Transaction, TransactionIn } from "./Transaction";
+import type { Transaction } from "./Transaction";
 
 const blockchainExplorer: BlockchainExplorer = BlockchainExplorerProvider.getInstance();
 
@@ -90,8 +90,6 @@ export class Api {
   importWalletFromMnemonic(mnemonicPhrase: string, language: string = "auto", password: string) {
     const self = this;
     blockchainExplorer.getHeight().then((currentHeight) => {
-      const newWallet = new Wallet();
-
       const mnemonic = mnemonicPhrase.trim();
       // let current_lang = 'english';
       let current_lang = "english";
@@ -162,7 +160,6 @@ export class Api {
   // Maybe pass wallet as a pararm? To be define later after testing
   //	send(wallet: Wallet, amountToSend: string, destinationAddress: string, paymentId: string) {
   send(amountToSend: string, destinationAddress: string, paymentId: string) {
-    const self = this;
     const wallet: Wallet = DependencyInjectorInstance().getInstance(Wallet.name, "default", false);
 
     blockchainExplorer.getHeight().then((blockchainHeight: number) => {
@@ -193,7 +190,7 @@ export class Api {
               throw "Amount higher than the funds";
             }
 
-            return new Promise<void>((resolve, reject) => {});
+            return new Promise<void>(() => {});
           },
           mixinToSendWith,
         )
@@ -231,7 +228,6 @@ export class Api {
   }
 
   refresh(callback: any) {
-    const self = this;
     blockchainExplorer.getHeight().then((height: number) => {
       callback(height);
     });

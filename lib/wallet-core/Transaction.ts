@@ -244,7 +244,7 @@ export class Transaction {
   };
 
   isCoinbase = () => {
-    return this.outs.length == 1 && this.outs[0].rtcAmount === "";
+    return this.outs.length === 1 && this.outs[0].rtcAmount === "";
   };
 
   isConfirmed = (blockchainHeight: number) => {
