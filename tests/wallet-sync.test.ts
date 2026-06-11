@@ -9,6 +9,7 @@ function walletInfo(overrides: Partial<WalletInfo> = {}): WalletInfo {
     address: "ccx7test",
     balanceTotal: zero,
     available: zero,
+    dust: zero,
     pending: zero,
     lockedDeposits: zero,
     withdrawable: zero,

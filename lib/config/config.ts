@@ -21,6 +21,8 @@ export const AVG_BLOCK_TIME_SECONDS = walletNetworkScalars.avgBlockTime;
 export const MAX_MESSAGE_SIZE = walletNetworkScalars.maxMessageSize;
 export const MAX_TTL_MINUTES = walletNetworkScalars.cryptonoteMemPoolTxLifetimeSeconds / 60;
 export const MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars.messageTxAmountAtomic;
+/** Mirrors conceal-core DEFAULT_DUST_THRESHOLD. Outputs strictly below this atomic value are dust — excluded from regular tx inputs. */
+export const DUST_THRESHOLD_ATOMIC = walletNetworkScalars.defaultDustThresholdAtomic;
 /** Sent message tx amount (remote node fee returned to wallet). */
 export const SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE_NODE_FEE_ATOMIC;
 /** Sent message tx amount (remote node operator fee paid). */
@@ -98,7 +100,7 @@ export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
     minimumFee_V2: new JSBigInt(String(s.minimumFeeV2Atomic)),
     remoteNodeFee: new JSBigInt(String(s.remoteNodeFeeAtomic)),
     feePerKB: new JSBigInt(String(s.feePerKBAtomic)),
-    dustThreshold: new JSBigInt(String(s.dustThresholdAtomic)),
+    dustThreshold: new JSBigInt(String(s.defaultDustThresholdAtomic)),
     defaultMixin: 5,
     optimizeOutputs: 100,
     optimizeThreshold: 900000000,

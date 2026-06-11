@@ -2185,6 +2185,10 @@ var reportError = self.reportError || function (e) { console.error(e); };
   var CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE = 1e5;
   var Currency = class {
   };
+  /**
+   @returns true if the amount is dust
+   */
+  Currency.isDustOutput = (amount) => amount > 0 && amount < Number(config.dustThreshold);
   //Fusion
   Currency.fusionTxMaxSize = CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE * 30 / 100;
   Currency.fusionTxMinInputCount = 12;
@@ -3460,7 +3464,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         );
         const usingOuts = [];
         let usingOuts_amount = new JSBigInt(0);
-        const unusedOuts = unspentOuts.slice(0);
+        const unusedOuts = unspentOuts.filter((out) => out.amount > Number(config.dustThreshold));
         const totalAmount = totalAmountWithoutFee.add(neededFee);
         function pop_random_value(list) {
           const idx = Math.floor(MathUtil.randomFloat() * list.length);
@@ -3756,7 +3760,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
     minimumFeeV2Atomic: 1e3,
     remoteNodeFeeAtomic: 1e4,
     feePerKBAtomic: 1e3,
-    dustThresholdAtomic: 10,
+    defaultDustThresholdAtomic: 10,
     messageTxAmountAtomic: 100,
     depositMinAmountCoin: 1,
     depositMinTermMonth: 1,
@@ -3781,6 +3785,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
   var MAX_MESSAGE_SIZE = walletNetworkScalars2.maxMessageSize;
   var MAX_TTL_MINUTES = walletNetworkScalars2.cryptonoteMemPoolTxLifetimeSeconds / 60;
   var MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars2.messageTxAmountAtomic;
+  var DUST_THRESHOLD_ATOMIC = walletNetworkScalars2.defaultDustThresholdAtomic;
   var SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE_NODE_FEE_ATOMIC;
   var SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
 
@@ -4414,6 +4419,19 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
         }
         return amount;
+      };
+      /**
+       * @returns the total atomic value of all confirmed unspent dust outputs.
+       * Mirrors conceal-core WalletGreen::getDustBalance(): sum of unlocked outputs where amount < defaultDustThreshold().
+       * These outputs are excluded from regular tx input selection and shown separately in the UI as "unspendable" until a fusion (mixin=0) is implemented.
+       */
+      this.dustAmount = (currentBlockHeight = -1) => {
+        const scanHeight = currentBlockHeight === -1 ? Math.max(0, Number(this.lastHeight)) : currentBlockHeight;
+        const unspentOuts = TransactionsExplorer.formatWalletOutsForTx(this, scanHeight);
+        return unspentOuts.reduce(
+          (sum, out) => Currency.isDustOutput(out.amount) ? sum + out.amount : sum,
+          0
+        );
       };
       this.lockedDeposits = (currHeight) => {
         let amount = 0;

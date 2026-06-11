@@ -63,7 +63,7 @@ myGlobal.config = {
     minimumFee_V2: new JSBigInt('${s.minimumFeeV2Atomic}'),
     remoteNodeFee: new JSBigInt('${s.remoteNodeFeeAtomic}'),
     feePerKB: new JSBigInt('${s.feePerKBAtomic}'),
-    dustThreshold: new JSBigInt('${s.dustThresholdAtomic}'),
+    dustThreshold: new JSBigInt('${s.defaultDustThresholdAtomic}'),
     defaultMixin: 5,
     optimizeOutputs: 100,
     optimizeThreshold: 900000000,

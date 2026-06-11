@@ -23,6 +23,7 @@ export const mockWalletInfo: WalletInfo = {
   address: MOCK_ADDRESS,
   balanceTotal: ccxAmount(1250.5),
   available: ccxAmount(634.75),
+  dust: { atomic: 45 }, // 0.000045 CCX — e.g. 1+2+…+9 atomic (< DEFAULT_DUST_THRESHOLD)
   pending: ccxAmount(15.75),
   lockedDeposits: ccxAmount(500),
   withdrawable: ccxAmount(734.75),
