@@ -1,6 +1,6 @@
 // @ts-nocheck
 /*
- * Copyright (c) 2025 Conceal Community, Conceal.Network & Conceal Devs
+ * Copyright (c) 2018 - 2026 Conceal Community, Conceal.Network & Conceal Devs
  *
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
  *
@@ -30,6 +30,12 @@ const TRANSACTION_UNLOCK_TIME_SIZE = 8; // sizeof(uint64_t)
 const CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE = 100000;
 
 export class Currency {
+  /**
+   @returns true if the amount is dust
+   */
+  public static isDustOutput = (amount: number): boolean =>
+    amount > 0 && amount < Number(config.dustThreshold);
+
   //Fusion
   public static fusionTxMaxSize = (CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE * 30) / 100;
   public static fusionTxMinInputCount = 12; // 12 is the default value in C++

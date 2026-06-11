@@ -10,6 +10,7 @@ export type WalletInfo = {
   address: string;
   balanceTotal: CcxAmount;
   available: CcxAmount;
+  dust: CcxAmount;
   pending: CcxAmount;
   lockedDeposits: CcxAmount;
   withdrawable: CcxAmount;

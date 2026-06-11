@@ -982,7 +982,7 @@ export class TransactionsExplorer {
 
       const usingOuts: RawOutForTx[] = [];
       let usingOuts_amount = new JSBigInt(0);
-      const unusedOuts = unspentOuts.slice(0);
+      const unusedOuts = unspentOuts.filter((out) => out.amount > Number(config.dustThreshold));
 
       const totalAmount = totalAmountWithoutFee.add(neededFee); /*.add(chargeAmount)*/
       //selecting outputs to fit the desired amount (totalAmount);

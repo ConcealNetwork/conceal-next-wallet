@@ -72,15 +72,18 @@ function resolveWalletForMapping(wallet: Wallet): Wallet {
 export function mapWalletToInfo(wallet: Wallet, networkHeight: number): WalletInfo {
   const w = resolveWalletForMapping(wallet);
   const walletHeight = Math.max(0, Number(w.lastHeight));
-  const available = w.availableAmount(networkHeight);
+  const gross = w.availableAmount(networkHeight);
+  const dust = w.dustAmount(networkHeight);
+  const available = Math.max(0, gross - dust);
   const locked = w.lockedDeposits(networkHeight);
   const withdrawable = w.unlockedDeposits(networkHeight);
-  const pending = Math.max(0, w.availableAmount(-1) - available);
+  const pending = Math.max(0, w.availableAmount(-1) - gross);
 
   return {
     address: w.getPublicAddress(),
-    balanceTotal: { atomic: available + locked },
+    balanceTotal: { atomic: gross + locked },
     available: { atomic: available },
+    dust: { atomic: dust },
     pending: { atomic: pending },
     lockedDeposits: { atomic: locked },
     withdrawable: { atomic: withdrawable },

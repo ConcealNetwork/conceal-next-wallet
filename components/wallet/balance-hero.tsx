@@ -7,6 +7,7 @@ import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
 import {
   ccxToNumber,
+  CCX_HUMAIN_DECIMAL_DISPLAY,
   CCX_PRECISION_DECIMAL_DISPLAY,
   cn,
   formatCcx,
@@ -29,13 +30,17 @@ type Segment = {
   dotClassName: string;
   barClassName: string;
   note: string;
+  /** Full precision for dust; default human decimals elsewhere. */
+  valueDecimals?: number;
+  valueClassName?: string;
 };
 
-const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Withdrawable"] as const;
+const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Withdrawable", "Dust"] as const;
 
 export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
   const [availableHovered, setAvailableHovered] = useState(false);
   const available = ccxToNumber(wallet.available);
+  const dust = ccxToNumber(wallet.dust);
   const total = ccxToNumber(wallet.balanceTotal);
   const pending = ccxToNumber(wallet.pending);
   const locked = ccxToNumber(wallet.lockedDeposits);
@@ -87,6 +92,16 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
       dotClassName: "bg-wallet-incoming",
       barClassName: "bg-wallet-incoming",
       note: withdrawable > 0 ? "ready to claim" : "no matured deposits",
+    },
+    {
+      label: "Dust",
+      value: dust,
+      pct: getPct(dust, total),
+      dotClassName: "bg-muted-foreground/50",
+      barClassName: "bg-muted-foreground/40",
+      note: "un-mixable",
+      valueDecimals: CCX_PRECISION_DECIMAL_DISPLAY,
+      valueClassName: "text-sm text-muted-foreground",
     },
   ];
 
@@ -150,7 +165,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
           .
         </p>
 
-        <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-5">
           {segments.map((segment) => (
             <div key={segment.label} className="min-w-0">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -160,8 +175,15 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
                 />
                 <span>{segment.label}</span>
               </div>
-              <p className="mt-2 truncate font-mono text-lg font-bold text-white">
-                {stripTickerSuffix(formatCcx(segment.value))}
+              <p
+                className={cn(
+                  "mt-2 truncate font-mono text-lg font-bold text-white",
+                  segment.valueClassName,
+                )}
+              >
+                {stripTickerSuffix(
+                  formatCcx(segment.value, segment.valueDecimals ?? CCX_HUMAIN_DECIMAL_DISPLAY),
+                )}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{segment.note}</p>
             </div>
@@ -188,7 +210,7 @@ export function BalanceHeroSkeleton() {
           </div>
         </div>
         <Skeleton className="mt-6 h-3.5 w-full rounded-full" />
-        <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-5">
           {BALANCE_SEGMENT_LABELS.map((segmentLabel) => (
             <div key={segmentLabel} className="space-y-2">
               <Skeleton className="h-4 w-24" />

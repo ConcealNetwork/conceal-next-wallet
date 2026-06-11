@@ -808,6 +808,21 @@ export class Wallet extends Observable {
     return amount;
   };
 
+  /**
+   * @returns the total atomic value of all confirmed unspent dust outputs.
+   * Mirrors conceal-core WalletGreen::getDustBalance(): sum of unlocked outputs where amount < defaultDustThreshold().
+   * These outputs are excluded from regular tx input selection and shown separately in the UI as "unspendable" until a fusion (mixin=0) is implemented.
+   */
+  dustAmount = (currentBlockHeight: number = -1): number => {
+    const scanHeight =
+      currentBlockHeight === -1 ? Math.max(0, Number(this.lastHeight)) : currentBlockHeight;
+    const unspentOuts = TransactionsExplorer.formatWalletOutsForTx(this, scanHeight);
+    return unspentOuts.reduce(
+      (sum, out) => (Currency.isDustOutput(out.amount) ? sum + out.amount : sum),
+      0,
+    );
+  };
+
   lockedDeposits = (currHeight: number): number => {
     let amount = 0;
     for (const deposit of this.deposits) {
