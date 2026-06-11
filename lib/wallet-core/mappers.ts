@@ -93,13 +93,17 @@ function txHasMessage(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): b
 /** Incoming message: has message + 100 atomic to recipient. */
 export function isMessageIn(tx: CoreTransaction): boolean {
   if (!tx.message) return false;
-  return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC;
+  // Must be received (positive amount) — TTL sent messages also net to 100 from sender side.
+  return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC && tx.getAmount() > 0;
 }
 
 /** Outgoing message: has message + envelope amount (10100 / 11100 atomic). */
 export function isMessageOut(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
   if (!txHasMessage(tx, sentRecord)) return false;
-  return isSentMessageAmount(getTxAmount(tx));
+  if (isSentMessageAmount(getTxAmount(tx))) return true;
+  // TTL messages carry no operator fee, so the sender's net is −MESSAGE_TX_AMOUNT_ATOMIC (100).
+  if (tx.ttl > 0 && tx.getAmount() < 0 && getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC) return true;
+  return false;
 }
 
 /** Miner reward — TransactionsExplorer.isMinerTx (chain coinbase: no vin). Not same as isCoinbase(). */
@@ -116,8 +120,11 @@ export function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amou
   return Math.abs(transaction.amount.atomic) === MESSAGE_TX_AMOUNT_ATOMIC;
 }
 
-export function isUiMessageOut(transaction: Pick<UiTransaction, "message" | "amount">): boolean {
+export function isUiMessageOut(
+  transaction: Pick<UiTransaction, "message" | "amount" | "outgoing">,
+): boolean {
   if (!transaction.message) return false;
+  if (transaction.outgoing) return true;
   return isSentMessageAmount(Math.abs(transaction.amount.atomic));
 }
 
@@ -197,11 +204,14 @@ export function mapCoreTransaction(
 
 export function listWalletTransactions(wallet: Wallet, blockchainHeight: number): UiTransaction[] {
   const address = wallet.getPublicAddress();
-  return wallet.txsMem.concat(wallet.getTransactionsCopy().reverse()).map((tx) => {
-    wallet.hydrateSentMessageBody(tx);
-    const sentRecord = wallet.getSentMessageRecord(tx.hash);
-    return mapCoreTransaction(tx, blockchainHeight, address, sentRecord);
-  });
+  return wallet.txsMem
+    .concat(wallet.getTransactionsCopy().reverse())
+    .filter((tx) => !isMessageTransactionExpired(tx))
+    .map((tx) => {
+      wallet.hydrateSentMessageBody(tx);
+      const sentRecord = wallet.getSentMessageRecord(tx.hash);
+      return mapCoreTransaction(tx, blockchainHeight, address, sentRecord);
+    });
 }
 
 /** Pending TTL txs store expiry as absolute unix seconds (v1 account/messages pages). */

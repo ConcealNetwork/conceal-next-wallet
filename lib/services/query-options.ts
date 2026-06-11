@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
 import { MARKET_SNAPSHOT_TTL_MS } from "@/lib/market/coingecko";
 
-const NETWORK_POLL_MS = 60_000;
+const NETWORK_POLL_MS = 30_000;
 const MARKET_CHART_STALE_MS = 30 * 60 * 1000;
 
 export const marketQueryOptions = {
@@ -22,13 +22,13 @@ export const networkQueryOptions = {
 
 /** Message list — expensive (scans all txs); not refetched on every sync tick. */
 export const messagesQueryOptions = {
-  staleTime: 60_000,
+  staleTime: 30_000,
   refetchOnWindowFocus: false,
 };
 
 /** Fusion readiness — walks unspent outputs; refresh after sync or optimize. */
 export const optimizationStatusQueryOptions = {
-  staleTime: 60_000,
+  staleTime: 30_000,
   refetchOnWindowFocus: false,
 };
 

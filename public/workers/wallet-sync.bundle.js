@@ -4056,7 +4056,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
           data.addressBook = this.addressBook.slice();
         }
         if (this.sentMessageRecords.size > 0) {
-          data.sentMessages = Array.from(this.sentMessageRecords.values());
+          const persistable = Array.from(this.sentMessageRecords.values()).filter((record) => {
+            const tx = this.txsMem.find((t) => t.hash === record.txHash);
+            return !tx || tx.ttl === 0 || tx.blockHeight !== 0;
+          });
+          if (persistable.length > 0) data.sentMessages = persistable;
         }
         return data;
       };
