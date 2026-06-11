@@ -22886,7 +22886,7 @@ export class MnemonicLang {
   static getLang(name: string): MnemonicLang | null {
     const langs = MnemonicLang.getLangs();
     for (const lang of langs) {
-      if (lang.name == name) return lang;
+      if (lang.name === name) return lang;
     }
     return null;
   }

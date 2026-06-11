@@ -17,12 +17,11 @@
  */
 
 import { getCuratedPoolListUrl } from "@/lib/config/config";
-import {
-  type BlockchainExplorer,
-  NetworkInfo,
-  type RawDaemon_Transaction,
-  type RawDaemon_Out,
-  type RemoteNodeInformation,
+import type {
+  BlockchainExplorer,
+  RawDaemon_Transaction,
+  RawDaemon_Out,
+  RemoteNodeInformation,
 } from "./BlockchainExplorer";
 import type { Wallet } from "../Wallet";
 import { Storage } from "../Storage";
@@ -522,7 +521,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
           let currentIndex = array.length;
 
           // While there remain elements to shuffle...
-          while (currentIndex != 0) {
+          while (currentIndex !== 0) {
             // Pick a remaining element...
             const randomIndex = Math.floor(Math.random() * currentIndex);
             currentIndex--;
@@ -533,7 +532,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
         }
 
         // Ensure we have nodes to work with
-        if (!config || !config.nodeList || config.nodeList.length === 0) {
+        if (!config?.nodeList || config.nodeList.length === 0) {
           throw new Error("No nodes available in configuration");
         }
 
@@ -665,7 +664,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
       for (const rawTx of response.transactions) {
         let tx: RawDaemon_Transaction | null = null;
 
-        if (rawTx && rawTx.transaction) {
+        if (rawTx?.transaction) {
           tx = rawTx.transaction;
 
           if (tx !== null) {
@@ -744,7 +743,7 @@ export class BlockchainExplorerRpcDaemon implements BlockchainExplorer {
         for (const rawTx of response.transactions) {
           let tx: RawDaemon_Transaction | null = null;
 
-          if (rawTx && rawTx.transaction) {
+          if (rawTx?.transaction) {
             tx = rawTx.transaction;
 
             if (tx !== null) {

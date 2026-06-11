@@ -13,7 +13,7 @@ For the current file:
 3. Apply fixes carefully, case by case:
 - Remove unused imports if they are clearly dead.
 - Remove unused variables only if they are genuinely dead code and not part of work-in-progress structure.
-- For unused parameters, prefer renaming to `_param` when the parameter is kept for callback signatures, interfaces, middleware, event handlers, destructuring symmetry, or readability.
+- For unused parameters, prefer renaming to `_param` **only** when the parameter must be kept for a required callback arity, interface contract, middleware signature, or destructuring symmetry where removing it would change behavior or break a type contract. In all other cases, remove the parameter or fix the underlying pattern (e.g. collapse explicit Promise constructor antipatterns, use optional catch binding `catch { }` instead of `catch (_e) { }`).
 - Replace `==` with `===` and `!=` with `!==` only when strict equality preserves the intended behavior.
 - Preserve patterns like `value == null` when the intent is to match both `null` and `undefined`.
 - Prefer the smallest possible edit.

@@ -150,6 +150,7 @@ describe("wallet mappers", () => {
     expect(fusion.type).toBe("fusion");
     expect(fusion.amount.atomic).toBe(1000);
     expect(fusion.address).toBe(walletAddress);
+    expect(fusion.blockHeight).toBe(100);
 
     const minerOut = out(3_000_000);
     minerOut.rtcAmount = "";
@@ -222,6 +223,19 @@ describe("wallet mappers", () => {
     expect(mapCoreMessage(sent, walletAddress)?.direction).toBe("sent");
     expect(mapCoreMessage(expired, walletAddress)).toBeNull();
     expect(isMessageTransactionExpired(expired)).toBe(true);
+
+    // TTL sent message: no operator fee → sender nets −100 (not −10100/−11100)
+    const ttlSent = makeTx({ hash: "ttl-sent-1", ins: [input(500_000)], outs: [out(499_900)] });
+    ttlSent.message = "Secret TTL";
+    ttlSent.blockHeight = 0;
+    ttlSent.ttl = Math.floor(Date.now() / 1000) + 3600;
+    expect(isMessageOut(ttlSent)).toBe(true);
+    expect(isMessageIn(ttlSent)).toBe(false);
+    expect(mapCoreMessage(ttlSent, walletAddress)?.direction).toBe("sent");
+    expect(mapCoreMessage(ttlSent, walletAddress)?.ttlExpiresAt).toBe(ttlSent.ttl);
+    expect(mapCoreTransaction(ttlSent, 200, walletAddress).amount.atomic).toBe(
+      MESSAGE_TX_AMOUNT_ATOMIC,
+    );
   });
 
   it("detects sent messages by tx amount (10100 / 11100)", () => {
@@ -349,6 +363,7 @@ describe("wallet mappers", () => {
       amount: { atomic: SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC },
       address: "",
       timestamp: new Date().toISOString(),
+      blockHeight: 100,
       confirmations: 10,
       message: "Hello",
     };
@@ -365,6 +380,7 @@ describe("wallet mappers", () => {
       amount: { atomic: SENT_MESSAGE_AMOUNT_SELF_ATOMIC },
       address: "ccx7Recipient",
       timestamp: new Date().toISOString(),
+      blockHeight: 97,
       confirmations: 3,
     };
 

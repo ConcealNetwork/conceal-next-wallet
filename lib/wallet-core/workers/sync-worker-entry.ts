@@ -89,8 +89,7 @@ self.onmessage = (data: MessageEvent) => {
           return;
         }
 
-        const isOwned =
-          screenedOwned || TransactionsExplorer.ownsTx(rawTransaction, currentWallet);
+        const isOwned = screenedOwned || TransactionsExplorer.ownsTx(rawTransaction, currentWallet);
         if (!isOwned) {
           return;
         }

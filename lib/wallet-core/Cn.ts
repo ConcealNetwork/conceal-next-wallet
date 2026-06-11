@@ -34,14 +34,10 @@
  *     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import { Mnemonic } from "./Mnemonic";
-import { Constants } from "./Constants";
 import { JSChaCha8 } from "./ChaCha8";
 
-const HASH_STATE_BYTES = 200;
 const HASH_SIZE = 32;
 const ADDRESS_CHECKSUM_SIZE = 4;
-const TX_EXTRA_MESSAGE_CHECKSUM_SIZE = 4;
 const INTEGRATED_ID_SIZE = 8;
 const ENCRYPTED_PAYMENT_ID_TAIL = 141;
 const cfg = (
@@ -408,7 +404,7 @@ export namespace CnUtils {
   }
 
   export function trimRight(str: string, char: string) {
-    while (str[str.length - 1] == char) str = str.slice(0, -1);
+    while (str[str.length - 1] === char) str = str.slice(0, -1);
     return str;
   }
 
@@ -922,7 +918,7 @@ export namespace CnTransactions {
     return C;
   }
 
-  export function decodeRctSimple(rv: any, sk: any, i: number, mask: any, hwdev: any = null) {
+  export function decodeRctSimple(rv: any, sk: any, i: number) {
     // CHECK_AND_ASSERT_MES(rv.type == RCTTypeSimple || rv.type == RCTTypeSimpleBulletproof, false, "decodeRct called on non simple rctSig");
     // CHECK_AND_ASSERT_THROW_MES(i < rv.ecdhInfo.size(), "Bad index");
     // CHECK_AND_ASSERT_THROW_MES(rv.outPk.size() == rv.ecdhInfo.size(), "Mismatched sizes of rv.outPk and rv.ecdhInfo");
@@ -935,7 +931,6 @@ export namespace CnTransactions {
     // logDebugMsg('ecdh_info',ecdh_info);
     // mask = ecdh_info.mask;
     const amount = ecdh_info.amount;
-    const C = rv.outPk[i].mask;
 
     // logDebugMsg('amount', amount);
     // logDebugMsg('C', C);
@@ -957,7 +952,6 @@ export namespace CnTransactions {
     pub: any,
     sec: any,
     i: number,
-    mask: any,
     amount: any,
     derivation: string | null,
   ): number | false {
@@ -969,16 +963,16 @@ export namespace CnTransactions {
       // logDebugMsg(rv.type,'RCTTypeSimple='+RCTTypeSimple,'RCTTypeFull='+RCTTypeFull);
       switch (rv.type) {
         case CnVars.RCT_TYPE.Simple:
-          amount = CnTransactions.decodeRctSimple(rv, scalar1, i, mask); //[5;10]ms
+          amount = CnTransactions.decodeRctSimple(rv, scalar1, i); //[5;10]ms
           break;
         case CnVars.RCT_TYPE.Full:
-          amount = CnTransactions.decodeRctSimple(rv, scalar1, i, mask);
+          amount = CnTransactions.decodeRctSimple(rv, scalar1, i);
           break;
         case CnVars.RCT_TYPE.SimpleBulletproof:
-          amount = CnTransactions.decodeRctSimple(rv, scalar1, i, mask);
+          amount = CnTransactions.decodeRctSimple(rv, scalar1, i);
           break;
         case CnVars.RCT_TYPE.FullBulletproof:
-          amount = CnTransactions.decodeRctSimple(rv, scalar1, i, mask);
+          amount = CnTransactions.decodeRctSimple(rv, scalar1, i);
           break;
         default:
           logDebugMsg("Unsupported rc type", rv.type);
@@ -1550,8 +1544,6 @@ export namespace CnTransactions {
     commitMaskObj: { C: string; mask: string },
     amount: number,
     nrings: number,
-    enc_seed: number,
-    exponent: number,
   ) {
     const size = 2;
     let C = CnVars.I; //identity
@@ -1689,7 +1681,7 @@ export namespace CnTransactions {
     if (i === 0) {
       rv.cc = c_old;
     }
-    while (i != index) {
+    while (i !== index) {
       rv.ss[i][0] = CnRandom.random_scalar(); //dsRow ss
       rv.ss[i][1] = CnRandom.random_scalar(); //ndsRow ss
 
@@ -1775,7 +1767,7 @@ export namespace CnTransactions {
   export function serializeRangeProofsClassic(rv: RctSignature): string {
     let buf = "";
     const p = rv.p;
-    if (p && p.rangeSigs.length)
+    if (p?.rangeSigs.length)
       for (let i = 0; i < p.rangeSigs.length; i++) {
         for (let j = 0; j < p.rangeSigs[i].bsig.s.length; j++) {
           for (let l = 0; l < p.rangeSigs[i].bsig.s[j].length; l++) {
@@ -1882,13 +1874,12 @@ export namespace CnTransactions {
       const nrings = 64; //for base 2/current
       //compute range proofs, etc
       for (let i = 0; i < outAmounts.length; i++) {
-        const teststart = new Date().getTime();
-        if (!bulletproof)
-          p.rangeSigs[i] = CnTransactions.proveRange(cmObj, outAmounts[i], nrings, 0, 0);
+        const teststart = Date.now();
+        if (!bulletproof) p.rangeSigs[i] = CnTransactions.proveRange(cmObj, outAmounts[i], nrings);
         // else
         // 	p.bulletproofs[i] = CnTransactions.proveRangeBulletproof(cmObj, outAmounts[i], nrings, 0, 0);
 
-        const testfinish = new Date().getTime() - teststart;
+        const testfinish = Date.now() - teststart;
         logDebugMsg("Time take for range proof " + i + ": " + testfinish);
         rv.outPk[i] = cmObj.C;
         sumout = CnNativeBride.sc_add(sumout, cmObj.mask);
@@ -1965,7 +1956,7 @@ export namespace CnTransactions {
     },
     sources: CnTransactions.Source[],
     dsts: CnTransactions.Destination[],
-    senderAddress: string,
+    _senderAddress: string,
     fee_amount: any /*JSBigInt*/,
     payment_id: string,
     pid_encrypt: boolean,
@@ -2148,7 +2139,7 @@ export namespace CnTransactions {
 
       logDebugMsg("Destinations resume:", unique_dst_addresses, num_stdaddresses, num_subaddresses);
 
-      if (num_stdaddresses == 0 && num_subaddresses == 1) {
+      if (num_stdaddresses === 0 && num_subaddresses === 1) {
         const uniqueSubaddressDecoded = Cn.decode_address(single_dest_subaddress);
         txkey.pub = CnUtils.ge_scalarmult(uniqueSubaddressDecoded.spend, txkey.sec);
       }
@@ -2187,7 +2178,6 @@ export namespace CnTransactions {
           amountKeys.push(CnUtils.derivation_to_scalar(out_derivation, out_index));
         }
         let out_ephemeral_pub = Cn.derive_public_key(out_derivation, out_index, destKeys.spend);
-        let out: CnTransactions.Vout;
 
         if (transactionType === "deposit" && i === 0) {
           const depositOut = {
@@ -2208,7 +2198,7 @@ export namespace CnTransactions {
           out_ephemeral_pub = Cn.derive_public_key(out_derivation, out_index, destKeys.spend);
         }
 
-        out = {
+        const out: CnTransactions.Vout = {
           amount: dsts[i].amount,
           target: {
             type: "txout_to_key",
@@ -2429,7 +2419,7 @@ export namespace CnTransactions {
     pub_keys: { spend: string; view: string },
     sec_keys: { spend: string; view: string },
     dsts: CnTransactions.Destination[],
-    senderAddress: string,
+    _senderAddress: string,
     outputs: {
       amount: number;
       public_key: string;
@@ -2669,7 +2659,7 @@ export namespace CnTransactions {
       keys,
       sources,
       dsts,
-      senderAddress,
+      _senderAddress,
       fee_amount,
       payment_id,
       pid_encrypt,

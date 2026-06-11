@@ -22,20 +22,12 @@ import {
   normalizeSentMessagesFromRaw,
   type RawSentMessageRecord,
 } from "./sent-messages";
-import {
-  Transaction,
-  TransactionIn,
-  type TransactionOut,
-  Deposit,
-  Withdrawal,
-} from "./Transaction";
-import { DependencyInjectorInstance } from "./numbersLab/DependencyInjector";
+import { Transaction, type TransactionOut, Deposit, Withdrawal } from "./Transaction";
 import type { BlockchainExplorer, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
 import { TransactionsExplorer } from "./TransactionsExplorer";
 import { KeysRepository, type UserKeys } from "./KeysRepository";
 import { Observable } from "./numbersLab/Observable";
-import { Cn, CnNativeBride, CnTransactions } from "./Cn";
-import { Constants } from "./Constants";
+import { Cn, CnTransactions } from "./Cn";
 import { MathUtil } from "./MathUtil";
 import { Currency } from "./Currency";
 
@@ -212,7 +204,11 @@ export class Wallet extends Observable {
     }
 
     if (this.sentMessageRecords.size > 0) {
-      data.sentMessages = Array.from(this.sentMessageRecords.values());
+      const persistable = Array.from(this.sentMessageRecords.values()).filter((record) => {
+        const tx = this.txsMem.find((t) => t.hash === record.txHash);
+        return !tx || tx.ttl === 0 || tx.blockHeight !== 0;
+      });
+      if (persistable.length > 0) data.sentMessages = persistable;
     }
 
     return data;
@@ -422,7 +418,7 @@ export class Wallet extends Observable {
     if (previous.paymentId && !next.paymentId) next.paymentId = previous.paymentId;
   };
 
-  getAll = (forceReload = false): Transaction[] => {
+  getAll = (_forceReload = false): Transaction[] => {
     return this.transactions.slice();
   };
 
@@ -470,7 +466,7 @@ export class Wallet extends Observable {
           transaction.messageViewed = existMem.messageViewed || transaction.messageViewed;
           this.preserveMessageTransactionMeta(transaction, existMem);
           const trIndex = this.txsMem.indexOf(existMem);
-          if (trIndex != -1) {
+          if (trIndex !== -1) {
             this.txsMem.splice(trIndex, 1);
           }
         }
@@ -512,7 +508,7 @@ export class Wallet extends Observable {
     let foundMatch = false;
 
     for (let i = 0; i < this.deposits.length; ++i) {
-      if (this.deposits[i].txHash == deposit.txHash) {
+      if (this.deposits[i].txHash === deposit.txHash) {
         // only check txHash
         this.deposits[i] = deposit;
         foundMatch = true;
@@ -876,7 +872,7 @@ export class Wallet extends Observable {
   };
 
   // Returns the deposit with the earliest unlock date (not spent)
-  earliestUnlockableDeposit = (currHeight: number): Deposit | null => {
+  earliestUnlockableDeposit = (_currHeight: number): Deposit | null => {
     let earliest: Deposit | null = null;
     for (const deposit of this.deposits) {
       if (deposit.isSpent()) continue;
@@ -914,7 +910,7 @@ export class Wallet extends Observable {
           let derivation = "";
           try {
             derivation = concealjs.crypto.generate_key_derivation(tx.txPubKey, this.keys.priv.view);
-          } catch (e) {
+          } catch {
             continue;
           }
           for (const out of tx.outs) {
@@ -947,11 +943,11 @@ export class Wallet extends Observable {
           const vin = this.transactions[iTx].ins[iIn];
 
           if (vin.amount < 0) {
-            if (this.keyImages.indexOf(vin.keyImage) != -1) {
+            if (this.keyImages.indexOf(vin.keyImage) !== -1) {
               //logDebugMsg('found in', vin);
               const walletOuts = this.getAllOuts();
               for (const ut of walletOuts) {
-                if (ut.keyImage == vin.keyImage) {
+                if (ut.keyImage === vin.keyImage) {
                   this.transactions[iTx].ins[iIn].amount = ut.amount;
                   this.transactions[iTx].ins[iIn].keyImage = ut.keyImage;
 

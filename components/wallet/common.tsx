@@ -288,7 +288,15 @@ export function TransactionRow({ transaction }: { transaction: Transaction }) {
   );
 }
 
-export function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
+export function CopyButton({
+  value,
+  label = "Copy",
+  iconOnly = false,
+}: {
+  value: string;
+  label?: string;
+  iconOnly?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -301,15 +309,20 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
     <Button
       type="button"
       variant="outline"
+      size={iconOnly ? "icon" : "default"}
       onClick={copy}
-      className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
+      aria-label={iconOnly ? label : undefined}
+      className={cn(
+        !iconOnly && "gap-2",
+        "shrink-0 active:scale-[0.98] motion-reduce:active:scale-100",
+      )}
     >
       {copied ? (
         <Check className="size-4" aria-hidden="true" />
       ) : (
         <Clipboard className="size-4" aria-hidden="true" />
       )}
-      {copied ? "Copied" : label}
+      {!iconOnly ? (copied ? "Copied" : label) : null}
     </Button>
   );
 }

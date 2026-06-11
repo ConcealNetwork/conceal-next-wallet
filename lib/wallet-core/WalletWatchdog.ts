@@ -260,7 +260,8 @@ class BlockList {
 
     while (this.blocks.length > 0) {
       if (this.blocks[0].finished) {
-        const block = this.blocks.shift()!;
+        const block = this.blocks.shift();
+        if (!block) break;
         this.txQueue.applyParsedTransactions(block.parsedTransactions, block.endBlock);
       } else {
         break;
@@ -270,7 +271,7 @@ class BlockList {
 
   markIdleBlockRange = (lastBlock: number): boolean => {
     for (let i = 0; i < this.blocks.length; ++i) {
-      if (this.blocks[i].endBlock == lastBlock) {
+      if (this.blocks[i].endBlock === lastBlock) {
         this.blocks[i].timestamp = new Date(0);
         return true;
       }
@@ -289,7 +290,7 @@ class BlockList {
       return null;
     }
 
-    const timeDiff: number = new Date().getTime() - head.timestamp.getTime();
+    const timeDiff: number = Date.now() - head.timestamp.getTime();
     if (timeDiff / 1000 > 30) {
       if (reset) {
         head.timestamp = new Date();
@@ -320,7 +321,6 @@ class BlockList {
 type ParseTxCallback = () => void;
 
 class ParseWorker {
-  private wallet: Wallet;
   private isReady: boolean;
   private watchdog: WalletWatchdog;
   private isWorking: boolean;
@@ -329,16 +329,10 @@ class ParseWorker {
   private countProcessed: number;
   private parseTxCallback: ParseTxCallback;
 
-  constructor(
-    wallet: Wallet,
-    watchdog: WalletWatchdog,
-    blockList: BlockList,
-    parseTxCallback: ParseTxCallback,
-  ) {
+  constructor(watchdog: WalletWatchdog, blockList: BlockList, parseTxCallback: ParseTxCallback) {
     this.parseTxCallback = parseTxCallback;
     this.blockList = blockList;
     this.watchdog = watchdog;
-    this.wallet = wallet;
 
     this.workerProcess = this.initWorker();
     this.countProcessed = 0;
@@ -469,8 +463,6 @@ export class WalletWatchdog {
   private wallet: Wallet;
   private stopped: boolean = false;
   private blockList: BlockList;
-  private cpuCores: number = 0;
-  private maxCpuCores: number = 0;
   private remoteNodes: number = 0;
   private maxConcurrentFetches: number = 1;
   private explorer: BlockchainExplorer;
@@ -483,22 +475,13 @@ export class WalletWatchdog {
 
   constructor(wallet: Wallet, explorer: BlockchainExplorer) {
     console.log("WalletWatchdog");
-    // by default we use all cores but limited up to config.maxWorkerCores
-    this.maxCpuCores = Math.min(
-      window.navigator.hardwareConcurrency
-        ? Math.max(window.navigator.hardwareConcurrency - 1, 1)
-        : 1,
-      config.maxWorkerCores,
-    );
 
     this.wallet = wallet;
     this.explorer = explorer;
     this.blockList = new BlockList(wallet, this);
 
     for (let i = 0; i < config.maxPrefetchParallel; ++i) {
-      this.filterWorkers.push(
-        new ParseWorker(this.wallet, this, this.blockList, this.tryScheduleFilter),
-      );
+      this.filterWorkers.push(new ParseWorker(this, this.blockList, this.tryScheduleFilter));
       this.syncWorkers.push(new SyncWorker(this.explorer, this.wallet, i));
     }
 
@@ -508,15 +491,15 @@ export class WalletWatchdog {
   setupWorkers = () => {
     const poolSize = Math.max(1, this.explorer.getPrefetchNodePoolSize());
 
-    if (this.wallet.options.readSpeed == 10) {
+    if (this.wallet.options.readSpeed === 10) {
       this.remoteNodes = Math.min(config.maxPrefetchParallel, poolSize, config.maxRemoteNodes);
-    } else if (this.wallet.options.readSpeed == 50) {
+    } else if (this.wallet.options.readSpeed === 50) {
       this.remoteNodes = Math.min(
         Math.max(1, Math.floor(poolSize / 2)),
         config.maxPrefetchParallel,
         config.maxRemoteNodes,
       );
-    } else if (this.wallet.options.readSpeed == 100) {
+    } else if (this.wallet.options.readSpeed === 100) {
       this.remoteNodes = 1;
     } else {
       this.remoteNodes = Math.min(config.maxPrefetchParallel, poolSize, config.maxRemoteNodes);
@@ -557,15 +540,6 @@ export class WalletWatchdog {
       }
     }
     return null;
-  };
-
-  private isFilterBusy = (): boolean => {
-    for (let i = 0; i < this.filterWorkers.length; ++i) {
-      if (this.filterWorkers[i].getIsWorking()) {
-        return true;
-      }
-    }
-    return false;
   };
 
   private getScreenShardCount = (txCount: number): number => {
@@ -665,7 +639,7 @@ export class WalletWatchdog {
     }
 
     const head = this.blockList.getBlocks()[0];
-    if (head && head.fetched && !head.finished && !head.screenComplete && head.filterDispatched) {
+    if (head?.fetched && !head.finished && !head.screenComplete && head.filterDispatched) {
       this.dispatchScreenShards(head);
     }
 

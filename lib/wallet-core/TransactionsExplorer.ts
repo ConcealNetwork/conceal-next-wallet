@@ -197,7 +197,7 @@ export class TransactionsExplorer {
 
     try {
       return rawTransaction.vout[0].amount !== 0;
-    } catch (err) {
+    } catch {
       return false;
     }
   }
@@ -212,9 +212,9 @@ export class TransactionsExplorer {
         type: out.target.type,
       };
 
-      if (out.target.type == "02" && typeof txout_k.key !== "undefined") {
+      if (out.target.type === "02" && typeof txout_k.key !== "undefined") {
         vout.key = txout_k.key;
-      } else if (out.target.type == "03" && typeof txout_k.keys !== "undefined") {
+      } else if (out.target.type === "03" && typeof txout_k.keys !== "undefined") {
         vout.keys = txout_k.keys;
       }
 
@@ -377,7 +377,7 @@ export class TransactionsExplorer {
 
     mlen -= TX_EXTRA_MESSAGE_CHECKSUM_SIZE;
     for (let i = 0; i < TX_EXTRA_MESSAGE_CHECKSUM_SIZE; i++) {
-      if (_buf[mlen + i] != 0) {
+      if (_buf[mlen + i] !== 0) {
         return null;
       }
     }
@@ -495,11 +495,11 @@ export class TransactionsExplorer {
 
       // check if generated public key matches the current output's key
       let mine_output: boolean = false;
-      if (out.target.type == "02" && typeof txout_k.key !== "undefined") {
-        mine_output = txout_k.key == generated_tx_pubkey;
-      } else if (out.target.type == "03" && typeof txout_k.keys !== "undefined") {
+      if (out.target.type === "02" && typeof txout_k.key !== "undefined") {
+        mine_output = txout_k.key === generated_tx_pubkey;
+      } else if (out.target.type === "03" && typeof txout_k.keys !== "undefined") {
         for (let iKey = 0; iKey < txout_k.keys.length; iKey++) {
-          if (txout_k.keys[iKey] == generated_tx_pubkey) {
+          if (txout_k.keys[iKey] === generated_tx_pubkey) {
             mine_output = true;
           }
         }
@@ -512,14 +512,14 @@ export class TransactionsExplorer {
         else transactionOut.globalIndex = output_idx_in_tx;
         transactionOut.amount = amount;
 
-        if (out.target.type == "02" && typeof txout_k.key !== "undefined") {
+        if (out.target.type === "02" && typeof txout_k.key !== "undefined") {
           transactionOut.pubKey = txout_k.key;
           transactionOut.type = "02";
-        } else if (out.target.type == "03" && typeof txout_k.keys !== "undefined") {
+        } else if (out.target.type === "03" && typeof txout_k.keys !== "undefined") {
           transactionOut.pubKey = generated_tx_pubkey; // assume
           transactionOut.type = "03";
 
-          if (out.target.data && out.target.data.term) {
+          if (out.target.data?.term) {
             const deposit = new Deposit();
             if (typeof rawTransaction.height !== "undefined")
               deposit.blockHeight = rawTransaction.height;
@@ -585,7 +585,7 @@ export class TransactionsExplorer {
         const vin = rawTransaction.vin[iIn];
         let wasAdded = false;
 
-        if (vin.value && vin.value.k_image && keyImages.indexOf(vin.value.k_image) !== -1) {
+        if (vin.value?.k_image && keyImages.indexOf(vin.value.k_image) !== -1) {
           const walletOuts = wallet.getAllOuts();
 
           for (const ut of walletOuts) {
@@ -593,24 +593,23 @@ export class TransactionsExplorer {
               console.log(ut.keyImage, "=", vin.value.k_image);
             }
 
-            if (ut.keyImage == vin.value.k_image) {
+            if (ut.keyImage === vin.value.k_image) {
               const transactionIn = new TransactionIn();
               transactionIn.amount = ut.amount;
               transactionIn.keyImage = ut.keyImage;
 
               // check if its a withdrawal
-              if (vin.type == "03") {
-                if (vin.value && vin.value.term) {
+              if (vin.type === "03") {
+                if (vin.value?.term) {
                   const withdrawal = new Deposit();
-                  withdrawal.globalOutputIndex =
-                    vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
+                  withdrawal.globalOutputIndex = vin.value?.outputIndex ? vin.value.outputIndex : 0;
                   if (typeof rawTransaction.height !== "undefined")
                     withdrawal.blockHeight = rawTransaction.height;
                   if (typeof rawTransaction.hash !== "undefined")
                     withdrawal.txHash = rawTransaction.hash;
                   if (typeof rawTransaction.ts !== "undefined")
                     withdrawal.timestamp = rawTransaction.ts;
-                  withdrawal.term = vin.value && vin.value.term ? vin.value.term : 0;
+                  withdrawal.term = vin.value?.term ? vin.value.term : 0;
                   withdrawal.amount = transactionIn.amount;
                   withdrawals.push(withdrawal);
                   wasAdded = true;
@@ -624,11 +623,11 @@ export class TransactionsExplorer {
         }
 
         // add the withdrawal if it was not yet processed
-        if (!wasAdded && vin.type == "03") {
+        if (!wasAdded && vin.type === "03") {
           const transactionIn = new TransactionIn();
           transactionIn.type = "03"; // Set type explicitly for withdrawal
-          transactionIn.term = vin.value && vin.value.term ? vin.value.term : 0;
-          if (vin.value && vin.value.amount) {
+          transactionIn.term = vin.value?.term ? vin.value.term : 0;
+          if (vin.value?.amount) {
             transactionIn.amount = parseInt(vin.value.amount);
           }
           // Add the transaction input to the array
@@ -639,10 +638,9 @@ export class TransactionsExplorer {
           if (typeof rawTransaction.hash !== "undefined") withdrawal.txHash = rawTransaction.hash;
           if (typeof rawTransaction.height !== "undefined")
             withdrawal.blockHeight = rawTransaction.height;
-          if (vin.value && vin.value.amount) withdrawal.amount = parseInt(vin.value?.amount);
-          withdrawal.globalOutputIndex =
-            vin.value && vin.value.outputIndex ? vin.value.outputIndex : 0;
-          withdrawal.term = vin.value && vin.value.term ? vin.value.term : 0;
+          if (vin.value?.amount) withdrawal.amount = parseInt(vin.value.amount);
+          withdrawal.globalOutputIndex = vin.value?.outputIndex ? vin.value.outputIndex : 0;
+          withdrawal.term = vin.value?.term ? vin.value.term : 0;
           withdrawals.push(withdrawal);
           wasAdded = true;
         }
@@ -675,8 +673,8 @@ export class TransactionsExplorer {
             transactionIn.keyImage = txOut.keyImage;
 
             // check if its a withdrawal
-            if (vin.type == "03") {
-              if (vin.value && vin.value.term) {
+            if (vin.type === "03") {
+              if (vin.value?.term) {
               }
             }
 
@@ -717,8 +715,8 @@ export class TransactionsExplorer {
         rawTransaction.vout.length <= config.maxFusionOutputs &&
         rawTransaction.vin.length / rawTransaction.vout.length >
           config.fusionTxMinInOutCountRatio &&
-        rawTransaction.vin.some((vin) => vin.type != "03") &&
-        rawTransaction.vout.some((vout) => vout.target.type != "03") &&
+        rawTransaction.vin.some((vin) => vin.type !== "03") &&
+        rawTransaction.vout.some((vout) => vout.target.type !== "03") &&
         (transaction.fees === 0 || transaction.fees === parseInt(config.minimumFee_V2));
 
       transaction.minerReward = TransactionsExplorer.isMinerTx(rawTransaction);
@@ -1151,7 +1149,6 @@ export class TransactionsExplorer {
       const totalInterest = deposit.interest;
       const totalAmount = lockedAmount + totalInterest;
       const pid_encrypt = false; // don't encrypt payment ID for withdrawals
-      const paymentId = "";
 
       // Check if the deposit is unlocked
       if (deposit.unlockHeight > blockchainHeight) {
@@ -1228,8 +1225,8 @@ export class TransactionsExplorer {
                 paymentId,
                 message,
                 ttl,
-                "withdraw",
-                deposit.term,
+                transactionType,
+                term,
               )
                 .then(
                   (data: { raw: { hash: string; prvkey: string; raw: string }; signed: any }) => {
@@ -1378,7 +1375,8 @@ export class TransactionsExplorer {
         if (!globalIndexCounts.has(mixout.global_index)) {
           globalIndexCounts.set(mixout.global_index, []);
         }
-        globalIndexCounts.get(mixout.global_index)!.push(i);
+        const bucket = globalIndexCounts.get(mixout.global_index);
+        if (bucket) bucket.push(i);
       }
     }
 

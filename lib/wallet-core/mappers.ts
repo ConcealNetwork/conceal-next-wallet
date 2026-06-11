@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2018-2026 Conceal Community, Conceal.Network & Conceal Devs
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 import { createWalletNetworkConfig, type WalletNetworkConfig } from "@/lib/config/config";
 import {
   MESSAGE_TX_AMOUNT_ATOMIC,
@@ -5,7 +19,6 @@ import {
   SENT_MESSAGE_AMOUNT_SELF_ATOMIC,
 } from "@/lib/config/config";
 import type {
-  AddressEntry,
   Deposit as UiDeposit,
   Message as UiMessage,
   Transaction as UiTransaction,
@@ -93,13 +106,17 @@ function txHasMessage(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): b
 /** Incoming message: has message + 100 atomic to recipient. */
 export function isMessageIn(tx: CoreTransaction): boolean {
   if (!tx.message) return false;
-  return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC;
+  // Must be received (positive amount) — TTL sent messages also net to 100 from sender side.
+  return getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC && tx.getAmount() > 0;
 }
 
 /** Outgoing message: has message + envelope amount (10100 / 11100 atomic). */
 export function isMessageOut(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
   if (!txHasMessage(tx, sentRecord)) return false;
-  return isSentMessageAmount(getTxAmount(tx));
+  if (isSentMessageAmount(getTxAmount(tx))) return true;
+  // TTL messages carry no operator fee, so the sender's net is −MESSAGE_TX_AMOUNT_ATOMIC (100).
+  if (tx.ttl > 0 && tx.getAmount() < 0 && getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC) return true;
+  return false;
 }
 
 /** Miner reward — TransactionsExplorer.isMinerTx (chain coinbase: no vin). Not same as isCoinbase(). */
@@ -116,8 +133,11 @@ export function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amou
   return Math.abs(transaction.amount.atomic) === MESSAGE_TX_AMOUNT_ATOMIC;
 }
 
-export function isUiMessageOut(transaction: Pick<UiTransaction, "message" | "amount">): boolean {
+export function isUiMessageOut(
+  transaction: Pick<UiTransaction, "message" | "amount" | "outgoing">,
+): boolean {
   if (!transaction.message) return false;
+  if (transaction.outgoing) return true;
   return isSentMessageAmount(Math.abs(transaction.amount.atomic));
 }
 
@@ -187,6 +207,7 @@ export function mapCoreTransaction(
     timestamp: tx.timestamp
       ? new Date(tx.timestamp * 1000).toISOString()
       : new Date().toISOString(),
+    blockHeight: tx.blockHeight,
     confirmations,
     paymentId: tx.paymentId || undefined,
     message: resolveStoredMessageBody(tx, sentRecord),
@@ -196,11 +217,14 @@ export function mapCoreTransaction(
 
 export function listWalletTransactions(wallet: Wallet, blockchainHeight: number): UiTransaction[] {
   const address = wallet.getPublicAddress();
-  return wallet.txsMem.concat(wallet.getTransactionsCopy().reverse()).map((tx) => {
-    wallet.hydrateSentMessageBody(tx);
-    const sentRecord = wallet.getSentMessageRecord(tx.hash);
-    return mapCoreTransaction(tx, blockchainHeight, address, sentRecord);
-  });
+  return wallet.txsMem
+    .concat(wallet.getTransactionsCopy().reverse())
+    .filter((tx) => !isMessageTransactionExpired(tx))
+    .map((tx) => {
+      wallet.hydrateSentMessageBody(tx);
+      const sentRecord = wallet.getSentMessageRecord(tx.hash);
+      return mapCoreTransaction(tx, blockchainHeight, address, sentRecord);
+    });
 }
 
 /** Pending TTL txs store expiry as absolute unix seconds (v1 account/messages pages). */

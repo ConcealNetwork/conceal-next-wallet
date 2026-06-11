@@ -39,7 +39,7 @@ export function getSafeNextPath(search?: string): string | undefined {
   const raw = new URLSearchParams(
     search ?? (typeof window !== "undefined" ? window.location.search : ""),
   ).get("next");
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return undefined;
+  if (!raw?.startsWith("/") || raw.startsWith("//")) return undefined;
   return raw;
 }
 

@@ -68,7 +68,7 @@ class NativeStorageWrap implements StorageInterface {
           () => {
             resolve();
           },
-          (error: NativeNativeStorageError) => {
+          () => {
             reject();
           },
         );
@@ -100,7 +100,7 @@ class NativeStorageWrap implements StorageInterface {
           (keys: string[]) => {
             resolve(keys);
           },
-          (error: NativeNativeStorageError) => {
+          () => {
             reject();
           },
         );
@@ -132,7 +132,7 @@ class NativeStorageWrap implements StorageInterface {
           () => {
             resolve();
           },
-          (error: NativeNativeStorageError) => {
+          () => {
             reject();
           },
         );

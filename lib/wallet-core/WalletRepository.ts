@@ -51,17 +51,10 @@ export class WalletRepository {
   }
 
   static hasOneStored(): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
-      WalletRepository.migrateWallet()
-        .then((isSuccess) => {
-          Storage.getItem("wallet", null).then((wallet: any) => {
-            resolve(wallet !== null);
-          });
-        })
-        .catch((err) => {
-          resolve(false);
-        });
-    });
+    return WalletRepository.migrateWallet()
+      .then(() => Storage.getItem("wallet", null))
+      .then((wallet: any) => wallet !== null)
+      .catch(() => false);
   }
 
   static decodeWithPassword(
@@ -95,7 +88,7 @@ export class WalletRepository {
 
       try {
         decodedRawWallet = JSON.parse(new TextDecoder("utf8").decode(decrypted));
-      } catch (e) {
+      } catch {
         decodedRawWallet = null;
       }
     } else {
