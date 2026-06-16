@@ -1,10 +1,26 @@
 /**
- * Cache vendored wallet scripts (/lib/*, /workers/*) for faster repeat loads.
- * Works with any deploy base path — matches on pathname, not origin root.
+ * Offline app shell + vendored-asset cache.
+ *
+ * - On install, precache the app shell from `precache-manifest.json` (generated
+ *   at build time from the static export) so the wallet can open offline.
+ * - Navigations are NETWORK-FIRST: online users always get the fresh page; the
+ *   cached shell is only served when the network is unavailable. This makes a
+ *   stale or bad cache unable to break the live site for online users.
+ * - Vendored `/lib/*` and `/workers/*` stay cache-first (large, immutable).
+ * - Everything resolves by pathname, so it works under any deploy base path.
  */
-const CACHE_NAME = "conceal-wallet-static-v1";
+const CACHE_PREFIX = "conceal-wallet-";
+// Replaced at build time with a content hash of the precache list (see
+// generate-precache-manifest.mjs). A content change → new SW bytes → the browser
+// reinstalls → the shell is re-precached under a new cache name and the stale one
+// is pruned on activate. Left as the literal token in dev (no precache there).
+const SW_VERSION = "__SW_VERSION__";
+const SHELL_CACHE = `${CACHE_PREFIX}shell-${SW_VERSION}`;
+// Vendored libs/workers are immutable; keep their cache stable across deploys.
+const ASSET_CACHE = `${CACHE_PREFIX}static-v2`;
+const KEEP = new Set([SHELL_CACHE, ASSET_CACHE]);
 
-function isCachedAssetUrl(url) {
+function isRuntimeAsset(url) {
   try {
     const path = new URL(url).pathname;
     return path.includes("/lib/") || path.includes("/workers/");
@@ -13,40 +29,118 @@ function isCachedAssetUrl(url) {
   }
 }
 
+function isPrecacheAsset(url) {
+  try {
+    const path = new URL(url).pathname;
+    return path.includes("/_next/static/") || path.endsWith(".webmanifest");
+  } catch {
+    return false;
+  }
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil(
+    (async () => {
+      let urls = null;
+      try {
+        // The manifest sits next to the SW (same scope), so a relative URL
+        // resolves correctly under a deploy base path.
+        const res = await fetch("precache-manifest.json", { cache: "no-cache" });
+        if (res.ok) {
+          const manifest = await res.json();
+          if (Array.isArray(manifest.urls)) urls = manifest.urls;
+        }
+      } catch {
+        // No manifest (e.g. dev) → skip precache; runtime caching still applies.
+      }
+      if (urls && urls.length > 0) {
+        // Atomic: if any shell asset fails, the install rejects and the previous
+        // SW stays active — never activate a half-cached, broken offline shell.
+        const cache = await caches.open(SHELL_CACHE);
+        await cache.addAll(urls);
+      }
+      await self.skipWaiting();
+    })(),
+  );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) =>
+        // Only our own caches — never delete caches belonging to other apps on
+        // the same origin (the GitHub Pages domain hosts other projects).
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith(CACHE_PREFIX) && !KEEP.has(key))
+            .map((key) => caches.delete(key)),
+        ),
+      )
       .then(() => self.clients.claim()),
   );
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") {
+  const request = event.request;
+  if (request.method !== "GET") return;
+
+  // Navigations: network-first, fall back to the cached shell when offline.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      (async () => {
+        try {
+          const response = await fetch(request);
+          // Treat a server error (e.g. a GitHub Pages 5xx outage) like being
+          // offline so the cached shell is served instead of an error page.
+          if (response.status >= 500) throw new Error(`nav ${response.status}`);
+          return response;
+        } catch {
+          const shell = await caches.open(SHELL_CACHE);
+          // Normalize to a trailing slash so a non-canonical "/wallet/account"
+          // still resolves to the precached "/wallet/account/index.html".
+          const slashUrl = request.url.replace(/\/?(\?.*)?$/, "/");
+          const cached =
+            (await shell.match(request, { ignoreSearch: true })) ||
+            (await shell.match(new URL("index.html", slashUrl).href, { ignoreSearch: true })) ||
+            (await shell.match("index.html"));
+          return (
+            cached ||
+            new Response("<h1>Offline</h1><p>This page isn't available offline yet.</p>", {
+              status: 503,
+              headers: { "Content-Type": "text/html; charset=utf-8" },
+            })
+          );
+        }
+      })(),
+    );
     return;
   }
 
-  if (!isCachedAssetUrl(event.request.url)) {
+  // Precached shell assets (Next chunks, manifest): cache-first for speed.
+  if (isPrecacheAsset(request.url)) {
+    event.respondWith(
+      caches.open(SHELL_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response.ok) void cache.put(request, response.clone()).catch(() => {});
+        return response;
+      }),
+    );
     return;
   }
 
-  event.respondWith(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      const cached = await cache.match(event.request);
-      if (cached) {
-        return cached;
-      }
-
-      const response = await fetch(event.request);
-      if (response.ok) {
-        void cache.put(event.request, response.clone());
-      }
-      return response;
-    }),
-  );
+  // Vendored libs + sync workers: cache-first runtime cache.
+  if (isRuntimeAsset(request.url)) {
+    event.respondWith(
+      caches.open(ASSET_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response.ok) void cache.put(request, response.clone()).catch(() => {});
+        return response;
+      }),
+    );
+  }
 });
