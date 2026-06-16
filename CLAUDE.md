@@ -46,3 +46,24 @@ npm run test:e2e             # Playwright (first run: npx playwright install chr
 - **Biome only** (no ESLint/Prettier): 2-space indent, double quotes, semicolons, trailing commas, line width 100, imports auto-organized. Most lint rules are `warn`, and the CI quality workflow (`.github/workflows/npm-audit.yml`) is report-only/non-blocking — so `npm run lint`/`npm run types` are your real gate, not CI.
 - **`.npmrc` `min-release-age=7`** blocks packages published in the last 7 days on `npm install`/`npm update` (not `npm ci`). Requires npm 11+ / Node 24.
 - **Tests:** unit tests in `tests/` (vitest, jsdom, coverage over `lib/**`); E2E in `e2e/` (Playwright, port 3100). `test-results/` is a Playwright artifact — don't commit it.
+
+## Multi-agent feature workflow (default)
+
+Backlog features are built with a collaborative multi-model workflow. Artifacts live under `docs/{specs,design,reviews}/<feature>/`. The co-agents (run headless, each writes only its own file — no parallel edits to shared source):
+
+| Agent | Invocation |
+|---|---|
+| Codex (gpt-5.5) | `codex exec --dangerously-bypass-approvals-and-sandbox -m gpt-5.5 "…"` |
+| Antigravity (Gemini 3.1 Pro) | `agy -p "…" --model "Gemini 3.1 Pro (High)" --dangerously-skip-permissions --print-timeout 20m` |
+| GLM-5.2 | `opencode run --dangerously-skip-permissions -m zai/glm-5.2 "…"` |
+| CodeRabbit | `coderabbit review --plain -t all --base main` |
+
+Phases:
+1. **Spec (parallel).** A shared `BRIEF.md` grounds **four** independent specs — Codex, Gemini, GLM, **and an Opus 4.8 subagent** (`Agent` tool, `model: opus`). The orchestrator (Opus, main thread) synthesizes the best ideas into `spec-merged.md`, noting provenance and resolving forks.
+2. **Design (UI/UX).** Invoke the `huashu-design` skill, grounded in `DESIGN.md` + existing component patterns (don't invent new visual language). The three co-agents each contribute 3 hi-fi HTML variants; screenshot with Playwright, curate best-per-element into `DESIGN-DECISIONS.md`.
+3. **Implement.** Orchestrator drives the edits (TDD: foundation → service interface + real + mock → UI); co-agents advise only — never let multiple agents edit source concurrently. Honor the spine rule (interface + both impls) and immutability.
+4. **Review (parallel).** Codex + Gemini + GLM each review the diff (read-only, write findings files) **plus** CodeRabbit. Address CRITICAL/HIGH; document deferrals in `RESPONSE.md` and the PR (don't silently dismiss).
+5. **Verify.** Gate is `npm run types && npm run lint && npm test && npm run test:e2e` (add an `e2e/<feature>.spec.ts`). A live `claude-in-chrome` visual pass when a same-machine browser is available.
+6. **PR** with multi-agent provenance + test plan + review response.
+
+`docs/**` is excluded from Biome (it holds specs + design-mockup HTML, not source).
