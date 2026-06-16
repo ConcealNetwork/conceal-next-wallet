@@ -24,5 +24,6 @@ export function downloadJsonFile(filename: string, data: unknown): void {
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
+  // Defer revocation — revoking synchronously cancels the download in WebKit/Safari.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

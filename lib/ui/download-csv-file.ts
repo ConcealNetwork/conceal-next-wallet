@@ -7,7 +7,10 @@ const CSV_BOM = "﻿";
 export function transactionCsvFilename(activeFilter = "All", now = new Date()): string {
   const date = now.toISOString().slice(0, 10);
   // Sanitize to [a-z0-9-] so a future multi-word tab label can't break the filename.
-  const cleaned = activeFilter.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const cleaned = activeFilter
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
   const slug = cleaned && cleaned !== "all" ? `-${cleaned}` : "";
   return `conceal-transactions${slug}-${date}.csv`;
 }
@@ -27,5 +30,6 @@ export function downloadCsvFile(filename: string, csv: string): void {
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
+  // Defer revocation — revoking synchronously cancels the download in WebKit/Safari.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

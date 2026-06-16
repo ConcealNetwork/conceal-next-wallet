@@ -1,7 +1,10 @@
 "use client";
 
+import { Download } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -17,9 +20,10 @@ import {
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import { useDeposits, useTransactions, useWalletInfo, useWalletViewOnly } from "@/lib/hooks";
-import { CoinUri } from "@/lib/wallet-core/CoinUri";
 import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
+import { downloadQrPng, qrPngFilename, qrToPngBlob } from "@/lib/ui/qr-png";
 import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
+import { CoinUri } from "@/lib/wallet-core/CoinUri";
 
 const QR_LOGOS = [
   { id: "orange", label: "Conceal orange mark", src: "/brand/conceal-mark-orange.svg" },
@@ -67,6 +71,17 @@ export default function ReceivePage() {
     .filter((transaction) => transaction.type === "receive")
     .slice(0, 5);
   const depositHistory = (deposits.data ?? []).slice(0, 5);
+
+  async function handleDownloadQrPng() {
+    if (!paymentUri) return;
+    try {
+      const blob = await qrToPngBlob(paymentUri);
+      downloadQrPng(qrPngFilename(address.slice(0, 12)), blob);
+      toast.success("QR code saved.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save QR code.");
+    }
+  }
 
   return (
     <>
@@ -138,6 +153,16 @@ export default function ReceivePage() {
                       </button>
                     ))}
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    disabled={!paymentUri}
+                    onClick={handleDownloadQrPng}
+                  >
+                    <Download className="size-4" aria-hidden="true" />
+                    Download PNG
+                  </Button>
                 </div>
               </div>
             </SectionCard>
