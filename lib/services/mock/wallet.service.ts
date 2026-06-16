@@ -39,6 +39,9 @@ export const mockWalletService: WalletService = {
   async openWallet() {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
+    // Opening the default mock wallet is spend-capable; don't inherit a prior
+    // view-only import (real mode re-derives from the stored keys on unlock).
+    mockViewOnly = false;
     return currentWalletInfo();
   },
   async prepareCreateWallet() {
@@ -93,6 +96,7 @@ export const mockWalletService: WalletService = {
     return { ok: true };
   },
   async disconnect() {
-    // no runtime in mock mode
+    // no runtime in mock mode; clear view-only so the next open starts clean
+    mockViewOnly = false;
   },
 };

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CopyButton, PageHeader, SectionCard } from "@/components/wallet/common";
+import { useWalletViewOnly } from "@/lib/hooks";
 import { services } from "@/lib/services";
 import type { ExportWalletData } from "@/lib/services/wallet.service";
 import { backupDownloadFilename, downloadJsonFile } from "@/lib/ui/download-json-file";
@@ -30,6 +31,7 @@ export default function ExportPage() {
   const [backupPassword, setBackupPassword] = useState("");
   const [downloading, setDownloading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const viewOnly = useWalletViewOnly();
 
   useEffect(() => {
     services.wallet.exportWallet().then(setData);
@@ -81,6 +83,12 @@ export default function ExportPage() {
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
         <SectionCard title="Backup Data">
           <div className="space-y-5">
+            {viewOnly ? (
+              <p className="rounded-xl border border-wallet-amber/30 bg-wallet-amber/10 px-4 py-3 text-sm text-foreground">
+                This is a view-only wallet — the spend key and mnemonic are blank. Only the address
+                and view key are available.
+              </p>
+            ) : null}
             <div className="rounded-xl bg-secondary p-4">
               <p className="text-sm text-muted-foreground">Mnemonic seed words</p>
               <p className="mt-2 wrap-break-word font-mono text-sm text-foreground">

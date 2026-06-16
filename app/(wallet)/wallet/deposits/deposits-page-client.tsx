@@ -1245,6 +1245,7 @@ function CreateDepositDialog({
   onOpenChange: (open: boolean) => void;
   onCreate: (input: CreateDepositInput) => void;
 }) {
+  const viewOnly = useWalletViewOnly();
   const [amount, setAmount] = useState("100");
   const [duration, setDuration] = useState("12");
   const [amountError, setAmountError] = useState("");
@@ -1284,6 +1285,10 @@ function CreateDepositDialog({
   }
 
   function confirmCreate() {
+    if (viewOnly) {
+      toast.error(walletCopy.viewOnlyDepositDisabled);
+      return;
+    }
     onCreate({ amount: amountValue, durationMonths });
   }
 
@@ -1392,7 +1397,10 @@ function CreateDepositDialog({
                 type="button"
                 className="w-full gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
                 onClick={submitForm}
-                disabled={constraints?.isDepositDisabled || !amountIsValid || preview.isFetching}
+                disabled={
+                  constraints?.isDepositDisabled || !amountIsValid || preview.isFetching || viewOnly
+                }
+                title={viewOnly ? walletCopy.viewOnlyDepositDisabled : undefined}
               >
                 <Lock className="size-4" aria-hidden="true" />
                 Review Deposit
