@@ -42,3 +42,6 @@ next-env.d.ts
 
 # design exploration scratch (landing mockups + verification screenshots)
 /public/explorations/
+
+# Stray output from review CLIs (opencode/agy) writing to cwd
+diff.txt

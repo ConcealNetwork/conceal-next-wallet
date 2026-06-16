@@ -10,4 +10,6 @@ export const queryKeys = {
   optimizationStatus: ["optimization-status"] as const,
   /** Per-transaction local note, keyed by tx hash. */
   txNote: (hash: string) => ["tx-note", hash] as const,
+  /** Browser storage durability/quota health. */
+  storageHealth: ["storage-health"] as const,
 };
