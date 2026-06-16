@@ -88,7 +88,9 @@ function transactionRow(transaction: Transaction): string[] {
 }
 
 function serializeRow(cells: readonly string[], allTrusted: boolean): string {
-  return cells.map((cell, index) => csvField(cell, allTrusted || TRUSTED_INDICES.has(index))).join(",");
+  return cells
+    .map((cell, index) => csvField(cell, allTrusted || TRUSTED_INDICES.has(index)))
+    .join(",");
 }
 
 /**

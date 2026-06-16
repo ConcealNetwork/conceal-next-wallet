@@ -91,6 +91,10 @@ describe("wallet mappers", () => {
     const miner = makeTx({ outs: [minerOut], minerReward: true });
     expect(resolveTransactionType(miner)).toBe("miner");
 
+    const parsedCoinbase = makeTx({ outs: [minerOut], ins: [] });
+    expect(parsedCoinbase.minerReward).toBe(false);
+    expect(resolveTransactionType(parsedCoinbase)).toBe("miner");
+
     const send = makeTx({ ins: [input(500_000)], outs: [out(100_000)] });
     expect(resolveTransactionType(send)).toBe("send");
 

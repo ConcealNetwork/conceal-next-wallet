@@ -123,9 +123,18 @@ export function isMessageOut(tx: CoreTransaction, sentRecord?: RawSentMessageRec
   return false;
 }
 
-/** Miner reward — TransactionsExplorer.isMinerTx (chain coinbase: no vin). Not same as isCoinbase(). */
+/** Parsed coinbase reward shape (RingCT fields omitted at sync). Not message envelopes (100 atomic). */
+function isParsedCoinbaseReward(tx: CoreTransaction): boolean {
+  if (tx.ins.length > 0) return false;
+  if (!tx.isCoinbase()) return false;
+  if (isWalletMessageTx(tx)) return false;
+  if (getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC) return false;
+  return tx.getAmount() > 0;
+}
+
+/** Miner reward — TransactionsExplorer.isMinerTx at sync, or parsed coinbase shape when flag missing. */
 export function isMinerRewardTx(tx: CoreTransaction): boolean {
-  return tx.minerReward === true;
+  return tx.minerReward === true || isParsedCoinbaseReward(tx);
 }
 
 export function isWalletMessageTx(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
@@ -164,11 +173,46 @@ export function resolveTransactionType(
   return tx.getAmount() < 0 ? "send" : "receive";
 }
 
+function sumBankingOutAmount(tx: CoreTransaction): number {
+  let total = 0;
+  for (const o of tx.outs) {
+    if (o.type === "03") total += o.amount;
+  }
+  return total;
+}
+
+function sumBankingInAmount(tx: CoreTransaction): number {
+  let total = 0;
+  for (const i of tx.ins) {
+    if (i.type === "03") total += i.amount;
+  }
+  return total;
+}
+
+function sumTransferOutAmount(tx: CoreTransaction): number {
+  let total = 0;
+  for (const o of tx.outs) {
+    if (o.type === "02") total += o.amount;
+  }
+  return total;
+}
+
 /** Atomic amount shown in lists; fusion may net to zero — fall back to fee. */
 export function resolveTransactionDisplayAmount(
   tx: CoreTransaction,
   type: TransactionType,
 ): number {
+  if (type === "deposit") {
+    const principal = sumBankingOutAmount(tx);
+    if (principal > 0) return principal;
+  }
+  if (type === "withdrawal") {
+    const received = sumTransferOutAmount(tx);
+    if (received > 0) return received;
+    const principal = sumBankingInAmount(tx);
+    if (principal > 0) return principal;
+  }
+
   const net = tx.getAmount();
   const absolute = Math.abs(net);
   if (type === "fusion" && absolute === 0) {
@@ -221,6 +265,7 @@ export function mapCoreTransaction(
 
 export function listWalletTransactions(wallet: Wallet, blockchainHeight: number): UiTransaction[] {
   const address = wallet.getPublicAddress();
+  const viewOnly = typeof wallet.isViewOnly === "function" && wallet.isViewOnly();
   return wallet.txsMem
     .concat(wallet.getTransactionsCopy().reverse())
     .filter((tx) => !isMessageTransactionExpired(tx))
@@ -228,7 +273,14 @@ export function listWalletTransactions(wallet: Wallet, blockchainHeight: number)
       wallet.hydrateSentMessageBody(tx);
       const sentRecord = wallet.getSentMessageRecord(tx.hash);
       return mapCoreTransaction(tx, blockchainHeight, address, sentRecord);
-    });
+    })
+    .filter(
+      (tx) =>
+        !viewOnly ||
+        (tx.type !== "send" &&
+          tx.type !== "fusion" &&
+          !(tx.type === "message" && isUiMessageOut(tx))),
+    );
 }
 
 /** Pending TTL txs store expiry as absolute unix seconds (v1 account/messages pages). */

@@ -67,7 +67,9 @@ test("exports the transaction list to a CSV with BOM + header", async ({ page })
   }
 });
 
-test("filtered export encodes the filter in the filename and exports a subset", async ({ page }) => {
+test("filtered export encodes the filter in the filename and exports a subset", async ({
+  page,
+}) => {
   await openTransactions(page);
   await page.getByRole("button", { name: "Sent", exact: true }).click();
 
@@ -75,7 +77,9 @@ test("filtered export encodes the filter in the filename and exports a subset", 
   await page.getByRole("button", { name: "Export CSV" }).click();
   const download = await downloadPromise;
 
-  expect(download.suggestedFilename()).toMatch(/^conceal-transactions-sent-\d{4}-\d{2}-\d{2}\.csv$/);
+  expect(download.suggestedFilename()).toMatch(
+    /^conceal-transactions-sent-\d{4}-\d{2}-\d{2}\.csv$/,
+  );
 
   const text = (await readFile((await download.path()) ?? "")).subarray(3).toString("utf8");
   const rows = text.split("\r\n").filter(Boolean);

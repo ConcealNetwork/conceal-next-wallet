@@ -446,6 +446,8 @@ export class Wallet extends Observable {
             if (this.transactions[tr].txPubKey === transaction.txPubKey) {
               // Preserve fusion flag when replacing
               transaction.fusion = this.transactions[tr].fusion;
+              transaction.minerReward =
+                transaction.minerReward || this.transactions[tr].minerReward;
               // Preserve messageViewed flag when replacing
               transaction.messageViewed =
                 this.transactions[tr].messageViewed || transaction.messageViewed;
@@ -770,6 +772,10 @@ export class Wallet extends Observable {
   }
 
   availableAmount = (currentBlockHeight: number = -1): number => {
+    if (this.isViewOnly()) {
+      return this.incomingAmount(currentBlockHeight);
+    }
+
     let amount = 0;
     for (const transaction of this.transactions) {
       if (!transaction.isFullyChecked()) continue;
@@ -805,6 +811,32 @@ export class Wallet extends Observable {
       }
     }
 
+    return amount;
+  };
+
+  /** View-only: sum confirmed incoming outs (type 02); spends are not subtracted. */
+  incomingAmount = (currentBlockHeight: number = -1): number => {
+    let amount = 0;
+    for (const transaction of this.transactions) {
+      if (!transaction.isConfirmed(currentBlockHeight) && currentBlockHeight !== -1) {
+        continue;
+      }
+      for (const nout of transaction.outs) {
+        if (nout.type !== "03") {
+          amount += nout.amount;
+        }
+      }
+    }
+    for (const transaction of this.txsMem) {
+      if (!transaction.isConfirmed(currentBlockHeight) && currentBlockHeight !== -1) {
+        continue;
+      }
+      for (const nout of transaction.outs) {
+        if (nout.type !== "03") {
+          amount += nout.amount;
+        }
+      }
+    }
     return amount;
   };
 
