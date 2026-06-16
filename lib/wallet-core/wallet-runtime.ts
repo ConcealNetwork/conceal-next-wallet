@@ -1,7 +1,8 @@
 // @ts-nocheck
-import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
+
 import { DependencyInjectorInstance } from "./numbersLab/DependencyInjector";
 import { Observable } from "./numbersLab/Observable";
+import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
 import { Wallet } from "./Wallet";
 import { WalletRepository } from "./WalletRepository";
 import { WalletWatchdog } from "./WalletWatchdog";
@@ -147,8 +148,12 @@ export async function openWalletRuntime(wallet: Wallet, password: string) {
   registerWalletSyncNotifier(wallet);
 }
 
-export async function disconnectWalletRuntime() {
-  await flushRuntimeWalletPersistence();
+export async function disconnectWalletRuntime(options: { flush?: boolean } = {}) {
+  // The panic wipe passes flush:false — there is nothing to preserve, and flushing
+  // would re-write the wallet to storage moments before we erase it.
+  if (options.flush !== false) {
+    await flushRuntimeWalletPersistence();
+  }
 
   const watchdog = getRuntimeWatchdog();
   stopWatchdogIfRunning(watchdog);

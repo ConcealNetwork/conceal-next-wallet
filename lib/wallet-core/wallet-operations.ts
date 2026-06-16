@@ -1,22 +1,17 @@
 // @ts-nocheck
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
-import { backupDownloadFilename } from "@/lib/ui/download-json-file";
-import type { ExportWalletData } from "@/lib/services/wallet.service";
+import { MAX_MESSAGE_SIZE, MESSAGE_TX_AMOUNT_ATOMIC } from "@/lib/config/config";
+import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
-import type { ImportWalletInput } from "@/lib/services/wallet.service";
-import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
-import type { Deposit, Message, Transaction, WalletInfo, NodeStatus } from "@/lib/types";
-import { MAX_MESSAGE_SIZE, MESSAGE_TX_AMOUNT_ATOMIC } from "@/lib/config/config";
+import type { ExportWalletData, ImportWalletInput } from "@/lib/services/wallet.service";
+import type { Deposit, Message, NodeStatus, Transaction, WalletInfo } from "@/lib/types";
+import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 import { Cn, CnUtils } from "./Cn";
+import { CoinUri } from "./CoinUri";
+import { InterestCalculator } from "./Interest";
 import { KeysRepository } from "./KeysRepository";
 import { Mnemonic } from "./Mnemonic";
-import { TransactionsExplorer } from "./TransactionsExplorer";
-import { Wallet } from "./Wallet";
-import { WalletRepository } from "./WalletRepository";
-import { StorageOld } from "./StorageOld";
-import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
-import { Storage } from "./Storage";
 import {
   buildMessageThreadKey,
   clampImportHeight,
@@ -31,22 +26,26 @@ import {
   mapWalletToInfo,
   newWalletCreationHeight,
 } from "./mappers";
-import { InterestCalculator } from "./Interest";
+import { BlockchainExplorerProvider } from "./providers/BlockchainExplorerProvider";
+import { Storage } from "./Storage";
+import { StorageOld } from "./StorageOld";
 import { Deposit as CoreDeposit } from "./Transaction";
+import { TransactionsExplorer } from "./TransactionsExplorer";
+import { Wallet } from "./Wallet";
+import { WalletRepository } from "./WalletRepository";
 import {
   clearPendingWalletCreation,
   disconnectWalletRuntime,
+  flushRuntimeWalletPersistence,
   getCreatedMnemonic,
   getPendingWalletCreation,
   getRuntimeWallet,
   getRuntimeWalletWorker,
-  flushRuntimeWalletPersistence,
   getRuntimeWatchdog,
   openWalletRuntime,
   setCreatedMnemonic,
   setPendingWalletCreation,
 } from "./wallet-runtime";
-import { CoinUri } from "./CoinUri";
 
 async function prepareLegacyRuntime() {
   await ensureAllWalletLegacyLibs();
@@ -791,6 +790,44 @@ export async function deleteStoredWalletOperation(): Promise<void> {
     await StorageOld.remove("wallet");
   } catch {
     // best-effort legacy localStorage cleanup
+  }
+}
+
+/**
+ * Panic wipe: delete the wallet (disconnects the runtime / terminates workers)
+ * then clear ALL persisted wallet-engine state — settings, custom node URL,
+ * creation height, etc. — so nothing recoverable is left in this browser.
+ */
+export async function panicWipeOperation(): Promise<void> {
+  await ensureAllWalletLegacyLibs();
+  const failures: unknown[] = [];
+
+  // Stop the savers FIRST without flushing — otherwise the watchdog's debounced
+  // save (or the disconnect's own flush) could re-persist the wallet moments after
+  // we clear storage. Best-effort: a failure here must not abort the erase.
+  try {
+    await disconnectWalletRuntime({ flush: false });
+  } catch (error) {
+    failures.push(error);
+  }
+
+  // Then erase every persisted store, each independently so one failure can't
+  // leave the rest behind.
+  for (const step of [
+    () => WalletRepository.deleteLocalCopy(),
+    () => StorageOld.remove("wallet"),
+    () => Storage.clear(),
+    () => StorageOld.clear(),
+  ]) {
+    try {
+      await step();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error("Panic wipe did not complete — some local data may remain.");
   }
 }
 

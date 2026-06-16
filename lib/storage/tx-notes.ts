@@ -7,6 +7,8 @@ export interface TxNotesBackend {
   get(hash: string): Promise<string | null>;
   set(hash: string, note: string): Promise<void>;
   delete(hash: string): Promise<void>;
+  /** Remove every note (used by the panic wipe). */
+  clear(): Promise<void>;
 }
 
 export interface TxNotesStore {
@@ -17,6 +19,8 @@ export interface TxNotesStore {
    * Returns the normalized value that was stored (`""` means "deleted").
    */
   setNote(hash: string, raw: string): Promise<string>;
+  /** Erase all stored notes. */
+  clearAll(): Promise<void>;
 }
 
 /** Wrap a backend with normalization + the empty-deletes invariant. */
@@ -36,12 +40,15 @@ export function createTxNotesStore(backend: TxNotesBackend): TxNotesStore {
       }
       return note;
     },
+    clearAll() {
+      return backend.clear();
+    },
   };
 }
 
 /**
- * In-memory backend — the default where IndexedDB is unavailable (SSR, tests,
- * private-mode Safari) and the transparent fallback for {@link resilientBackend}.
+ * In-memory backend — used by tests and as the default where IndexedDB is
+ * genuinely absent (SSR, static-export prerender).
  */
 export function inMemoryTxNotesBackend(seed?: Record<string, string>): TxNotesBackend {
   const map = new Map<string, string>(seed ? Object.entries(seed) : undefined);
@@ -53,6 +60,10 @@ export function inMemoryTxNotesBackend(seed?: Record<string, string>): TxNotesBa
     },
     delete: (hash) => {
       map.delete(hash);
+      return Promise.resolve();
+    },
+    clear: () => {
+      map.clear();
       return Promise.resolve();
     },
   };
@@ -149,6 +160,9 @@ export function indexedDbTxNotesBackend(): TxNotesBackend {
     async delete(hash) {
       await run("readwrite", (store) => store.delete(hash));
     },
+    async clear() {
+      await run("readwrite", (store) => store.clear());
+    },
   };
 }
 
@@ -164,3 +178,8 @@ function defaultBackend(): TxNotesBackend {
 }
 
 export const txNotes: TxNotesStore = createTxNotesStore(defaultBackend());
+
+/** Erase every saved transaction note (used by the panic wipe). */
+export function clearAllTxNotes(): Promise<void> {
+  return txNotes.clearAll();
+}

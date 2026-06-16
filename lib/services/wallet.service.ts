@@ -73,6 +73,12 @@ export interface WalletService {
   prepareCreateWallet(): Promise<PrepareCreateWalletResult>;
   finalizeCreateWallet(input: FinalizeCreateWalletInput): Promise<WalletInfo>;
   deleteStoredWallet(): Promise<void>;
+  /**
+   * Panic wipe: delete the stored wallet AND clear all persisted wallet-engine
+   * state (settings, custom node, …), terminating any sync workers. The UI layer
+   * additionally clears mode-agnostic local data (tx notes, prefs).
+   */
+  panicWipe(): Promise<void>;
   abortCreateWallet(): Promise<void>;
   importWallet(input: ImportWalletInput): Promise<WalletInfo>;
   /** Derive the public address (and effective view key) from a spend key, locally. */

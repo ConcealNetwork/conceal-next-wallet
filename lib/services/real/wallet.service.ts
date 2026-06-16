@@ -42,6 +42,9 @@ export const realWalletService: WalletService = {
   async deleteStoredWallet() {
     await (await walletOps()).deleteStoredWalletOperation();
   },
+  async panicWipe() {
+    await (await walletOps()).panicWipeOperation();
+  },
   async importWallet(input: ImportWalletInput): Promise<WalletInfo> {
     return (await walletOps()).importWalletOperation(input);
   },

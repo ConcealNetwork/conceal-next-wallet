@@ -61,4 +61,12 @@ describe("tx-notes store", () => {
     const { store } = makeStore();
     expect(await store.getNote("")).toBe("");
   });
+
+  it("clearAll erases every note (panic wipe)", async () => {
+    const { store, backend } = makeStore({ hashA: "a", hashB: "b" });
+    await store.clearAll();
+    expect(await store.getNote("hashA")).toBe("");
+    expect(await store.getNote("hashB")).toBe("");
+    expect(await backend.get("hashA")).toBeNull();
+  });
 });
