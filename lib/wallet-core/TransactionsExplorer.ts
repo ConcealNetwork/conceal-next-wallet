@@ -279,7 +279,7 @@ export class TransactionsExplorer {
       }
       return owned;
     } catch (e) {
-      console.error("Error when scanning transaction on block " + rawTransaction.height, e);
+      console.error("Error when scanning transaction on block", rawTransaction.height, e);
       return false;
     }
   }
@@ -407,7 +407,7 @@ export class TransactionsExplorer {
 
       txExtras = TransactionsExplorer.parseExtra(hexExtra);
     } catch (e) {
-      console.error("Error when scanning transaction on block " + rawTransaction.height, e);
+      console.error("Error when scanning transaction on block", rawTransaction.height, e);
       return null;
     }
 
