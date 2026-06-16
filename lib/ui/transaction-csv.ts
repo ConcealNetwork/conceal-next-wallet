@@ -1,3 +1,4 @@
+import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber } from "@/lib/utils";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
@@ -20,7 +21,12 @@ export const CSV_COLUMNS = [
 
 // Generated numeric columns are trusted (not attacker-controlled) and must NOT be
 // formula-guarded, or a legitimate negative amount ("-50") would gain a stray "'".
-const TRUSTED_HEADERS = new Set<string>(["Amount (CCX)", "Amount (atomic)"]);
+const TRUSTED_HEADERS = new Set<string>([
+  "Amount (CCX)",
+  "Amount (atomic)",
+  "Block Height",
+  "Confirmations",
+]);
 const TRUSTED_INDICES = new Set(
   CSV_COLUMNS.flatMap((header, index) => (TRUSTED_HEADERS.has(header) ? [index] : [])),
 );
@@ -69,14 +75,14 @@ function transactionRow(transaction: Transaction): string[] {
     new Date(transaction.timestamp).toISOString(),
     TYPE_LABELS[type],
     isOutgoing(transaction, type) ? "Outgoing" : "Incoming",
-    `${sign}${ccxToNumber(transaction.amount).toFixed(CCX_PRECISION_DECIMAL_DISPLAY)}`,
+    `${sign}${Math.abs(ccxToNumber(transaction.amount)).toFixed(CCX_PRECISION_DECIMAL_DISPLAY)}`,
     `${sign}${Math.abs(transaction.amount.atomic)}`,
     transaction.address ?? "",
     transaction.paymentId ?? "",
-    transaction.hash,
+    transaction.hash ?? "",
     String(transaction.blockHeight),
     String(transaction.confirmations),
-    transaction.confirmations >= 10 ? "Confirmed" : "Pending",
+    transaction.confirmations >= TX_CONFIRMED_THRESHOLD ? "Confirmed" : "Pending",
     transaction.message ?? "",
   ];
 }

@@ -65,13 +65,15 @@ deposits Create, messages New). Success `toast` reporting row count _[GLM]_. One
 standard button — **no huashu mockups warranted** (it's identical to existing
 header buttons); the design decision is the CSV format, not visual UI.
 
-## DESIGN DECISION (needs user sign-off)
-**Amount sign:** signed `Amount (CCX)` (`-50.000000` for sends) — 3 of 4 specs;
-enables `=SUM()` net-flow, matches the screen's signed display; a well-formed
-negative number is a valid numeric cell (not a formula-injection vector — the
-guard covers string fields). **vs** Opus's unsigned amount + rely on the
-`Direction` column (strictest: avoids any leading-`-` scanner flag). _Recommend
-signed_ + keep the `Direction` column for human filtering. Switchable.
+## DESIGN DECISION — RESOLVED (user-approved)
+**Amount sign: SIGNED.** `Amount (CCX)` is `-50.000000` for outflows, bare positive
+for inflows (no `+`, which would itself be a formula trigger); the `Direction`
+column is kept for human filtering. Chosen for `=SUM()` net-flow + parity with the
+on-screen signed display; a well-formed negative number is a valid numeric cell, and
+the formula-injection guard covers the (string) attacker-influenced fields — the
+numeric Amount columns are exempt. (Opus's unsigned alternative was considered and
+declined.) **Newlines in messages: PRESERVED** inside quoted fields (RFC 4180), not
+collapsed.
 
 ## Tests
 - **Unit** `tests/transaction-csv.test.ts` (vitest): empty→header-only; quoting

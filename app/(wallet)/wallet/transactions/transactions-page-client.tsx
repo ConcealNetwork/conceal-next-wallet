@@ -15,6 +15,7 @@ import {
   Search,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ import {
   PageHeader,
   SectionCard,
 } from "@/components/wallet/common";
+import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import { downloadCsvFile, transactionCsvFilename } from "@/lib/ui/download-csv-file";
@@ -190,7 +192,12 @@ export default function TransactionsPageClient() {
 
   function handleExportCsv() {
     // Export the current filtered/searched view (WYSIWYG), not just the visible page.
-    downloadCsvFile(transactionCsvFilename(active), transactionsToCsv(filtered));
+    try {
+      downloadCsvFile(transactionCsvFilename(active), transactionsToCsv(filtered));
+      toast.success(`Exported ${filtered.length} transaction${filtered.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export CSV.");
+    }
   }
 
   const groupedTransactions = useMemo(() => {
@@ -739,7 +746,7 @@ function StatusPill({ status }: { status: TransactionStatus }) {
 }
 
 function getTransactionStatus(confirmations: number): TransactionStatus {
-  return confirmations >= 10 ? "Confirmed" : "Pending";
+  return confirmations >= TX_CONFIRMED_THRESHOLD ? "Confirmed" : "Pending";
 }
 
 function formatSignedAmount(transaction: Transaction, decimals?: number) {

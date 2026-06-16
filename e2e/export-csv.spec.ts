@@ -1,6 +1,35 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
+/** Minimal RFC-4180 row parser (respects quotes + doubled quotes) for cell assertions. */
+function parseRow(line: string): string[] {
+  const cells: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i += 1;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        cur += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      cells.push(cur);
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  cells.push(cur);
+  return cells;
+}
+
 async function openTransactions(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Open your wallet" }).click();
@@ -25,7 +54,17 @@ test("exports the transaction list to a CSV with BOM + header", async ({ page })
   expect(text.startsWith("Date,Type,Direction,Amount (CCX)")).toBe(true);
   expect(text.includes("\r\n")).toBe(true);
   // 8 mock transactions + 1 header row.
-  expect(text.split("\r\n").filter(Boolean).length).toBe(9);
+  const lines = text.split("\r\n").filter(Boolean);
+  expect(lines.length).toBe(9);
+
+  // Security gate: no decoded cell may start with a formula trigger — EXCEPT the
+  // signed Amount columns (3, 4), which legitimately start with "-" for outflows.
+  const AMOUNT_COLS = new Set([3, 4]);
+  for (const line of lines.slice(1)) {
+    parseRow(line).forEach((cell, i) => {
+      if (!AMOUNT_COLS.has(i)) expect(cell).not.toMatch(/^[=+\-@\t\r\n]/);
+    });
+  }
 });
 
 test("filtered export encodes the filter in the filename and exports a subset", async ({ page }) => {

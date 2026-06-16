@@ -6,7 +6,9 @@ const CSV_BOM = "﻿";
 /** Filename like `conceal-transactions-sent-2026-06-16.csv` (filter slug omitted for "All"). */
 export function transactionCsvFilename(activeFilter = "All", now = new Date()): string {
   const date = now.toISOString().slice(0, 10);
-  const slug = activeFilter && activeFilter !== "All" ? `-${activeFilter.toLowerCase()}` : "";
+  // Sanitize to [a-z0-9-] so a future multi-word tab label can't break the filename.
+  const cleaned = activeFilter.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const slug = cleaned && cleaned !== "all" ? `-${cleaned}` : "";
   return `conceal-transactions${slug}-${date}.csv`;
 }
 

@@ -120,10 +120,20 @@ describe("transactionsToCsv — formula injection (CWE-1236)", () => {
     });
   }
 
-  it("neutralizes a payment ID starting with a trigger", () => {
-    const cell = rows(transactionsToCsv([tx({ paymentId: "=danger" })]))[1][COL["Payment ID"]];
-    expect(cell).toBe("'=danger");
-  });
+  // Every attacker-influenced string column must be guarded, not just Message.
+  const stringColumns: Array<[string, (v: string) => Partial<Transaction>]> = [
+    ["Message", (v) => ({ message: v })],
+    ["Payment ID", (v) => ({ paymentId: v })],
+    ["Address", (v) => ({ address: v })],
+    ["Hash", (v) => ({ hash: v })],
+  ];
+
+  for (const [column, build] of stringColumns) {
+    it(`neutralizes a formula payload in the ${column} column`, () => {
+      const cell = rows(transactionsToCsv([tx(build('=cmd|"/c calc"!A1'))]))[1][COL[column]];
+      expect(cell.startsWith("'")).toBe(true);
+    });
+  }
 
   it("does NOT prefix benign fields", () => {
     const row = rows(transactionsToCsv([tx({ message: "50% off", address: "ccx7abc" })]))[1];
