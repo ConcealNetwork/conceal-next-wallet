@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,12 +19,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CcxAmount } from "@/components/wallet/ccx";
-import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import {
   AddressBookContactPicker,
   findAddressBookContactByAddress,
 } from "@/components/wallet/address-book-contact-picker";
+import { CcxAmount } from "@/components/wallet/ccx";
 import {
   CopyButton,
   PageHeader,
@@ -31,32 +31,34 @@ import {
   ViewOnlyBadge,
   WalletQrCode,
 } from "@/components/wallet/common";
+import { SendReviewWarnings } from "@/components/wallet/send-review-warnings";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
-import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { walletNetworkScalars } from "@/lib/config/config";
-import { useCountUp } from "@/lib/hooks/use-count-up";
 import {
-  useMarketData,
   useAddressBook,
+  useMarketData,
   useSendTransaction,
   useTransactions,
   useWalletInfo,
   useWalletSyncStatus,
   useWalletViewOnly,
 } from "@/lib/hooks";
+import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { AddressEntry } from "@/lib/types";
+import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
+import { deriveSendWarnings } from "@/lib/ui/send-review-warnings";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { isSendToSelf } from "@/lib/validation/ccx";
 import {
-  ccxToNumber,
   CCX_PRECISION_DECIMAL_DISPLAY,
+  ccxToNumber,
   formatCcx,
   formatUsd,
   timeAgo,
   truncateAddress,
 } from "@/lib/utils";
+import { isSendToSelf } from "@/lib/validation/ccx";
 
 const NETWORK_FEE = walletNetworkScalars.coinFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
 const REMOTE_NODE_FEE =
@@ -110,6 +112,20 @@ export default function SendPage() {
   const recentSent = (transactions.data ?? [])
     .filter((transaction) => transaction.type === "send")
     .slice(0, 5);
+
+  const reviewContactLabel = review
+    ? (findAddressBookContactByAddress(addressBook.data ?? [], review.address)?.label ?? null)
+    : null;
+  const sendWarnings = review
+    ? deriveSendWarnings({
+        recipient: review.address,
+        walletAddress: wallet.data?.address ?? "",
+        contactLabel: reviewContactLabel,
+        lockedDepositsCcx: wallet.data ? ccxToNumber(wallet.data.lockedDeposits) : 0,
+        availableCcx: available,
+        sendTotalCcx: review.amount + SEND_FEE,
+      })
+    : [];
 
   useEffect(() => {
     const match = findAddressBookContactByAddress(addressBook.data ?? [], address);
@@ -419,6 +435,7 @@ export default function SendPage() {
             <DialogTitle>Confirm send</DialogTitle>
             <DialogDescription>{walletCopy.sendConfirm}</DialogDescription>
           </DialogHeader>
+          {sendWarnings.length > 0 ? <SendReviewWarnings warnings={sendWarnings} /> : null}
           {review ? (
             <div className="space-y-3 text-sm">
               <Row label="To" value={truncateAddress(review.address, 10, 8)} mono />
