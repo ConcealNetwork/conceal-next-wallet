@@ -892,6 +892,40 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return expected_spend_pub === spend_pub && expected_view_pub === view_pub;
     }
     Cn2.valid_keys = valid_keys;
+    function try_decode_address(address) {
+      try {
+        decode_address(address.trim());
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    Cn2.try_decode_address = try_decode_address;
+    function build_view_only_keys(address, privateViewKey) {
+      let decoded;
+      try {
+        decoded = decode_address(address.trim());
+      } catch {
+        throw new Error("Invalid address \u2014 check the ccx7 address and try again.");
+      }
+      const viewKey = privateViewKey.trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(viewKey)) {
+        throw new Error("View key must be 64 hexadecimal characters.");
+      }
+      const derivedViewPub = CnUtils.sec_key_to_pub(viewKey);
+      if (derivedViewPub !== decoded.view) {
+        throw new Error("View key does not match this address.");
+      }
+      return {
+        keys: {
+          priv: { spend: "", view: viewKey },
+          pub: { spend: decoded.spend, view: decoded.view }
+        },
+        address: pubkeys_to_string(decoded.spend, decoded.view),
+        viewKey
+      };
+    }
+    Cn2.build_view_only_keys = build_view_only_keys;
     function decrypt_payment_id(payment_id8, tx_public_key, acc_prv_view_key) {
       if (payment_id8.length !== 16) throw "Invalid input length2!";
       const key_derivation = concealjs.crypto.generate_key_derivation(
@@ -2939,12 +2973,6 @@ var reportError = self.reportError || function (e) { console.error(e); };
           }
         }
         ctx.ownedKeyImages = ownedKeyImages;
-      } else {
-        const knownGlobalOutputIndexes = [];
-        for (const ut of wallet.getAllOuts()) {
-          knownGlobalOutputIndexes.push(ut.globalIndex);
-        }
-        ctx.knownGlobalOutputIndexes = knownGlobalOutputIndexes;
       }
       return ctx;
     }
@@ -3159,7 +3187,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
               if (rawTransaction.output_indexes && typeof rawTransaction.output_indexes[iOut] !== "undefined") {
                 deposit.globalOutputIndex = rawTransaction.output_indexes[iOut];
               } else {
-                deposit.globalOutputIndex = output_idx_in_tx;
+                deposit.globalOutputIndex = 0;
               }
               deposit.indexInVout = iOut;
               if (out.target.data.keys && Array.isArray(out.target.data.keys)) {
@@ -3248,34 +3276,39 @@ var reportError = self.reportError || function (e) { console.error(e); };
             wasAdded = true;
           }
         }
-      } else {
-        const txOutIndexes = wallet.getTransactionOutIndexes();
-        for (let iIn = 0; iIn < rawTransaction.vin.length; ++iIn) {
-          const vin = rawTransaction.vin[iIn];
-          if (!vin.value) continue;
-          const absoluteOffets = vin.value.key_offsets.slice();
-          for (let i = 1; i < absoluteOffets.length; ++i) {
-            absoluteOffets[i] += absoluteOffets[i - 1];
+      } else if (outs.length > 0) {
+        const ownedDepositIndexes = /* @__PURE__ */ new Set();
+        for (const deposit of wallet.deposits) {
+          if (deposit.globalOutputIndex > 0) {
+            ownedDepositIndexes.add(deposit.globalOutputIndex);
           }
-          let ownTx = -1;
-          for (const index of absoluteOffets) {
-            if (txOutIndexes.indexOf(index) !== -1) {
-              ownTx = index;
-              break;
+        }
+        if (ownedDepositIndexes.size > 0) {
+          for (let iIn = 0; iIn < rawTransaction.vin.length; ++iIn) {
+            const vin = rawTransaction.vin[iIn];
+            if (!vin.value || vin.type !== "03") {
+              continue;
             }
-          }
-          if (ownTx !== -1) {
-            const txOut = wallet.getOutWithGlobalIndex(ownTx);
-            if (txOut !== null) {
-              const transactionIn = new TransactionIn();
-              transactionIn.amount = -txOut.amount;
-              transactionIn.keyImage = txOut.keyImage;
-              if (vin.type === "03") {
-                if (vin.value?.term) {
-                }
-              }
-              ins.push(transactionIn);
+            const outputIndex = vin.value.outputIndex;
+            if (typeof outputIndex !== "number" || !ownedDepositIndexes.has(outputIndex)) {
+              continue;
             }
+            const transactionIn = new TransactionIn();
+            transactionIn.type = "03";
+            transactionIn.term = vin.value?.term ? vin.value.term : 0;
+            if (vin.value?.amount) {
+              transactionIn.amount = parseInt(vin.value.amount, 10);
+            }
+            ins.push(transactionIn);
+            const withdrawal = new Deposit();
+            if (typeof rawTransaction.ts !== "undefined") withdrawal.timestamp = rawTransaction.ts;
+            if (typeof rawTransaction.hash !== "undefined") withdrawal.txHash = rawTransaction.hash;
+            if (typeof rawTransaction.height !== "undefined")
+              withdrawal.blockHeight = rawTransaction.height;
+            if (vin.value?.amount) withdrawal.amount = parseInt(vin.value.amount, 10);
+            withdrawal.globalOutputIndex = outputIndex;
+            withdrawal.term = vin.value?.term ? vin.value.term : 0;
+            withdrawals.push(withdrawal);
           }
         }
       }
@@ -3307,7 +3340,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         transactionData.transaction = transaction;
         transactionData.withdrawals = withdrawals;
         transactionData.deposits = deposits;
-        if (rawMessage !== "") {
+        if (rawMessage !== "" && wallet.keys.priv.spend !== null && wallet.keys.priv.spend !== "") {
           try {
             const message = _TransactionsExplorer.decryptMessage(
               extraIndex,
@@ -4388,6 +4421,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return news;
       };
       this.availableAmount = (currentBlockHeight = -1) => {
+        if (this.isViewOnly()) {
+          return this.incomingAmount(currentBlockHeight);
+        }
         let amount = 0;
         for (const transaction of this.transactions) {
           if (!transaction.isFullyChecked()) continue;
@@ -4415,6 +4451,31 @@ var reportError = self.reportError || function (e) { console.error(e); };
           for (const nin of transaction.ins) {
             if (nin.type !== "03") {
               amount -= nin.amount;
+            }
+          }
+        }
+        return amount;
+      };
+      /** View-only: sum confirmed incoming outs (type 02); spends are not subtracted. */
+      this.incomingAmount = (currentBlockHeight = -1) => {
+        let amount = 0;
+        for (const transaction of this.transactions) {
+          if (!transaction.isConfirmed(currentBlockHeight) && currentBlockHeight !== -1) {
+            continue;
+          }
+          for (const nout of transaction.outs) {
+            if (nout.type !== "03") {
+              amount += nout.amount;
+            }
+          }
+        }
+        for (const transaction of this.txsMem) {
+          if (!transaction.isConfirmed(currentBlockHeight) && currentBlockHeight !== -1) {
+            continue;
+          }
+          for (const nout of transaction.outs) {
+            if (nout.type !== "03") {
+              amount += nout.amount;
             }
           }
         }

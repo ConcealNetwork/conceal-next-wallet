@@ -755,6 +755,10 @@ export namespace Cn {
     return keys;
   }
 
+  /**
+   * @param address - Base58-encoded address
+   * @returns spend key, view key, and integrated payment ID
+   */
   export function decode_address(address: string): {
     spend: string;
     view: string;
@@ -827,6 +831,47 @@ export namespace Cn {
     const expected_view_pub = concealjs.cnutils.sec_key_to_pub(view_sec);
     const expected_spend_pub = concealjs.cnutils.sec_key_to_pub(spend_sec);
     return expected_spend_pub === spend_pub && expected_view_pub === view_pub;
+  }
+
+  /** True when `decode_address` succeeds (prefix + checksum). 
+   * @returns boolean indicating if address is valid
+  */
+  export function try_decode_address(address: string): boolean {
+    try {
+      decode_address(address.trim());
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * View-only keys from public address + private view key.
+   * Incoming scan uses view secret + spend/view public keys from the address.
+   */
+  export function build_view_only_keys(address: string, privateViewKey: string) {
+    let decoded;
+    try {
+      decoded = decode_address(address.trim());
+    } catch {
+      throw new Error("Invalid address — check the ccx7 address and try again.");
+    }
+    const viewKey = privateViewKey.trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(viewKey)) {
+      throw new Error("View key must be 64 hexadecimal characters.");
+    }
+    const derivedViewPub = CnUtils.sec_key_to_pub(viewKey);
+    if (derivedViewPub !== decoded.view) {
+      throw new Error("View key does not match this address.");
+    }
+    return {
+      keys: {
+        priv: { spend: "", view: viewKey },
+        pub: { spend: decoded.spend, view: decoded.view },
+      },
+      address: pubkeys_to_string(decoded.spend, decoded.view),
+      viewKey,
+    };
   }
 
   export function decrypt_payment_id(

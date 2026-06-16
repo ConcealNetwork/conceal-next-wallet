@@ -140,11 +140,8 @@ export async function importWalletOperation(input: ImportWalletInput): Promise<W
     case "keys": {
       wallet = new Wallet();
       if (input.viewOnly) {
-        const decodedPublic = Cn.decode_address(input.address.trim());
-        wallet.keys = {
-          priv: { spend: "", view: input.privateViewKey.trim() },
-          pub: { spend: decodedPublic.spend, view: decodedPublic.view },
-        };
+        const built = Cn.build_view_only_keys(input.address, input.privateViewKey);
+        wallet.keys = built.keys;
       } else {
         let viewKey = input.privateViewKey.trim();
         if (viewKey === "") {
@@ -203,12 +200,9 @@ export async function importWalletOperation(input: ImportWalletInput): Promise<W
         wallet = new Wallet();
         wallet.keys = KeysRepository.fromPriv(decoded.spendKey, viewKey);
       } else if (decoded.viewKey && decoded.address) {
-        const decodedPublic = Cn.decode_address(decoded.address);
+        const built = Cn.build_view_only_keys(decoded.address, decoded.viewKey);
         wallet = new Wallet();
-        wallet.keys = {
-          priv: { spend: "", view: decoded.viewKey },
-          pub: { spend: decodedPublic.spend, view: decodedPublic.view },
-        };
+        wallet.keys = built.keys;
       } else {
         throw new Error("Unsupported QR wallet payload.");
       }

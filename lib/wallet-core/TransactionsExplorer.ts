@@ -257,13 +257,8 @@ export class TransactionsExplorer {
         }
       }
       ctx.ownedKeyImages = ownedKeyImages;
-    } else {
-      const knownGlobalOutputIndexes: number[] = [];
-      for (const ut of wallet.getAllOuts()) {
-        knownGlobalOutputIndexes.push(ut.globalIndex);
-      }
-      ctx.knownGlobalOutputIndexes = knownGlobalOutputIndexes;
     }
+    // View-only: P′ receive scan only (view secret + spend pub from address).
 
     return ctx;
   }
@@ -533,7 +528,7 @@ export class TransactionsExplorer {
             ) {
               deposit.globalOutputIndex = rawTransaction.output_indexes[iOut];
             } else {
-              deposit.globalOutputIndex = output_idx_in_tx;
+              deposit.globalOutputIndex = 0;
             }
             deposit.indexInVout = iOut;
             // Extract keys from the transaction output target data
@@ -645,41 +640,45 @@ export class TransactionsExplorer {
           wasAdded = true;
         }
       }
-    } else {
-      const txOutIndexes = wallet.getTransactionOutIndexes();
-      for (let iIn = 0; iIn < rawTransaction.vin.length; ++iIn) {
-        const vin = rawTransaction.vin[iIn];
-
-        if (!vin.value) continue;
-
-        const absoluteOffets = vin.value.key_offsets.slice();
-        for (let i = 1; i < absoluteOffets.length; ++i) {
-          absoluteOffets[i] += absoluteOffets[i - 1];
+    } else if (outs.length > 0) {
+      // View-only: link type-03 vins only on txs we already own via P′ (outs above).
+      // Never screen by vin index alone — that matches other users' deposit unlocks.
+      const ownedDepositIndexes = new Set<number>();
+      for (const deposit of wallet.deposits) {
+        if (deposit.globalOutputIndex > 0) {
+          ownedDepositIndexes.add(deposit.globalOutputIndex);
         }
+      }
 
-        let ownTx = -1;
-        for (const index of absoluteOffets) {
-          if (txOutIndexes.indexOf(index) !== -1) {
-            ownTx = index;
-            break;
+      if (ownedDepositIndexes.size > 0) {
+        for (let iIn = 0; iIn < rawTransaction.vin.length; ++iIn) {
+          const vin = rawTransaction.vin[iIn];
+          if (!vin.value || vin.type !== "03") {
+            continue;
           }
-        }
 
-        if (ownTx !== -1) {
-          const txOut = wallet.getOutWithGlobalIndex(ownTx);
-          if (txOut !== null) {
-            const transactionIn = new TransactionIn();
-            transactionIn.amount = -txOut.amount;
-            transactionIn.keyImage = txOut.keyImage;
-
-            // check if its a withdrawal
-            if (vin.type === "03") {
-              if (vin.value?.term) {
-              }
-            }
-
-            ins.push(transactionIn);
+          const outputIndex = vin.value.outputIndex;
+          if (typeof outputIndex !== "number" || !ownedDepositIndexes.has(outputIndex)) {
+            continue;
           }
+
+          const transactionIn = new TransactionIn();
+          transactionIn.type = "03";
+          transactionIn.term = vin.value?.term ? vin.value.term : 0;
+          if (vin.value?.amount) {
+            transactionIn.amount = parseInt(vin.value.amount, 10);
+          }
+          ins.push(transactionIn);
+
+          const withdrawal = new Deposit();
+          if (typeof rawTransaction.ts !== "undefined") withdrawal.timestamp = rawTransaction.ts;
+          if (typeof rawTransaction.hash !== "undefined") withdrawal.txHash = rawTransaction.hash;
+          if (typeof rawTransaction.height !== "undefined")
+            withdrawal.blockHeight = rawTransaction.height;
+          if (vin.value?.amount) withdrawal.amount = parseInt(vin.value.amount, 10);
+          withdrawal.globalOutputIndex = outputIndex;
+          withdrawal.term = vin.value?.term ? vin.value.term : 0;
+          withdrawals.push(withdrawal);
         }
       }
     }
@@ -730,8 +729,7 @@ export class TransactionsExplorer {
       transactionData.withdrawals = withdrawals;
       transactionData.deposits = deposits;
 
-      if (rawMessage !== "") {
-        // decode message
+      if (rawMessage !== "" && wallet.keys.priv.spend !== null && wallet.keys.priv.spend !== "") {
         try {
           const message: string = TransactionsExplorer.decryptMessage(
             extraIndex,

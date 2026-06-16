@@ -73,6 +73,19 @@ describe("ImportKeysForm wizard", () => {
     expect(screen.getByLabelText("View key")).toBeInTheDocument();
   });
 
+  it("view-only: Continue on Keys step needs only format-valid address and view key", () => {
+    render(<ImportKeysForm />);
+    fireEvent.click(screen.getByRole("button", { name: /View-only/ }));
+    clickContinue();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Address"), {
+      target: { value: "ccx7" + "a".repeat(94) },
+    });
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("View key"), { target: { value: HEX64 } });
+    expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+  });
+
   it("lets you click a completed step in the rail to jump back", () => {
     render(<ImportKeysForm />);
     clickContinue(); // → Keys

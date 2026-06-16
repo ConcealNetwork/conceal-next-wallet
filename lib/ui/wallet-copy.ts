@@ -69,7 +69,7 @@ export const walletCopy = {
   viewOnlyBadge: "View-only",
   viewOnlyBannerTitle: "View-only wallet",
   viewOnlyBannerBody:
-    "It can watch balances and receive, but can't send, deposit, or message — these need the private spend key. Import the full wallet to unlock them.",
+    "Incoming transactions, deposits, and withdrawals are tracked. Regular sends are not shown — detecting spends requires the spend key or imported key images.",
   viewOnlySendDisabled: "This is a view-only wallet. Import the spend key to send CCX.",
   viewOnlyDepositDisabled:
     "This is a view-only wallet. Creating or withdrawing deposits requires the spend key.",
