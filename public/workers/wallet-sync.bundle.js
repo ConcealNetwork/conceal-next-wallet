@@ -2959,7 +2959,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
         return owned;
       } catch (e) {
-        console.error("Error when scanning transaction on block " + rawTransaction.height, e);
+        console.error("Error when scanning transaction on block", rawTransaction.height, e);
         return false;
       }
     }
@@ -3052,7 +3052,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
         txExtras = _TransactionsExplorer.parseExtra(hexExtra);
       } catch (e) {
-        console.error("Error when scanning transaction on block " + rawTransaction.height, e);
+        console.error("Error when scanning transaction on block", rawTransaction.height, e);
         return null;
       }
       for (const extra of txExtras) {
