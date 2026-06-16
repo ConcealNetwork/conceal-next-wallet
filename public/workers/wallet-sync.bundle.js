@@ -2483,6 +2483,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         aCopy.messageViewed = this.messageViewed;
         aCopy.ttl = this.ttl;
         aCopy.remoteAddress = this.remoteAddress;
+        aCopy.minerReward = this.minerReward;
         for (const nin of this.ins) {
           aCopy.ins.push(nin.copy());
         }
@@ -2913,11 +2914,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return extras;
     }
     static isMinerTx(rawTransaction) {
-      if (!Array.isArray(rawTransaction.vout) || rawTransaction.vin.length > 0) {
-        return false;
-      }
       if (!Array.isArray(rawTransaction.vout) || rawTransaction.vout.length === 0) {
         console.error("Weird tx !", rawTransaction);
+        return false;
+      }
+      const coinbaseVin = rawTransaction.vin.length === 0 || rawTransaction.vin.length === 1 && rawTransaction.vin[0]?.type === "ff";
+      if (!coinbaseVin) {
         return false;
       }
       try {
@@ -3328,7 +3330,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
             wallet.keys.priv.view
           );
         }
-        if (rawTransaction.vin[0].type === "ff") {
+        if (rawTransaction.vin.length === 0 || rawTransaction.vin[0]?.type === "ff") {
           transaction.fees = 0;
         } else {
           transaction.fees = rawTransaction.fee;
@@ -4202,6 +4204,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
               for (let tr = 0; tr < this.transactions.length; ++tr) {
                 if (this.transactions[tr].txPubKey === transaction.txPubKey) {
                   transaction.fusion = this.transactions[tr].fusion;
+                  transaction.minerReward = transaction.minerReward || this.transactions[tr].minerReward;
                   transaction.messageViewed = this.transactions[tr].messageViewed || transaction.messageViewed;
                   this.preserveMessageTransactionMeta(transaction, this.transactions[tr]);
                   this.keyLookupMap.set(transaction.txPubKey, transaction);

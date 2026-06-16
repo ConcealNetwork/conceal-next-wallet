@@ -46,10 +46,7 @@ function parseRow(line: string): string[] {
 }
 
 function rows(csv: string): string[][] {
-  return csv
-    .replace(/\r\n$/, "")
-    .split("\r\n")
-    .map(parseRow);
+  return csv.replace(/\r\n$/, "").split("\r\n").map(parseRow);
 }
 
 const COL = Object.fromEntries(CSV_COLUMNS.map((c, i) => [c, i])) as Record<string, number>;

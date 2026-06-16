@@ -833,9 +833,9 @@ export namespace Cn {
     return expected_spend_pub === spend_pub && expected_view_pub === view_pub;
   }
 
-  /** True when `decode_address` succeeds (prefix + checksum). 
+  /** True when `decode_address` succeeds (prefix + checksum).
    * @returns boolean indicating if address is valid
-  */
+   */
   export function try_decode_address(address: string): boolean {
     try {
       decode_address(address.trim());

@@ -446,6 +446,8 @@ export class Wallet extends Observable {
             if (this.transactions[tr].txPubKey === transaction.txPubKey) {
               // Preserve fusion flag when replacing
               transaction.fusion = this.transactions[tr].fusion;
+              transaction.minerReward =
+                transaction.minerReward || this.transactions[tr].minerReward;
               // Preserve messageViewed flag when replacing
               transaction.messageViewed =
                 this.transactions[tr].messageViewed || transaction.messageViewed;

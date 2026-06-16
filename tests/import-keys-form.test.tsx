@@ -79,7 +79,7 @@ describe("ImportKeysForm wizard", () => {
     clickContinue();
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Address"), {
-      target: { value: "ccx7" + "a".repeat(94) },
+      target: { value: `ccx7${"a".repeat(94)}` },
     });
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("View key"), { target: { value: HEX64 } });

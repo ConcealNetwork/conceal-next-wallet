@@ -331,6 +331,7 @@ export class Transaction {
     aCopy.messageViewed = this.messageViewed;
     aCopy.ttl = this.ttl;
     aCopy.remoteAddress = this.remoteAddress;
+    aCopy.minerReward = this.minerReward;
 
     for (const nin of this.ins) {
       aCopy.ins.push(nin.copy());

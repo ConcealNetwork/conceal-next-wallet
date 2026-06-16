@@ -186,12 +186,15 @@ export class TransactionsExplorer {
   }
 
   static isMinerTx(rawTransaction: RawDaemon_Transaction) {
-    if (!Array.isArray(rawTransaction.vout) || rawTransaction.vin.length > 0) {
+    if (!Array.isArray(rawTransaction.vout) || rawTransaction.vout.length === 0) {
+      console.error("Weird tx !", rawTransaction);
       return false;
     }
 
-    if (!Array.isArray(rawTransaction.vout) || rawTransaction.vout.length === 0) {
-      console.error("Weird tx !", rawTransaction);
+    const coinbaseVin =
+      rawTransaction.vin.length === 0 ||
+      (rawTransaction.vin.length === 1 && rawTransaction.vin[0]?.type === "ff");
+    if (!coinbaseVin) {
       return false;
     }
 
@@ -703,7 +706,7 @@ export class TransactionsExplorer {
         );
       }
 
-      if (rawTransaction.vin[0].type === "ff") {
+      if (rawTransaction.vin.length === 0 || rawTransaction.vin[0]?.type === "ff") {
         transaction.fees = 0;
       } else {
         transaction.fees = rawTransaction.fee;

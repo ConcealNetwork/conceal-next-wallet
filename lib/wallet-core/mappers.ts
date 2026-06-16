@@ -123,9 +123,18 @@ export function isMessageOut(tx: CoreTransaction, sentRecord?: RawSentMessageRec
   return false;
 }
 
-/** Miner reward — TransactionsExplorer.isMinerTx (chain coinbase: no vin). Not same as isCoinbase(). */
+/** Parsed coinbase reward shape (RingCT fields omitted at sync). Not message envelopes (100 atomic). */
+function isParsedCoinbaseReward(tx: CoreTransaction): boolean {
+  if (tx.ins.length > 0) return false;
+  if (!tx.isCoinbase()) return false;
+  if (isWalletMessageTx(tx)) return false;
+  if (getTxAmount(tx) === MESSAGE_TX_AMOUNT_ATOMIC) return false;
+  return tx.getAmount() > 0;
+}
+
+/** Miner reward — TransactionsExplorer.isMinerTx at sync, or parsed coinbase shape when flag missing. */
 export function isMinerRewardTx(tx: CoreTransaction): boolean {
-  return tx.minerReward === true;
+  return tx.minerReward === true || isParsedCoinbaseReward(tx);
 }
 
 export function isWalletMessageTx(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
