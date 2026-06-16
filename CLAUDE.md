@@ -66,5 +66,6 @@ Phases:
 4. **Review (parallel).** Codex + Gemini + GLM each review the diff (read-only, write findings files) **plus** CodeRabbit. Address CRITICAL/HIGH; document deferrals in `RESPONSE.md` and the PR (don't silently dismiss).
 5. **Verify.** Gate is `npm run types && npm run lint && npm test && npm run test:e2e` (add an `e2e/<feature>.spec.ts`). A live `claude-in-chrome` visual pass when a same-machine browser is available.
 6. **PR** with multi-agent provenance + test plan + review response.
+7. **Document.** After the PR, update the docs the change touches — `CLAUDE.md` (commands, conventions, gotchas, or the workflow itself), `README`, and any affected `docs/`. Fold in workflow learnings/feedback from the run so the next feature starts from the improved process.
 
 `docs/**` is excluded from Biome (it holds specs + design-mockup HTML, not source).
