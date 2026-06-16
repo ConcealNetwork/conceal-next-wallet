@@ -43,6 +43,7 @@ npm run test:e2e             # Playwright (first run: npx playwright install chr
 
 ## Conventions & gotchas
 
-- **Biome only** (no ESLint/Prettier): 2-space indent, double quotes, semicolons, trailing commas, line width 100, imports auto-organized. Most lint rules are `warn`, and the CI quality workflow (`.github/workflows/npm-audit.yml`) is report-only/non-blocking — so `npm run lint`/`npm run types` are your real gate, not CI.
+- **Biome only** (no ESLint/Prettier): 2-space indent, double quotes, semicolons, trailing commas, line width 100, imports auto-organized. Most lint rules are `warn`, but **CI gates** on `npm run lint`/`npm run types` (they exit non-zero on errors), so run both before pushing.
 - **`.npmrc` `min-release-age=7`** blocks packages published in the last 7 days on `npm install`/`npm update` (not `npm ci`). Requires npm 11+ / Node 24.
 - **Tests:** unit tests in `tests/` (vitest, jsdom, coverage over `lib/**`); E2E in `e2e/` (Playwright, port 3100). `test-results/` is a Playwright artifact — don't commit it.
+- **CI** (`.github/workflows/`): `ci.yml` runs typecheck · lint · test · static build · Playwright e2e, plus security gates (gitleaks secret-scan, `dependency-review`, `actionlint`, commitlint) and informational jobs (npm audit, bundle-size, Lighthouse). `codeql.yml` + `scorecard.yml` are scheduled security scans. A single **`ci-complete`** job aggregates results — make that the required status check for branch protection. Third-party actions are SHA-pinned (Dependabot bumps them). Commits must follow Conventional Commits (`<type>: …`).
