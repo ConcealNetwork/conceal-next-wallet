@@ -51,7 +51,7 @@ import {
 import type { CreateDepositInput } from "@/lib/services/deposit.service";
 import type { Deposit } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { ccxToNumber, cn, formatCcx, formatUsd, truncateAddress } from "@/lib/utils";
+import { ccxToNumber, cn, formatCcx, truncateAddress, usdSubline } from "@/lib/utils";
 import { InterestCalculatorDialog } from "./interest-calculator-dialog";
 
 const ResponsiveContainer = dynamic(
@@ -314,7 +314,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           detail={`${activeDeposits.length} position${activeDeposits.length === 1 ? "" : "s"} earning`}
           tone="deposit"
           index={0}
-          usd={price > 0 ? formatUsd(totalLocked * price) : undefined}
+          usd={usdSubline(totalLocked, price)}
           chart={<CompositionBar segments={segments} total={totalLocked} />}
         />
         <SummaryCard
@@ -333,7 +333,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           detail="Projected return"
           tone="amber"
           index={2}
-          usd={price > 0 ? formatUsd(totalInterest * price) : undefined}
+          usd={usdSubline(totalInterest, price)}
           chart={
             <MiniArea values={projection.map((point) => point.value)} color="hsl(var(--primary))" />
           }
@@ -419,7 +419,7 @@ function SummaryCard({
       >
         {valueLabel}
       </p>
-      {usd ? <p className="mt-0.5 text-xs text-muted-foreground">≈ {usd} USD</p> : null}
+      {usd ? <p className="mt-0.5 text-xs text-muted-foreground">≈ {usd}</p> : null}
       <div className="mt-auto pt-4">{chart}</div>
       <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
     </div>
@@ -796,12 +796,12 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
   const status = getDepositStatus(deposit);
   const isWithdrawn = deposit.status === "spent";
   const Icon = isWithdrawn || status === "matured" ? Unlock : Lock;
+  const price = useMarketData().data?.price.value ?? 0;
   const principal = ccxToNumber(deposit.amount);
   const interest = ccxToNumber(deposit.interest);
   const maturityValue = principal + interest;
   const maturityDate = formatMaturityDate(deposit.unlocksInDays);
-  const price = useMarketData().data?.price.value ?? 0;
-  const usd = (ccx: number) => (price > 0 ? formatUsd(ccx * price) : undefined);
+  const usd = (ccx: number) => usdSubline(ccx, price);
 
   return (
     <article
