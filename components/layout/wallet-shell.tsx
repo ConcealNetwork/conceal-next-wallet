@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/footer";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
+import { StorageWarningBanner } from "@/components/wallet/storage-warning-banner";
 import { useWalletLiveSync, useWalletSettings } from "@/lib/hooks";
 import { NetworkTelemetryProvider } from "@/lib/hooks/network-telemetry-provider";
 import { useIdleLock } from "@/lib/hooks/use-idle-lock";
@@ -41,6 +42,7 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
               collapsed ? "max-w-[1360px]" : "max-w-[1200px]",
             )}
           >
+            <StorageWarningBanner />
             {children}
           </div>
           <Footer collapsed={collapsed} />

@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@/lib/hooks/query-provider";
-import { queryKeys } from "@/lib/hooks/query-keys";
 import { env } from "@/lib/env";
+import { queryKeys } from "@/lib/hooks/query-keys";
+import { useQueryClient } from "@/lib/hooks/query-provider";
+import { requestPersistentStorage } from "@/lib/hooks/use-storage-health";
 import type { WalletInfo } from "@/lib/types";
 import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
 
@@ -71,6 +72,9 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
   const openSession = useCallback(
     (nextWalletInfo: WalletInfo, redirectTo?: string) => {
       resetMessageNavBadge();
+      // Opening the wallet is a user gesture — request durable storage now so the
+      // browser is less likely to evict the encrypted wallet (best-effort).
+      void requestPersistentStorage();
       setStatus("open");
       setWalletInfo(nextWalletInfo);
       queryClient.setQueryData(queryKeys.wallet, nextWalletInfo);
