@@ -16,6 +16,7 @@
       "e2e/**",
       "types/**",
       "!public",
+      "!docs",
       "!**/*.svg",
       "!lib/conceal/concealjs",
       "!!out",

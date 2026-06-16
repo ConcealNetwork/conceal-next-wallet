@@ -1,12 +1,15 @@
 import { MOCK_ADDRESS, mockDeposits } from "@/lib/mock-data/wallet";
 import { ccxAmount } from "@/lib/utils";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
+import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import {
   estimateDepositInterest,
   estimateDepositUnlockDays,
   getDepositApr,
   type DepositService,
 } from "@/lib/services/deposit.service";
+import { assertCanSpend } from "@/lib/services/view-only";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 
 export const mockDepositService: DepositService = {
   async listDeposits() {
@@ -32,6 +35,7 @@ export const mockDepositService: DepositService = {
   },
   async createDeposit(input) {
     await mockDelay();
+    assertCanSpend(isMockViewOnly(), walletCopy.viewOnlyDepositDisabled);
     return {
       id: "dep-mock-submit",
       txHash: "mock-deposit-tx-hash",
@@ -48,6 +52,7 @@ export const mockDepositService: DepositService = {
   },
   async withdrawDeposit() {
     await mockDelay();
+    assertCanSpend(isMockViewOnly(), walletCopy.viewOnlyDepositDisabled);
     return {
       id: "mock-withdrawal-tx",
       hash: "mock-withdrawal-tx-hash",

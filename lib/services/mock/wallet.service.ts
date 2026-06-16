@@ -1,18 +1,37 @@
 import { mockExportData, mockWalletInfo } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
 import type { DownloadWalletBackupResult, WalletService } from "@/lib/services/wallet.service";
+import type { WalletInfo } from "@/lib/types";
 import { backupDownloadFilename } from "@/lib/ui/download-json-file";
+
+// Mock services are module singletons, so the imported view-only state lives
+// here. A view-only `importWallet` flips it on; any full import/create resets it.
+let mockViewOnly = false;
+
+/** Current mock view-only state — read by the mock spend-service guards. */
+export function isMockViewOnly(): boolean {
+  return mockViewOnly;
+}
+
+/** Test-only reset so suites that toggle view-only don't leak state. */
+export function _resetMockViewOnly(): void {
+  mockViewOnly = false;
+}
+
+function currentWalletInfo(): WalletInfo {
+  return { ...clone(mockWalletInfo), viewOnly: mockViewOnly };
+}
 
 export const mockWalletService: WalletService = {
   async getWalletInfo() {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
-    return clone(mockWalletInfo);
+    return currentWalletInfo();
   },
   async refreshWallet() {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
-    return clone(mockWalletInfo);
+    return currentWalletInfo();
   },
   async hasStoredWallet() {
     return false;
@@ -20,7 +39,10 @@ export const mockWalletService: WalletService = {
   async openWallet() {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
-    return clone(mockWalletInfo);
+    // Opening the default mock wallet is spend-capable; don't inherit a prior
+    // view-only import (real mode re-derives from the stored keys on unlock).
+    mockViewOnly = false;
+    return currentWalletInfo();
   },
   async prepareCreateWallet() {
     await mockDelay();
@@ -28,7 +50,8 @@ export const mockWalletService: WalletService = {
   },
   async finalizeCreateWallet() {
     await mockDelay();
-    return clone(mockWalletInfo);
+    mockViewOnly = false;
+    return currentWalletInfo();
   },
   async abortCreateWallet() {
     // no draft state in mock mode
@@ -39,8 +62,8 @@ export const mockWalletService: WalletService = {
   async importWallet(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
-    void input;
-    return clone(mockWalletInfo);
+    mockViewOnly = input.method === "keys" && input.viewOnly === true;
+    return currentWalletInfo();
   },
   async previewKeys() {
     // Mock mode has no crypto engine; echo sample export data for UI review.
@@ -73,6 +96,7 @@ export const mockWalletService: WalletService = {
     return { ok: true };
   },
   async disconnect() {
-    // no runtime in mock mode
+    // no runtime in mock mode; clear view-only so the next open starts clean
+    mockViewOnly = false;
   },
 };

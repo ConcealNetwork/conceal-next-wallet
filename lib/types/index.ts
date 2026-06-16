@@ -8,6 +8,9 @@ export type UsdAmount = {
 
 export type WalletInfo = {
   address: string;
+  /** True when the wallet holds no private spend key (watch-only import). Send,
+   *  Deposits create/withdraw, and Message send are unavailable. */
+  viewOnly: boolean;
   balanceTotal: CcxAmount;
   available: CcxAmount;
   dust: CcxAmount;

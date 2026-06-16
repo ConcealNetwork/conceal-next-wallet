@@ -45,6 +45,11 @@ export function useWalletSyncStatus() {
   };
 }
 
+/** True when the open wallet is watch-only (no spend key) — drives view-only UI. */
+export function useWalletViewOnly(): boolean {
+  return useWalletInfo().data?.viewOnly ?? false;
+}
+
 export function useRefreshWallet() {
   const queryClient = useQueryClient();
   return useMutation({

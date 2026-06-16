@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>View-only mode variants</title>
+    <style>
+      :root {
+        --bg: #212121;
+        --card: #262626;
+        --inset: #2e2e2e;
+        --border: #404040;
+        --text: #ffffff;
+        --muted: #a3a3a3;
+        --active: #FFA500;
+        --view: #f5a623;
+        --danger: #ef4444;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Geist,
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0;
+      }
+
+      .page-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(24px, 3vw, 30px);
+        line-height: 1.15;
+      }
+
+      .brief-note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .variant-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .variant {
+        min-width: 0;
+      }
+
+      .variant-label {
+        margin-bottom: 10px;
+      }
+
+      .variant-label h2 {
+        font-size: 15px;
+        line-height: 1.3;
+      }
+
+      .rationale {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .phone {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+        padding: 18px;
+        min-height: 650px;
+      }
+
+      .screen-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .screen-title {
+        display: grid;
+        gap: 4px;
+      }
+
+      .screen-title h3 {
+        font-size: 24px;
+        line-height: 1.15;
+      }
+
+      .wallet-name {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 24px;
+        white-space: nowrap;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--inset);
+        color: var(--text);
+        padding: 2px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge-amber {
+        border-color: var(--view);
+        color: var(--view);
+      }
+
+      .banner {
+        display: flex;
+        align-items: start;
+        gap: 10px;
+        margin-bottom: 16px;
+        border: 1px solid var(--view);
+        border-radius: 12px;
+        background: var(--inset);
+        padding: 12px 14px;
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .banner strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 14px;
+      }
+
+      .banner span,
+      .helper,
+      .field-hint,
+      .blocked-reason {
+        color: var(--muted);
+      }
+
+      .banner-simple {
+        display: block;
+      }
+
+      .icon {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        color: var(--view);
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+      }
+
+      .icon-muted {
+        color: var(--muted);
+      }
+
+      .form {
+        display: grid;
+        gap: 14px;
+      }
+
+      .field {
+        display: grid;
+        gap: 7px;
+      }
+
+      label,
+      .row-label {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .input {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--inset);
+        padding: 10px 12px;
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .mono {
+        font-family:
+          "Geist Mono",
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          monospace;
+      }
+
+      .field-hint,
+      .helper {
+        font-size: 12px;
+      }
+
+      .button {
+        width: 100%;
+        min-height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--inset);
+        color: var(--muted);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: not-allowed;
+      }
+
+      .button-lockline {
+        border-color: var(--view);
+      }
+
+      .withdraw-card {
+        margin-top: 18px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+        overflow: hidden;
+      }
+
+      .withdraw-row {
+        min-height: 62px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px;
+        color: var(--muted);
+        cursor: not-allowed;
+      }
+
+      .withdraw-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .withdraw-copy {
+        min-width: 0;
+      }
+
+      .withdraw-copy strong {
+        display: block;
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .withdraw-copy span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .row-lock {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--inset);
+      }
+
+      .row-lock-amber {
+        border-color: var(--view);
+      }
+
+      .tooltip-callout {
+        position: relative;
+        margin: 2px 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--inset);
+        padding: 8px 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .tooltip-callout strong {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .button-block {
+        display: grid;
+        gap: 8px;
+      }
+
+      .blocked-reason {
+        display: flex;
+        align-items: start;
+        gap: 7px;
+        font-size: 12px;
+      }
+
+      .inline-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid var(--view);
+        border-radius: 999px;
+        color: var(--view);
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .blocked-control {
+        border-color: var(--view);
+      }
+
+      .blocked-control .withdraw-copy strong,
+      .blocked-control .row-label {
+        color: var(--text);
+      }
+
+      .split-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 16px 0;
+      }
+
+      .tiny-stack {
+        display: grid;
+        gap: 3px;
+      }
+
+      @media (max-width: 980px) {
+        .variant-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .phone {
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="page-title">
+        <div>
+          <h1>View-only mode Send screen variants</h1>
+          <p class="brief-note">Dark wallet mockups using only the existing Conceal Next Wallet tokens.</p>
+        </div>
+      </header>
+
+      <section class="variant-grid" aria-label="View-only mode UI variants">
+        <article class="variant" aria-labelledby="v1-title">
+          <div class="variant-label">
+            <h2 id="v1-title">V1 by-the-book</h2>
+            <p class="rationale">Closest sibling to the sync banner: neutral badge, amber status banner, native disabled affordances.</p>
+          </div>
+          <div class="phone">
+            <header class="screen-header">
+              <div class="screen-title">
+                <h3>Send</h3>
+                <p class="wallet-name">Main wallet</p>
+              </div>
+              <span class="badge">View-only</span>
+            </header>
+
+            <div class="banner banner-simple" role="status">
+              View-only wallet. Sending is unavailable because this wallet was imported without a spend key.
+            </div>
+
+            <div class="form">
+              <div class="field">
+                <label for="v1-recipient">Recipient address</label>
+                <div class="input mono" id="v1-recipient">ccx7...43af</div>
+              </div>
+              <div class="field">
+                <label for="v1-amount">Amount</label>
+                <div class="input" id="v1-amount"><span class="mono">12.5000 CCX</span><span class="field-hint">Available 84.1200</span></div>
+              </div>
+
+              <div class="tooltip-callout">
+                <strong>Tooltip:</strong> Review Send is disabled in view-only mode. Import the spend key to send funds.
+              </div>
+              <button class="button" type="button" disabled title="Review Send is disabled in view-only mode. Import the spend key to send funds.">
+                Review Send
+              </button>
+            </div>
+
+            <div class="withdraw-card" aria-label="Deposits">
+              <div class="withdraw-row" aria-disabled="true" title="Withdraw is disabled in view-only mode. Import the spend key to withdraw from a deposit.">
+                <div class="withdraw-left">
+                  <span class="row-lock" aria-hidden="true">
+                    <svg class="icon icon-muted" viewBox="0 0 24 24">
+                      <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                      <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+                    </svg>
+                  </span>
+                  <span class="withdraw-copy">
+                    <strong>Withdraw</strong>
+                    <span>Deposit actions require a spend key.</span>
+                  </span>
+                </div>
+                <span class="row-label">Disabled</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="variant" aria-labelledby="v2-title">
+          <div class="variant-label">
+            <h2 id="v2-title">V2 more-guidance</h2>
+            <p class="rationale">Adds an eye cue and inline helper copy where the user is most likely to wonder what changed.</p>
+          </div>
+          <div class="phone">
+            <header class="screen-header">
+              <div class="screen-title">
+                <h3>Send</h3>
+                <p class="wallet-name">Main wallet</p>
+              </div>
+              <span class="badge badge-amber">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                View-only
+              </span>
+            </header>
+
+            <div class="banner" role="status">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <div>
+                <strong>Watching only</strong>
+                <span>This wallet can show balances and history, but it cannot sign spend actions without the spend key.</span>
+              </div>
+            </div>
+
+            <div class="form">
+              <div class="field">
+                <label for="v2-recipient">Recipient address</label>
+                <div class="input mono" id="v2-recipient">ccx7...43af</div>
+              </div>
+              <div class="field">
+                <label for="v2-amount">Amount</label>
+                <div class="input" id="v2-amount"><span class="mono">12.5000 CCX</span><span class="field-hint">Available 84.1200</span></div>
+              </div>
+
+              <div class="button-block">
+                <button class="button" type="button" disabled title="Import the spend key to review and send this transaction.">
+                  <svg class="icon icon-muted" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+                  </svg>
+                  Review Send
+                </button>
+                <p class="helper">Import the spend key to review and send transactions from this wallet.</p>
+              </div>
+            </div>
+
+            <div class="withdraw-card" aria-label="Deposits">
+              <div class="withdraw-row" aria-disabled="true" title="Deposit withdrawals require the spend key.">
+                <div class="withdraw-left">
+                  <span class="row-lock row-lock-amber" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24">
+                      <path d="M9.5 2h5"></path>
+                      <path d="M12 14v4"></path>
+                      <path d="M8 22h8"></path>
+                      <path d="M17 8.5a5 5 0 0 0-10 0v3.5a5 5 0 0 0 10 0Z"></path>
+                    </svg>
+                  </span>
+                  <span class="withdraw-copy">
+                    <strong>Withdraw</strong>
+                    <span>Spend key required to unlock deposit funds.</span>
+                  </span>
+                </div>
+                <span class="row-label">View-only</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="variant" aria-labelledby="v3-title">
+          <div class="variant-label">
+            <h2 id="v3-title">V3 novel</h2>
+            <p class="rationale">Moves the view-only explanation into compact chips on each blocked control, reinforced by an amber hairline.</p>
+          </div>
+          <div class="phone">
+            <header class="screen-header">
+              <div class="screen-title">
+                <h3>Send</h3>
+                <p class="wallet-name">Main wallet</p>
+              </div>
+              <span class="badge badge-amber">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 3l18 18"></path>
+                  <path d="M10.6 10.6A2 2 0 0 0 13.4 13.4"></path>
+                  <path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a16.7 16.7 0 0 1-3 4.2"></path>
+                  <path d="M6.6 6.7C3.6 8.8 2 12 2 12s3.5 8 10 8a10.6 10.6 0 0 0 4.2-.9"></path>
+                </svg>
+                View-only
+              </span>
+            </header>
+
+            <div class="banner" role="status">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4"></path>
+                <path d="M12 8h.01"></path>
+              </svg>
+              <div>
+                <strong>Spend controls are locked</strong>
+                <span>The wallet is safe to inspect, but this device does not hold the spend key needed to sign transactions.</span>
+              </div>
+            </div>
+
+            <div class="form">
+              <div class="field">
+                <label for="v3-recipient">Recipient address</label>
+                <div class="input mono" id="v3-recipient">ccx7...43af</div>
+              </div>
+              <div class="field">
+                <label for="v3-amount">Amount</label>
+                <div class="input" id="v3-amount"><span class="mono">12.5000 CCX</span><span class="field-hint">Available 84.1200</span></div>
+              </div>
+
+              <button class="button button-lockline" type="button" disabled title="Blocked by view-only mode: spend key missing.">
+                <span class="inline-chip">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+                  </svg>
+                  View-only
+                </span>
+                Review Send
+              </button>
+              <p class="blocked-reason">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 6v6l4 2"></path>
+                  <circle cx="12" cy="12" r="10"></circle>
+                </svg>
+                Signing is the only blocked step; address and amount entry remain visible for inspection.
+              </p>
+            </div>
+
+            <div class="withdraw-card" aria-label="Deposits">
+              <div class="withdraw-row blocked-control" aria-disabled="true" title="Blocked by view-only mode: spend key missing.">
+                <div class="withdraw-left">
+                  <span class="row-lock row-lock-amber" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24">
+                      <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                      <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+                    </svg>
+                  </span>
+                  <span class="withdraw-copy">
+                    <strong>Withdraw</strong>
+                    <span>Cannot sign the withdrawal from this import.</span>
+                  </span>
+                </div>
+                <span class="inline-chip">View-only</span>
+              </div>
+            </div>
+
+            <div class="divider" aria-hidden="true"></div>
+            <div class="split-row">
+              <div class="tiny-stack">
+                <span class="row-label">Network state</span>
+                <span class="field-hint">Ready to view history</span>
+              </div>
+              <span class="badge">Read access</span>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

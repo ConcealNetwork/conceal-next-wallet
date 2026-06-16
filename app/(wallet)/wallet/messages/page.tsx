@@ -20,8 +20,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CopyButton, PageHeader } from "@/components/wallet/common";
+import { CopyButton, PageHeader, ViewOnlyBadge } from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
+import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import { MAX_MESSAGE_SIZE, MAX_TTL_MINUTES } from "@/lib/config/config";
 import {
   useAddressBook,
@@ -30,6 +31,7 @@ import {
   useSendMessage,
   useWalletInfo,
   useWalletSyncStatus,
+  useWalletViewOnly,
 } from "@/lib/hooks";
 import {
   buildConversationFromMessage,
@@ -63,6 +65,7 @@ export default function MessagesPage() {
   const markRead = useMarkMessageRead();
   const wallet = useWalletInfo();
   const { isSyncing } = useWalletSyncStatus();
+  const viewOnly = useWalletViewOnly();
   const [query, setQuery] = useState("");
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [readThreads, setReadThreads] = useState<Set<string>>(new Set());
@@ -175,6 +178,10 @@ export default function MessagesPage() {
 
   function sendReply() {
     if (!active || !draft.trim()) return;
+    if (viewOnly) {
+      toast.error(walletCopy.viewOnlyMessageDisabled);
+      return;
+    }
     if (!canReplyToConversation(active)) {
       toast.error("Add this contact to the address book with a CCX address to reply.");
       return;
@@ -202,6 +209,10 @@ export default function MessagesPage() {
   }
 
   function sendCompose() {
+    if (viewOnly) {
+      toast.error(walletCopy.viewOnlyMessageDisabled);
+      return;
+    }
     if (!recipient.trim() || !composeBody.trim()) {
       toast.error("Recipient and message are required.");
       return;
@@ -250,12 +261,14 @@ export default function MessagesPage() {
       <PageHeader
         title="Messages"
         subtitle="Private wallet messages and sent memos"
+        badge={viewOnly ? <ViewOnlyBadge /> : null}
         action={
           <Button
             type="button"
             className="gap-2"
             onClick={() => setCompose(true)}
-            disabled={isSyncing}
+            disabled={isSyncing || viewOnly}
+            title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
           >
             <Plus className="size-4" aria-hidden="true" />
             New Message
@@ -264,6 +277,7 @@ export default function MessagesPage() {
       />
 
       <WalletSyncingBanner />
+      <ViewOnlyBanner />
 
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <div className="wallet-card messages-inbox-height grid grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
@@ -324,19 +338,22 @@ export default function MessagesPage() {
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   placeholder={
-                    replyEnabled
-                      ? `Message ${active.name}…`
-                      : "Add contact to address book to reply…"
+                    viewOnly
+                      ? "View-only wallet — replies need the spend key"
+                      : replyEnabled
+                        ? `Message ${active.name}…`
+                        : "Add contact to address book to reply…"
                   }
                   rows={1}
-                  disabled={!replyEnabled}
+                  disabled={!replyEnabled || viewOnly}
                   className="max-h-28 min-h-10 resize-none"
                   aria-label={`Reply to ${active.name}`}
                 />
                 <Button
                   type="button"
                   onClick={sendReply}
-                  disabled={!replyEnabled || !draft.trim() || send.isPending}
+                  disabled={!replyEnabled || !draft.trim() || send.isPending || viewOnly}
+                  title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
                   className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
                 >
                   <Send className="size-4" aria-hidden="true" />
@@ -462,7 +479,8 @@ export default function MessagesPage() {
             <Button
               type="button"
               onClick={sendCompose}
-              disabled={send.isPending || composeBody.length > MAX_MESSAGE_SIZE}
+              disabled={send.isPending || composeBody.length > MAX_MESSAGE_SIZE || viewOnly}
+              title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
             >
               {send.isPending ? "Sending…" : "Send"}
             </Button>

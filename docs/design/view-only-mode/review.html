@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>View-only mode — design review</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #171513;
+        color: #fff;
+        font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #1c1c1c;
+        border-bottom: 1px solid #404040;
+        padding: 20px 32px;
+      }
+      h1 { margin: 0 0 6px; font-size: 22px; }
+      header p { margin: 0; color: #a3a3a3; font-size: 14px; max-width: 70ch; }
+      .pick { color: #f5a623; }
+      section { padding: 28px 32px 8px; }
+      .agent {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        margin: 0 0 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #2e2e2e;
+      }
+      .agent h2 { margin: 0; font-size: 18px; }
+      .agent span { color: #a3a3a3; font-size: 13px; }
+      iframe {
+        width: 100%;
+        border: 1px solid #404040;
+        border-radius: 12px;
+        background: #212121;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>View-only mode — design review</h1>
+      <p>
+        Nine variants (3 agents × 3). Compare per element — badge, banner, and the disabled-control
+        affordance. Shipped pick: <span class="pick">Codex V2 banner/badge + V3 per-row chips,
+        native-disabled buttons</span> (rejected the amber-filled "Review Send" CTA). Tell me to
+        keep it or switch any element.
+      </p>
+    </header>
+
+    <section>
+      <div class="agent"><h2>Codex</h2><span>gpt-5.5</span></div>
+      <iframe src="./variants-codex.html" title="Codex variants" onload="fit(this)"></iframe>
+    </section>
+    <section>
+      <div class="agent"><h2>Antigravity</h2><span>Gemini 3.1 Pro</span></div>
+      <iframe src="./variants-gemini.html" title="Gemini variants" onload="fit(this)"></iframe>
+    </section>
+    <section>
+      <div class="agent"><h2>GLM-5.2</h2><span>opencode</span></div>
+      <iframe src="./variants-glm.html" title="GLM variants" onload="fit(this)"></iframe>
+    </section>
+
+    <script>
+      function fit(frame) {
+        try {
+          const doc = frame.contentWindow.document;
+          const h = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+          frame.style.height = h + 24 + "px";
+        } catch (_) {
+          frame.style.height = "1600px";
+        }
+      }
+      // Re-fit on window resize (variant layouts are responsive).
+      addEventListener("resize", () => {
+        document.querySelectorAll("iframe").forEach(fit);
+      });
+    </script>
+  </body>
+</html>

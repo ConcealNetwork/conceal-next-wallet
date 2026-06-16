@@ -81,6 +81,7 @@ export function mapWalletToInfo(wallet: Wallet, networkHeight: number): WalletIn
 
   return {
     address: w.getPublicAddress(),
+    viewOnly: w.isViewOnly(),
     balanceTotal: { atomic: gross + locked },
     available: { atomic: available },
     dust: { atomic: dust },

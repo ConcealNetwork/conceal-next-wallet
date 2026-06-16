@@ -7,6 +7,7 @@ const zero = { atomic: 0 };
 function walletInfo(overrides: Partial<WalletInfo> = {}): WalletInfo {
   return {
     address: "ccx7test",
+    viewOnly: false,
     balanceTotal: zero,
     available: zero,
     dust: zero,

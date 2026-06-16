@@ -66,6 +66,15 @@ export const walletCopy = {
   disconnectConfirm: env.useMockWallet
     ? "This clears the current mock wallet session and returns you to the open wallet screen."
     : "This locks the wallet and returns you to the open wallet screen. Your encrypted wallet stays on this device.",
+  viewOnlyBadge: "View-only",
+  viewOnlyBannerTitle: "View-only wallet",
+  viewOnlyBannerBody:
+    "It can watch balances and receive, but can't send, deposit, or message — these need the private spend key. Import the full wallet to unlock them.",
+  viewOnlySendDisabled: "This is a view-only wallet. Import the spend key to send CCX.",
+  viewOnlyDepositDisabled:
+    "This is a view-only wallet. Creating or withdrawing deposits requires the spend key.",
+  viewOnlyMessageDisabled: "This is a view-only wallet. Import the spend key to send messages.",
+  viewOnlyOptimizeDisabled: "This is a view-only wallet. Optimizing outputs requires the spend key.",
 } as const;
 
 /** HTML `required` on import fields — relaxed in mock so you can click through quickly. */

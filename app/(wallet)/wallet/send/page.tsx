@@ -24,8 +24,15 @@ import {
   AddressBookContactPicker,
   findAddressBookContactByAddress,
 } from "@/components/wallet/address-book-contact-picker";
-import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
+import {
+  CopyButton,
+  PageHeader,
+  SectionCard,
+  ViewOnlyBadge,
+  WalletQrCode,
+} from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
+import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { walletNetworkScalars } from "@/lib/config/config";
 import { useCountUp } from "@/lib/hooks/use-count-up";
@@ -36,6 +43,7 @@ import {
   useTransactions,
   useWalletInfo,
   useWalletSyncStatus,
+  useWalletViewOnly,
 } from "@/lib/hooks";
 import type { AddressEntry } from "@/lib/types";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
@@ -74,6 +82,7 @@ type SendForm = z.infer<typeof sendSchema>;
 export default function SendPage() {
   const wallet = useWalletInfo();
   const { isSyncing } = useWalletSyncStatus();
+  const viewOnly = useWalletViewOnly();
   const addressBook = useAddressBook();
   const market = useMarketData();
   const transactions = useTransactions();
@@ -127,13 +136,15 @@ export default function SendPage() {
     url.search = "";
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
 
-    if (isSendToSelf(draft.address, walletAddress)) {
+    if (viewOnly) {
+      toast.error(walletCopy.viewOnlySendDisabled);
+    } else if (isSendToSelf(draft.address, walletAddress)) {
       setSelfSendFromLink(values);
     } else {
       setReview(values);
       toast.success("Payment request loaded — confirm to send.");
     }
-  }, [form, paymentLinkApplied, wallet.data?.address]);
+  }, [form, paymentLinkApplied, wallet.data?.address, viewOnly]);
 
   function pickContact(entry: AddressEntry | null) {
     setSelectedContactId(entry?.id ?? null);
@@ -157,6 +168,10 @@ export default function SendPage() {
 
   function confirmSend() {
     if (!review) return;
+    if (viewOnly) {
+      toast.error(walletCopy.viewOnlySendDisabled);
+      return;
+    }
     send.mutate(review, {
       onSuccess: () => {
         toast.success(walletCopy.sendSuccess);
@@ -169,15 +184,29 @@ export default function SendPage() {
 
   return (
     <>
-      <PageHeader title="Send CCX" subtitle="Transfer Conceal Coins to another address" />
+      <PageHeader
+        title="Send CCX"
+        subtitle="Transfer Conceal Coins to another address"
+        badge={viewOnly ? <ViewOnlyBadge /> : null}
+      />
       <WalletSyncingBanner />
+      <ViewOnlyBanner />
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
           <SectionCard
             title="Send Transaction"
             description="All fields are required except Payment ID and Message"
           >
-            <form className="space-y-5" onSubmit={form.handleSubmit((values) => setReview(values))}>
+            <form
+              className="space-y-5"
+              onSubmit={form.handleSubmit((values) => {
+                if (viewOnly) {
+                  toast.error(walletCopy.viewOnlySendDisabled);
+                  return;
+                }
+                setReview(values);
+              })}
+            >
               <div className="space-y-2">
                 <Label htmlFor="address">Destination Address</Label>
                 <AddressBookContactPicker
@@ -286,10 +315,16 @@ export default function SendPage() {
               <Button
                 type="submit"
                 className="w-full active:scale-[0.98] motion-reduce:active:scale-100"
-                disabled={send.isPending || sendToSelf || isSyncing}
+                disabled={send.isPending || sendToSelf || isSyncing || viewOnly}
+                title={viewOnly ? walletCopy.viewOnlySendDisabled : undefined}
               >
                 Review Send
               </Button>
+              {viewOnly ? (
+                <p className="text-center text-xs text-wallet-amber">
+                  {walletCopy.viewOnlySendDisabled}
+                </p>
+              ) : null}
             </form>
           </SectionCard>
         </div>

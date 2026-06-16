@@ -21,6 +21,7 @@ export const MOCK_EXPORT_ADDRESS = MOCK_ADDRESS;
 
 export const mockWalletInfo: WalletInfo = {
   address: MOCK_ADDRESS,
+  viewOnly: false,
   balanceTotal: ccxAmount(1250.5),
   available: ccxAmount(634.75),
   dust: { atomic: 45 }, // 0.000045 CCX — e.g. 1+2+…+9 atomic (< DEFAULT_DUST_THRESHOLD)

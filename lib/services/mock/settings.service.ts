@@ -1,7 +1,10 @@
 import { mockSettings } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
+import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import type { SettingsService } from "@/lib/services/settings.service";
+import { assertCanSpend } from "@/lib/services/view-only";
 import { validateNodeUrlFormat } from "@/lib/validation/node-url";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 
 let currentSettings = clone(mockSettings);
 
@@ -46,6 +49,7 @@ export const mockSettingsService: SettingsService = {
   },
   async optimizeWallet() {
     await mockDelay();
+    assertCanSpend(isMockViewOnly(), walletCopy.viewOnlyOptimizeDisabled);
     return { ok: true, optimized: true };
   },
   async resetAndRescan() {

@@ -30,9 +30,11 @@ import {
   useWalletInfo,
   useWalletSettings,
   useWalletSyncStatus,
+  useWalletViewOnly,
 } from "@/lib/hooks";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
 import { getNodeUrlFormatHints } from "@/lib/validation/node-url";
 import { cn } from "@/lib/utils";
@@ -109,6 +111,7 @@ export default function SettingsPage() {
   const resetAndRescan = useResetAndRescan();
   const wallet = useWalletInfo();
   const { isSyncing } = useWalletSyncStatus();
+  const viewOnly = useWalletViewOnly();
   const deleteWallet = useWalletDelete();
   const ticker = useTickerPreference();
   const current = settings.data;
@@ -252,6 +255,10 @@ export default function SettingsPage() {
   const unspentOutputs = optimizationStatus.data?.unspentOutputs ?? 0;
 
   function handleOptimize() {
+    if (viewOnly) {
+      toast.error(walletCopy.viewOnlyOptimizeDisabled);
+      return;
+    }
     optimizeWallet.mutate(undefined, {
       onSuccess: (result) => {
         if (result.optimized) {
@@ -303,15 +310,21 @@ export default function SettingsPage() {
                       optimizeWallet.isPending ||
                       optimizationStatus.isLoading ||
                       !optimizationNeeded ||
-                      isSyncing
+                      isSyncing ||
+                      viewOnly
                     }
                     onClick={handleOptimize}
+                    title={viewOnly ? walletCopy.viewOnlyOptimizeDisabled : undefined}
                   >
                     {optimizeWallet.isPending ? "Optimizing…" : "Optimize Now"}
                   </Button>
                   {isSyncing ? (
                     <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
                       Wait for sync to finish before optimizing.
+                    </p>
+                  ) : viewOnly ? (
+                    <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
+                      {walletCopy.viewOnlyOptimizeDisabled}
                     </p>
                   ) : optimizationNeeded ? (
                     <p className="max-w-xs text-right text-xs text-amber-400/90 sm:max-w-sm">

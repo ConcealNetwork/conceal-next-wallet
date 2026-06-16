@@ -1,4 +1,5 @@
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
+import { assertRealWalletCanSpend } from "@/lib/services/real/view-only-runtime";
 import type {
   CreateDepositInput,
   DepositConstraints,
@@ -7,6 +8,7 @@ import type {
   WithdrawDepositInput,
 } from "@/lib/services/deposit.service";
 import type { Deposit, Transaction } from "@/lib/types";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 
 async function depositOps() {
   await ensureAllWalletLegacyLibs();
@@ -24,9 +26,11 @@ export const realDepositService: DepositService = {
     return (await depositOps()).previewCreateDepositOperation(input);
   },
   async createDeposit(input: CreateDepositInput): Promise<Deposit> {
+    await assertRealWalletCanSpend(walletCopy.viewOnlyDepositDisabled);
     return (await depositOps()).createDepositOperation(input);
   },
   async withdrawDeposit(input: WithdrawDepositInput): Promise<Transaction> {
+    await assertRealWalletCanSpend(walletCopy.viewOnlyDepositDisabled);
     return (await depositOps()).withdrawDepositOperation(input);
   },
 };
