@@ -62,7 +62,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
-    "conceal-lib-js": "https://github.com/ConcealNetwork/conceal-lib-js/releases/download/v0.2.4/conceal-lib-js-0.2.4.tgz",
+    "conceal-lib-js": "https://github.com/ConcealNetwork/conceal-lib-js/releases/download/v0.2.5/conceal-lib-js-0.2.5.tgz",
     "esbuild": "^0.28.1",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.15",
