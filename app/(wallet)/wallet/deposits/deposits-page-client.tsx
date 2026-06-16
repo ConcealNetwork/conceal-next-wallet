@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, LayoutGrid, Lock, Plus, Table2, Unlock } from "lucide-react";
+import { CalendarClock, EyeOff, LayoutGrid, Lock, Plus, Table2, Unlock } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -26,13 +26,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
+import { EmptyState, PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
+import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import {
   useCreateDeposit,
   useDepositConstraints,
   useDepositPreview,
   useDeposits,
+  useWalletViewOnly,
   useWithdrawDeposit,
 } from "@/lib/hooks";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
@@ -105,7 +107,8 @@ export default function DepositsPageClient() {
     return [...open, ...withdrawnDeposits];
   }, [openDeposits, withdrawnDeposits]);
 
-  const createDisabled = constraints.data?.isDepositDisabled ?? false;
+  const viewOnly = useWalletViewOnly();
+  const createDisabled = (constraints.data?.isDepositDisabled ?? false) || viewOnly;
 
   useEffect(() => {
     function applyStoredView(next: DepositView) {
@@ -126,12 +129,14 @@ export default function DepositsPageClient() {
       <PageHeader
         title="Deposits"
         subtitle="Create time-locked deposits and track projected returns"
+        badge={viewOnly ? <ViewOnlyBadge /> : null}
         action={
           <Button
             type="button"
             className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
             onClick={() => setOpen(true)}
             disabled={createDisabled}
+            title={viewOnly ? walletCopy.viewOnlyDepositDisabled : undefined}
           >
             <Plus className="size-4" aria-hidden="true" />
             Create New Deposit
@@ -140,6 +145,7 @@ export default function DepositsPageClient() {
       />
 
       <WalletSyncingBanner hint="create and withdraw are disabled until the chain is caught up" />
+      <ViewOnlyBanner />
 
       {constraints.data?.hasPendingDeposit ? (
         <div
@@ -1048,6 +1054,7 @@ function DepositWithdrawButton({
   size?: "default" | "xs";
 }) {
   const withdraw = useWithdrawDeposit();
+  const viewOnly = useWalletViewOnly();
   const [open, setOpen] = useState(false);
   const canWithdraw = canWithdrawDeposit(deposit);
   const principal = ccxToNumber(deposit.amount);
@@ -1056,6 +1063,10 @@ function DepositWithdrawButton({
   const netReceive = principal + interest - withdrawFee;
 
   function confirmWithdraw() {
+    if (viewOnly) {
+      toast.error(walletCopy.viewOnlyDepositDisabled);
+      return;
+    }
     withdraw.mutate(
       { txHash: deposit.txHash, globalOutputIndex: deposit.globalOutputIndex },
       {
@@ -1084,12 +1095,17 @@ function DepositWithdrawButton({
         type="button"
         variant={canWithdraw ? "default" : "outline"}
         size={size}
-        disabled={!canWithdraw || withdraw.isPending}
+        disabled={!canWithdraw || withdraw.isPending || viewOnly}
         onClick={() => setOpen(true)}
+        title={viewOnly ? walletCopy.viewOnlyDepositDisabled : undefined}
         className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
       >
-        <Unlock className="size-4" aria-hidden="true" />
-        {deposit.withdrawPending ? "Withdrawing…" : "Withdraw"}
+        {viewOnly ? (
+          <EyeOff className="size-4" aria-hidden="true" />
+        ) : (
+          <Unlock className="size-4" aria-hidden="true" />
+        )}
+        {viewOnly ? "View-only" : deposit.withdrawPending ? "Withdrawing…" : "Withdraw"}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

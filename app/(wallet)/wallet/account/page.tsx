@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BalanceHero, BalanceHeroSkeleton } from "@/components/wallet/balance-hero";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { PageHeader, SectionCard } from "@/components/wallet/common";
+import { PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
+import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types";
 import {
@@ -18,6 +19,7 @@ import {
   useRefreshWallet,
   useTransactions,
   useWalletInfo,
+  useWalletViewOnly,
 } from "@/lib/hooks";
 import {
   ccxToNumber,
@@ -41,6 +43,7 @@ const Tooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), { s
 
 export default function AccountPage() {
   const wallet = useWalletInfo();
+  const viewOnly = useWalletViewOnly();
   const transactions = useTransactions();
   const market = useMarketData();
   const deposits = useDeposits();
@@ -69,6 +72,7 @@ export default function AccountPage() {
       <PageHeader
         title="Account Overview"
         subtitle="Manage your CCX holdings and view transaction summary"
+        badge={viewOnly ? <ViewOnlyBadge /> : null}
         action={
           <Button
             type="button"
@@ -88,6 +92,7 @@ export default function AccountPage() {
         }
       />
       <WalletSyncingBanner />
+      <ViewOnlyBanner />
       {wallet.isError && (
         <div
           className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"

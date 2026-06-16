@@ -1,6 +1,8 @@
 import { ensureAllWalletLegacyLibs } from "@/lib/conceal/init";
+import { assertRealWalletCanSpend } from "@/lib/services/real/view-only-runtime";
 import type { SettingsService } from "@/lib/services/settings.service";
 import type { WalletSettings } from "@/lib/types";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 
 async function settingsOps() {
   await ensureAllWalletLegacyLibs();
@@ -18,6 +20,7 @@ export const realSettingsService: SettingsService = {
     return (await settingsOps()).getOptimizationStatusOperation();
   },
   async optimizeWallet() {
+    await assertRealWalletCanSpend(walletCopy.viewOnlyOptimizeDisabled);
     return (await settingsOps()).optimizeWalletOperation();
   },
   async resetAndRescan() {

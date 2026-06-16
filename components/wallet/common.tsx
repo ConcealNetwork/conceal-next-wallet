@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clipboard, Inbox } from "lucide-react";
+import { Check, Clipboard, EyeOff, Inbox } from "lucide-react";
 import { cloneElement, isValidElement, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,26 +15,46 @@ import {
 import { CcxAmount } from "@/components/wallet/ccx";
 import { DottedQrCode } from "@/components/qr/dotted-qr";
 import type { Transaction, TransactionType } from "@/lib/types";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
 
 export function PageHeader({
   title,
   subtitle,
   action,
+  badge,
 }: {
   title: string;
   subtitle: string;
   action?: React.ReactNode;
+  badge?: React.ReactNode;
 }) {
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">{title}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight text-white">{title}</h1>
+          {badge}
+        </div>
         <p className="mt-2 text-muted-foreground">{subtitle}</p>
       </div>
       {action}
     </div>
   );
+}
+
+/** "View-only" pill for the page header — amber outline, distinct from the solid-orange active-nav pill. */
+export function ViewOnlyBadge() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-wallet-amber/40 px-2.5 py-0.5 text-xs font-semibold text-wallet-amber">
+      <ViewOnlyBadgeIcon />
+      {walletCopy.viewOnlyBadge}
+    </span>
+  );
+}
+
+function ViewOnlyBadgeIcon() {
+  return <EyeOff className="size-3.5" aria-hidden="true" />;
 }
 
 export function SectionCard({

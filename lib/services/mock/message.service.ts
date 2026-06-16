@@ -1,6 +1,9 @@
 import { mockMessages } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
+import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import type { MessageService } from "@/lib/services/message.service";
+import { assertCanSpend } from "@/lib/services/view-only";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 
 export const mockMessageService: MessageService = {
@@ -10,6 +13,7 @@ export const mockMessageService: MessageService = {
   },
   async sendMessage(input) {
     await mockDelay();
+    assertCanSpend(isMockViewOnly(), walletCopy.viewOnlyMessageDisabled);
     const paymentId = input.paymentId?.trim() || undefined;
     return {
       id: `msg-mock-${Date.now()}`,

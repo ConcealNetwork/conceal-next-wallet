@@ -16,6 +16,7 @@
       "e2e/**",
       "types/**",
       "!public",
+      "!docs",
       "!lib/conceal/concealjs",
       "!!out",
       "!!.next"

@@ -1,7 +1,10 @@
 import { mockTransactions } from "@/lib/mock-data/wallet";
 import { ccxAmount } from "@/lib/utils";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
+import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import type { TransactionService } from "@/lib/services/transaction.service";
+import { assertCanSpend } from "@/lib/services/view-only";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 
 export const mockTransactionService: TransactionService = {
   async listTransactions() {
@@ -12,6 +15,7 @@ export const mockTransactionService: TransactionService = {
   async sendTransaction(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
+    assertCanSpend(isMockViewOnly(), walletCopy.viewOnlySendDisabled);
     return {
       id: "tx-mock-submit",
       // TODO(backend): replace mock hash with the walletd transaction hash.

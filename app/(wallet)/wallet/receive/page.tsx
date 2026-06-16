@@ -7,9 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
+import {
+  CopyButton,
+  PageHeader,
+  SectionCard,
+  ViewOnlyBadge,
+  WalletQrCode,
+} from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
-import { useDeposits, useTransactions, useWalletInfo } from "@/lib/hooks";
+import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
+import { useDeposits, useTransactions, useWalletInfo, useWalletViewOnly } from "@/lib/hooks";
 import { CoinUri } from "@/lib/wallet-core/CoinUri";
 import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
 import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
@@ -22,6 +29,7 @@ const QR_LOGOS = [
 
 export default function ReceivePage() {
   const wallet = useWalletInfo();
+  const viewOnly = useWalletViewOnly();
   const transactions = useTransactions();
   const deposits = useDeposits();
   const [amount, setAmount] = useState("");
@@ -62,8 +70,13 @@ export default function ReceivePage() {
 
   return (
     <>
-      <PageHeader title="Receive CCX" subtitle="Share your address or QR code to receive funds" />
+      <PageHeader
+        title="Receive CCX"
+        subtitle="Share your address or QR code to receive funds"
+        badge={viewOnly ? <ViewOnlyBadge /> : null}
+      />
       <WalletSyncingBanner />
+      <ViewOnlyBanner />
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">

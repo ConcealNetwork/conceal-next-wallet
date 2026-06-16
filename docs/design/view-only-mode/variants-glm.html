@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>View-only mode — 3 UI variants (glm)</title>
+    <meta
+      name="description"
+      content="Three view-only-mode UI variants for the Conceal Next Wallet Send screen. Static design artifact; no external dependencies."
+    />
+    <style>
+      /* ------------------------------------------------------------------
+         Tokens — exact hex from DESIGN-BRIEF.md / DESIGN.md.
+         No pure black, no purple, no invented colors.
+         ------------------------------------------------------------------ */
+      :root {
+        --vo-bg: #212121; /* app background — lifted warm grey */
+        --vo-card: #262626; /* cards — subtle lift */
+        --vo-inset: #2e2e2e; /* secondary / muted fills, inputs */
+        --vo-border: #404040; /* card + input outlines */
+        --vo-text: #ffffff; /* primary text */
+        --vo-muted: #a3a3a3; /* secondary text */
+        --vo-primary: #ffa500; /* sync / active / primary — pure orange */
+        --vo-amber: #f5a623; /* view-only info tone */
+        --vo-danger: #ef4444; /* destructive (outgoing) — not used for view-only */
+
+        /* opacity variants of the two accents (border/30, bg/10 etc.) */
+        --vo-primary-10: rgba(255, 165, 0, 0.1);
+        --vo-primary-30: rgba(255, 165, 0, 0.3);
+        --vo-amber-10: rgba(245, 166, 35, 0.1);
+        --vo-amber-15: rgba(245, 166, 35, 0.15);
+        --vo-amber-18: rgba(245, 166, 35, 0.18);
+        --vo-amber-30: rgba(245, 166, 35, 0.3);
+        --vo-amber-45: rgba(245, 166, 35, 0.45);
+        --vo-amber-50: rgba(245, 166, 35, 0.5);
+        --vo-amber-60: rgba(245, 166, 35, 0.6);
+
+        --radius: 0.75rem; /* rounded-xl, matches --radius */
+        --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Arial, sans-serif;
+        --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        background-color: var(--vo-bg);
+        color: var(--vo-text);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      .vo-wrap {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 40px 28px 80px;
+      }
+
+      /* ----------------------------- file header ----------------------------- */
+      .vo-doc-head {
+        margin-bottom: 28px;
+      }
+      .vo-doc-head h1 {
+        margin: 0 0 6px;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .vo-doc-head p {
+        margin: 0;
+        color: var(--vo-muted);
+        max-width: 70ch;
+      }
+      .vo-swatches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .vo-swatch {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 9999px;
+        border: 1px solid var(--vo-border);
+        background: var(--vo-card);
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--vo-muted);
+      }
+      .vo-swatch i {
+        width: 14px;
+        height: 14px;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        display: inline-block;
+      }
+
+      /* ----------------------------- variant grid --------------------------- */
+      .vo-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      @media (min-width: 1100px) {
+        .vo-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (min-width: 1400px) {
+        .vo-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      /* ----------------------------- variant shell -------------------------- */
+      .vo-variant {
+        background: var(--vo-card);
+        border: 1px solid var(--vo-border);
+        border-radius: var(--radius);
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+      }
+      .vo-variant__head {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .vo-variant__tagrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .vo-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 9px;
+        border-radius: 9999px;
+        background: var(--vo-inset);
+        color: var(--vo-text);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .vo-variant__name {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .vo-rationale {
+        margin: 0;
+        color: var(--vo-muted);
+        font-size: 12.5px;
+        line-height: 1.45;
+      }
+
+      /* ----------------------------- mock screen ---------------------------- */
+      .vo-phone {
+        background: var(--vo-bg);
+        border: 1px solid var(--vo-border);
+        border-radius: var(--radius);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .vo-pageheader {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 4px;
+      }
+      .vo-pageheader h2 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .vo-pageheader p {
+        margin: 6px 0 0;
+        color: var(--vo-muted);
+        font-size: 13px;
+      }
+
+      /* ------------------------------- badges -------------------------------- */
+      .vo-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.4;
+        white-space: nowrap;
+        border: 1px solid transparent;
+      }
+      .vo-badge--secondary {
+        background: var(--vo-inset);
+        color: var(--vo-text);
+      }
+      .vo-badge--amber {
+        background: var(--vo-amber-15);
+        border-color: var(--vo-amber-45);
+        color: var(--vo-text);
+      }
+
+      /* ------------------------------- banners ------------------------------- */
+      .vo-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 14px;
+        border-radius: var(--radius);
+        border: 1px solid;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .vo-banner strong {
+        color: var(--vo-text);
+        font-weight: 600;
+      }
+      .vo-banner--sync {
+        border-color: var(--vo-primary-30);
+        background: var(--vo-primary-10);
+        color: var(--vo-text);
+      }
+      .vo-banner--viewonly {
+        border-color: var(--vo-amber-30);
+        background: var(--vo-amber-10);
+        color: var(--vo-text);
+      }
+      .vo-banner__body {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .vo-banner__sub {
+        color: var(--vo-muted);
+        font-size: 12px;
+      }
+      .vo-banner .vo-ico {
+        color: var(--vo-amber);
+        flex: none;
+      }
+      .vo-banner--sync .vo-ico {
+        color: var(--vo-primary);
+      }
+
+      /* -------------------------------- cards -------------------------------- */
+      .vo-card {
+        background: var(--vo-card);
+        border: 1px solid var(--vo-border);
+        border-radius: var(--radius);
+        padding: 16px;
+        box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+      }
+      .vo-card__title {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .vo-card__desc {
+        margin: 2px 0 0;
+        color: var(--vo-muted);
+        font-size: 12px;
+      }
+      .vo-card__body {
+        margin-top: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      /* -------------------------------- form --------------------------------- */
+      .vo-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .vo-label {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--vo-text);
+      }
+      .vo-input {
+        width: 100%;
+        background: var(--vo-inset);
+        border: 1px solid var(--vo-border);
+        border-radius: 10px;
+        padding: 9px 12px;
+        color: var(--vo-text);
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+      }
+      .vo-input--mono {
+        font-family: var(--font-mono);
+        letter-spacing: -0.01em;
+      }
+      .vo-input::placeholder {
+        color: var(--vo-muted);
+      }
+      .vo-fee {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--vo-inset);
+        border-radius: var(--radius);
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+      .vo-fee span:first-child {
+        color: var(--vo-muted);
+      }
+      .vo-fee span:last-child {
+        font-family: var(--font-mono);
+      }
+
+      /* -------------------------------- buttons ------------------------------ */
+      .vo-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 600;
+        line-height: 1;
+        border: 1px solid transparent;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
+      }
+      .vo-btn--primary {
+        background: var(--vo-primary);
+        color: #000;
+      }
+      .vo-btn--outline {
+        background: transparent;
+        border-color: var(--vo-border);
+        color: var(--vo-text);
+      }
+      .vo-btn:disabled,
+      .vo-btn[aria-disabled="true"] {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      .vo-btn--block {
+        width: 100%;
+      }
+
+      /* --------------------------- helper / lockage -------------------------- */
+      .vo-helper {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 8px 0 0;
+        color: var(--vo-muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .vo-helper .vo-ico {
+        color: var(--vo-amber);
+      }
+
+      /* ----------------------------- deposit row ----------------------------- */
+      .vo-deposit-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 6px 0;
+      }
+      .vo-deposit-row__main {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .vo-deposit-row__amount {
+        font-family: var(--font-mono);
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+      .vo-deposit-row__meta {
+        color: var(--vo-muted);
+        font-size: 12px;
+      }
+
+      /* ------------------------------- V3 chips ------------------------------ */
+      .vo-controlwrap {
+        position: relative;
+      }
+      /* amber top hairline on a disabled primary control */
+      .vo-hairline-top {
+        box-shadow: inset 0 2px 0 0 var(--vo-amber-60);
+      }
+      /* amber left rail marking a blocked row */
+      .vo-row-marked {
+        border-left: 2px solid var(--vo-amber-60);
+        padding-left: 12px;
+      }
+      .vo-lockchip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        background: var(--vo-amber-18);
+        border: 1px solid var(--vo-amber-50);
+        color: var(--vo-text);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        line-height: 1.4;
+        white-space: nowrap;
+      }
+      .vo-lockchip .vo-ico {
+        color: var(--vo-amber);
+      }
+      /* chip floating at the top-right corner of a blocked CTA */
+      .vo-lockchip--float {
+        position: absolute;
+        top: -10px;
+        right: 10px;
+      }
+
+      /* -------------------------------- icons -------------------------------- */
+      .vo-ico {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        display: block;
+      }
+      .vo-ico--sm {
+        width: 12px;
+        height: 12px;
+      }
+      .vo-ico--lead {
+        margin-right: 2px;
+        vertical-align: middle;
+      }
+
+      /* ------------------------------ footnote ------------------------------- */
+      .vo-foot {
+        margin-top: 32px;
+        color: var(--vo-muted);
+        font-size: 12px;
+        max-width: 80ch;
+        line-height: 1.5;
+      }
+      .vo-foot code {
+        font-family: var(--font-mono);
+        background: var(--vo-inset);
+        padding: 1px 5px;
+        border-radius: 4px;
+        color: var(--vo-text);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="vo-wrap">
+      <!-- ============================ doc header ============================ -->
+      <header class="vo-doc-head">
+        <h1>View-only mode — 3 UI variants</h1>
+        <p>
+          Three mock dark <strong>Send CCX</strong> screens for an imported
+          view-only wallet (no spend key). Each shows the page-header
+          <em>View-only</em> badge, the view-only banner (amber sibling of the
+          existing sync banner), a disabled <em>Review Send</em> button, and a
+          disabled <em>Withdraw</em> row — each variant signalling <em>why</em>
+          spending is blocked in a different way. Informational state, not an
+          error.
+        </p>
+        <div class="vo-swatches" aria-hidden="true">
+          <span class="vo-swatch"><i style="background:#212121"></i>#212121 bg</span>
+          <span class="vo-swatch"><i style="background:#262626"></i>#262626 card</span>
+          <span class="vo-swatch"><i style="background:#2e2e2e"></i>#2e2e2e inset</span>
+          <span class="vo-swatch"><i style="background:#404040"></i>#404040 border</span>
+          <span class="vo-swatch"><i style="background:#a3a3a3"></i>#a3a3a3 muted</span>
+          <span class="vo-swatch"><i style="background:#ffffff"></i>#ffffff text</span>
+          <span class="vo-swatch"><i style="background:#FFA500"></i>#FFA500 sync / primary</span>
+          <span class="vo-swatch"><i style="background:#f5a623"></i>#f5a623 view-only amber</span>
+        </div>
+      </header>
+
+      <div class="vo-grid">
+        <!-- ============================== V1 ================================= -->
+        <article class="vo-variant" id="v1">
+          <div class="vo-variant__head">
+            <div class="vo-variant__tagrow">
+              <span class="vo-tag">V1</span>
+              <h2 class="vo-variant__name">By the book</h2>
+            </div>
+            <p class="vo-rationale">
+              Strict amber sibling of the sync banner — secondary header badge,
+              native <code>disabled</code> + <code>title</code> tooltip only;
+              the smallest possible addition to the existing system.
+            </p>
+          </div>
+
+          <div class="vo-phone">
+            <!-- page header w/ badge -->
+            <div class="vo-pageheader">
+              <div>
+                <h2>Send CCX</h2>
+                <p>Transfer Conceal Coins to another address</p>
+              </div>
+              <span class="vo-badge vo-badge--secondary">View-only</span>
+            </div>
+
+            <!-- stacked banners: syncing (orange) + view-only (amber) -->
+            <div
+              class="vo-banner vo-banner--sync"
+              role="status"
+              aria-label="Blockchain syncing"
+            >
+              <svg
+                class="vo-ico"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                <path d="M3 21v-5h5" />
+              </svg>
+              <span>Syncing blockchain… block 12,345 / 67,890 (18%)</span>
+            </div>
+            <div
+              class="vo-banner vo-banner--viewonly"
+              role="status"
+              aria-label="View-only wallet"
+            >
+              <span>View-only wallet — spending is disabled.</span>
+            </div>
+
+            <!-- send form -->
+            <div class="vo-card">
+              <div class="vo-card__title">Send Transaction</div>
+              <p class="vo-card__desc">
+                All fields are required except Payment ID and Message
+              </p>
+              <div class="vo-card__body">
+                <div class="vo-field">
+                  <label class="vo-label" for="v1-addr">Destination Address</label>
+                  <input
+                    id="v1-addr"
+                    class="vo-input vo-input--mono"
+                    placeholder="ccx7 …"
+                    autocomplete="off"
+                    disabled
+                  />
+                </div>
+                <div class="vo-field">
+                  <label class="vo-label" for="v1-amt">Amount to Send</label>
+                  <input
+                    id="v1-amt"
+                    class="vo-input"
+                    type="number"
+                    placeholder="0.00"
+                    disabled
+                  />
+                </div>
+                <div class="vo-fee">
+                  <span>Estimated fees</span><span>0.0010 CCX</span>
+                </div>
+                <button
+                  type="button"
+                  class="vo-btn vo-btn--primary vo-btn--block"
+                  disabled
+                  title="Spending is disabled in view-only mode. Import your spend key to send."
+                >
+                  Review Send
+                </button>
+              </div>
+            </div>
+
+            <!-- deposit / withdraw row -->
+            <div class="vo-card">
+              <div class="vo-card__title">Deposits</div>
+              <p class="vo-card__desc">Open term deposits</p>
+              <div class="vo-card__body">
+                <div class="vo-deposit-row">
+                  <div class="vo-deposit-row__main">
+                    <span class="vo-deposit-row__amount">1,200.00 CCX</span>
+                    <span class="vo-deposit-row__meta">Unlocks in 4 days</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="vo-btn vo-btn--outline"
+                    disabled
+                    title="Withdraw is disabled in view-only mode. Import your spend key to withdraw."
+                  >
+                    Withdraw
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- ============================== V2 ================================= -->
+        <article class="vo-variant" id="v2">
+          <div class="vo-variant__head">
+            <div class="vo-variant__tagrow">
+              <span class="vo-tag">V2</span>
+              <h2 class="vo-variant__name">More guidance</h2>
+            </div>
+            <p class="vo-rationale">
+              Adds a lucide <em>eye-off</em> + <em>lock</em> vocabulary on badge
+              and banner, plus an inline helper line under the disabled CTA — so
+              the <em>why</em> is readable without hovering.
+            </p>
+          </div>
+
+          <div class="vo-phone">
+            <!-- page header w/ amber icon badge -->
+            <div class="vo-pageheader">
+              <div>
+                <h2>Send CCX</h2>
+                <p>Transfer Conceal Coins to another address</p>
+              </div>
+              <span class="vo-badge vo-badge--amber">
+                <svg
+                  class="vo-ico vo-ico--sm"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M10.7 5.1A10.6 10.6 0 0 1 12 5c5.5 0 10 7 10 7a18 18 0 0 1-3.1 4M6.6 6.6A18 18 0 0 0 2 12s4.5 7 10 7a10.6 10.6 0 0 0 5.4-1.5"
+                  />
+                  <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+                  <line x1="2" y1="2" x2="22" y2="22" />
+                </svg>
+                View-only
+              </span>
+            </div>
+
+            <!-- banners: sync + view-only w/ icon & subline -->
+            <div
+              class="vo-banner vo-banner--sync"
+              role="status"
+              aria-label="Blockchain syncing"
+            >
+              <svg
+                class="vo-ico"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                <path d="M3 21v-5h5" />
+              </svg>
+              <span>Syncing blockchain… block 12,345 / 67,890 (18%)</span>
+            </div>
+            <div
+              class="vo-banner vo-banner--viewonly"
+              role="status"
+              aria-label="View-only wallet"
+            >
+              <svg
+                class="vo-ico"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M10.7 5.1A10.6 10.6 0 0 1 12 5c5.5 0 10 7 10 7a18 18 0 0 1-3.1 4M6.6 6.6A18 18 0 0 0 2 12s4.5 7 10 7a10.6 10.6 0 0 0 5.4-1.5"
+                />
+                <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+                <line x1="2" y1="2" x2="22" y2="22" />
+              </svg>
+              <span class="vo-banner__body">
+                <strong>View-only wallet — spending is disabled.</strong>
+                <span class="vo-banner__sub"
+                  >Import your spend key to send, withdraw, or message.</span
+                >
+              </span>
+            </div>
+
+            <!-- send form -->
+            <div class="vo-card">
+              <div class="vo-card__title">Send Transaction</div>
+              <p class="vo-card__desc">
+                All fields are required except Payment ID and Message
+              </p>
+              <div class="vo-card__body">
+                <div class="vo-field">
+                  <label class="vo-label" for="v2-addr">Destination Address</label>
+                  <input
+                    id="v2-addr"
+                    class="vo-input vo-input--mono"
+                    placeholder="ccx7 …"
+                    autocomplete="off"
+                    disabled
+                  />
+                </div>
+                <div class="vo-field">
+                  <label class="vo-label" for="v2-amt">Amount to Send</label>
+                  <input
+                    id="v2-amt"
+                    class="vo-input"
+                    type="number"
+                    placeholder="0.00"
+                    disabled
+                  />
+                </div>
+                <div class="vo-fee">
+                  <span>Estimated fees</span><span>0.0010 CCX</span>
+                </div>
+                <div class="vo-controlwrap">
+                  <button
+                    type="button"
+                    class="vo-btn vo-btn--primary vo-btn--block"
+                    disabled
+                    title="Spending is disabled in view-only mode. Import your spend key to send."
+                  >
+                    Review Send
+                  </button>
+                </div>
+                <p class="vo-helper">
+                  <svg
+                    class="vo-ico vo-ico--sm"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="7.5" cy="15.5" r="4.5" />
+                    <path d="m10.5 12.5 8-8" />
+                    <path d="m16 7 3 3" />
+                    <path d="m18.5 4.5 2 2" />
+                  </svg>
+                  You need to import your spend key to enable sending.
+                </p>
+              </div>
+            </div>
+
+            <!-- deposit / withdraw row -->
+            <div class="vo-card">
+              <div class="vo-card__title">Deposits</div>
+              <p class="vo-card__desc">Open term deposits</p>
+              <div class="vo-card__body">
+                <div class="vo-deposit-row">
+                  <div class="vo-deposit-row__main">
+                    <span class="vo-deposit-row__amount">1,200.00 CCX</span>
+                    <span class="vo-deposit-row__meta">Unlocks in 4 days</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="vo-btn vo-btn--outline"
+                    disabled
+                    title="Withdraw is disabled in view-only mode. Import your spend key to withdraw."
+                  >
+                    <svg
+                      class="vo-ico vo-ico--sm"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="11" width="18" height="11" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Withdraw
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- ============================== V3 ================================= -->
+        <article class="vo-variant" id="v3">
+          <div class="vo-variant__head">
+            <div class="vo-variant__tagrow">
+              <span class="vo-tag">V3</span>
+              <h2 class="vo-variant__name">View-only chip system</h2>
+            </div>
+            <p class="vo-rationale">
+              A reusable amber <em>view-only chip</em> + hairline on every blocked
+              control turns the disabled set into a scannable system — not
+              per-control guesswork. Still on-system: same amber, same pill
+              vocabulary, same banner.
+            </p>
+          </div>
+
+          <div class="vo-phone">
+            <!-- page header w/ amber eye badge (same as V2; persistent chrome) -->
+            <div class="vo-pageheader">
+              <div>
+                <h2>Send CCX</h2>
+                <p>Transfer Conceal Coins to another address</p>
+              </div>
+              <span class="vo-badge vo-badge--amber">
+                <svg
+                  class="vo-ico vo-ico--sm"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                View-only
+              </span>
+            </div>
+
+            <!-- banners -->
+            <div
+              class="vo-banner vo-banner--sync"
+              role="status"
+              aria-label="Blockchain syncing"
+            >
+              <svg
+                class="vo-ico"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                <path d="M3 21v-5h5" />
+              </svg>
+              <span>Syncing blockchain… block 12,345 / 67,890 (18%)</span>
+            </div>
+            <div
+              class="vo-banner vo-banner--viewonly"
+              role="status"
+              aria-label="View-only wallet"
+            >
+              <svg
+                class="vo-ico"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span class="vo-banner__body">
+                <strong>View-only wallet — spending is disabled.</strong>
+                <span class="vo-banner__sub"
+                  >Blocked controls are marked with a view-only chip.</span
+                >
+              </span>
+            </div>
+
+            <!-- send form -->
+            <div class="vo-card">
+              <div class="vo-card__title">Send Transaction</div>
+              <p class="vo-card__desc">
+                All fields are required except Payment ID and Message
+              </p>
+              <div class="vo-card__body">
+                <div class="vo-field">
+                  <label class="vo-label" for="v3-addr">Destination Address</label>
+                  <input
+                    id="v3-addr"
+                    class="vo-input vo-input--mono"
+                    placeholder="ccx7 …"
+                    autocomplete="off"
+                    disabled
+                  />
+                </div>
+                <div class="vo-field">
+                  <label class="vo-label" for="v3-amt">Amount to Send</label>
+                  <input
+                    id="v3-amt"
+                    class="vo-input"
+                    type="number"
+                    placeholder="0.00"
+                    disabled
+                  />
+                </div>
+                <div class="vo-fee">
+                  <span>Estimated fees</span><span>0.0010 CCX</span>
+                </div>
+                <div class="vo-controlwrap">
+                  <!-- amber top hairline via modifier class -->
+                  <button
+                    type="button"
+                    class="vo-btn vo-btn--primary vo-btn--block vo-hairline-top"
+                    disabled
+                    title="Spending is disabled in view-only mode. Import your spend key to send."
+                  >
+                    Review Send
+                  </button>
+                  <!-- floating chip signage -->
+                  <span class="vo-lockchip vo-lockchip--float">
+                    <svg
+                      class="vo-ico vo-ico--sm"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="11" width="18" height="11" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    View-only
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- deposit / withdraw row: amber left rail + inline chip -->
+            <div class="vo-card">
+              <div class="vo-card__title">Deposits</div>
+              <p class="vo-card__desc">Open term deposits</p>
+              <div class="vo-card__body">
+                <div class="vo-deposit-row vo-row-marked">
+                  <div class="vo-deposit-row__main">
+                    <span class="vo-deposit-row__amount">1,200.00 CCX</span>
+                    <span class="vo-deposit-row__meta">Unlocks in 4 days</span>
+                  </div>
+                  <span class="vo-lockchip" aria-hidden="true">
+                    <svg
+                      class="vo-ico vo-ico--sm"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="3" y="11" width="18" height="11" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Locked
+                  </span>
+                  <button
+                    type="button"
+                    class="vo-btn vo-btn--outline"
+                    disabled
+                    title="Withdraw is disabled in view-only mode. Import your spend key to withdraw."
+                  >
+                    Withdraw
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="vo-foot">
+        Static design artifact — mock balances/addresses are illustrative only.
+        All colors are the real Conceal wallet tokens (<code>#212121</code> bg,
+        <code>#262626</code> card, <code>#2e2e2e</code> inset,
+        <code>#404040</code> border, <code>#a3a3a3</code> muted,
+        <code>#FFA500</code> sync/primary, <code>#f5a623</code> view-only
+        amber). Orange is reserved for sync/active; amber is reserved for
+        view-only so a syncing view-only wallet reads as two distinct stacked
+        banners. Icons are inline SVG in the lucide line style; no emoji, no
+        pure-black surfaces, no purple.
+      </p>
+    </div>
+  </body>
+</html>
