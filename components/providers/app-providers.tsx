@@ -2,10 +2,11 @@
 
 import type { CSSProperties } from "react";
 import { Toaster } from "sonner";
-import { WalletServiceWorkerRegister } from "@/components/wallet/wallet-service-worker";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { WalletServiceWorkerRegister } from "@/components/wallet/wallet-service-worker";
 import { WalletQueryProvider } from "@/lib/hooks/query-provider";
 import { WalletSessionProvider } from "@/lib/session/wallet-session";
+import { ThemeProvider } from "@/lib/ui/theme-provider";
 import { TickerPreferenceProvider } from "@/lib/ui/ticker-preference-provider";
 
 // Sonner CSS variables — warm Aurora palette. `richColors` must stay on so Sonner
@@ -31,16 +32,18 @@ const TOAST_STYLE: CSSProperties = {
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <WalletQueryProvider>
-      <WalletSessionProvider>
-        <TickerPreferenceProvider>
-          <WalletServiceWorkerRegister />
-          <TooltipProvider>
-            {children}
-            <Toaster richColors position="top-right" style={TOAST_STYLE} />
-          </TooltipProvider>
-        </TickerPreferenceProvider>
-      </WalletSessionProvider>
-    </WalletQueryProvider>
+    <ThemeProvider>
+      <WalletQueryProvider>
+        <WalletSessionProvider>
+          <TickerPreferenceProvider>
+            <WalletServiceWorkerRegister />
+            <TooltipProvider>
+              {children}
+              <Toaster richColors position="top-right" style={TOAST_STYLE} />
+            </TooltipProvider>
+          </TickerPreferenceProvider>
+        </WalletSessionProvider>
+      </WalletQueryProvider>
+    </ThemeProvider>
   );
 }
