@@ -2,6 +2,7 @@
 
 import { Check, Clipboard, EyeOff, Inbox } from "lucide-react";
 import { cloneElement, isValidElement, useState } from "react";
+import { DottedQrCode } from "@/components/qr/dotted-qr";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { DottedQrCode } from "@/components/qr/dotted-qr";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
@@ -33,7 +33,7 @@ export function PageHeader({
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-white">{title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
           {badge}
         </div>
         <p className="mt-2 text-muted-foreground">{subtitle}</p>
@@ -111,7 +111,7 @@ export function StatCard({
   tone?: "default" | "incoming" | "outgoing" | "deposit" | "amber";
 }) {
   const toneClass = {
-    default: "text-white",
+    default: "text-foreground",
     incoming: "text-wallet-incoming",
     outgoing: "text-wallet-outgoing",
     deposit: "text-wallet-deposit",
@@ -297,7 +297,7 @@ export function TransactionRow({ transaction }: { transaction: Transaction }) {
       <div>
         <div className="flex items-center gap-3">
           <Badge variant="secondary">{label}</Badge>
-          <p className="font-medium text-white">{truncateAddress(transaction.address)}</p>
+          <p className="font-medium text-foreground">{truncateAddress(transaction.address)}</p>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {timeAgo(transaction.timestamp)} • {transaction.confirmations} conf
@@ -395,7 +395,7 @@ export function EmptyState({
           <Inbox className="size-5" aria-hidden="true" />
         </div>
       )}
-      <p className="mt-4 font-semibold text-white">{title}</p>
+      <p className="mt-4 font-semibold text-foreground">{title}</p>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">{description}</p>
     </div>
   );

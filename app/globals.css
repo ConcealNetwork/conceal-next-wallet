@@ -101,6 +101,22 @@
   @apply rounded-xl border border-border/70 bg-card/70 backdrop-blur-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_18px_60px_rgba(0,0,0,0.32)];
 }
 
+/* The dark-tuned 18px/60px/0.32 drop shadow reads as "floating" on a light field.
+   Swap it for a subtle, warm-tinted elevation (and drop the white inset sheen,
+   which is invisible on light) so cards sit naturally on the background. */
+:root[data-theme="light"] .wallet-card {
+  box-shadow:
+    0 1px 2px rgb(34 29 24 / 0.04),
+    0 2px 6px rgb(34 29 24 / 0.06);
+}
+
+/* Brand orange (#FFA500) as text/icons on the near-white field is only ~1.5:1.
+   Use a deeper amber for the `text-primary` *foreground* in light mode (passes
+   WCAG) while leaving `bg-primary` fills (buttons, active nav) the bright orange. */
+:root[data-theme="light"] .text-primary {
+  color: hsl(33 96% 38%);
+}
+
 /* Messages inbox: fill remaining viewport; each column scrolls internally. */
 @layer components {
   .messages-inbox-height {
@@ -150,6 +166,38 @@
     --chart-3: 39 100% 50%;
     --chart-4: 0 84% 60%;
     --chart-5: 221 83% 53%;
+  }
+
+  /* Warm "Aurora" — light counterpart. Warm near-white field, warm-tinted
+     surfaces/borders, the same pure-orange accent (#FFA500) preserved. Applied
+     when the resolved theme is light (see the no-FOUC script in the root layout). */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --background: 36 38% 97%; /* warm near-white ~#faf7f2 */
+    --foreground: 30 12% 12%; /* warm near-black ~#221d18 */
+    --card: 0 0% 100%;
+    --card-foreground: 30 12% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 12% 12%;
+    --primary: 39 100% 50%; /* #FFA500 pure orange */
+    --primary-foreground: 0 0% 0%;
+    --secondary: 36 24% 92%; /* warm light surface */
+    --secondary-foreground: 30 12% 18%;
+    --muted: 36 24% 92%;
+    --muted-foreground: 32 9% 38%; /* warm mid grey */
+    --accent: 39 100% 50%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 72% 46%; /* darker red for contrast on light */
+    --destructive-foreground: 0 0% 100%;
+    --border: 34 18% 85%; /* warm hairline */
+    --input: 34 18% 85%;
+    --ring: 39 100% 50%;
+    --chrome: 36 30% 95%; /* light warm chrome surface (sidebar + footer) */
+    --chart-1: 199 89% 42%;
+    --chart-2: 160 84% 32%;
+    --chart-3: 33 100% 45%;
+    --chart-4: 0 72% 50%;
+    --chart-5: 221 83% 48%;
   }
 
   * {

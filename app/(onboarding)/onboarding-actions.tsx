@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { Eye, FileKey, KeyRound, type LucideIcon, QrCode, Upload } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -16,21 +16,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
-import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
 import { services } from "@/lib/services";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
-import {
-  MNEMONIC_IMPORT_LANGUAGES,
-  type MnemonicImportLanguageKey,
-} from "@/lib/ui/mnemonic-import-languages";
 import {
   describeScanHeight,
   estimateScanHeight,
   IMPORT_HEIGHT_PRESETS,
   type ImportHeightPreset,
 } from "@/lib/ui/import-height-presets";
+import {
+  MNEMONIC_IMPORT_LANGUAGES,
+  type MnemonicImportLanguageKey,
+} from "@/lib/ui/mnemonic-import-languages";
 import { importFieldsRequired, walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 import { addressIsValid, privateKeyIsValid } from "@/lib/validation/ccx";
@@ -79,7 +79,7 @@ export function ImportMethodCards() {
                   <Icon className="size-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-white">{method.label}</h2>
+                  <h2 className="font-semibold text-foreground">{method.label}</h2>
                   <p className="mt-2 text-sm text-muted-foreground">{method.description}</p>
                 </div>
               </CardContent>

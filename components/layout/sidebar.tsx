@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import {
   BarChart3,
   BookOpen,
@@ -13,15 +12,21 @@ import {
   LogOut,
   Mail,
   Menu,
+  Monitor,
+  Moon,
   Network,
   QrCode,
   Send,
   Settings,
+  Sun,
   Wallet,
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCallback, useState } from "react";
+import { NavMessageBadge } from "@/components/layout/nav-message-badge";
+import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,15 +41,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
-import { NavMessageBadge } from "@/components/layout/nav-message-badge";
-import { cn } from "@/lib/utils";
+import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
 import {
   useAcknowledgeMessagesSinceOpen,
   useNewMessagesSinceOpen,
 } from "@/lib/hooks/use-new-messages-since-open";
-import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
+import { THEME_PREFERENCES, type ThemePreference } from "@/lib/ui/theme";
+import { useTheme } from "@/lib/ui/theme-provider";
 import { walletCopy } from "@/lib/ui/wallet-copy";
+import { cn } from "@/lib/utils";
 
 const mainNav = [
   { href: "/wallet/account", label: "Account", icon: Home },
@@ -125,6 +130,46 @@ function NavLink({
       <TooltipContent side="right">
         {showBadge ? `${item.label} (+${badge > 99 ? "99" : badge} new)` : item.label}
       </TooltipContent>
+    </Tooltip>
+  );
+}
+
+const THEME_META: Record<ThemePreference, { label: string; icon: typeof Sun }> = {
+  system: { label: "System", icon: Monitor },
+  light: { label: "Light", icon: Sun },
+  dark: { label: "Dark", icon: Moon },
+};
+
+/** Globally-accessible theme switch: cycles System → Light → Dark. */
+function SidebarThemeToggle({ collapsed }: { collapsed: boolean }) {
+  const { preference, setPreference } = useTheme();
+  const { label, icon: Icon } = THEME_META[preference];
+  const next =
+    THEME_PREFERENCES[(THEME_PREFERENCES.indexOf(preference) + 1) % THEME_PREFERENCES.length];
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label={`Theme: ${label}. Switch to ${THEME_META[next].label}`}
+          onClick={() => setPreference(next)}
+          className="h-11 w-full shrink-0 justify-start gap-3 px-3 text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <Icon className="size-4 shrink-0" aria-hidden="true" />
+          <span
+            className={cn(
+              "whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none",
+              collapsed && "pointer-events-none opacity-0",
+            )}
+            aria-hidden={collapsed}
+          >
+            Theme · {label}
+          </span>
+        </Button>
+      </TooltipTrigger>
+      {collapsed && <TooltipContent side="right">{`Theme: ${label}`}</TooltipContent>}
     </Tooltip>
   );
 }
@@ -230,6 +275,7 @@ function SidebarContent({
           <NavLink key={item.href} item={item} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
       </nav>
+      <SidebarThemeToggle collapsed={collapsed} />
       <DisconnectButton collapsed={collapsed} />
     </div>
   );
