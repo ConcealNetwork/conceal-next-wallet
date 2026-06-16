@@ -33,9 +33,16 @@ test.describe("offline app shell", () => {
     server = createServer(async (req, res) => {
       try {
         let pathname = decodeURIComponent((req.url ?? "/").split("?")[0]);
+        // Reject traversal sequences and NUL up front (defence in depth + a
+        // sanitizer the static analyzer recognizes).
+        if (pathname.includes("..") || pathname.includes("\0")) {
+          res.statusCode = 403;
+          res.end("forbidden");
+          return;
+        }
         if (pathname.startsWith(BASE)) pathname = pathname.slice(BASE.length) || "/";
         if (pathname.endsWith("/")) pathname += "index.html";
-        // Contain to OUT (no traversal).
+        // Belt-and-braces: the resolved path must still stay within OUT.
         const filePath = normalize(join(OUT, pathname));
         if (filePath !== OUT && !filePath.startsWith(OUT + sep)) {
           res.statusCode = 403;
