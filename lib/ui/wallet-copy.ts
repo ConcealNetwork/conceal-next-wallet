@@ -75,6 +75,8 @@ export const walletCopy = {
     "This is a view-only wallet. Creating or withdrawing deposits requires the spend key.",
   viewOnlyMessageDisabled: "This is a view-only wallet. Import the spend key to send messages.",
   viewOnlyOptimizeDisabled: "This is a view-only wallet. Optimizing outputs requires the spend key.",
+  exportCsvButton: "Export CSV",
+  exportCsvEmpty: "No transactions to export.",
 } as const;
 
 /** HTML `required` on import fields — relaxed in mock so you can click through quickly. */

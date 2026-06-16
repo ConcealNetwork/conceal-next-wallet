@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   CalendarClock,
   Combine,
+  Download,
   Hash,
   Lock,
   Mail,
@@ -14,7 +15,9 @@ import {
   Search,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -39,8 +42,12 @@ import {
   PageHeader,
   SectionCard,
 } from "@/components/wallet/common";
+import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
+import { downloadCsvFile, transactionCsvFilename } from "@/lib/ui/download-csv-file";
+import { transactionsToCsv } from "@/lib/ui/transaction-csv";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
 import {
@@ -183,6 +190,16 @@ export default function TransactionsPageClient() {
     setCurrentPage(1);
   }
 
+  function handleExportCsv() {
+    // Export the current filtered/searched view (WYSIWYG), not just the visible page.
+    try {
+      downloadCsvFile(transactionCsvFilename(active), transactionsToCsv(filtered));
+      toast.success(`Exported ${filtered.length} transaction${filtered.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export CSV.");
+    }
+  }
+
   const groupedTransactions = useMemo(() => {
     const groups = new Map<DateGroup, Transaction[]>(dateGroups.map((label) => [label, []]));
 
@@ -224,6 +241,19 @@ export default function TransactionsPageClient() {
       <PageHeader
         title="Transaction History"
         subtitle="Complete transaction history for your wallet"
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2"
+            onClick={handleExportCsv}
+            disabled={filtered.length === 0}
+            title={filtered.length === 0 ? walletCopy.exportCsvEmpty : undefined}
+          >
+            <Download className="size-4" aria-hidden="true" />
+            {walletCopy.exportCsvButton}
+          </Button>
+        }
       />
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <SectionCard title="Summary" description="Wallet flow across all transactions">
@@ -716,7 +746,7 @@ function StatusPill({ status }: { status: TransactionStatus }) {
 }
 
 function getTransactionStatus(confirmations: number): TransactionStatus {
-  return confirmations >= 10 ? "Confirmed" : "Pending";
+  return confirmations >= TX_CONFIRMED_THRESHOLD ? "Confirmed" : "Pending";
 }
 
 function formatSignedAmount(transaction: Transaction, decimals?: number) {

@@ -9,6 +9,8 @@ import { walletNetworkScalars as walletNetworkScalarsSource } from "./wallet-net
 export const walletNetworkScalars = walletNetworkScalarsSource;
 
 export const COIN_UNIT_PLACES = walletNetworkScalars.coinUnitPlaces;
+/** Confirmations at which a transaction is shown as "Confirmed" (UI + CSV export). */
+export const TX_CONFIRMED_THRESHOLD = 10;
 export const COIN_FEE_ATOMIC = walletNetworkScalars.coinFeeAtomic;
 export const REMOTE_NODE_FEE_ATOMIC = walletNetworkScalars.remoteNodeFeeAtomic;
 export const DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC = walletNetworkScalars.depositSmallWithdrawFee;
