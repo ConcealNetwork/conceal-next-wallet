@@ -8,4 +8,6 @@ export const queryKeys = {
   network: ["network"] as const,
   settings: ["settings"] as const,
   optimizationStatus: ["optimization-status"] as const,
+  /** Per-transaction local note, keyed by tx hash. */
+  txNote: (hash: string) => ["tx-note", hash] as const,
 };
