@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { ccxAmount, formatCcx, formatUsd, timeAgo, truncateAddress, usdAmount } from "@/lib/utils";
+import {
+  ccxAmount,
+  formatCcx,
+  formatUsd,
+  timeAgo,
+  truncateAddress,
+  usdAmount,
+  usdSubline,
+} from "@/lib/utils";
 
 describe("wallet utils", () => {
   it("formats CCX amounts from atomic units", () => {
@@ -23,5 +31,11 @@ describe("wallet utils", () => {
     expect(timeAgo("2026-05-22T00:00:00.000Z", new Date("2026-05-22T01:00:00.000Z"))).toBe(
       "1h ago",
     );
+  });
+
+  it("builds a fiat subline, hiding it only when the price is unknown/zero", () => {
+    expect(usdSubline(100, 0.045)).toBe(`${formatUsd(4.5)} USD`);
+    expect(usdSubline(100, 0)).toBeUndefined(); // price not loaded → hidden (no $0.00 flash)
+    expect(usdSubline(0, 0.045)).toBe(`${formatUsd(0)} USD`); // gate is on price, not amount
   });
 });

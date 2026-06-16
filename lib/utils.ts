@@ -59,6 +59,14 @@ export function formatUsd(amount: UsdAmount | number, decimals = 4): string {
   })}`;
 }
 
+/**
+ * Fiat subline for a CCX amount, e.g. `"$4.50 USD"`. Returns `undefined` when the
+ * price is unknown/zero so the UI can hide the line instead of flashing `$0.00`.
+ */
+export function usdSubline(ccx: number, priceUsd: number): string | undefined {
+  return priceUsd > 0 ? `${formatUsd(ccx * priceUsd)} USD` : undefined;
+}
+
 export function truncateAddress(address: string, head = 8, tail = 6): string {
   if (address.length <= head + tail + 3) return address;
   return `${address.slice(0, head)}...${address.slice(-tail)}`;

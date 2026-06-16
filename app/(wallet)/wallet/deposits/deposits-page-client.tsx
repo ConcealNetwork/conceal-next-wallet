@@ -34,6 +34,7 @@ import {
   useDepositConstraints,
   useDepositPreview,
   useDeposits,
+  useMarketData,
   useWalletViewOnly,
   useWithdrawDeposit,
 } from "@/lib/hooks";
@@ -50,7 +51,7 @@ import {
 import type { CreateDepositInput } from "@/lib/services/deposit.service";
 import type { Deposit } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { ccxToNumber, cn, formatCcx, truncateAddress } from "@/lib/utils";
+import { ccxToNumber, cn, formatCcx, truncateAddress, usdSubline } from "@/lib/utils";
 import { InterestCalculatorDialog } from "./interest-calculator-dialog";
 
 const ResponsiveContainer = dynamic(
@@ -261,6 +262,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
     () => deposits.filter((deposit) => deposit.status === "active"),
     [deposits],
   );
+  const price = useMarketData().data?.price.value ?? 0;
   const totalLocked = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0);
   const totalInterest = activeDeposits.reduce(
     (sum, deposit) => sum + ccxToNumber(deposit.interest),
@@ -312,6 +314,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           detail={`${activeDeposits.length} position${activeDeposits.length === 1 ? "" : "s"} earning`}
           tone="deposit"
           index={0}
+          usd={usdSubline(totalLocked, price)}
           chart={<CompositionBar segments={segments} total={totalLocked} />}
         />
         <SummaryCard
@@ -330,6 +333,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           detail="Projected return"
           tone="amber"
           index={2}
+          usd={usdSubline(totalInterest, price)}
           chart={
             <MiniArea values={projection.map((point) => point.value)} color="hsl(var(--primary))" />
           }
@@ -382,6 +386,7 @@ function SummaryCard({
   tone,
   index,
   chart,
+  usd,
 }: {
   label: string;
   value: number;
@@ -390,6 +395,7 @@ function SummaryCard({
   tone: "default" | "incoming" | "deposit" | "amber";
   index: number;
   chart: React.ReactNode;
+  usd?: string;
 }) {
   const valueLabel = useCountUp(value, { formatter });
   const toneClass = {
@@ -413,6 +419,7 @@ function SummaryCard({
       >
         {valueLabel}
       </p>
+      {usd ? <p className="mt-0.5 text-xs text-muted-foreground">≈ {usd}</p> : null}
       <div className="mt-auto pt-4">{chart}</div>
       <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
     </div>
@@ -789,10 +796,12 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
   const status = getDepositStatus(deposit);
   const isWithdrawn = deposit.status === "spent";
   const Icon = isWithdrawn || status === "matured" ? Unlock : Lock;
+  const price = useMarketData().data?.price.value ?? 0;
   const principal = ccxToNumber(deposit.amount);
   const interest = ccxToNumber(deposit.interest);
   const maturityValue = principal + interest;
   const maturityDate = formatMaturityDate(deposit.unlocksInDays);
+  const usd = (ccx: number) => usdSubline(ccx, price);
 
   return (
     <article
@@ -840,17 +849,24 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
       </div>
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <DepositDetail label="Principal" value={formatCcx(deposit.amount)} tone="deposit" />
+        <DepositDetail
+          label="Principal"
+          value={formatCcx(deposit.amount)}
+          tone="deposit"
+          usd={usd(principal)}
+        />
         <DepositDetail label="APR" value={`${deposit.apr.toFixed(2)}%`} tone="amber" />
         <DepositDetail
           label="Est. Interest"
           value={formatCcx(deposit.interest, 4)}
           tone="incoming"
+          usd={usd(interest)}
         />
         <DepositDetail
           label="Value at Maturity"
           value={formatCcx(maturityValue, 4)}
           tone="default"
+          usd={usd(maturityValue)}
         />
         <DepositDetail label="Duration" value={`${deposit.durationMonths} months`} tone="default" />
       </dl>
@@ -1024,10 +1040,12 @@ function DepositDetail({
   label,
   value,
   tone,
+  usd,
 }: {
   label: string;
   value: string;
   tone: "default" | "incoming" | "deposit" | "amber";
+  usd?: string;
 }) {
   const toneClass = {
     default: "text-foreground",
@@ -1042,6 +1060,7 @@ function DepositDetail({
       <dd className={cn("mt-1 truncate font-mono text-sm font-semibold", toneClass)}>
         <CcxAmount>{value}</CcxAmount>
       </dd>
+      {usd ? <dd className="mt-0.5 truncate text-xs text-muted-foreground">≈ {usd}</dd> : null}
     </div>
   );
 }
