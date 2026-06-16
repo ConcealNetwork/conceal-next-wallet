@@ -42,22 +42,23 @@ import {
   PageHeader,
   SectionCard,
 } from "@/components/wallet/common";
+import { TransactionNote } from "@/components/wallet/transaction-note";
 import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
+import type { Transaction, TransactionType } from "@/lib/types";
 import { downloadCsvFile, transactionCsvFilename } from "@/lib/ui/download-csv-file";
 import { transactionsToCsv } from "@/lib/ui/transaction-csv";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import type { Transaction, TransactionType } from "@/lib/types";
-import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
 import {
+  CCX_PRECISION_DECIMAL_DISPLAY,
   ccxToNumber,
   cn,
   formatCcx,
   timeAgo,
   truncateAddress,
-  CCX_PRECISION_DECIMAL_DISPLAY,
 } from "@/lib/utils";
+import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
 
 const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals", "Messages"];
 const pageSizes = ["10", "25", "50"];
@@ -684,6 +685,8 @@ function TransactionDetailsDialog({
             <CopyButton value={transaction.address} label="Copy address" iconOnly />
           </div>
         </div>
+
+        <TransactionNote key={transaction.hash} hash={transaction.hash} />
       </DialogContent>
     </Dialog>
   );
