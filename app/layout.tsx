@@ -57,10 +57,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1a1613",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#1a1613" },
+    { media: "(prefers-color-scheme: light)", color: "#faf7f2" },
+  ],
   width: "device-width",
   initialScale: 1,
 };
+
+// Resolve the saved theme before first paint so light users never see a dark
+// flash (static export — no server runtime to set this). Mirrors lib/ui/theme.ts;
+// kept inline/minified because it must run as a blocking script.
+const THEME_INIT_SCRIPT = `(function(){var p="system";try{var s=localStorage.getItem("ccx-theme");if(s==="light"||s==="dark"||s==="system")p=s;}catch(_){}try{var d=p==="dark"||(p==="system"&&typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches);var e=document.documentElement;e.setAttribute("data-theme",d?"dark":"light");e.classList.toggle("dark",d);e.classList.toggle("light",!d);}catch(_){}})();`;
 
 export default function RootLayout({
   children,
@@ -68,7 +76,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("dark font-sans", geist.variable, geistMono.variable)}>
+    <html
+      lang="en"
+      // The no-FOUC theme script mutates <html> (data-theme + light/dark class)
+      // before hydration, so its attributes intentionally differ from SSR.
+      suppressHydrationWarning
+      // No hardcoded theme class — the palette is driven by the data-theme
+      // attribute (set by the no-FOUC script + ThemeProvider). Default (no
+      // attribute) is the dark :root tokens.
+      className={cn("font-sans", geist.variable, geistMono.variable)}
+    >
+      <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, app-authored no-FOUC theme script */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         <AppProviders>{children}</AppProviders>
       </body>

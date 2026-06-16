@@ -1,0 +1,55 @@
+import { describe, expect, it } from "vitest";
+import { buildPrecacheList } from "@/lib/pwa/precache.mjs";
+
+const FILES = [
+  "index.html",
+  "wallet/account/index.html",
+  "create/index.html",
+  "explorations/landing-index.html", // design mockup — excluded
+  "_next/static/chunks/main-abc123.js",
+  "_next/static/css/app-def456.css",
+  "_next/static/media/font.woff2",
+  "_next/static/chunks/main-abc123.js.map", // source map — excluded
+  "manifest.webmanifest",
+  "lib/concealjs/concealjs.js", // runtime-cached — excluded
+  "workers/sync-worker.js", // runtime-cached — excluded
+  "404.html", // error page — served via offline fallback, not precached
+  "404/index.html",
+  "_not-found/index.html",
+  "build-manifest.txt", // sidecar — excluded
+];
+
+describe("buildPrecacheList", () => {
+  it("includes route HTML, Next static assets, and the web manifest", () => {
+    const list = buildPrecacheList(FILES);
+    expect(list).toContain("index.html");
+    expect(list).toContain("wallet/account/index.html");
+    expect(list).toContain("create/index.html");
+    expect(list).toContain("_next/static/chunks/main-abc123.js");
+    expect(list).toContain("_next/static/css/app-def456.css");
+    expect(list).toContain("_next/static/media/font.woff2");
+    expect(list).toContain("manifest.webmanifest");
+  });
+
+  it("excludes mockups, runtime-cached libs/workers, error pages, maps, and sidecars", () => {
+    const list = buildPrecacheList(FILES);
+    expect(list).not.toContain("explorations/landing-index.html");
+    expect(list).not.toContain("lib/concealjs/concealjs.js");
+    expect(list).not.toContain("workers/sync-worker.js");
+    expect(list).not.toContain("404.html");
+    expect(list).not.toContain("404/index.html");
+    expect(list).not.toContain("_not-found/index.html");
+    expect(list).not.toContain("_next/static/chunks/main-abc123.js.map");
+    expect(list).not.toContain("build-manifest.txt");
+  });
+
+  it("normalizes leading ./ and / and dedupes, returning sorted root-relative URLs", () => {
+    const list = buildPrecacheList(["./index.html", "/index.html", "index.html"]);
+    expect(list).toEqual(["index.html"]);
+    expect(list.every((u) => !u.startsWith("/") && !u.startsWith("./"))).toBe(true);
+  });
+
+  it("returns a stable (sorted) order", () => {
+    expect(buildPrecacheList(["b.html", "a.html"])).toEqual(["a.html", "b.html"]);
+  });
+});

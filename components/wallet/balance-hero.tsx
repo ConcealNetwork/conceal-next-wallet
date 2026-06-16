@@ -5,17 +5,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
+import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
 import {
-  ccxToNumber,
   CCX_HUMAIN_DECIMAL_DISPLAY,
   CCX_PRECISION_DECIMAL_DISPLAY,
+  ccxToNumber,
   cn,
   formatCcx,
   formatUsd,
   stripTickerSuffix,
   walletBalanceUsd,
 } from "@/lib/utils";
-import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
 
 type BalanceHeroProps = {
   wallet: WalletInfo;
@@ -112,7 +112,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Available · ready to spend</p>
             <p
-              className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-white sm:text-[2.75rem]"
+              className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-foreground sm:text-[2.75rem]"
               onMouseEnter={() => setAvailableHovered(true)}
               onMouseLeave={() => setAvailableHovered(false)}
             >
@@ -177,7 +177,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
               </div>
               <p
                 className={cn(
-                  "mt-2 truncate font-mono text-lg font-bold text-white",
+                  "mt-2 truncate font-mono text-lg font-bold text-foreground",
                   segment.valueClassName,
                 )}
               >

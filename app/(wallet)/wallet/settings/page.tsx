@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/wallet/common";
 import { usePanicWipe, useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
+import { ThemeToggle } from "@/components/wallet/theme-toggle";
 import { env } from "@/lib/env";
 import {
   useOptimizationStatus,
@@ -282,6 +283,9 @@ export default function SettingsPage() {
         <Card className="wallet-card">
           <CardContent className="divide-y divide-border">
             <Section title="General">
+              <Row label="Theme" description="Light, dark, or follow your system setting">
+                <ThemeToggle />
+              </Row>
               <Row label="Ticker" description="Amount suffix shown across the wallet">
                 <select
                   className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
