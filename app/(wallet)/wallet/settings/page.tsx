@@ -19,12 +19,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/wallet/common";
+import { usePanicWipe, useWalletDelete } from "@/components/wallet/open-wallet-form";
+import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
-import { useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { env } from "@/lib/env";
 import {
-  useOptimizeWallet,
   useOptimizationStatus,
+  useOptimizeWallet,
   useResetAndRescan,
   useUpdateWalletSettings,
   useWalletInfo,
@@ -34,10 +35,10 @@ import {
 } from "@/lib/hooks";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
-import { walletCopy } from "@/lib/ui/wallet-copy";
 import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
-import { getNodeUrlFormatHints } from "@/lib/validation/node-url";
+import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
+import { getNodeUrlFormatHints } from "@/lib/validation/node-url";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -113,6 +114,7 @@ export default function SettingsPage() {
   const { isSyncing } = useWalletSyncStatus();
   const viewOnly = useWalletViewOnly();
   const deleteWallet = useWalletDelete();
+  const panicWipe = usePanicWipe();
   const ticker = useTickerPreference();
   const current = settings.data;
   const isMock = env.useMockWallet;
@@ -496,6 +498,12 @@ export default function SettingsPage() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                </Row>
+                <Row
+                  label="Panic wipe"
+                  description="Erases everything local — wallet, settings, custom node, transaction notes — and returns to the open-wallet screen"
+                >
+                  <PanicWipeDialog isMock={isMock} onConfirm={panicWipe} />
                 </Row>
               </Section>
             )}

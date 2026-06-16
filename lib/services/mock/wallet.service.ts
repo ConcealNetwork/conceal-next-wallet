@@ -59,6 +59,10 @@ export const mockWalletService: WalletService = {
   async deleteStoredWallet() {
     // no persisted wallet in mock mode
   },
+  async panicWipe() {
+    // No persisted wallet/engine state in mock mode; the hook clears the
+    // mode-agnostic local data (tx notes, prefs) and the session.
+  },
   async importWallet(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
