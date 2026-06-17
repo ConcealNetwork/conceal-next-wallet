@@ -72,7 +72,9 @@ describe("vault build → parse → open → restore", () => {
 
   it("fails to open with the wrong password", async () => {
     const file = await buildVaultFile("right", "2026-06-17T00:00:00.000Z");
-    await expect(openVaultFile(file, "nope")).rejects.toThrow(/wrong password|corrupt/i);
+    // Go through the full load path (parse → open) for consistency.
+    const parsed = parseVaultFile(JSON.stringify(file));
+    await expect(openVaultFile(parsed, "nope")).rejects.toThrow(/wrong password|corrupt/i);
   });
 
   it("rejects a file that isn't a Conceal vault", () => {
