@@ -246,12 +246,15 @@ export default function SendPage() {
                     onScan={applyScannedDraft}
                   />
                 </div>
+                {/* One hint node, linked via aria-describedby. No role="alert":
+                    react-hook-form focuses the first invalid field on submit, so the
+                    error is read via the description — avoids assertive double-reads. */}
                 {form.formState.errors.address ? (
-                  <p id="address-hint" role="alert" className="text-sm text-wallet-outgoing">
+                  <p id="address-hint" className="text-sm text-wallet-outgoing">
                     {form.formState.errors.address.message}
                   </p>
                 ) : sendToSelf ? (
-                  <p id="address-hint" role="alert" className="text-sm text-wallet-amber">
+                  <p id="address-hint" className="text-sm text-wallet-amber">
                     Cannot send to your own wallet address
                   </p>
                 ) : (
@@ -296,7 +299,7 @@ export default function SendPage() {
                   ) : null}
                 </div>
                 {form.formState.errors.amount && (
-                  <p id="amount-error" role="alert" className="text-sm text-wallet-outgoing">
+                  <p id="amount-error" className="text-sm text-wallet-outgoing">
                     {form.formState.errors.amount.message}
                   </p>
                 )}
@@ -313,7 +316,7 @@ export default function SendPage() {
                   {...form.register("paymentId")}
                 />
                 {form.formState.errors.paymentId && (
-                  <p id="paymentId-error" role="alert" className="text-sm text-wallet-outgoing">
+                  <p id="paymentId-error" className="text-sm text-wallet-outgoing">
                     {form.formState.errors.paymentId.message}
                   </p>
                 )}
@@ -324,12 +327,20 @@ export default function SendPage() {
                 <Textarea
                   id="message"
                   placeholder="Optional message to include with the transaction"
-                  aria-describedby="message-count"
+                  aria-invalid={form.formState.errors.message ? true : undefined}
+                  aria-describedby={
+                    form.formState.errors.message ? "message-count message-error" : "message-count"
+                  }
                   {...form.register("message")}
                 />
                 <p id="message-count" className="text-right text-xs text-muted-foreground">
                   {message.length}/255
                 </p>
+                {form.formState.errors.message && (
+                  <p id="message-error" className="text-sm text-wallet-outgoing">
+                    {form.formState.errors.message.message}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3 text-sm">

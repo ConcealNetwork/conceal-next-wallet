@@ -140,7 +140,7 @@ function LabeledTextField({
         className={cn(invalid && "border-wallet-outgoing")}
       />
       {invalid && error ? (
-        <p id={`${id}-hint`} role="alert" className="text-sm text-wallet-outgoing">
+        <p id={`${id}-hint`} className="text-sm text-wallet-outgoing">
           {error}
         </p>
       ) : hint ? (

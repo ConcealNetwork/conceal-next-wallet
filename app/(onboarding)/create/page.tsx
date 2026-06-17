@@ -174,7 +174,6 @@ export default function CreateWalletPage() {
             </button>
             <p
               role="status"
-              aria-live="polite"
               className={cn(
                 "text-xs transition-colors duration-200",
                 copied ? "text-wallet-incoming" : "text-muted-foreground",

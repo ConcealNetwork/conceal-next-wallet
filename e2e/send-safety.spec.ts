@@ -52,12 +52,13 @@ test("links validation errors to the field for screen readers", async ({ page })
   await page.getByLabel("Destination Address").fill("ccx7-too-short");
   await page.getByRole("button", { name: "Review Send" }).click();
 
-  // The field is flagged invalid and the error is exposed as a live alert that
-  // the input points at via aria-describedby.
+  // The field is flagged invalid and its error text is programmatically linked
+  // via aria-describedby (react-hook-form moves focus to the first invalid field,
+  // so a screen reader reads the description without an assertive interruption).
   const address = page.getByLabel("Destination Address");
   await expect(address).toHaveAttribute("aria-invalid", "true");
   await expect(address).toHaveAttribute("aria-describedby", "address-hint");
   const hint = page.locator("#address-hint");
   await expect(hint).toBeVisible();
-  await expect(hint).toHaveAttribute("role", "alert");
+  await expect(hint).not.toBeEmpty();
 });
