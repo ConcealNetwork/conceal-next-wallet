@@ -318,32 +318,44 @@ export function CopyButton({
   iconOnly?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  // Bumped on every copy so the live-region text changes even on a repeat copy
+  // within the 1.2s window (identical text wouldn't re-announce). The marker is
+  // zero-width spaces — invisible on screen and silent to screen readers.
+  const [copyNonce, setCopyNonce] = useState(0);
 
   async function copy() {
     await navigator.clipboard.writeText(value);
     setCopied(true);
+    setCopyNonce((n) => n + 1);
     window.setTimeout(() => setCopied(false), 1200);
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size={iconOnly ? "icon" : "default"}
-      onClick={copy}
-      aria-label={iconOnly ? label : undefined}
-      className={cn(
-        !iconOnly && "gap-2",
-        "shrink-0 active:scale-[0.98] motion-reduce:active:scale-100",
-      )}
-    >
-      {copied ? (
-        <Check className="size-4" aria-hidden="true" />
-      ) : (
-        <Clipboard className="size-4" aria-hidden="true" />
-      )}
-      {!iconOnly ? (copied ? "Copied" : label) : null}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size={iconOnly ? "icon" : "default"}
+        onClick={copy}
+        aria-label={iconOnly ? label : undefined}
+        className={cn(
+          !iconOnly && "gap-2",
+          "shrink-0 active:scale-[0.98] motion-reduce:active:scale-100",
+        )}
+      >
+        {copied ? (
+          <Check className="size-4" aria-hidden="true" />
+        ) : (
+          <Clipboard className="size-4" aria-hidden="true" />
+        )}
+        {!iconOnly ? (copied ? "Copied" : label) : null}
+      </Button>
+      {/* Sibling (not inside the button, so it stays out of the accessible name):
+          announces the copy to screen readers since the icon swap is visual-only. */}
+      <span className="sr-only" role="status" aria-live="polite">
+        {copied ? `Copied to clipboard${"\u200B".repeat(copyNonce % 4)}` : ""}
+      </span>
+    </>
   );
 }
 

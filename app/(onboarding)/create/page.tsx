@@ -173,6 +173,7 @@ export default function CreateWalletPage() {
               {mnemonic}
             </button>
             <p
+              role="status"
               className={cn(
                 "text-xs transition-colors duration-200",
                 copied ? "text-wallet-incoming" : "text-muted-foreground",
