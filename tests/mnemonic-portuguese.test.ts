@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { Mnemonic } from "@/lib/wallet-core/Mnemonic";
 import { MnemonicLang } from "@/lib/wallet-core/MnemonicLang";
@@ -75,5 +76,20 @@ describe("Portuguese mnemonic decoding", () => {
       expect(mnemonic).not.toBeNull();
       expect(Mnemonic.mn_decode(mnemonic as string, lang)).toBe(seed);
     }
+  });
+
+  // Interop with canonical Conceal hinges on the wordlist being byte-identical:
+  // our mn_encode is the same algorithm as ConcealNetwork/conceal-web-wallet
+  // (src/model/Mnemonic.ts), so with the same words+order a given seed produces
+  // the exact same Portuguese phrase a canonical Conceal wallet would — and our
+  // full-word decode recovers that seed (canonical's prefix-only decode actually
+  // mis-resolves prefix-colliding words, so ours is a strict superset).
+  it("matches the canonical conceal-web-wallet Portuguese wordlist (seed↔mnemonic interop)", () => {
+    const words = portuguese?.words ?? [];
+    expect(words.length).toBe(1626);
+    const hash = createHash("sha256").update(words.join("\n")).digest("hex");
+    // sha256 of the canonical wordlist joined by "\n"
+    // (ConcealNetwork/conceal-web-wallet@development src/model/MnemonicLang.ts).
+    expect(hash).toBe("c76d03f29784fec483613d104b7b7efe4b930616035925457f0eea98e290de3c");
   });
 });
