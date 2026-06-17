@@ -31,6 +31,10 @@ test("watch a contact for check-ins, snooze and remove", async ({ page }) => {
   const watching = page.locator("ul li", { hasText: "Alice" });
   await expect(watching).toBeVisible();
 
+  // One-tap "Send check-in" sends a smart-message ping (mock send → toast).
+  await watching.getByRole("button", { name: "Send check-in" }).click();
+  await expect(page.getByText(/Check-in sent to Alice/i)).toBeVisible();
+
   // Snooze → a Resume control replaces Snooze/Pause.
   await watching.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(watching.getByRole("button", { name: "Resume" })).toBeVisible();

@@ -19,7 +19,8 @@ function isWatchedContact(value: unknown): value is WatchedContact {
     typeof w.intervalDays === "number" &&
     Number.isFinite(w.intervalDays) &&
     typeof w.graceDays === "number" &&
-    Number.isFinite(w.graceDays)
+    Number.isFinite(w.graceDays) &&
+    (w.paymentId === undefined || typeof w.paymentId === "string")
   );
 }
 

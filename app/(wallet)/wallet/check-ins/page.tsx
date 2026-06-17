@@ -1,20 +1,23 @@
 "use client";
 
+import { Heart } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAddressBook, useMessages } from "@/lib/hooks";
+import { useAddressBook, useMessages, useSendMessage, useWalletViewOnly } from "@/lib/hooks";
 import { useWalletSynced } from "@/lib/hooks/use-check-ins";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { listWatchers, removeWatcher, saveWatcher, updateWatcher } from "@/lib/storage/check-ins-store";
+import { formatCheckIn } from "@/lib/ui/check-in-message";
 import {
   checkInStatus,
   type CheckInStatus,
   daysSince,
-  lastReceivedFrom,
+  hasFreshCheckIn,
+  lastReceivedForWatcher,
   type WatchedContact,
 } from "@/lib/ui/check-ins";
 import { cn } from "@/lib/utils";
@@ -34,6 +37,8 @@ export default function CheckInsPage() {
   const addressBook = useAddressBook();
   const messages = useMessages();
   const synced = useWalletSynced();
+  const viewOnly = useWalletViewOnly();
+  const sendMessage = useSendMessage();
   const [watchers, setWatchers] = useState<WatchedContact[]>(() => listWatchers());
   const [contactId, setContactId] = useState("");
   const [interval, setInterval] = useState("14");
@@ -66,6 +71,7 @@ export default function CheckInsPage() {
           label: contact.label,
           intervalDays,
           graceDays,
+          paymentId: contact.paymentId,
         }),
       );
       setContactId("");
@@ -84,9 +90,27 @@ export default function CheckInsPage() {
     }
   }
 
+  function sendCheckIn(w: WatchedContact) {
+    if (viewOnly || sendMessage.isPending) return;
+    sendMessage.mutate(
+      { recipientAddress: w.address, body: formatCheckIn("alive"), paymentId: w.paymentId },
+      {
+        onSuccess: () => toast.success(`Check-in sent to ${w.label}.`),
+        onError: (error: unknown) =>
+          toast.error(error instanceof Error ? error.message : "Couldn't send check-in."),
+      },
+    );
+  }
+
+  const msgs = messages.data ?? [];
   const evaluated = watchers.map((w) => {
-    const lastHeard = lastReceivedFrom(messages.data ?? [], w.address);
-    return { w, lastHeard, status: checkInStatus(w, lastHeard, nowISO) };
+    const lastHeard = lastReceivedForWatcher(msgs, w);
+    return {
+      w,
+      lastHeard,
+      status: checkInStatus(w, lastHeard, nowISO),
+      checkedIn: synced && hasFreshCheckIn(w, msgs, nowISO),
+    };
   });
   const overdue = synced ? evaluated.filter((e) => e.status === "overdue") : [];
 
@@ -107,7 +131,7 @@ export default function CheckInsPage() {
 
         <SectionCard
           title="Watch a contact"
-          description="A reminder to reconnect — not proof of anything. People miss check-ins for ordinary reasons (lost wallet, no fees, travel). Alerts only appear while the wallet is open and synced."
+          description="A reminder to reconnect — not proof of anything. A check-in is a courtesy ping, not authenticated (anyone could in principle send a fake one), so don't rely on it for safety-critical decisions. People miss check-ins for ordinary reasons (lost wallet, no fees, travel). Alerts only appear while the wallet is open and synced."
         >
           <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
             <div className="space-y-2">
@@ -165,7 +189,7 @@ export default function CheckInsPage() {
             <p className="text-sm text-muted-foreground">Not watching anyone yet.</p>
           ) : (
             <ul className="divide-y divide-border">
-              {evaluated.map(({ w, lastHeard, status }) => {
+              {evaluated.map(({ w, lastHeard, status, checkedIn }) => {
                 const meta = STATUS_META[status];
                 const detail =
                   status === "waiting"
@@ -176,15 +200,36 @@ export default function CheckInsPage() {
                 return (
                   <li key={w.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className={cn("size-2.5 shrink-0 rounded-full", meta.dot)} aria-hidden="true" />
+                      {checkedIn ? (
+                        <Heart
+                          className="size-3.5 shrink-0 fill-wallet-incoming text-wallet-incoming"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span
+                          className={cn("size-2.5 shrink-0 rounded-full", meta.dot)}
+                          aria-hidden="true"
+                        />
+                      )}
                       <div className="min-w-0">
                         <span className="font-semibold">{w.label}</span>
                         <p className={cn("text-sm", meta.text)}>
+                          {checkedIn ? <span className="sr-only">Checked in. </span> : null}
                           {meta.label} · {detail}
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={viewOnly || sendMessage.isPending}
+                        title="Sends an on-chain check-in message (~0.0011 CCX net, 0.0111 reserved)"
+                        onClick={() => sendCheckIn(w)}
+                      >
+                        Send check-in
+                      </Button>
                       {w.paused || (w.snoozedUntil && new Date(nowISO) < new Date(w.snoozedUntil)) ? (
                         <Button
                           type="button"
