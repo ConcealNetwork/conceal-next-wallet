@@ -4,6 +4,8 @@ import { MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ContactAvatar } from "@/components/wallet/contact-avatar";
+import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
+import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import {
   AddressBookContactPicker,
   findAddressBookContactByAddress,
@@ -143,6 +145,13 @@ export default function MessagesPage() {
     setRecipient(value);
     const match = findAddressBookContactByAddress(addressBook.data ?? [], value);
     setSelectedContactId(match?.id ?? null);
+  }
+
+  function applyScannedDraft(draft: ScannedSendDraft) {
+    handleRecipientChange(draft.address);
+    if (draft.paymentId) {
+      setComposePaymentId(draft.paymentId);
+    }
   }
 
   function handleComposeOpenChange(open: boolean) {
@@ -388,13 +397,21 @@ export default function MessagesPage() {
                 selectedId={selectedContactId}
                 onSelect={pickComposeContact}
               />
-              <Input
-                id="recipient"
-                value={recipient}
-                onChange={(event) => handleRecipientChange(event.target.value)}
-                placeholder="ccx7 …"
-                autoComplete="off"
-              />
+              <div className="relative">
+                <Input
+                  id="recipient"
+                  value={recipient}
+                  onChange={(event) => handleRecipientChange(event.target.value)}
+                  placeholder="ccx7 …"
+                  autoComplete="off"
+                  className="max-lg:pr-10"
+                />
+                <AddressQrScanButton
+                  className="absolute right-1 top-1/2 -translate-y-1/2 lg:hidden"
+                  disabled={send.isPending}
+                  onScan={applyScannedDraft}
+                />
+              </div>
               {composeToSelf ? (
                 <p className="text-sm text-wallet-amber">This is your own wallet address</p>
               ) : null}

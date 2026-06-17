@@ -3,6 +3,7 @@
 import { ArrowLeftRight, LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/hooks";
 import type { AddressEntry } from "@/lib/types";
 import { CONTACT_AVATARS, contactAvatarPath } from "@/lib/ui/contact-avatars";
+import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { addressIsValid, generatePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
 import { cn, truncateAddress, withBasePath } from "@/lib/utils";
 
@@ -66,6 +68,13 @@ export default function AddressBookPage() {
   function openCreate() {
     resetForm();
     setOpen(true);
+  }
+
+  function applyScannedDraft(draft: ScannedSendDraft) {
+    setAddress(draft.address);
+    if (draft.paymentId) {
+      setPaymentId(draft.paymentId);
+    }
   }
 
   function openEdit(entry: AddressEntry) {
@@ -361,13 +370,21 @@ export default function AddressBookPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="ab-address">Address</Label>
-              <Input
-                id="ab-address"
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder="ccx7 …"
-                autoComplete="off"
-              />
+              <div className="relative">
+                <Input
+                  id="ab-address"
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                  placeholder="ccx7 …"
+                  autoComplete="off"
+                  className="max-lg:pr-10"
+                />
+                <AddressQrScanButton
+                  className="absolute right-1 top-1/2 -translate-y-1/2 lg:hidden"
+                  disabled={isSaving}
+                  onScan={applyScannedDraft}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="ab-paymentId">Payment ID</Label>
