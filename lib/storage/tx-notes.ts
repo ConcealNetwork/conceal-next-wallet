@@ -9,6 +9,8 @@ export interface TxNotesBackend {
   delete(hash: string): Promise<void>;
   /** Remove every note (used by the panic wipe). */
   clear(): Promise<void>;
+  /** Snapshot every saved note as a plain `hash → note` map (used by the vault export). */
+  entries(): Promise<Record<string, string>>;
 }
 
 export interface TxNotesStore {
@@ -21,6 +23,14 @@ export interface TxNotesStore {
   setNote(hash: string, raw: string): Promise<string>;
   /** Erase all stored notes. */
   clearAll(): Promise<void>;
+  /** Every saved note as a `hash → note` map (for backup/export). */
+  exportNotes(): Promise<Record<string, string>>;
+  /**
+   * Bulk-restore notes from a backup. `replace` clears existing notes first;
+   * `merge` keeps existing notes and only adds incoming hashes that aren't set.
+   * Values are normalized; empty ones are skipped. Returns the count written.
+   */
+  importNotes(notes: Record<string, string>, mode: "merge" | "replace"): Promise<number>;
 }
 
 /** Wrap a backend with normalization + the empty-deletes invariant. */
@@ -42,6 +52,23 @@ export function createTxNotesStore(backend: TxNotesBackend): TxNotesStore {
     },
     clearAll() {
       return backend.clear();
+    },
+    exportNotes() {
+      return backend.entries();
+    },
+    async importNotes(notes, mode) {
+      const existing = mode === "merge" ? await backend.entries() : null;
+      if (mode === "replace") await backend.clear();
+      let written = 0;
+      for (const [hash, raw] of Object.entries(notes)) {
+        if (!hash) continue;
+        if (existing && hash in existing) continue; // merge: never clobber an existing note
+        const note = normalizeTxNote(raw);
+        if (!note) continue;
+        await backend.set(hash, note);
+        written += 1;
+      }
+      return written;
     },
   };
 }
@@ -66,6 +93,7 @@ export function inMemoryTxNotesBackend(seed?: Record<string, string>): TxNotesBa
       map.clear();
       return Promise.resolve();
     },
+    entries: () => Promise.resolve(Object.fromEntries(map)),
   };
 }
 
@@ -162,6 +190,18 @@ export function indexedDbTxNotesBackend(): TxNotesBackend {
     },
     async clear() {
       await run("readwrite", (store) => store.clear());
+    },
+    async entries() {
+      const [keys, values] = await Promise.all([
+        run<IDBValidKey[]>("readonly", (store) => store.getAllKeys()),
+        run<unknown[]>("readonly", (store) => store.getAll()),
+      ]);
+      const out: Record<string, string> = {};
+      keys.forEach((key, index) => {
+        const value = values[index];
+        if (typeof key === "string" && typeof value === "string") out[key] = value;
+      });
+      return out;
     },
   };
 }

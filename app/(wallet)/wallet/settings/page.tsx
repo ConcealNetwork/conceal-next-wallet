@@ -26,6 +26,7 @@ import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ThemeToggle } from "@/components/wallet/theme-toggle";
 import { env } from "@/lib/env";
+import { VaultBackup } from "@/components/wallet/vault-backup";
 import { checkCustomNodeLag } from "@/lib/network/node-lag";
 import {
   useOptimizationStatus,
@@ -498,6 +499,12 @@ export default function SettingsPage() {
                       {resetAndRescan.isPending ? "Rescanning…" : "Reset & rescan"}
                     </Button>
                   </div>
+                </Row>
+                <Row
+                  label="Device data backup"
+                  description="Export or restore an encrypted backup of your transaction notes and display preferences (not your wallet keys — those export separately)"
+                >
+                  <VaultBackup />
                 </Row>
                 <Row
                   label="Delete wallet"
