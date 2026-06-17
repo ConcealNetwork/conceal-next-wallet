@@ -2737,7 +2737,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
       logDebugMsg("Warning: Using legacy V1 interest calculation");
       const m_depositMaxTerm = _InterestCalculator.DEPOSIT_MAX_TERM;
       const a = term * _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE - _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
-      const base = Math.floor(amount * a / (100 * m_depositMaxTerm));
+      const product = BigInt(Math.trunc(amount)) * BigInt(a);
+      const base = Number(product / BigInt(100 * m_depositMaxTerm));
       return lockHeight <= _InterestCalculator.END_MULTIPLIER_BLOCK ? base * _InterestCalculator.MULTIPLIER_FACTOR : base;
     }
     /**
