@@ -36,9 +36,11 @@ const en: Dictionary = {
   "theme.system": "System",
   "theme.light": "Light",
   "theme.dark": "Dark",
+  "theme.switchTo": "Switch to {name}",
   // Settings
   "settings.language": "Language",
   "settings.languageDescription": "Display language for the wallet interface",
+  "settings.languageAriaLabel": "Language",
 };
 
 const es: Dictionary = {
@@ -49,7 +51,7 @@ const es: Dictionary = {
   "nav.receive": "Recibir",
   "nav.deposits": "Depósitos",
   "nav.messages": "Mensajes",
-  "nav.addressBook": "Libreta de direcciones",
+  "nav.addressBook": "Contactos",
   "nav.settings": "Ajustes",
   "nav.export": "Exportar",
   "nav.network": "Red",
@@ -68,8 +70,10 @@ const es: Dictionary = {
   "theme.system": "Sistema",
   "theme.light": "Claro",
   "theme.dark": "Oscuro",
+  "theme.switchTo": "Cambiar a {name}",
   "settings.language": "Idioma",
-  "settings.languageDescription": "Idioma de la interfaz de la cartera",
+  "settings.languageDescription": "Idioma de la interfaz de la billetera",
+  "settings.languageAriaLabel": "Idioma",
 };
 
 export const DICTIONARIES: Record<Locale, Dictionary> = { en, es };

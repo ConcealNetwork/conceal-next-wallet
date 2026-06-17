@@ -30,8 +30,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // storage unavailable → fall back to browser languages
     }
-    const langs = typeof navigator !== "undefined" ? navigator.languages : [];
-    setLocaleState(resolveLocale(stored, langs ?? []));
+    // navigator.languages can be undefined in privacy/legacy modes — fall back to
+    // the single navigator.language so detection still works.
+    const nav = typeof navigator !== "undefined" ? navigator : undefined;
+    const langs = nav?.languages ?? (nav?.language ? [nav.language] : []);
+    setLocaleState(resolveLocale(stored, langs));
   }, []);
 
   useEffect(() => {
@@ -48,7 +51,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<I18nContextValue>(() => {
-    const dict = DICTIONARIES[locale];
+    // Fall back to the default dictionary if a locale ever lacks one (e.g. a new
+    // LOCALES entry added before its dictionary) — never pass undefined to translate.
+    const dict = DICTIONARIES[locale] ?? DICTIONARIES[DEFAULT_LOCALE];
     const fallback = DICTIONARIES[DEFAULT_LOCALE];
     return {
       locale,

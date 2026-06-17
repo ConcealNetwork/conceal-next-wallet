@@ -156,7 +156,7 @@ function SidebarThemeToggle({ collapsed }: { collapsed: boolean }) {
         <Button
           type="button"
           variant="ghost"
-          aria-label={`${t("theme.label")}: ${label}. ${t("theme.label")} → ${t(THEME_META[next].labelKey)}`}
+          aria-label={`${t("theme.label")}: ${label}. ${t("theme.switchTo", { name: t(THEME_META[next].labelKey) })}`}
           onClick={() => setPreference(next)}
           className="h-11 w-full shrink-0 justify-start gap-3 px-3 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
@@ -291,6 +291,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeMobileNav = useCallback(() => setMobileOpen(false), []);
   const EdgeToggleIcon = collapsed ? ChevronRight : ChevronLeft;
+  const { t } = useI18n();
 
   return (
     <>
@@ -305,7 +306,7 @@ export function Sidebar() {
           <Button
             type="button"
             variant="ghost"
-            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            aria-label={collapsed ? t("action.expandMenu") : t("action.collapseMenu")}
             onClick={toggle}
             className="absolute right-0 top-7 z-50 size-7 min-h-0 translate-x-1/2 rounded-full border border-border bg-card p-0 text-muted-foreground shadow-xs hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
@@ -316,7 +317,7 @@ export function Sidebar() {
       <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur-sm lg:hidden">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label="Open navigation">
+            <Button type="button" variant="ghost" size="icon" aria-label={t("action.openNavigation")}>
               <Menu className="size-5" aria-hidden="true" />
             </Button>
           </SheetTrigger>

@@ -44,9 +44,15 @@ export function translate(
   key: string,
   vars?: Record<string, string | number>,
 ): string {
-  const template = dict[key] ?? fallback[key] ?? key;
+  // Object.hasOwn (not `dict[key]` / `name in vars`) so prototype members like
+  // "valueOf"/"toString" can't be returned as a "translation" or interpolated.
+  const template = Object.hasOwn(dict, key)
+    ? dict[key]
+    : Object.hasOwn(fallback, key)
+      ? fallback[key]
+      : key;
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (match, name) =>
-    name in vars ? String(vars[name]) : match,
+    Object.hasOwn(vars, name) ? String(vars[name]) : match,
   );
 }

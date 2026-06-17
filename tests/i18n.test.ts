@@ -33,6 +33,15 @@ describe("translate", () => {
     expect(translate(en, en, "saved", { name: "backup.json" })).toBe('Saved "backup.json"');
     expect(translate({ x: "{a}-{b}" }, en, "x", { a: "1" })).toBe("1-{b}");
   });
+
+  it("does not resolve Object.prototype keys as translations or interpolations", () => {
+    // A key matching a prototype member must fall through to the literal key,
+    // not return Object.prototype.valueOf/toString.
+    expect(translate({}, {}, "valueOf")).toBe("valueOf");
+    expect(translate({}, {}, "toString")).toBe("toString");
+    // A {toString} placeholder with no matching own var stays literal.
+    expect(translate({ x: "{toString}" }, en, "x", {})).toBe("{toString}");
+  });
 });
 
 describe("dictionaries", () => {
