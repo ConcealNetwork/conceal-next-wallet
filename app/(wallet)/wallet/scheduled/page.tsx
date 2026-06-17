@@ -48,9 +48,13 @@ export default function ScheduledPage() {
       // Normalize the date input to an ISO instant (UTC midnight).
       anchorDate: new Date(`${form.anchorDate}T00:00:00.000Z`).toISOString(),
     };
-    setSchedules(saveSchedule(schedule));
-    setForm(EMPTY_FORM);
-    toast.success("Reminder added.");
+    try {
+      setSchedules(saveSchedule(schedule));
+      setForm(EMPTY_FORM);
+      toast.success("Reminder added.");
+    } catch {
+      toast.error("Couldn't save the reminder — device storage may be full or unavailable.");
+    }
   }
 
   function sendNow(schedule: ScheduledPayment) {
@@ -60,12 +64,20 @@ export default function ScheduledPage() {
   }
 
   function markPaid(id: string) {
-    setSchedules(markSchedulePaid(id, new Date().toISOString()));
-    toast.success("Marked as paid — next reminder scheduled.");
+    try {
+      setSchedules(markSchedulePaid(id, new Date().toISOString()));
+      toast.success("Marked as paid — next reminder scheduled.");
+    } catch {
+      toast.error("Couldn't update the reminder — device storage may be unavailable.");
+    }
   }
 
   function remove(id: string) {
-    setSchedules(removeSchedule(id));
+    try {
+      setSchedules(removeSchedule(id));
+    } catch {
+      toast.error("Couldn't remove the reminder — device storage may be unavailable.");
+    }
   }
 
   const sorted = [...schedules].sort((a, b) => computeNextDue(a).localeCompare(computeNextDue(b)));
