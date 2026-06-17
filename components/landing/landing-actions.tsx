@@ -20,7 +20,11 @@ import {
   getBiometricEnrollment,
   setBiometricEnrollment,
 } from "@/lib/auth/biometric-store";
-import { enrollBiometric, isBiometricAvailable, unlockWithBiometric } from "@/lib/auth/webauthn-prf";
+import {
+  enrollBiometric,
+  isBiometricAvailable,
+  unlockWithBiometric,
+} from "@/lib/auth/webauthn-prf";
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -126,9 +130,15 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!getSafeNextPath()) return;
-    void services.wallet.hasStoredWallet().then((hasStored) => {
-      if (hasStored) setUnlockDialogOpen(true);
-    });
+    void services.wallet
+      .hasStoredWallet()
+      .then((hasStored) => {
+        if (hasStored) setUnlockDialogOpen(true);
+      })
+      .catch(() => {
+        // Real-mode dynamic import can reject (script load failure); the user can
+        // still open the wallet manually, so swallow rather than crash the effect.
+      });
   }, []);
 
   async function openWallet() {

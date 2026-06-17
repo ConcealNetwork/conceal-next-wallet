@@ -10,11 +10,18 @@ function encodePaymentMessage(message: string): string {
 
 function decodePaymentMessage(raw: string): string {
   if (!raw.startsWith(PAYMENT_MESSAGE_ENC_PREFIX)) return raw;
-  const b64 = raw.slice(PAYMENT_MESSAGE_ENC_PREFIX.length).replace(/-/g, "+").replace(/_/g, "/");
-  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
-  const binary = atob(padded);
-  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
+  // A hostile or typo'd `?message=b64.…` link can make `atob` throw
+  // (InvalidCharacterError) or yield garbage. Never let a bad link blank the
+  // send page — fall back to the raw token so the page still renders.
+  try {
+    const b64 = raw.slice(PAYMENT_MESSAGE_ENC_PREFIX.length).replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return raw;
+  }
 }
 
 export type PaymentSendDraft = {

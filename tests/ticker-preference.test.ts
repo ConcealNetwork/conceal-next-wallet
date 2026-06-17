@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getDisplayTicker,
+  getUseShortTicker,
+  loadTickerPreference,
   setTickerPreference,
   stripTickerSuffix,
 } from "@/lib/ui/ticker-preference";
@@ -38,6 +40,7 @@ vi.mock("@/lib/wallet-core/Translations", () => ({
 describe("ticker preference", () => {
   beforeEach(async () => {
     storage.clear();
+    localStorage.clear();
     await setTickerPreference(false);
   });
 
@@ -51,5 +54,25 @@ describe("ticker preference", () => {
   it("defaults to CCX", () => {
     expect(getDisplayTicker()).toBe("CCX");
     expect(formatCcx(12.5)).toBe("12.50 CCX");
+  });
+
+  it("persists to the canonical localStorage key the vault backs up", async () => {
+    await setTickerPreference(true);
+    expect(localStorage.getItem("useShortTicker")).toBe("true");
+    await setTickerPreference(false);
+    expect(localStorage.getItem("useShortTicker")).toBe("false");
+  });
+
+  it("loads the value from localStorage", async () => {
+    localStorage.setItem("useShortTicker", "true");
+    expect(await loadTickerPreference()).toBe(true);
+    expect(getUseShortTicker()).toBe(true);
+  });
+
+  it("migrates a legacy wallet-core value into localStorage on first load", async () => {
+    localStorage.removeItem("useShortTicker");
+    storage.set("useShortTicker", true); // value persisted by an older build
+    expect(await loadTickerPreference()).toBe(true);
+    expect(localStorage.getItem("useShortTicker")).toBe("true"); // seeded for the vault
   });
 });

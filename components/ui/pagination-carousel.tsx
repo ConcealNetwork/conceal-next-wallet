@@ -25,7 +25,7 @@ export function PaginationCarousel({
         disabled={currentPage <= 1}
         aria-label="Previous page"
       >
-        <ChevronLeft className="size-4" />
+        <ChevronLeft className="size-4" aria-hidden="true" />
       </Button>
 
       {pages.map((page, index) =>
@@ -58,7 +58,7 @@ export function PaginationCarousel({
         disabled={currentPage >= totalPages}
         aria-label="Next page"
       >
-        <ChevronRight className="size-4" />
+        <ChevronRight className="size-4" aria-hidden="true" />
       </Button>
     </nav>
   );

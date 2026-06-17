@@ -7,8 +7,8 @@
  * Sources vendored under public/lib/ (copied from conceal-web-wallet/src/lib/).
  */
 
-import { applyWalletNetworkConfig } from "@/lib/config/config";
 import { publicAssetPath } from "@/lib/conceal/asset-path";
+import { applyWalletNetworkConfig } from "@/lib/config/config";
 
 const CORE_SCRIPT_ORDER = [
   "/lib/biginteger.js",
@@ -24,9 +24,6 @@ const EXTENDED_SCRIPT_ORDER = [
   "/lib/FileSaver.min.js",
   "/lib/cn_utils_native.js",
 ] as const;
-
-/** Worker-only (zbar via emscripten) — must NOT be injected as a page <script>; v3 QR uses jsQR. */
-export const DECODER_WORKER_URL = publicAssetPath("/lib/decoder.min.js");
 
 let loadPromise: Promise<void> | null = null;
 let extendedLoadPromise: Promise<void> | null = null;
@@ -114,9 +111,6 @@ export function ensureWalletExtendedLibs(): Promise<void> {
 export function ensureAllWalletLegacyLibs(): Promise<void> {
   return ensureWalletExtendedLibs();
 }
-
-/** @deprecated Use ensureWalletRuntimeLibs */
-export const ensureConcealJs = ensureWalletRuntimeLibs;
 
 export function isWalletRuntimeReady(): boolean {
   return (

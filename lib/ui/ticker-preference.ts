@@ -28,19 +28,51 @@ function notifyListeners(): void {
   });
 }
 
-/** Load persisted preference from IndexedDB (same key as wallet-core `TickerStore`). */
+function readLocalPreference(): boolean | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw === null ? null : raw === "true";
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalPreference(value: boolean): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, String(value));
+  } catch {
+    // Private-mode / quota — non-critical UI preference; keep the in-memory value.
+  }
+}
+
+/** One-time migration: read the value persisted by older builds (wallet-core IndexedDB store). */
+async function readLegacyPreference(): Promise<boolean> {
+  try {
+    const { tickerStore } = await import("@/lib/wallet-core/Translations");
+    await tickerStore.initialize();
+    return tickerStore.useShortTicker;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Load the persisted preference. localStorage is the canonical store — the same
+ * `useShortTicker` key the device-data vault backs up. Older builds kept it in the
+ * wallet-core IndexedDB store, so on first run we migrate that value into
+ * localStorage once (after which nothing here pulls wallet-core into mock mode).
+ */
 export async function loadTickerPreference(): Promise<boolean> {
   if (typeof window === "undefined") {
     return false;
   }
 
-  try {
-    const { tickerStore } = await import("@/lib/wallet-core/Translations");
-    await tickerStore.initialize();
-    useShortTicker = tickerStore.useShortTicker;
-  } catch {
-    const { Storage } = await import("@/lib/wallet-core/Storage");
-    useShortTicker = Boolean(await Storage.getItem(STORAGE_KEY, false));
+  const local = readLocalPreference();
+  useShortTicker = local ?? (await readLegacyPreference());
+  if (local === null) {
+    writeLocalPreference(useShortTicker);
   }
 
   notifyListeners();
@@ -53,15 +85,7 @@ export async function setTickerPreference(nextUseShortTicker: boolean): Promise<
   }
 
   useShortTicker = nextUseShortTicker;
-
-  try {
-    const { tickerStore } = await import("@/lib/wallet-core/Translations");
-    await tickerStore.setTickerPreference(nextUseShortTicker);
-  } catch {
-    const { Storage } = await import("@/lib/wallet-core/Storage");
-    await Storage.setItem(STORAGE_KEY, nextUseShortTicker);
-  }
-
+  writeLocalPreference(nextUseShortTicker);
   notifyListeners();
 }
 

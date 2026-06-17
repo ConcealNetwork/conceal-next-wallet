@@ -120,103 +120,111 @@ export async function importWalletOperation(input: ImportWalletInput): Promise<W
   let wallet: Wallet | null = null;
   const password = "password" in input ? input.password : "";
 
-  switch (input.method) {
-    case "open":
-      return unlockStoredWallet(input.password);
-    case "mnemonic": {
-      const language =
-        input.language === "auto" || !input.language
-          ? (Mnemonic.detectLang(input.mnemonic) ?? "english")
-          : input.language;
-      const decoded = Mnemonic.mn_decode(input.mnemonic.trim(), language);
-      if (decoded === null) throw new Error("Invalid mnemonic phrase.");
-      const keys = Cn.create_address(decoded);
-      wallet = new Wallet();
-      wallet.keys = KeysRepository.fromPriv(keys.spend.sec, keys.view.sec);
-      wallet.lastHeight = clampImportHeight(input.scanHeight, currentHeight);
-      wallet.creationHeight = wallet.lastHeight;
-      break;
-    }
-    case "keys": {
-      wallet = new Wallet();
-      if (input.viewOnly) {
-        const built = Cn.build_view_only_keys(input.address, input.privateViewKey);
-        wallet.keys = built.keys;
-      } else {
-        let viewKey = input.privateViewKey.trim();
-        if (viewKey === "") {
-          viewKey = Cn.generate_keys(CnUtils.cn_fast_hash(input.privateSpendKey.trim())).sec;
-        }
-        wallet.keys = KeysRepository.fromPriv(input.privateSpendKey.trim(), viewKey);
-      }
-      wallet.lastHeight = clampImportHeight(input.scanHeight, currentHeight);
-      wallet.creationHeight = wallet.lastHeight;
-      break;
-    }
-    case "file": {
-      const text =
-        typeof input.file === "string"
-          ? input.file
-          : new TextDecoder()
-              .decode(input.file)
-              .replace(/^\uFEFF/, "")
-              .trim();
-      let raw: unknown;
-      try {
-        raw = JSON.parse(text);
-      } catch {
-        throw new Error("The selected file is not valid JSON.");
-      }
-      if (!raw || typeof raw !== "object") {
-        throw new Error("The selected file is not a valid wallet backup.");
-      }
-      wallet = WalletRepository.decodeWithPassword(
-        raw as Parameters<typeof WalletRepository.decodeWithPassword>[0],
-        input.password,
-      );
-      if (wallet === null) {
-        throw new Error("Invalid wallet file or password.");
-      }
-      if (!wallet.keys?.pub?.spend) {
-        throw new Error("Wallet file decrypted but key data is incomplete.");
-      }
-      await openWalletRuntime(wallet, input.password);
-      await flushRuntimeWalletPersistence();
-      return mapWalletToInfo(wallet, currentHeight);
-    }
-    case "qr": {
-      const decoded = CoinUri.decodeWallet(input.payload);
-      if (decoded.mnemonicSeed) {
-        const seed = Mnemonic.mn_decode(decoded.mnemonicSeed, "english");
-        if (seed === null) throw new Error("Invalid mnemonic in QR payload.");
-        const keys = Cn.create_address(seed);
+  // Key/QR/mnemonic import runs legacy crypto on user-supplied material. Some of
+  // those paths throw bare strings (CoinUri codes like "missing_seeds") or errors
+  // whose message could embed key material \u2014 funnel everything through
+  // toFriendlyImportError so the UI never shows a raw/sensitive string.
+  try {
+    switch (input.method) {
+      case "open":
+        return await unlockStoredWallet(input.password);
+      case "mnemonic": {
+        const language =
+          input.language === "auto" || !input.language
+            ? (Mnemonic.detectLang(input.mnemonic) ?? "english")
+            : input.language;
+        const decoded = Mnemonic.mn_decode(input.mnemonic.trim(), language);
+        if (decoded === null) throw new Error("Invalid mnemonic phrase.");
+        const keys = Cn.create_address(decoded);
         wallet = new Wallet();
         wallet.keys = KeysRepository.fromPriv(keys.spend.sec, keys.view.sec);
-      } else if (decoded.spendKey) {
-        let viewKey = decoded.viewKey ?? "";
-        if (viewKey === "") {
-          viewKey = Cn.generate_keys(CnUtils.cn_fast_hash(decoded.spendKey)).sec;
-        }
-        wallet = new Wallet();
-        wallet.keys = KeysRepository.fromPriv(decoded.spendKey, viewKey);
-      } else if (decoded.viewKey && decoded.address) {
-        const built = Cn.build_view_only_keys(decoded.address, decoded.viewKey);
-        wallet = new Wallet();
-        wallet.keys = built.keys;
-      } else {
-        throw new Error("Unsupported QR wallet payload.");
+        wallet.lastHeight = clampImportHeight(input.scanHeight, currentHeight);
+        wallet.creationHeight = wallet.lastHeight;
+        break;
       }
-      const scanHeight = decoded.height ? parseInt(decoded.height, 10) : undefined;
-      wallet.lastHeight = clampImportHeight(scanHeight, currentHeight);
-      wallet.creationHeight = wallet.lastHeight;
-      break;
+      case "keys": {
+        wallet = new Wallet();
+        if (input.viewOnly) {
+          const built = Cn.build_view_only_keys(input.address, input.privateViewKey);
+          wallet.keys = built.keys;
+        } else {
+          let viewKey = input.privateViewKey.trim();
+          if (viewKey === "") {
+            viewKey = Cn.generate_keys(CnUtils.cn_fast_hash(input.privateSpendKey.trim())).sec;
+          }
+          wallet.keys = KeysRepository.fromPriv(input.privateSpendKey.trim(), viewKey);
+        }
+        wallet.lastHeight = clampImportHeight(input.scanHeight, currentHeight);
+        wallet.creationHeight = wallet.lastHeight;
+        break;
+      }
+      case "file": {
+        const text =
+          typeof input.file === "string"
+            ? input.file
+            : new TextDecoder()
+                .decode(input.file)
+                .replace(/^\uFEFF/, "")
+                .trim();
+        let raw: unknown;
+        try {
+          raw = JSON.parse(text);
+        } catch {
+          throw new Error("The selected file is not valid JSON.");
+        }
+        if (!raw || typeof raw !== "object") {
+          throw new Error("The selected file is not a valid wallet backup.");
+        }
+        wallet = WalletRepository.decodeWithPassword(
+          raw as Parameters<typeof WalletRepository.decodeWithPassword>[0],
+          input.password,
+        );
+        if (wallet === null) {
+          throw new Error("Invalid wallet file or password.");
+        }
+        if (!wallet.keys?.pub?.spend) {
+          throw new Error("Wallet file decrypted but key data is incomplete.");
+        }
+        await openWalletRuntime(wallet, input.password);
+        await flushRuntimeWalletPersistence();
+        return mapWalletToInfo(wallet, currentHeight);
+      }
+      case "qr": {
+        const decoded = CoinUri.decodeWallet(input.payload);
+        if (decoded.mnemonicSeed) {
+          const seed = Mnemonic.mn_decode(decoded.mnemonicSeed, "english");
+          if (seed === null) throw new Error("Invalid mnemonic in QR payload.");
+          const keys = Cn.create_address(seed);
+          wallet = new Wallet();
+          wallet.keys = KeysRepository.fromPriv(keys.spend.sec, keys.view.sec);
+        } else if (decoded.spendKey) {
+          let viewKey = decoded.viewKey ?? "";
+          if (viewKey === "") {
+            viewKey = Cn.generate_keys(CnUtils.cn_fast_hash(decoded.spendKey)).sec;
+          }
+          wallet = new Wallet();
+          wallet.keys = KeysRepository.fromPriv(decoded.spendKey, viewKey);
+        } else if (decoded.viewKey && decoded.address) {
+          const built = Cn.build_view_only_keys(decoded.address, decoded.viewKey);
+          wallet = new Wallet();
+          wallet.keys = built.keys;
+        } else {
+          throw new Error("Unsupported QR wallet payload.");
+        }
+        const scanHeight = decoded.height ? parseInt(decoded.height, 10) : undefined;
+        wallet.lastHeight = clampImportHeight(scanHeight, currentHeight);
+        wallet.creationHeight = wallet.lastHeight;
+        break;
+      }
+      default:
+        throw new Error("Unsupported import method.");
     }
-    default:
-      throw new Error("Unsupported import method.");
-  }
 
-  await openWalletRuntime(wallet, password);
-  return mapWalletToInfo(wallet, currentHeight);
+    await openWalletRuntime(wallet, password);
+    return mapWalletToInfo(wallet, currentHeight);
+  } catch (error) {
+    throw toFriendlyImportError(error);
+  }
 }
 
 export async function previewKeysOperation(input: {
@@ -774,6 +782,21 @@ function normalizeWalletOperationError(error: unknown, fallback: string): Error 
     return new Error(`${fallback} ${String((error as { error: unknown }).error)}`);
   }
   return new Error(fallback);
+}
+
+/** Long hex runs in an error message likely carry key/seed material — never surface them. */
+const SENSITIVE_ERROR_PATTERN = /[0-9a-fA-F]{32,}/;
+
+/**
+ * Map any import failure to a user-safe Error. Our own curated validation
+ * messages (no key material) pass through; bare-string library throws and any
+ * crypto error whose message could embed a key are replaced with a generic one.
+ */
+function toFriendlyImportError(error: unknown): Error {
+  if (error instanceof Error && error.message && !SENSITIVE_ERROR_PATTERN.test(error.message)) {
+    return error;
+  }
+  return new Error("Couldn't import this wallet — double-check the details and try again.");
 }
 
 export async function deleteStoredWalletOperation(): Promise<void> {

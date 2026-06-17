@@ -85,4 +85,19 @@ describe("parsePaymentSendDraft", () => {
       message: "v1 note",
     });
   });
+
+  it("falls back to the raw token on a malformed encoded message (never throws)", () => {
+    // A hostile or typo'd `?message=b64.…` link makes atob throw — it must not
+    // bubble out of the send page's effect and blank the screen.
+    const params = new URLSearchParams({
+      address: ADDRESS,
+      amount: "1",
+      message: "b64.@@@invalid@@@",
+    });
+    expect(() => parsePaymentSendDraft(params.toString())).not.toThrow();
+    const draft = parsePaymentSendDraft(params.toString());
+    expect(draft?.address).toBe(ADDRESS);
+    expect(draft?.amount).toBe(1);
+    expect(draft?.message).toBe("b64.@@@invalid@@@");
+  });
 });

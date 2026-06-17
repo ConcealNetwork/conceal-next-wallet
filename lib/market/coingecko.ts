@@ -326,27 +326,6 @@ export async function fetchCcxMarketData(): Promise<MarketData> {
   return marketDataPromise;
 }
 
-/** @deprecated Use fetchCcxMarketData */
-export const fetchCoinGeckoMarketData = fetchCcxMarketData;
-
 export async function fetchCcxPriceHistory(range: MarketTimeframe): Promise<MarketHistoryPoint[]> {
   return loadChart(range);
-}
-
-/** @deprecated Use fetchCcxPriceHistory */
-export const fetchCoinGeckoPriceHistory = fetchCcxPriceHistory;
-
-export async function hydrateMarketHistory(
-  data: MarketData,
-  range: MarketTimeframe,
-): Promise<MarketData> {
-  if (data.historyByTimeframe[range]?.length) {
-    return { ...data, history: data.historyByTimeframe[range] };
-  }
-  const points = await loadChart(range);
-  return {
-    ...data,
-    history: points,
-    historyByTimeframe: { ...data.historyByTimeframe, [range]: points },
-  };
 }
