@@ -46,27 +46,28 @@ import {
   useAcknowledgeMessagesSinceOpen,
   useNewMessagesSinceOpen,
 } from "@/lib/hooks/use-new-messages-since-open";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { THEME_PREFERENCES, type ThemePreference } from "@/lib/ui/theme";
 import { useTheme } from "@/lib/ui/theme-provider";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 
 const mainNav = [
-  { href: "/wallet/account", label: "Account", icon: Home },
-  { href: "/wallet/market", label: "Market", icon: BarChart3 },
-  { href: "/wallet/transactions", label: "Transactions", icon: WalletCards },
-  { href: "/wallet/send", label: "Send", icon: Send },
-  { href: "/wallet/receive", label: "Receive", icon: QrCode },
-  { href: "/wallet/deposits", label: "Deposits", icon: Coins },
-  { href: "/wallet/messages", label: "Messages", icon: Mail },
-  { href: "/wallet/address-book", label: "Address Book", icon: BookOpen },
+  { href: "/wallet/account", labelKey: "nav.account", icon: Home },
+  { href: "/wallet/market", labelKey: "nav.market", icon: BarChart3 },
+  { href: "/wallet/transactions", labelKey: "nav.transactions", icon: WalletCards },
+  { href: "/wallet/send", labelKey: "nav.send", icon: Send },
+  { href: "/wallet/receive", labelKey: "nav.receive", icon: QrCode },
+  { href: "/wallet/deposits", labelKey: "nav.deposits", icon: Coins },
+  { href: "/wallet/messages", labelKey: "nav.messages", icon: Mail },
+  { href: "/wallet/address-book", labelKey: "nav.addressBook", icon: BookOpen },
 ];
 
 const bottomNav = [
-  { href: "/wallet/settings", label: "Settings", icon: Settings },
-  { href: "/wallet/export", label: "Export", icon: Download },
-  { href: "/wallet/network", label: "Network", icon: Network },
-  { href: "/wallet/donate", label: "Donate", icon: Gift },
+  { href: "/wallet/settings", labelKey: "nav.settings", icon: Settings },
+  { href: "/wallet/export", labelKey: "nav.export", icon: Download },
+  { href: "/wallet/network", labelKey: "nav.network", icon: Network },
+  { href: "/wallet/donate", labelKey: "nav.donate", icon: Gift },
 ];
 
 function NavLink({
@@ -81,16 +82,16 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const Icon = item.icon;
+  const label = t(item.labelKey);
   const active = pathname === item.href;
   const showBadge = badge !== undefined && badge > 0 && !active;
 
   const link = (
     <Link
       href={item.href}
-      aria-label={
-        collapsed ? (showBadge ? `${item.label}, ${badge} new since open` : item.label) : undefined
-      }
+      aria-label={collapsed ? (showBadge ? `${label}, ${badge} new since open` : label) : undefined}
       onClick={onNavigate}
       className={cn(
         "flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
@@ -111,7 +112,7 @@ function NavLink({
             showBadge && "font-semibold text-foreground",
           )}
         >
-          {item.label}
+          {label}
         </span>
       ) : null}
       {showBadge && !collapsed ? (
@@ -128,22 +129,24 @@ function NavLink({
     <Tooltip>
       <TooltipTrigger asChild>{link}</TooltipTrigger>
       <TooltipContent side="right">
-        {showBadge ? `${item.label} (+${badge > 99 ? "99" : badge} new)` : item.label}
+        {showBadge ? `${label} (+${badge > 99 ? "99" : badge} new)` : label}
       </TooltipContent>
     </Tooltip>
   );
 }
 
-const THEME_META: Record<ThemePreference, { label: string; icon: typeof Sun }> = {
-  system: { label: "System", icon: Monitor },
-  light: { label: "Light", icon: Sun },
-  dark: { label: "Dark", icon: Moon },
+const THEME_META: Record<ThemePreference, { labelKey: string; icon: typeof Sun }> = {
+  system: { labelKey: "theme.system", icon: Monitor },
+  light: { labelKey: "theme.light", icon: Sun },
+  dark: { labelKey: "theme.dark", icon: Moon },
 };
 
 /** Globally-accessible theme switch: cycles System → Light → Dark. */
 function SidebarThemeToggle({ collapsed }: { collapsed: boolean }) {
   const { preference, setPreference } = useTheme();
-  const { label, icon: Icon } = THEME_META[preference];
+  const { t } = useI18n();
+  const { labelKey, icon: Icon } = THEME_META[preference];
+  const label = t(labelKey);
   const next =
     THEME_PREFERENCES[(THEME_PREFERENCES.indexOf(preference) + 1) % THEME_PREFERENCES.length];
 
@@ -153,7 +156,7 @@ function SidebarThemeToggle({ collapsed }: { collapsed: boolean }) {
         <Button
           type="button"
           variant="ghost"
-          aria-label={`Theme: ${label}. Switch to ${THEME_META[next].label}`}
+          aria-label={`${t("theme.label")}: ${label}. ${t("theme.switchTo", { name: t(THEME_META[next].labelKey) })}`}
           onClick={() => setPreference(next)}
           className="h-11 w-full shrink-0 justify-start gap-3 px-3 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
@@ -165,17 +168,19 @@ function SidebarThemeToggle({ collapsed }: { collapsed: boolean }) {
             )}
             aria-hidden={collapsed}
           >
-            Theme · {label}
+            {t("theme.label")} · {label}
           </span>
         </Button>
       </TooltipTrigger>
-      {collapsed && <TooltipContent side="right">{`Theme: ${label}`}</TooltipContent>}
+      {collapsed && <TooltipContent side="right">{`${t("theme.label")}: ${label}`}</TooltipContent>}
     </Tooltip>
   );
 }
 
 function DisconnectButton({ collapsed }: { collapsed: boolean }) {
   const disconnect = useWalletDisconnect();
+  const { t } = useI18n();
+  const disconnectLabel = t("action.disconnect");
 
   return (
     <AlertDialog>
@@ -185,7 +190,7 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
             <Button
               type="button"
               variant="ghost"
-              aria-label={collapsed ? "Disconnect" : undefined}
+              aria-label={collapsed ? disconnectLabel : undefined}
               className="mt-4 h-11 w-full shrink-0 justify-start gap-3 px-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             >
               <LogOut className="size-4 shrink-0" aria-hidden="true" />
@@ -196,12 +201,12 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
                 )}
                 aria-hidden={collapsed}
               >
-                Disconnect
+                {disconnectLabel}
               </span>
             </Button>
           </AlertDialogTrigger>
         </TooltipTrigger>
-        {collapsed && <TooltipContent side="right">Disconnect</TooltipContent>}
+        {collapsed && <TooltipContent side="right">{disconnectLabel}</TooltipContent>}
       </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -286,6 +291,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeMobileNav = useCallback(() => setMobileOpen(false), []);
   const EdgeToggleIcon = collapsed ? ChevronRight : ChevronLeft;
+  const { t } = useI18n();
 
   return (
     <>
@@ -300,7 +306,7 @@ export function Sidebar() {
           <Button
             type="button"
             variant="ghost"
-            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            aria-label={collapsed ? t("action.expandMenu") : t("action.collapseMenu")}
             onClick={toggle}
             className="absolute right-0 top-7 z-50 size-7 min-h-0 translate-x-1/2 rounded-full border border-border bg-card p-0 text-muted-foreground shadow-xs hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
@@ -311,7 +317,7 @@ export function Sidebar() {
       <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur-sm lg:hidden">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label="Open navigation">
+            <Button type="button" variant="ghost" size="icon" aria-label={t("action.openNavigation")}>
               <Menu className="size-5" aria-hidden="true" />
             </Button>
           </SheetTrigger>
