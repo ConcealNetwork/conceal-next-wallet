@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
+import { forgetBiometricEnrollment } from "@/components/wallet/open-wallet-form";
 import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -41,6 +42,9 @@ export default function ChangePasswordPage() {
   async function submit(values: PasswordForm) {
     try {
       await services.wallet.changePassword(values);
+      // The biometric enrollment encrypts the OLD password — drop it so the user
+      // re-enrols against the new one (otherwise biometric unlock would fail).
+      forgetBiometricEnrollment();
       toast.success(walletCopy.passwordChanged);
       router.push("/wallet/settings");
     } catch (error) {
