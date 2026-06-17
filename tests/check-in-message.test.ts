@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { encodeSmartMessage, isSmartMessage, parseSmartMessage } from "@/lib/messages/smart-message";
+import {
+  encodeSmartMessage,
+  isKnownSmartMessage,
+  isSmartMessage,
+  parseSmartMessage,
+} from "@/lib/messages/smart-message";
 import { formatCheckIn, isCheckInMessage, parseCheckIn } from "@/lib/ui/check-in-message";
 
 describe("smart-message convention (conceal-2fa compatible)", () => {
@@ -29,30 +34,41 @@ describe("smart-message convention (conceal-2fa compatible)", () => {
     expect(parseSmartMessage("{ a , b , c }")).toEqual(["a", "b", "c"]);
     expect(parseSmartMessage("not a command")).toBeNull();
   });
+
+  it("isKnownSmartMessage gates on the module allow-list (not just braces)", () => {
+    expect(isKnownSmartMessage("{status,alive}")).toBe(true);
+    expect(isKnownSmartMessage("{2FA,c}")).toBe(true); // ecosystem module
+    expect(isKnownSmartMessage("{vault,u,x}")).toBe(true);
+    // Ordinary brace-wrapped chat / JSON is NOT a smart message → stays ChaCha8 text.
+    expect(isKnownSmartMessage("{hi}")).toBe(false);
+    expect(isKnownSmartMessage('{"foo":1}')).toBe(false);
+    expect(isKnownSmartMessage("{unknownModule,x}")).toBe(false);
+    expect(isKnownSmartMessage("plain text")).toBe(false);
+  });
 });
 
 describe("check-in message", () => {
-  it("round-trips format → parse as a {checkin,…} smart message", () => {
-    expect(formatCheckIn("alive")).toBe("{checkin,alive}");
+  it("round-trips format → parse as a {status,…} smart message", () => {
+    expect(formatCheckIn("alive")).toBe("{status,alive}");
     expect(parseCheckIn(formatCheckIn())).toEqual({ status: "alive" });
   });
 
   it("accepts `ok` as an alias for alive", () => {
-    expect(parseCheckIn("{checkin,ok}")).toEqual({ status: "alive" });
+    expect(parseCheckIn("{status,ok}")).toEqual({ status: "alive" });
   });
 
   it("matches only the whole, trimmed body (no substring/injection)", () => {
-    expect(parseCheckIn("  {checkin,alive}  ")).toEqual({ status: "alive" });
-    expect(parseCheckIn("hi {checkin,alive}")).toBeNull();
-    expect(parseCheckIn("{checkin,alive} and more")).toBeNull();
+    expect(parseCheckIn("  {status,alive}  ")).toEqual({ status: "alive" });
+    expect(parseCheckIn("hi {status,alive}")).toBeNull();
+    expect(parseCheckIn("{status,alive} and more")).toBeNull();
   });
 
   it("rejects other modules and unknown statuses", () => {
     expect(parseCheckIn("{2FA,c}")).toBeNull();
     expect(parseCheckIn("{vault,u}")).toBeNull();
-    expect(parseCheckIn("{checkin,dead}")).toBeNull();
-    expect(parseCheckIn("{checkin,help}")).toBeNull(); // reserved, not wired in v1.1
-    expect(parseCheckIn("{checkin}")).toBeNull(); // no status
+    expect(parseCheckIn("{status,dead}")).toBeNull();
+    expect(parseCheckIn("{status,help}")).toBeNull(); // reserved, not wired in v1.1
+    expect(parseCheckIn("{status}")).toBeNull(); // no status value
   });
 
   it("never throws or leaks prototype members on adversarial input", () => {
@@ -60,14 +76,14 @@ describe("check-in message", () => {
     expect(parseCheckIn(undefined)).toBeNull();
     expect(parseCheckIn(null)).toBeNull();
     expect(parseCheckIn(12345)).toBeNull();
-    expect(parseCheckIn(`{checkin,${"x".repeat(10_000)}}`)).toBeNull();
-    expect(parseCheckIn("{checkin,constructor}")).toBeNull();
-    expect(parseCheckIn("{checkin,__proto__}")).toBeNull();
-    expect(parseCheckIn("{checkin,toString}")).toBeNull();
+    expect(parseCheckIn(`{status,${"x".repeat(10_000)}}`)).toBeNull();
+    expect(parseCheckIn("{status,constructor}")).toBeNull();
+    expect(parseCheckIn("{status,__proto__}")).toBeNull();
+    expect(parseCheckIn("{status,toString}")).toBeNull();
   });
 
   it("isCheckInMessage mirrors parse", () => {
-    expect(isCheckInMessage("{checkin,alive}")).toBe(true);
+    expect(isCheckInMessage("{status,alive}")).toBe(true);
     expect(isCheckInMessage("just a normal message")).toBe(false);
   });
 });

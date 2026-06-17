@@ -31,6 +31,27 @@ export function isSmartMessage(body: unknown): boolean {
   return trimmed.length >= 2 && trimmed.startsWith(PREFIX) && trimmed.endsWith(SUFFIX);
 }
 
+// Ecosystem smart-message modules (conceal-2fa) + this wallet's `status`. Used
+// to distinguish an *actionable* smart-message command from ordinary
+// brace-wrapped chat/JSON — so only recognized commands ride ChaCha12 / render
+// as a chip; everything else stays plain ChaCha8 text.
+const KNOWN_MODULES = new Set([
+  "2FA",
+  "vault",
+  "to-do",
+  "medical",
+  "trust",
+  "contact",
+  "agent",
+  "status",
+]);
+
+/** True only for a brace token whose first part is a known module. */
+export function isKnownSmartMessage(body: unknown): boolean {
+  const parts = parseSmartMessage(body);
+  return parts !== null && parts.length >= 2 && KNOWN_MODULES.has(parts[0]);
+}
+
 /** `encodeSmartMessage("checkin","alive")` → `"{checkin,alive}"`. */
 export function encodeSmartMessage(module: string, action: string, ...data: string[]): string {
   // Commas/braces are the structural delimiters — a part containing them would

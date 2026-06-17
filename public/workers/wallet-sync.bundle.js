@@ -29,6 +29,34 @@ var reportError = self.reportError || function (e) { console.error(e); };
     }
   };
 
+  // lib/messages/smart-message.ts
+  var PREFIX = "{";
+  var SUFFIX = "}";
+  function isSmartMessage(body) {
+    if (typeof body !== "string") return false;
+    const trimmed = body.trim();
+    return trimmed.length >= 2 && trimmed.startsWith(PREFIX) && trimmed.endsWith(SUFFIX);
+  }
+  var KNOWN_MODULES = /* @__PURE__ */ new Set([
+    "2FA",
+    "vault",
+    "to-do",
+    "medical",
+    "trust",
+    "contact",
+    "agent",
+    "status"
+  ]);
+  function isKnownSmartMessage(body) {
+    const parts = parseSmartMessage(body);
+    return parts !== null && parts.length >= 2 && KNOWN_MODULES.has(parts[0]);
+  }
+  function parseSmartMessage(body) {
+    if (!isSmartMessage(body)) return null;
+    const inner = body.trim().slice(1, -1);
+    return inner.split(",").map((part) => part.trim());
+  }
+
   // lib/wallet-core/ChaCha8.ts
   var JSChaCha8 = class {
     constructor(bufKey, bufNonce, counter) {
@@ -1895,8 +1923,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
             const rawMessArrFull = new Uint8Array(rawMessArr.length + 4);
             rawMessArrFull.set(rawMessArr);
             rawMessArrFull.set([0, 0, 0, 0], rawMessArr.length);
-            const cha = new JSChaCha8(hashBuf, nonceBuf);
-            const _buf = cha.encrypt(rawMessArrFull);
+            let _buf;
+            if (isKnownSmartMessage(message)) {
+              _buf = concealjs.cypher.chacha12(hashBuf, nonceBuf, rawMessArrFull);
+            } else {
+              _buf = new JSChaCha8(hashBuf, nonceBuf).encrypt(rawMessArrFull);
+            }
             const encryptedMessStr = CnUtils.bintohex(_buf);
             tx.extra += TX_EXTRA_TAGS.MESSAGE_TAG;
             tx.extra += ("0" + rawMessArrFull.length.toString(16)).slice(-2);
@@ -3056,6 +3088,23 @@ var reportError = self.reportError || function (e) { console.error(e); };
         nonceBuf.set([index / 256 ** i], 11 - i);
       }
       const rawMessArr = concealjs.cnutils.hextobin(rawMessage);
+      try {
+        const c12 = concealjs.cypher.chacha12(hashBuf, nonceBuf, rawMessArr);
+        let checksumOk = true;
+        for (let i = 0; i < TX_EXTRA_MESSAGE_CHECKSUM_SIZE; i++) {
+          if (c12[c12.length - TX_EXTRA_MESSAGE_CHECKSUM_SIZE + i] !== 0) {
+            checksumOk = false;
+            break;
+          }
+        }
+        if (checksumOk) {
+          const candidate = new TextDecoder().decode(c12).slice(0, -TX_EXTRA_MESSAGE_CHECKSUM_SIZE);
+          if (isKnownSmartMessage(candidate)) {
+            return candidate;
+          }
+        }
+      } catch (_e) {
+      }
       const cha = new JSChaCha8(hashBuf, nonceBuf);
       const _buf = cha.decrypt(rawMessArr);
       decryptedMessage = new TextDecoder().decode(_buf);

@@ -2,8 +2,8 @@ import { encodeSmartMessage, parseSmartMessage } from "@/lib/messages/smart-mess
 
 /**
  * Proof-of-life check-in encoded as a Conceal *smart message* — a structured
- * `{checkin,alive}` command (brace-wrapped, comma-separated) that rides the
- * normal encrypted message body. Detected by the shared smart-message
+ * `{status,alive}` command (brace-wrapped, comma-separated) that rides the
+ * normal encrypted message body (ChaCha12, per the ecosystem convention). Detected by the shared smart-message
  * convention (see lib/messages/smart-message.ts), so it never pollutes regular
  * text messages and stays compatible with the wider ecosystem (conceal-2fa).
  *
@@ -14,7 +14,9 @@ import { encodeSmartMessage, parseSmartMessage } from "@/lib/messages/smart-mess
 
 export type CheckInStatusValue = "alive";
 
-const MODULE = "checkin";
+// Smart-message module for proof-of-life pings: {status,alive}. Sits alongside
+// the other ecosystem modules (2FA, vault, to-do, medical, trust, contact, agent).
+const MODULE = "status";
 
 // Known statuses (v1). `ok` is accepted as an alias on parse. Object.hasOwn-gated
 // so prototype members can't masquerade as a status.
