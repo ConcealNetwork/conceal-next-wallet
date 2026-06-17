@@ -1,6 +1,6 @@
 "use client";
 
-import { MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
+import { Cog, Heart, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ContactAvatar } from "@/components/wallet/contact-avatar";
@@ -43,6 +43,8 @@ import {
   sortMessagesNewestFirst,
 } from "@/lib/messages/conversations";
 import type { AddressEntry, Message } from "@/lib/types";
+import { isSmartMessage } from "@/lib/messages/smart-message";
+import { parseCheckIn } from "@/lib/ui/check-in-message";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, timeAgo, truncateAddress } from "@/lib/utils";
 import {
@@ -522,7 +524,11 @@ function MessageListItem({
   const entry = buildMessageListContactEntry(message, addressBook);
 
   const preview = message.hasBody
-    ? message.body
+    ? parseCheckIn(message.body)
+      ? "💚 Check-in"
+      : isSmartMessage(message.body)
+        ? "Smart message"
+        : message.body
     : message.direction === "sent"
       ? "Sent message (body not saved locally)"
       : "";
@@ -671,7 +677,18 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
         )}
       >
         {message.hasBody ? (
-          threadViewMd ? (
+          parseCheckIn(message.body) ? (
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <Heart className="size-3.5 fill-current" aria-hidden="true" />
+              Check-in
+            </span>
+          ) : isSmartMessage(message.body) ? (
+            // Other structured commands (2FA, vault, …) — show a chip, not the raw token.
+            <span className="inline-flex items-center gap-1.5 font-medium italic opacity-90">
+              <Cog className="size-3.5" aria-hidden="true" />
+              Smart message
+            </span>
+          ) : threadViewMd ? (
             <div className="[&_i]:italic [&_s]:line-through">
               <FormattedMessageText
                 text={message.body}

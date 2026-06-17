@@ -1,4 +1,6 @@
 import type { Message } from "@/lib/types";
+import { parseCheckIn } from "@/lib/ui/check-in-message";
+import { normalizePaymentId } from "@/lib/validation/ccx";
 
 /**
  * "Check-ins" — a proof-of-life *watcher*. You mark a contact as one you expect
@@ -26,9 +28,55 @@ export interface WatchedContact {
   paused?: boolean;
   /** ISO; while now < snoozedUntil the contact is treated as paused. */
   snoozedUntil?: string;
+  /**
+   * Optional shared payment-id. When set, a message must match BOTH this PID and
+   * the address to count — an anti-spoof tightening (a third party can pick any
+   * PID, but can't also send from the contact's address). Absent → address-only.
+   */
+  paymentId?: string;
 }
 
 const DAY_MS = 86_400_000;
+
+/** Inbound PID of a received message (normalized), or "" when none. */
+function inboundPid(message: Message): string {
+  return normalizePaymentId(message.paymentIdFrom ?? undefined);
+}
+
+/** Does a received message belong to this watcher (address, and PID when set)? */
+export function messageMatchesWatcher(message: Message, watcher: WatchedContact): boolean {
+  if (message.direction !== "received" || message.counterpartyAddress !== watcher.address) {
+    return false;
+  }
+  const wantPid = normalizePaymentId(watcher.paymentId);
+  return wantPid ? inboundPid(message) === wantPid : true;
+}
+
+/** Newest received-message timestamp matching the watcher, or null. */
+export function lastReceivedForWatcher(
+  messages: readonly Message[],
+  watcher: WatchedContact,
+): string | null {
+  let latest: string | null = null;
+  for (const m of messages) {
+    if (!m.timestamp || !messageMatchesWatcher(m, watcher)) continue;
+    if (latest === null || m.timestamp > latest) latest = m.timestamp;
+  }
+  return latest;
+}
+
+/** Newest *structured check-in* timestamp matching the watcher, or null. */
+export function lastCheckInForWatcher(
+  messages: readonly Message[],
+  watcher: WatchedContact,
+): string | null {
+  let latest: string | null = null;
+  for (const m of messages) {
+    if (!m.timestamp || !messageMatchesWatcher(m, watcher) || !parseCheckIn(m.body)) continue;
+    if (latest === null || m.timestamp > latest) latest = m.timestamp;
+  }
+  return latest;
+}
 
 /** Newest received-message timestamp from `address`, or null if none seen. */
 export function lastReceivedFrom(messages: readonly Message[], address: string): string | null {
@@ -38,6 +86,24 @@ export function lastReceivedFrom(messages: readonly Message[], address: string):
     if (latest === null || m.timestamp > latest) latest = m.timestamp;
   }
   return latest;
+}
+
+/**
+ * True when the contact has sent an intentional check-in recently (within
+ * interval + grace) — drives the "checked in" indicator. Only structured
+ * check-in messages count here; ordinary messages keep the freshness clock but
+ * don't light the indicator.
+ */
+export function hasFreshCheckIn(
+  watcher: WatchedContact,
+  messages: readonly Message[],
+  nowISO: string,
+): boolean {
+  if (isPaused(watcher, nowISO)) return false;
+  const lastCheckIn = lastCheckInForWatcher(messages, watcher);
+  if (!lastCheckIn) return false;
+  const status = checkInStatus(watcher, lastCheckIn, nowISO);
+  return status === "ok" || status === "due-soon";
 }
 
 export function isPaused(watcher: WatchedContact, nowISO: string): boolean {
@@ -71,7 +137,7 @@ export function countOverdue(
   nowISO: string,
 ): number {
   return watchers.reduce(
-    (n, w) => (checkInStatus(w, lastReceivedFrom(messages, w.address), nowISO) === "overdue" ? n + 1 : n),
+    (n, w) => (checkInStatus(w, lastReceivedForWatcher(messages, w), nowISO) === "overdue" ? n + 1 : n),
     0,
   );
 }

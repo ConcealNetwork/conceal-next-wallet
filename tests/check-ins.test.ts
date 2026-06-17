@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { Message } from "@/lib/types";
+import { formatCheckIn } from "@/lib/ui/check-in-message";
 import {
   checkInStatus,
   countOverdue,
   daysSince,
+  hasFreshCheckIn,
+  lastCheckInForWatcher,
+  lastReceivedForWatcher,
   lastReceivedFrom,
+  messageMatchesWatcher,
   type WatchedContact,
 } from "@/lib/ui/check-ins";
 
@@ -28,6 +33,47 @@ function msg(over: Partial<Message>): Message {
 function watcher(over: Partial<WatchedContact> = {}): WatchedContact {
   return { id: "w1", address: BOB, label: "Bob", intervalDays: 14, graceDays: 7, ...over };
 }
+
+describe("messageMatchesWatcher (PID tightening)", () => {
+  it("address-only when the watcher has no PID", () => {
+    expect(messageMatchesWatcher(msg({}), watcher())).toBe(true);
+    expect(messageMatchesWatcher(msg({ counterpartyAddress: "ccx7other" }), watcher())).toBe(false);
+  });
+  it("requires BOTH address and PID when the watcher has a PID (anti-spoof)", () => {
+    const w = watcher({ paymentId: "abc123" });
+    expect(messageMatchesWatcher(msg({ paymentIdFrom: "abc123" }), w)).toBe(true);
+    expect(messageMatchesWatcher(msg({ paymentIdFrom: "wrong" }), w)).toBe(false);
+    // Right PID but wrong address (a spoof from a different wallet) → no match.
+    expect(
+      messageMatchesWatcher(msg({ paymentIdFrom: "abc123", counterpartyAddress: "ccx7evil" }), w),
+    ).toBe(false);
+  });
+  it("ignores sent messages", () => {
+    expect(messageMatchesWatcher(msg({ direction: "sent" }), watcher())).toBe(false);
+  });
+});
+
+describe("check-in freshness (indicator)", () => {
+  const checkin = formatCheckIn("alive");
+  it("lastCheckInForWatcher only counts parseable check-in bodies", () => {
+    const messages = [
+      msg({ body: "just chatting", timestamp: "2026-02-10T00:00:00.000Z" }),
+      msg({ body: checkin, timestamp: "2026-02-05T00:00:00.000Z" }),
+    ];
+    expect(lastCheckInForWatcher(messages, watcher())).toBe("2026-02-05T00:00:00.000Z");
+    // A plain message is still the newest *received* (drives the overdue clock)…
+    expect(lastReceivedForWatcher(messages, watcher())).toBe("2026-02-10T00:00:00.000Z");
+  });
+  it("hasFreshCheckIn true within interval+grace, false when stale or paused", () => {
+    const w = watcher(); // 14 + 7
+    const fresh = [msg({ body: checkin, timestamp: "2026-02-01T00:00:00.000Z" })];
+    expect(hasFreshCheckIn(w, fresh, "2026-02-10T00:00:00.000Z")).toBe(true);
+    expect(hasFreshCheckIn(w, fresh, "2026-03-15T00:00:00.000Z")).toBe(false); // overdue
+    expect(hasFreshCheckIn(watcher({ paused: true }), fresh, "2026-02-10T00:00:00.000Z")).toBe(false);
+    // No check-in messages → no indicator even if plain messages exist.
+    expect(hasFreshCheckIn(w, [msg({ body: "hi" })], "2026-01-01T12:00:00.000Z")).toBe(false);
+  });
+});
 
 describe("lastReceivedFrom", () => {
   it("returns the newest received message timestamp from the address", () => {
