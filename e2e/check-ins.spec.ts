@@ -28,7 +28,7 @@ test("watch a contact for check-ins, snooze and remove", async ({ page }) => {
   await page.getByRole("button", { name: "Watch", exact: true }).click();
 
   // It appears under "Watching" with a status line.
-  const watching = page.locator("li", { hasText: "Alice" });
+  const watching = page.locator("ul li", { hasText: "Alice" });
   await expect(watching).toBeVisible();
 
   // Snooze → a Resume control replaces Snooze/Pause.
@@ -37,13 +37,13 @@ test("watch a contact for check-ins, snooze and remove", async ({ page }) => {
 
   // Persists across reload — contact AND its interval.
   await page.goto("/wallet/check-ins");
-  const persisted = page.locator("li", { hasText: "Alice" });
+  const persisted = page.locator("ul li", { hasText: "Alice" });
   await expect(persisted).toBeVisible();
   await expect(persisted.getByText(/every 14d/i)).toBeVisible();
 
   // Remove.
   await page
-    .locator("li", { hasText: "Alice" })
+    .locator("ul li", { hasText: "Alice" })
     .getByRole("button", { name: "Stop watching Alice" })
     .click();
   await expect(page.getByText("Not watching anyone yet.")).toBeVisible();
