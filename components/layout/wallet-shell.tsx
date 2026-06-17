@@ -8,6 +8,7 @@ import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
 import { StorageWarningBanner } from "@/components/wallet/storage-warning-banner";
 import { useWalletLiveSync, useWalletSettings } from "@/lib/hooks";
 import { NetworkTelemetryProvider } from "@/lib/hooks/network-telemetry-provider";
+import { useDuePaymentReminders } from "@/lib/hooks/use-due-reminders";
 import { useIdleLock } from "@/lib/hooks/use-idle-lock";
 import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-messages-since-open";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebarCollapse();
   useWalletLiveSync();
   usePrefetchMessagesForBadge();
+  useDuePaymentReminders();
 
   // Auto-lock: after the configured idle window, drop the in-memory session and
   // bounce to the unlock screen. Disabled when autoLockMinutes is 0.
