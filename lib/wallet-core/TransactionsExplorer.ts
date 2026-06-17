@@ -62,7 +62,6 @@ declare var config: {
 import type { Wallet } from "./Wallet";
 import { MathUtil } from "./MathUtil";
 import { isKnownSmartMessage } from "@/lib/messages/smart-message";
-import { JSChaCha8 } from "./ChaCha8";
 import { Cn, CnTransactions } from "./Cn";
 import type { RawDaemon_Transaction, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
 import {
@@ -391,9 +390,10 @@ export class TransactionsExplorer {
       // WASM cypher unavailable / threw → fall back to the ChaCha8 path.
     }
 
-    // typescripted chacha
-    const cha = new JSChaCha8(hashBuf, nonceBuf);
-    const _buf = cha.decrypt(rawMessArr);
+    // Ordinary messages: ChaCha8 via the audited conceal-lib-js WASM (decrypt ==
+    // encrypt for a stream cipher). Byte-identical to the former JSChaCha8 at the
+    // message's zero nonce — pinned by tests/chacha8-parity.test.ts.
+    const _buf: Uint8Array = concealjs.cypher.chacha8(hashBuf, nonceBuf, rawMessArr);
 
     // decode the buffer from chacha8 with text decoder
     decryptedMessage = new TextDecoder().decode(_buf);

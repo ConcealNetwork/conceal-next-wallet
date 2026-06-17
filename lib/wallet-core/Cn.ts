@@ -35,7 +35,6 @@
  */
 
 import { isKnownSmartMessage } from "@/lib/messages/smart-message";
-import { JSChaCha8 } from "./ChaCha8";
 
 const HASH_SIZE = 32;
 const ADDRESS_CHECKSUM_SIZE = 4;
@@ -2297,12 +2296,15 @@ export namespace CnTransactions {
           rawMessArrFull.set([0, 0, 0, 0], rawMessArr.length);
           // Structured "smart messages" (e.g. {status,alive} check-ins) ride
           // ChaCha12 so peers can distinguish them from chat (conceal-2fa
-          // convention); ordinary text stays ChaCha8 (the legacy on-chain path).
+          // convention); ordinary text stays ChaCha8. Both come from the audited
+          // conceal-lib-js WASM (cypher.*); ChaCha8↔WASM parity at the message's
+          // zero nonce is pinned by tests/chacha8-parity.test.ts, so this is
+          // byte-identical to already-on-chain messages.
           let _buf: Uint8Array;
           if (isKnownSmartMessage(message)) {
             _buf = concealjs.cypher.chacha12(hashBuf, nonceBuf, rawMessArrFull);
           } else {
-            _buf = new JSChaCha8(hashBuf, nonceBuf).encrypt(rawMessArrFull);
+            _buf = concealjs.cypher.chacha8(hashBuf, nonceBuf, rawMessArrFull);
           }
           const encryptedMessStr = CnUtils.bintohex(_buf);
 
