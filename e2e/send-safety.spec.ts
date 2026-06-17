@@ -44,3 +44,20 @@ test("shows no locked-deposit warning for a send covered by the available balanc
   await expect(dialog.getByRole("heading", { name: "Confirm send" })).toBeVisible();
   await expect(dialog.getByText(/locked in deposits/i)).toHaveCount(0);
 });
+
+test("links validation errors to the field for screen readers", async ({ page }) => {
+  await openSend(page);
+
+  // An invalid (too-short) address should fail schema validation on submit.
+  await page.getByLabel("Destination Address").fill("ccx7-too-short");
+  await page.getByRole("button", { name: "Review Send" }).click();
+
+  // The field is flagged invalid and the error is exposed as a live alert that
+  // the input points at via aria-describedby.
+  const address = page.getByLabel("Destination Address");
+  await expect(address).toHaveAttribute("aria-invalid", "true");
+  await expect(address).toHaveAttribute("aria-describedby", "address-hint");
+  const hint = page.locator("#address-hint");
+  await expect(hint).toBeVisible();
+  await expect(hint).toHaveAttribute("role", "alert");
+});

@@ -236,6 +236,8 @@ export default function SendPage() {
                     placeholder="ccx7 ..."
                     autoComplete="off"
                     className="max-lg:pr-10"
+                    aria-invalid={form.formState.errors.address ? true : undefined}
+                    aria-describedby="address-hint"
                     {...form.register("address")}
                   />
                   <AddressQrScanButton
@@ -245,15 +247,15 @@ export default function SendPage() {
                   />
                 </div>
                 {form.formState.errors.address ? (
-                  <p className="text-sm text-wallet-outgoing">
+                  <p id="address-hint" role="alert" className="text-sm text-wallet-outgoing">
                     {form.formState.errors.address.message}
                   </p>
                 ) : sendToSelf ? (
-                  <p className="text-sm text-wallet-amber">
+                  <p id="address-hint" role="alert" className="text-sm text-wallet-amber">
                     Cannot send to your own wallet address
                   </p>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
+                  <p id="address-hint" className="text-xs text-muted-foreground">
                     Enter the recipient&apos;s CCX address (98 characters, starts with ccx7)
                   </p>
                 )}
@@ -281,16 +283,20 @@ export default function SendPage() {
                   type="number"
                   step={10 ** -CCX_PRECISION_DECIMAL_DISPLAY}
                   placeholder={`0.${"0".repeat(CCX_PRECISION_DECIMAL_DISPLAY)}`}
+                  aria-invalid={form.formState.errors.amount ? true : undefined}
+                  aria-describedby={
+                    form.formState.errors.amount ? "amount-help amount-error" : "amount-help"
+                  }
                   {...form.register("amount", { valueAsNumber: true })}
                 />
-                <div className="flex items-center justify-between text-xs">
+                <div id="amount-help" className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">≈ {formatUsd(amount * price)} USD</span>
                   {amount + SEND_FEE > available && amount > 0 ? (
                     <span className="text-wallet-outgoing">Exceeds available balance</span>
                   ) : null}
                 </div>
                 {form.formState.errors.amount && (
-                  <p className="text-sm text-wallet-outgoing">
+                  <p id="amount-error" role="alert" className="text-sm text-wallet-outgoing">
                     {form.formState.errors.amount.message}
                   </p>
                 )}
@@ -302,10 +308,12 @@ export default function SendPage() {
                   id="paymentId"
                   placeholder="64 character hex string"
                   autoComplete="off"
+                  aria-invalid={form.formState.errors.paymentId ? true : undefined}
+                  aria-describedby={form.formState.errors.paymentId ? "paymentId-error" : undefined}
                   {...form.register("paymentId")}
                 />
                 {form.formState.errors.paymentId && (
-                  <p className="text-sm text-wallet-outgoing">
+                  <p id="paymentId-error" role="alert" className="text-sm text-wallet-outgoing">
                     {form.formState.errors.paymentId.message}
                   </p>
                 )}
@@ -316,9 +324,12 @@ export default function SendPage() {
                 <Textarea
                   id="message"
                   placeholder="Optional message to include with the transaction"
+                  aria-describedby="message-count"
                   {...form.register("message")}
                 />
-                <p className="text-right text-xs text-muted-foreground">{message.length}/255</p>
+                <p id="message-count" className="text-right text-xs text-muted-foreground">
+                  {message.length}/255
+                </p>
               </div>
 
               <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3 text-sm">

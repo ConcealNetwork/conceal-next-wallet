@@ -343,6 +343,10 @@ export function CopyButton({
         <Clipboard className="size-4" aria-hidden="true" />
       )}
       {!iconOnly ? (copied ? "Copied" : label) : null}
+      {/* Announce the copy to screen readers (the icon swap is visual-only). */}
+      <span className="sr-only" role="status" aria-live="polite">
+        {copied ? "Copied to clipboard" : ""}
+      </span>
     </Button>
   );
 }

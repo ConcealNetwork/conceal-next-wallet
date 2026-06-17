@@ -136,12 +136,17 @@ function LabeledTextField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-invalid={invalid || undefined}
+        aria-describedby={(invalid && error) || hint ? `${id}-hint` : undefined}
         className={cn(invalid && "border-wallet-outgoing")}
       />
       {invalid && error ? (
-        <p className="text-sm text-wallet-outgoing">{error}</p>
+        <p id={`${id}-hint`} role="alert" className="text-sm text-wallet-outgoing">
+          {error}
+        </p>
       ) : hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
       ) : null}
     </div>
   );
