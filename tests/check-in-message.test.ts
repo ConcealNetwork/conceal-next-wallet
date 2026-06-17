@@ -18,6 +18,12 @@ describe("smart-message convention (conceal-2fa compatible)", () => {
     expect(encodeSmartMessage("2FA", "create", "x")).toBe("{2FA,c,x}"); // create → c (conceal-2fa map)
   });
 
+  it("rejects parts containing the structural delimiters", () => {
+    expect(() => encodeSmartMessage("mod,ule", "action")).toThrow();
+    expect(() => encodeSmartMessage("mod}", "action")).toThrow();
+    expect(() => encodeSmartMessage("checkin", "ali,ve")).toThrow();
+  });
+
   it("parses into trimmed parts, or null", () => {
     expect(parseSmartMessage("{checkin,alive}")).toEqual(["checkin", "alive"]);
     expect(parseSmartMessage("{ a , b , c }")).toEqual(["a", "b", "c"]);

@@ -33,6 +33,14 @@ export function isSmartMessage(body: unknown): boolean {
 
 /** `encodeSmartMessage("checkin","alive")` → `"{checkin,alive}"`. */
 export function encodeSmartMessage(module: string, action: string, ...data: string[]): string {
+  // Commas/braces are the structural delimiters — a part containing them would
+  // corrupt the round-trip, so reject rather than silently mangle.
+  const invalid = [module, action, ...data].find(
+    (part) => part.includes(",") || part.includes("{") || part.includes("}"),
+  );
+  if (invalid !== undefined) {
+    throw new Error(`Smart-message parts cannot contain "," "{" or "}": ${JSON.stringify(invalid)}`);
+  }
   const serializedAction = Object.hasOwn(ACTION_MAP, action) ? ACTION_MAP[action] : action;
   return `${PREFIX}${[module, serializedAction, ...data].join(",")}${SUFFIX}`;
 }
