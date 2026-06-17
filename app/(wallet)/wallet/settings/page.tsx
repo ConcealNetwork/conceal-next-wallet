@@ -167,13 +167,17 @@ export default function SettingsPage() {
         // Non-fatal heads-up: a real custom node that lags well behind the public
         // reference nodes will show stale height/balances. (Mock has no real node.)
         if (input.useCustomNode && !isMock) {
-          void checkCustomNodeLag(settings.nodeUrl).then((lag) => {
-            if (lag?.isLagging) {
-              toast.warning(
-                `This node is ${lag.lagBlocks.toLocaleString()} blocks behind the network — it may show outdated balances. Consider switching nodes.`,
-              );
-            }
-          });
+          void checkCustomNodeLag(settings.nodeUrl)
+            .then((lag) => {
+              if (lag?.isLagging) {
+                toast.warning(
+                  `This node is ${lag.lagBlocks.toLocaleString()} blocks behind the network — it may show outdated balances. Consider switching nodes.`,
+                );
+              }
+            })
+            .catch(() => {
+              // Best-effort heads-up only — never let a probe failure surface an error.
+            });
         }
       },
       onError: (error: unknown) =>
