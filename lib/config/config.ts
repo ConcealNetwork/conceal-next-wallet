@@ -61,15 +61,18 @@ type WalletConfigBigInt = {
   new (value: string): { valueOf(): number };
 };
 
+/** Default (public) daemon nodes — the trusted reference set for the node-lag check. */
+export const DEFAULT_DAEMON_NODES = [
+  "https://explorer.conceal.network/daemon/",
+  "https://ccxapi.conceal.network/daemon/",
+] as const;
+
 export function createWalletConfig(JSBigInt: WalletConfigBigInt) {
   const s = walletNetworkScalars;
   return {
     debug: false,
     apiUrl: ["https://ccxapi.conceal.network/api/"],
-    nodeList: [
-      "https://explorer.conceal.network/daemon/",
-      "https://ccxapi.conceal.network/daemon/",
-    ],
+    nodeList: [...DEFAULT_DAEMON_NODES],
     publicNodes: PUBLIC_NODES_POOL_BASE,
     curatedPoolListQuery: CURATED_POOL_LIST_QUERY,
     mainnetExplorerUrl: "https://explorer.conceal.network/",

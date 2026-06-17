@@ -26,6 +26,7 @@ import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ThemeToggle } from "@/components/wallet/theme-toggle";
 import { env } from "@/lib/env";
+import { checkCustomNodeLag } from "@/lib/network/node-lag";
 import {
   useOptimizationStatus,
   useOptimizeWallet,
@@ -163,6 +164,21 @@ export default function SettingsPage() {
         setNodeUrl(settings.nodeUrl);
         setNodeUrlDirty(false);
         toast.success(message);
+        // Non-fatal heads-up: a real custom node that lags well behind the public
+        // reference nodes will show stale height/balances. (Mock has no real node.)
+        if (input.useCustomNode && !isMock) {
+          void checkCustomNodeLag(settings.nodeUrl)
+            .then((lag) => {
+              if (lag?.isLagging) {
+                toast.warning(
+                  `This node is ${lag.lagBlocks.toLocaleString()} blocks behind the network — it may show outdated balances. Consider switching nodes.`,
+                );
+              }
+            })
+            .catch(() => {
+              // Best-effort heads-up only — never let a probe failure surface an error.
+            });
+        }
       },
       onError: (error: unknown) =>
         toast.error(error instanceof Error ? error.message : "Node update failed."),
