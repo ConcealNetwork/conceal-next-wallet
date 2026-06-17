@@ -9,6 +9,7 @@ import {
   Coins,
   Download,
   Gift,
+  HeartPulse,
   Home,
   LogOut,
   LineChart,
@@ -48,6 +49,7 @@ import {
   useAcknowledgeMessagesSinceOpen,
   useNewMessagesSinceOpen,
 } from "@/lib/hooks/use-new-messages-since-open";
+import { useOverdueCheckInCount } from "@/lib/hooks/use-check-ins";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { THEME_PREFERENCES, type ThemePreference } from "@/lib/ui/theme";
 import { useTheme } from "@/lib/ui/theme-provider";
@@ -64,6 +66,7 @@ const mainNav = [
   { href: "/wallet/receive", labelKey: "nav.receive", icon: QrCode },
   { href: "/wallet/deposits", labelKey: "nav.deposits", icon: Coins },
   { href: "/wallet/messages", labelKey: "nav.messages", icon: Mail },
+  { href: "/wallet/check-ins", labelKey: "nav.checkIns", icon: HeartPulse },
   { href: "/wallet/address-book", labelKey: "nav.addressBook", icon: BookOpen },
 ];
 
@@ -240,6 +243,7 @@ function SidebarContent({
 }) {
   const newMessages = useNewMessagesSinceOpen();
   const acknowledgeMessages = useAcknowledgeMessagesSinceOpen();
+  const overdueCheckIns = useOverdueCheckInCount();
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[hsl(var(--chrome))] px-3 py-5">
@@ -268,7 +272,13 @@ function SidebarContent({
             key={item.href}
             item={item}
             collapsed={collapsed}
-            badge={item.href === "/wallet/messages" ? newMessages : undefined}
+            badge={
+              item.href === "/wallet/messages"
+                ? newMessages
+                : item.href === "/wallet/check-ins"
+                  ? overdueCheckIns
+                  : undefined
+            }
             onNavigate={
               item.href === "/wallet/messages"
                 ? () => {
