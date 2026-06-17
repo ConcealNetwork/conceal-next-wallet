@@ -321,7 +321,12 @@ export function Sidebar() {
       <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur-sm lg:hidden">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label={t("action.openNavigation")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t("action.openNavigation")}
+            >
               <Menu className="size-5" aria-hidden="true" />
             </Button>
           </SheetTrigger>

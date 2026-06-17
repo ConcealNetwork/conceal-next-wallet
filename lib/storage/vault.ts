@@ -132,6 +132,9 @@ export async function restoreVaultData(
   opts: { mergeNotes: boolean },
 ): Promise<{ notes: number; prefs: number }> {
   const prefs = writePrefs(data.prefs ?? {});
-  const notes = await txNotes.importNotes(data.txNotes ?? {}, opts.mergeNotes ? "merge" : "replace");
+  const notes = await txNotes.importNotes(
+    data.txNotes ?? {},
+    opts.mergeNotes ? "merge" : "replace",
+  );
   return { notes, prefs };
 }

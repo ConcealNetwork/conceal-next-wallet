@@ -63,7 +63,9 @@ export function addCadence(date: Date, cadence: Cadence): Date {
  * The next due date: the anchor if never paid, otherwise the first occurrence
  * strictly after `lastPaidAt`. Returns an ISO string.
  */
-export function computeNextDue(schedule: Pick<ScheduledPayment, "anchorDate" | "cadence" | "lastPaidAt">): string {
+export function computeNextDue(
+  schedule: Pick<ScheduledPayment, "anchorDate" | "cadence" | "lastPaidAt">,
+): string {
   let occurrence = new Date(schedule.anchorDate);
   if (Number.isNaN(occurrence.getTime())) return schedule.anchorDate;
   if (schedule.lastPaidAt) {

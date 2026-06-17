@@ -36,7 +36,15 @@ export function base64urlToBytes(value: string): Uint8Array<ArrayBuffer> {
 }
 
 async function aesKeyFromSecret(secret: ArrayBuffer): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", secret, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+  const view = new Uint8Array(secret);
+  // Copy into a fresh ArrayBuffer so importKey accepts the key material in
+  // jsdom tests (Node's SubtleCrypto rejects jsdom-realm ArrayBuffers).
+  const keyBytes = new Uint8Array(new ArrayBuffer(view.byteLength));
+  keyBytes.set(view);
+  return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [
+    "encrypt",
+    "decrypt",
+  ]);
 }
 
 /** Encrypt a plaintext (the wallet password) with a PRF-derived secret. */

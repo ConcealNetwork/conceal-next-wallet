@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  checkCustomNodeLag,
-  evaluateNodeLag,
-  NODE_LAG_WARN_BLOCKS,
-} from "@/lib/network/node-lag";
+import { checkCustomNodeLag, evaluateNodeLag, NODE_LAG_WARN_BLOCKS } from "@/lib/network/node-lag";
 
 describe("evaluateNodeLag", () => {
   it("reports the gap behind the reference, clamped at zero", () => {

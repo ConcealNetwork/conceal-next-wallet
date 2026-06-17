@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTxNotesStore, inMemoryTxNotesBackend, txNotes } from "@/lib/storage/tx-notes";
 import { decryptVault, encryptVault } from "@/lib/storage/vault-crypto";
-import { buildVaultFile, openVaultFile, parseVaultFile, restoreVaultData } from "@/lib/storage/vault";
+import {
+  buildVaultFile,
+  openVaultFile,
+  parseVaultFile,
+  restoreVaultData,
+} from "@/lib/storage/vault";
 
 describe("vault-crypto", () => {
   it("round-trips plaintext through password encryption", async () => {

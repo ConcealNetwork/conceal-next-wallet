@@ -50,7 +50,10 @@ test("WebAuthn PRF round-trip recovers an AES-GCM-encrypted password", async ({ 
         },
         challenge: crypto.getRandomValues(new Uint8Array(32)),
         pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+        authenticatorSelection: {
+          authenticatorAttachment: "platform",
+          userVerification: "required",
+        },
         attestation: "none",
         // biome-ignore lint/suspicious/noExplicitAny: PRF types not in lib.dom
         extensions: { prf: { eval: { first: SALT } } } as any,

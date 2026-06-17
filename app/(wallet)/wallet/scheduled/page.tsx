@@ -24,7 +24,13 @@ import {
 } from "@/lib/ui/scheduled-payments";
 import { addressIsValid } from "@/lib/validation/ccx";
 
-const EMPTY_FORM = { label: "", address: "", amount: "", cadence: "monthly" as Cadence, anchorDate: "" };
+const EMPTY_FORM = {
+  label: "",
+  address: "",
+  amount: "",
+  cadence: "monthly" as Cadence,
+  anchorDate: "",
+};
 
 export default function ScheduledPage() {
   const { t } = useI18n();
@@ -181,7 +187,12 @@ export default function ScheduledPage() {
                       <Button type="button" size="sm" onClick={() => sendNow(s)}>
                         Send now
                       </Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => markPaid(s.id)}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => markPaid(s.id)}
+                      >
                         Mark paid
                       </Button>
                       <Button

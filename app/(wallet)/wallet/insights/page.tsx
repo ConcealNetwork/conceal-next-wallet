@@ -38,7 +38,10 @@ export default function InsightsPage() {
 
   return (
     <>
-      <PageHeader title={t("nav.insights")} subtitle="Your activity, computed privately on this device" />
+      <PageHeader
+        title={t("nav.insights")}
+        subtitle="Your activity, computed privately on this device"
+      />
 
       {loading ? (
         <p className="text-muted-foreground">Loading…</p>
