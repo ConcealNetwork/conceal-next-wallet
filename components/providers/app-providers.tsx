@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WalletServiceWorkerRegister } from "@/components/wallet/wallet-service-worker";
 import { WalletQueryProvider } from "@/lib/hooks/query-provider";
+import { I18nProvider } from "@/lib/i18n/i18n-provider";
 import { WalletSessionProvider } from "@/lib/session/wallet-session";
 import { ThemeProvider } from "@/lib/ui/theme-provider";
 import { TickerPreferenceProvider } from "@/lib/ui/ticker-preference-provider";
@@ -33,17 +34,19 @@ const TOAST_STYLE: CSSProperties = {
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
-      <WalletQueryProvider>
-        <WalletSessionProvider>
-          <TickerPreferenceProvider>
-            <WalletServiceWorkerRegister />
-            <TooltipProvider>
-              {children}
-              <Toaster richColors position="top-right" style={TOAST_STYLE} />
-            </TooltipProvider>
-          </TickerPreferenceProvider>
-        </WalletSessionProvider>
-      </WalletQueryProvider>
+      <I18nProvider>
+        <WalletQueryProvider>
+          <WalletSessionProvider>
+            <TickerPreferenceProvider>
+              <WalletServiceWorkerRegister />
+              <TooltipProvider>
+                {children}
+                <Toaster richColors position="top-right" style={TOAST_STYLE} />
+              </TooltipProvider>
+            </TickerPreferenceProvider>
+          </WalletSessionProvider>
+        </WalletQueryProvider>
+      </I18nProvider>
     </ThemeProvider>
   );
 }

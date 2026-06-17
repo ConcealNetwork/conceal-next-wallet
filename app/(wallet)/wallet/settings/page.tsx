@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BiometricSetting } from "@/components/wallet/biometric-setting";
 import { PageHeader } from "@/components/wallet/common";
+import { LanguageSetting } from "@/components/wallet/language-setting";
 import { usePanicWipe, useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
@@ -35,6 +36,7 @@ import {
   useWalletSyncStatus,
   useWalletViewOnly,
 } from "@/lib/hooks";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
 import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
@@ -118,6 +120,7 @@ export default function SettingsPage() {
   const deleteWallet = useWalletDelete();
   const panicWipe = usePanicWipe();
   const ticker = useTickerPreference();
+  const { t } = useI18n();
   const current = settings.data;
   const isMock = env.useMockWallet;
 
@@ -286,6 +289,9 @@ export default function SettingsPage() {
             <Section title="General">
               <Row label="Theme" description="Light, dark, or follow your system setting">
                 <ThemeToggle />
+              </Row>
+              <Row label={t("settings.language")} description={t("settings.languageDescription")}>
+                <LanguageSetting />
               </Row>
               {!isMock ? (
                 <Row
