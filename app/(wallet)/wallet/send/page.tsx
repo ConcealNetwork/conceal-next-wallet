@@ -167,7 +167,7 @@ export default function SendPage() {
     form.setValue("address", entry?.address ?? "", { shouldValidate: true });
   }
 
-  function applyScannedSendDraft(draft: ScannedSendDraft) {
+  function applyScannedDraft(draft: ScannedSendDraft) {
     form.setValue("address", draft.address, { shouldValidate: true });
     if (draft.amount !== undefined && draft.amount > 0) {
       form.setValue("amount", draft.amount, { shouldValidate: true });
@@ -235,13 +235,13 @@ export default function SendPage() {
                     id="address"
                     placeholder="ccx7 ..."
                     autoComplete="off"
-                    className="max-sm:pr-10"
+                    className="max-lg:pr-10"
                     {...form.register("address")}
                   />
                   <AddressQrScanButton
-                    className="absolute right-1 top-1/2 -translate-y-1/2 sm:hidden"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 lg:hidden"
                     disabled={send.isPending}
-                    onScan={applyScannedSendDraft}
+                    onScan={applyScannedDraft}
                   />
                 </div>
                 {form.formState.errors.address ? (
