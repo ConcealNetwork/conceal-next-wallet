@@ -43,7 +43,7 @@ import {
   sortMessagesNewestFirst,
 } from "@/lib/messages/conversations";
 import type { AddressEntry, Message } from "@/lib/types";
-import { isSmartMessage } from "@/lib/messages/smart-message";
+import { isKnownSmartMessage } from "@/lib/messages/smart-message";
 import { parseCheckIn } from "@/lib/ui/check-in-message";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, timeAgo, truncateAddress } from "@/lib/utils";
@@ -526,7 +526,7 @@ function MessageListItem({
   const preview = message.hasBody
     ? parseCheckIn(message.body)
       ? "💚 Check-in"
-      : isSmartMessage(message.body)
+      : isKnownSmartMessage(message.body)
         ? "Smart message"
         : message.body
     : message.direction === "sent"
@@ -682,7 +682,7 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
               <Heart className="size-3.5 fill-current" aria-hidden="true" />
               Check-in
             </span>
-          ) : isSmartMessage(message.body) ? (
+          ) : isKnownSmartMessage(message.body) ? (
             // Other structured commands (2FA, vault, …) — show a chip, not the raw token.
             <span className="inline-flex items-center gap-1.5 font-medium italic opacity-90">
               <Cog className="size-3.5" aria-hidden="true" />

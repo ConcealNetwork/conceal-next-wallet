@@ -61,6 +61,7 @@ declare var config: {
 
 import type { Wallet } from "./Wallet";
 import { MathUtil } from "./MathUtil";
+import { isKnownSmartMessage } from "@/lib/messages/smart-message";
 import { JSChaCha8 } from "./ChaCha8";
 import { Cn, CnTransactions } from "./Cn";
 import type { RawDaemon_Transaction, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
@@ -365,6 +366,30 @@ export class TransactionsExplorer {
 
     // make a binary array out of raw message
     const rawMessArr = concealjs.cnutils.hextobin(rawMessage);
+
+    // Smart messages (e.g. {status,alive} check-ins) are ChaCha12 — try that
+    // first and accept it only as a valid, checksummed smart message; otherwise
+    // fall through to the unchanged ChaCha8 path below for ordinary chat.
+    try {
+      const c12: Uint8Array = concealjs.cypher.chacha12(hashBuf, nonceBuf, rawMessArr);
+      let checksumOk = true;
+      for (let i = 0; i < TX_EXTRA_MESSAGE_CHECKSUM_SIZE; i++) {
+        if (c12[c12.length - TX_EXTRA_MESSAGE_CHECKSUM_SIZE + i] !== 0) {
+          checksumOk = false;
+          break;
+        }
+      }
+      if (checksumOk) {
+        const candidate = new TextDecoder()
+          .decode(c12)
+          .slice(0, -TX_EXTRA_MESSAGE_CHECKSUM_SIZE);
+        if (isKnownSmartMessage(candidate)) {
+          return candidate;
+        }
+      }
+    } catch (_e) {
+      // WASM cypher unavailable / threw → fall back to the ChaCha8 path.
+    }
 
     // typescripted chacha
     const cha = new JSChaCha8(hashBuf, nonceBuf);

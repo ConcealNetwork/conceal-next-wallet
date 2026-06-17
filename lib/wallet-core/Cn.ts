@@ -34,6 +34,7 @@
  *     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import { isKnownSmartMessage } from "@/lib/messages/smart-message";
 import { JSChaCha8 } from "./ChaCha8";
 
 const HASH_SIZE = 32;
@@ -2294,8 +2295,15 @@ export namespace CnTransactions {
           const rawMessArrFull = new Uint8Array(rawMessArr.length + 4);
           rawMessArrFull.set(rawMessArr);
           rawMessArrFull.set([0, 0, 0, 0], rawMessArr.length);
-          const cha = new JSChaCha8(hashBuf, nonceBuf);
-          const _buf = cha.encrypt(rawMessArrFull);
+          // Structured "smart messages" (e.g. {status,alive} check-ins) ride
+          // ChaCha12 so peers can distinguish them from chat (conceal-2fa
+          // convention); ordinary text stays ChaCha8 (the legacy on-chain path).
+          let _buf: Uint8Array;
+          if (isKnownSmartMessage(message)) {
+            _buf = concealjs.cypher.chacha12(hashBuf, nonceBuf, rawMessArrFull);
+          } else {
+            _buf = new JSChaCha8(hashBuf, nonceBuf).encrypt(rawMessArrFull);
+          }
           const encryptedMessStr = CnUtils.bintohex(_buf);
 
           // Append to extra:
