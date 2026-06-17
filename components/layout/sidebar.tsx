@@ -3,6 +3,7 @@
 import {
   BarChart3,
   BookOpen,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   Coins,
@@ -59,6 +60,7 @@ const mainNav = [
   { href: "/wallet/transactions", labelKey: "nav.transactions", icon: WalletCards },
   { href: "/wallet/insights", labelKey: "nav.insights", icon: LineChart },
   { href: "/wallet/send", labelKey: "nav.send", icon: Send },
+  { href: "/wallet/scheduled", labelKey: "nav.scheduled", icon: CalendarClock },
   { href: "/wallet/receive", labelKey: "nav.receive", icon: QrCode },
   { href: "/wallet/deposits", labelKey: "nav.deposits", icon: Coins },
   { href: "/wallet/messages", labelKey: "nav.messages", icon: Mail },
