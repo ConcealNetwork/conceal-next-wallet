@@ -2717,7 +2717,6 @@ var reportError = self.reportError || function (e) { console.error(e); };
 
   // lib/wallet-core/Interest.ts
   var _InterestCalculator = class _InterestCalculator {
-    // Block with special handling
     /**
      * Calculates interest for a deposit based on amount, term, and lock height
      * @param amount - Amount of the deposit in atomic units
@@ -2736,15 +2735,10 @@ var reportError = self.reportError || function (e) { console.error(e); };
         return _InterestCalculator.calculateInterestV2(amount, term);
       }
       logDebugMsg("Warning: Using legacy V1 interest calculation");
-      const m_depositMaxTerm = _InterestCalculator.DEPOSIT_MAX_TERM_V1;
+      const m_depositMaxTerm = _InterestCalculator.DEPOSIT_MAX_TERM;
       const a = term * _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE - _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
-      let interestAmount = amount * a / (100 * m_depositMaxTerm);
-      const END_MULTIPLIER_BLOCK = 1e6;
-      const MULTIPLIER_FACTOR = 3;
-      if (lockHeight <= END_MULTIPLIER_BLOCK) {
-        interestAmount = interestAmount * MULTIPLIER_FACTOR;
-      }
-      return Math.floor(interestAmount);
+      const base = Math.floor(amount * a / (100 * m_depositMaxTerm));
+      return lockHeight <= _InterestCalculator.END_MULTIPLIER_BLOCK ? base * _InterestCalculator.MULTIPLIER_FACTOR : base;
     }
     /**
      * Calculates interest for V3 deposits (monthly terms)
@@ -2819,8 +2813,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
   // Constants from C++ implementation
   _InterestCalculator.DEPOSIT_MIN_TERM = 5040;
   // One week
-  _InterestCalculator.DEPOSIT_MAX_TERM_V1 = 64800 * 20;
-  // Five years
+  // conceal-core uses DEPOSIT_MAX_TERM (one year) as the legacy-interest divisor,
+  // NOT the five-year DEPOSIT_MAX_TERM_V1 (which only bounds the term in
+  // validation). See conceal-core src/CryptoNoteConfig.h + Currency.cpp:1371.
+  _InterestCalculator.DEPOSIT_MAX_TERM = 1 * 12 * 21900;
+  // 262800 — one year
   _InterestCalculator.DEPOSIT_MIN_TERM_V3 = 21900;
   // One month
   _InterestCalculator.DEPOSIT_HEIGHT_V3 = 413400;
@@ -2830,6 +2827,11 @@ var reportError = self.reportError || function (e) { console.error(e); };
   _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE = 4;
   // Legacy deposits
   _InterestCalculator.BLOCK_WITH_MISSING_INTEREST = 425799;
+  // Block with special handling
+  // Early-deposit multiplier (conceal-core src/CryptoNoteConfig.h:85-86): deposits
+  // locked on/before block 12750 earned 100× the base legacy rate.
+  _InterestCalculator.END_MULTIPLIER_BLOCK = 12750;
+  _InterestCalculator.MULTIPLIER_FACTOR = 100;
   var InterestCalculator = _InterestCalculator;
 
   // lib/wallet-core/Varint.ts

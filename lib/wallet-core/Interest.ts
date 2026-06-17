@@ -36,12 +36,19 @@ declare function logDebugMsg(...args: any[]): void;
 export class InterestCalculator {
   // Constants from C++ implementation
   private static readonly DEPOSIT_MIN_TERM = 5040; // One week
-  private static readonly DEPOSIT_MAX_TERM_V1 = 64800 * 20; // Five years
+  // conceal-core uses DEPOSIT_MAX_TERM (one year) as the legacy-interest divisor,
+  // NOT the five-year DEPOSIT_MAX_TERM_V1 (which only bounds the term in
+  // validation). See conceal-core src/CryptoNoteConfig.h + Currency.cpp:1371.
+  private static readonly DEPOSIT_MAX_TERM = 1 * 12 * 21900; // 262800 — one year
   private static readonly DEPOSIT_MIN_TERM_V3 = 21900; // One month
   private static readonly DEPOSIT_HEIGHT_V3 = 413400; // Height when V3 deposit rates were activated
   private static readonly DEPOSIT_MIN_TOTAL_RATE_FACTOR = 0; // Constant rate
   private static readonly DEPOSIT_MAX_TOTAL_RATE = 4; // Legacy deposits
   private static readonly BLOCK_WITH_MISSING_INTEREST = 425799; // Block with special handling
+  // Early-deposit multiplier (conceal-core src/CryptoNoteConfig.h:85-86): deposits
+  // locked on/before block 12750 earned 100× the base legacy rate.
+  private static readonly END_MULTIPLIER_BLOCK = 12750;
+  private static readonly MULTIPLIER_FACTOR = 100;
 
   /**
    * Calculates interest for a deposit based on amount, term, and lock height
@@ -72,23 +79,21 @@ export class InterestCalculator {
     // If we reach here, it's a V1 deposit (fallback, should not happen in current Conceal)
     logDebugMsg("Warning: Using legacy V1 interest calculation");
 
-    const m_depositMaxTerm = InterestCalculator.DEPOSIT_MAX_TERM_V1;
+    const m_depositMaxTerm = InterestCalculator.DEPOSIT_MAX_TERM;
 
     const a =
       term * InterestCalculator.DEPOSIT_MAX_TOTAL_RATE -
       InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
-    // In JS we don't need mul128/div128 as JS Numbers can handle larger values
-    let interestAmount = (amount * a) / (100 * m_depositMaxTerm);
+    // conceal-core (Currency.cpp:268-289) uses 128-bit mul128/div128_32 and
+    // truncates the division BEFORE the early-deposit multiplier. amount*a can
+    // exceed Number.MAX_SAFE_INTEGER for large deposits, so use BigInt to keep
+    // the product and the truncating divide bit-exact with the daemon.
+    const product = BigInt(Math.trunc(amount)) * BigInt(a);
+    const base = Number(product / BigInt(100 * m_depositMaxTerm));
 
-    // Early deposit multiplier
-    const END_MULTIPLIER_BLOCK = 1000000; // Placeholder - need actual value
-    const MULTIPLIER_FACTOR = 3; // Placeholder - need actual value
-
-    if (lockHeight <= END_MULTIPLIER_BLOCK) {
-      interestAmount = interestAmount * MULTIPLIER_FACTOR;
-    }
-
-    return Math.floor(interestAmount);
+    return lockHeight <= InterestCalculator.END_MULTIPLIER_BLOCK
+      ? base * InterestCalculator.MULTIPLIER_FACTOR
+      : base;
   }
 
   /**
