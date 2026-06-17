@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { BiometricSetting } from "@/components/wallet/biometric-setting";
 import { PageHeader } from "@/components/wallet/common";
 import { usePanicWipe, useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
@@ -286,6 +287,14 @@ export default function SettingsPage() {
               <Row label="Theme" description="Light, dark, or follow your system setting">
                 <ThemeToggle />
               </Row>
+              {!isMock ? (
+                <Row
+                  label="Biometric unlock"
+                  description="Unlock with Touch ID / Face ID / Windows Hello on this device"
+                >
+                  <BiometricSetting />
+                </Row>
+              ) : null}
               <Row label="Ticker" description="Amount suffix shown across the wallet">
                 <select
                   className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
