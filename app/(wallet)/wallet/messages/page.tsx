@@ -3,13 +3,7 @@
 import { Cog, Heart, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
-import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
-import {
-  AddressBookContactPicker,
-  findAddressBookContactByAddress,
-} from "@/components/wallet/address-book-contact-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +16,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AddressBookContactPicker,
+  findAddressBookContactByAddress,
+} from "@/components/wallet/address-book-contact-picker";
 import { CopyButton, PageHeader, ViewOnlyBadge } from "@/components/wallet/common";
+import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import { MAX_MESSAGE_SIZE, MAX_TTL_MINUTES } from "@/lib/config/config";
@@ -35,6 +34,7 @@ import {
   useWalletSyncStatus,
   useWalletViewOnly,
 } from "@/lib/hooks";
+import { useFormatters } from "@/lib/i18n/use-formatters";
 import {
   buildConversationFromMessage,
   buildMessageListContactEntry,
@@ -42,18 +42,19 @@ import {
   type MessageConversation,
   sortMessagesNewestFirst,
 } from "@/lib/messages/conversations";
-import type { AddressEntry, Message } from "@/lib/types";
 import { isKnownSmartMessage } from "@/lib/messages/smart-message";
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
+import type { AddressEntry, Message } from "@/lib/types";
 import { parseCheckIn } from "@/lib/ui/check-in-message";
+import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { cn, timeAgo, truncateAddress } from "@/lib/utils";
+import { cn, truncateAddress } from "@/lib/utils";
 import {
   addressIsValid,
   generatePaymentId,
   isSendToSelf,
   paymentIdIsValid,
 } from "@/lib/validation/ccx";
-import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 
 const TTL_STEP = 5;
 
@@ -521,6 +522,7 @@ function MessageListItem({
   isActive: boolean;
   onSelect: () => void;
 }) {
+  const { timeAgo } = useFormatters();
   const entry = buildMessageListContactEntry(message, addressBook);
 
   const preview = message.hasBody
@@ -660,6 +662,7 @@ function PendingSendBubble() {
 }
 
 function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewMd: boolean }) {
+  const { timeAgo } = useFormatters();
   return (
     <div className={cn("max-w-[75%]", message.direction === "sent" && "ml-auto")}>
       {message.direction === "received" && message.ttlExpiresAt ? (
@@ -756,20 +759,20 @@ function messageTtlMinutesToUnix(minutes: number | null): number {
   return Math.floor(Date.now() / 1000) + minutes * 60;
 }
 
-/** Pending mempool TTL expiry as local date + time (v1 ttl is unix seconds). */
-function formatTtlExpiresAt(unixSeconds: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(unixSeconds * 1000));
-}
+/** `Intl.DateTimeFormat` options for the pending-mempool TTL expiry label. */
+const TTL_EXPIRES_FORMAT: Intl.DateTimeFormatOptions = {
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+};
 
 function MessageTtlExpiryLabel({ expiresAt }: { expiresAt: number }) {
+  const { formatDate } = useFormatters();
+  // v1 ttl is unix seconds → local date + time in the active locale.
   return (
     <span className="shrink-0 font-medium text-wallet-amber">
-      expires at {formatTtlExpiresAt(expiresAt)}
+      expires at {formatDate(new Date(expiresAt * 1000), TTL_EXPIRES_FORMAT)}
     </span>
   );
 }

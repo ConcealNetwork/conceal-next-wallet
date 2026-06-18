@@ -33,6 +33,38 @@ describe("wallet utils", () => {
     );
   });
 
+  it("keeps the bare formatters at their en-US default output (backward compat)", () => {
+    // Passing no locale must be byte-identical to today's output so existing
+    // tests and non-component callers never break.
+    expect(formatCcx(ccxAmount(1250.5))).toBe(formatCcx(ccxAmount(1250.5), undefined, undefined));
+    expect(formatCcx(1234567.89, 2)).toBe("1,234,567.89 CCX");
+    expect(formatUsd(1234567.5, 2)).toBe("$1,234,567.50");
+    // Default timeAgo keeps the wallet's original shorthand, including "just now".
+    expect(timeAgo("2026-05-22T00:00:00.000Z", new Date("2026-05-22T00:00:30.000Z"))).toBe(
+      "just now",
+    );
+  });
+
+  it("formats CCX with locale grouping when a locale is supplied", () => {
+    // es-ES groups thousands with "." and uses "," as the decimal separator.
+    expect(formatCcx(1234567.89, 2, false, "es-ES")).toBe("1.234.567,89 CCX");
+    // The bare call is unchanged by the locale-aware overload existing.
+    expect(formatCcx(1234567.89, 2)).toBe("1,234,567.89 CCX");
+  });
+
+  it("formats USD with locale grouping when a locale is supplied", () => {
+    expect(formatUsd(1234567.5, 2, "es-ES")).toBe("$1.234.567,50");
+    expect(formatUsd(1234567.5, 2)).toBe("$1,234,567.50");
+  });
+
+  it("formats relative time via Intl.RelativeTimeFormat for a locale", () => {
+    const now = new Date("2026-05-22T01:00:00.000Z");
+    // 5 minutes earlier → Spanish narrow relative time.
+    expect(timeAgo("2026-05-22T00:55:00.000Z", now, "es-ES")).toBe("hace 5 min");
+    // English locale path uses Intl too (numeric:"auto" → "yesterday" for 1 day).
+    expect(timeAgo("2026-05-21T01:00:00.000Z", now, "en-US")).toBe("yesterday");
+  });
+
   it("builds a fiat subline, hiding it only when the price is unknown/zero", () => {
     expect(usdSubline(100, 0.045)).toBe(`${formatUsd(4.5)} USD`);
     expect(usdSubline(100, 0)).toBeUndefined(); // price not loaded → hidden (no $0.00 flash)
