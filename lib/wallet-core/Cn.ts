@@ -2294,6 +2294,14 @@ export namespace CnTransactions {
           const rawMessArrFull = new Uint8Array(rawMessArr.length + 4);
           rawMessArrFull.set(rawMessArr);
           rawMessArrFull.set([0, 0, 0, 0], rawMessArr.length);
+          // The tx_extra message length is encoded as a SINGLE byte below
+          // (`.slice(-2)` keeps only the low byte). Anything >255 would frame a
+          // corrupt, undecryptable message on-chain — refuse rather than do
+          // that silently. Caller (sendMessageOperation) already enforces the
+          // 251-byte body budget; this is the last-line defensive guard.
+          if (rawMessArrFull.length > 255) {
+            throw "Encrypted message too long: " + rawMessArrFull.length + " bytes (max 255)";
+          }
           // Structured "smart messages" (e.g. {status,alive} check-ins) ride
           // ChaCha12 so peers can distinguish them from chat (conceal-2fa
           // convention); ordinary text stays ChaCha8. Both come from the audited
