@@ -2,5 +2,6 @@
   "name": "concealjs-prebuilt",
   "private": true,
   "main": "concealjs.js",
-  "types": "concealjs.d.ts"
+  "types": "concealjs.d.ts",
+  "concealLibJsVersion": "0.2.5"
 }
