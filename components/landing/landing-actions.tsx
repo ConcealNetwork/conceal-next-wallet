@@ -16,14 +16,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  clearBiometricEnrollment,
-  getBiometricEnrollment,
-  setBiometricEnrollment,
+  addPasskeyCredential,
+  clearPasskeyEnrollment,
+  getPasskeyEnrollment,
+  hasPasskeyEnrollment,
+  savePasskeyEnrollment,
 } from "@/lib/auth/biometric-store";
 import {
-  enrollBiometric,
-  isBiometricAvailable,
-  unlockWithBiometric,
+  enrollPasskeyCredential,
+  isPasskeyUnlockAvailable,
+  PasskeyError,
+  unlockWithPasskey,
 } from "@/lib/auth/webauthn-prf";
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
@@ -52,11 +55,11 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Biometric unlock is a real-mode feature (it gates the wallet password).
-  const biometricEnabled = !env.useMockWallet;
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  // Passkey unlock is a real-mode feature (it gates the wallet password).
+  const passkeyEnabled = !env.useMockWallet;
+  const [passkeyAvailable, setPasskeyAvailable] = useState(false);
   const [enrolled, setEnrolled] = useState(false);
-  const [enableBiometric, setEnableBiometric] = useState(false);
+  const [enablePasskey, setEnablePasskey] = useState(false);
 
   async function unlock(passwordValue?: string) {
     setLoading(true);
@@ -65,16 +68,19 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
         env.useMockWallet ? {} : { password: passwordValue },
       );
       // Opt-in enrollment: the password just verified, so encrypt it now.
-      if (biometricEnabled && biometricAvailable && !enrolled && enableBiometric && passwordValue) {
+      if (passkeyEnabled && passkeyAvailable && enablePasskey && passwordValue) {
         try {
-          setBiometricEnrollment({
-            ...(await enrollBiometric(passwordValue)),
-            address: wallet.address,
-          });
+          const credential = await enrollPasskeyCredential(passwordValue);
+          savePasskeyEnrollment(
+            addPasskeyCredential(getPasskeyEnrollment(), credential, wallet.address),
+          );
           setEnrolled(true);
-          toast.success("Biometric unlock enabled for this device.");
+          toast.success("Passkey unlock enabled for this device.");
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Couldn't enable biometric unlock.");
+          // A user cancel is silent; a real failure (e.g. no PRF) explains itself.
+          if (!(error instanceof PasskeyError) || error.code !== "cancelled") {
+            toast.error(error instanceof Error ? error.message : "Couldn't enable passkey unlock.");
+          }
         }
       }
       openSession(wallet, getSafeNextPath() ?? "/wallet/account");
@@ -87,16 +93,19 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
     }
   }
 
-  async function unlockBiometric() {
-    const enrollment = getBiometricEnrollment();
+  async function unlockPasskey() {
+    const enrollment = getPasskeyEnrollment();
     if (!enrollment) return;
     setLoading(true);
     let recovered: string;
     try {
-      recovered = await unlockWithBiometric(enrollment);
+      recovered = await unlockWithPasskey(enrollment);
     } catch (error) {
       // Assertion cancelled / failed — keep the enrollment, fall back to manual.
-      toast.error(error instanceof Error ? error.message : "Biometric unlock failed.");
+      // A user cancel is silent; other failures explain themselves.
+      if (!(error instanceof PasskeyError) || error.code !== "cancelled") {
+        toast.error(error instanceof Error ? error.message : "Passkey unlock failed.");
+      }
       setLoading(false);
       return;
     }
@@ -107,26 +116,20 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
     } catch {
       // Decrypted fine, but the password no longer opens the wallet (changed /
       // re-imported elsewhere) — the enrollment is stale, so drop it.
-      clearBiometricEnrollment();
+      clearPasskeyEnrollment();
       setEnrolled(false);
-      toast.error("Biometric unlock is out of date — unlock with your password to re-enable it.");
+      toast.error("Passkey unlock is out of date — unlock with your password to re-enable it.");
     } finally {
       setLoading(false);
     }
   }
 
-  // Reflect biometric availability/enrollment whenever the unlock dialog opens.
+  // Reflect passkey availability/enrollment whenever the unlock dialog opens.
   useEffect(() => {
-    if (!biometricEnabled || !unlockDialogOpen) return;
-    let mounted = true;
-    setEnrolled(getBiometricEnrollment() !== null);
-    void isBiometricAvailable().then((value) => {
-      if (mounted) setBiometricAvailable(value);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [biometricEnabled, unlockDialogOpen]);
+    if (!passkeyEnabled || !unlockDialogOpen) return;
+    setEnrolled(hasPasskeyEnrollment());
+    setPasskeyAvailable(isPasskeyUnlockAvailable());
+  }, [passkeyEnabled, unlockDialogOpen]);
 
   useEffect(() => {
     if (!getSafeNextPath()) return;
@@ -174,16 +177,16 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
               void unlock(password);
             }}
           >
-            {biometricEnabled && enrolled && biometricAvailable ? (
+            {passkeyEnabled && enrolled && passkeyAvailable ? (
               <Button
                 type="button"
                 variant="outline"
                 className="w-full gap-2"
                 disabled={loading}
-                onClick={() => void unlockBiometric()}
+                onClick={() => void unlockPasskey()}
               >
                 <Fingerprint className="size-4" aria-hidden="true" />
-                Unlock with biometrics
+                Unlock with a passkey
               </Button>
             ) : null}
             <div className="space-y-2">
@@ -196,15 +199,15 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
                 required
                 autoFocus
               />
-              {biometricEnabled && biometricAvailable && !enrolled ? (
+              {passkeyEnabled && passkeyAvailable && !enrolled ? (
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
                   <input
                     type="checkbox"
                     className="size-4 accent-primary"
-                    checked={enableBiometric}
-                    onChange={(event) => setEnableBiometric(event.target.checked)}
+                    checked={enablePasskey}
+                    onChange={(event) => setEnablePasskey(event.target.checked)}
                   />
-                  Enable biometric unlock on this device
+                  Enable passkey unlock (Touch ID, security key…) on this device
                 </label>
               ) : null}
             </div>

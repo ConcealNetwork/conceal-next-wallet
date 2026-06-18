@@ -18,16 +18,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { BiometricSetting } from "@/components/wallet/biometric-setting";
+import { PasskeySetting } from "@/components/wallet/biometric-setting";
 import { PageHeader } from "@/components/wallet/common";
 import { LanguageSetting } from "@/components/wallet/language-setting";
 import { usePanicWipe, useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ThemeToggle } from "@/components/wallet/theme-toggle";
-import { env } from "@/lib/env";
 import { VaultBackup } from "@/components/wallet/vault-backup";
-import { checkCustomNodeLag } from "@/lib/network/node-lag";
+import { env } from "@/lib/env";
 import {
   useOptimizationStatus,
   useOptimizeWallet,
@@ -39,6 +38,7 @@ import {
   useWalletViewOnly,
 } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
+import { checkCustomNodeLag } from "@/lib/network/node-lag";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
 import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
@@ -311,12 +311,16 @@ export default function SettingsPage() {
                 <LanguageSetting />
               </Row>
               {!isMock ? (
-                <Row
-                  label="Biometric unlock"
-                  description="Unlock with Touch ID / Face ID / Windows Hello on this device"
-                >
-                  <BiometricSetting />
-                </Row>
+                <div className="flex flex-col gap-3 border-t border-border py-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Passkey unlock</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Unlock with Touch ID / Windows Hello, a security key, or your phone — on this
+                      device
+                    </p>
+                  </div>
+                  <PasskeySetting />
+                </div>
               ) : null}
               <Row label="Ticker" description="Amount suffix shown across the wallet">
                 <select

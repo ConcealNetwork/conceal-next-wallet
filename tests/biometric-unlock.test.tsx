@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Real mode so the biometric path is active (it's gated off in mock).
+// Real mode so the passkey path is active (it's gated off in mock).
 vi.mock("@/lib/env", () => ({
   env: { useMockWallet: false, persistWalletSession: false },
 }));
@@ -19,28 +19,43 @@ vi.mock("@/lib/services", () => ({
   services: { wallet: { hasStoredWallet, openWallet } },
 }));
 
-const { getBiometricEnrollment } = vi.hoisted(() => ({
-  getBiometricEnrollment: vi.fn().mockReturnValue(null),
+const { getPasskeyEnrollment, hasPasskeyEnrollment } = vi.hoisted(() => ({
+  getPasskeyEnrollment: vi.fn().mockReturnValue(null),
+  hasPasskeyEnrollment: vi.fn().mockReturnValue(false),
 }));
 vi.mock("@/lib/auth/biometric-store", () => ({
-  getBiometricEnrollment,
-  hasBiometricEnrollment: () => getBiometricEnrollment() !== null,
-  setBiometricEnrollment: vi.fn(),
-  clearBiometricEnrollment: vi.fn(),
+  getPasskeyEnrollment,
+  hasPasskeyEnrollment,
+  savePasskeyEnrollment: vi.fn(),
+  clearPasskeyEnrollment: vi.fn(),
+  addPasskeyCredential: vi.fn((_existing, credential) => ({
+    version: 2,
+    credentials: [credential],
+  })),
 }));
 
-vi.mock("@/lib/auth/webauthn-prf", () => ({
-  isBiometricAvailable: vi.fn().mockResolvedValue(true),
-  enrollBiometric: vi.fn().mockResolvedValue({ credentialId: "c", encrypted: {} }),
-  unlockWithBiometric: vi.fn().mockResolvedValue("recovered-password"),
-}));
+vi.mock("@/lib/auth/webauthn-prf", () => {
+  class PasskeyError extends Error {
+    constructor(
+      readonly code: string,
+      message: string,
+    ) {
+      super(message);
+    }
+  }
+  return {
+    isPasskeyUnlockAvailable: vi.fn().mockReturnValue(true),
+    enrollPasskeyCredential: vi
+      .fn()
+      .mockResolvedValue({ credentialId: "c", label: "This device", encrypted: {}, createdAt: "" }),
+    unlockWithPasskey: vi.fn().mockResolvedValue("recovered-password"),
+    PasskeyError,
+  };
+});
 
 vi.mock("@/lib/ui/payment-link", () => ({ getSafeNextPath: () => undefined }));
 
-import {
-  NavOpenWalletButton,
-  OpenWalletProvider,
-} from "@/components/landing/landing-actions";
+import { NavOpenWalletButton, OpenWalletProvider } from "@/components/landing/landing-actions";
 
 function openUnlockDialog() {
   render(
@@ -51,27 +66,38 @@ function openUnlockDialog() {
   fireEvent.click(screen.getAllByRole("button", { name: "Open Wallet" })[0]);
 }
 
-describe("OpenWalletProvider unlock dialog — biometric (real mode)", () => {
+describe("OpenWalletProvider unlock dialog — passkey (real mode)", () => {
   beforeEach(() => {
-    getBiometricEnrollment.mockReturnValue(null);
+    getPasskeyEnrollment.mockReturnValue(null);
+    hasPasskeyEnrollment.mockReturnValue(false);
     openSession.mockClear();
   });
   afterEach(cleanup);
 
-  it("offers to enable biometric unlock when available and not enrolled", async () => {
+  it("offers to enable passkey unlock when available and not enrolled", async () => {
     openUnlockDialog();
-    // The dialog opens and, once availability resolves, offers biometric
-    // enrollment (this is the bug: the option was missing entirely).
-    await waitFor(() =>
-      expect(screen.getByText(/enable biometric unlock/i)).toBeInTheDocument(),
-    );
+    // The dialog opens and, once availability resolves, offers passkey enrollment
+    // (the previous bug: the option was missing entirely at login).
+    await waitFor(() => expect(screen.getByText(/enable passkey unlock/i)).toBeInTheDocument());
   });
 
-  it("offers a biometric unlock button when already enrolled", async () => {
-    getBiometricEnrollment.mockReturnValue({ credentialId: "c", encrypted: {}, address: "ccx7test" });
+  it("offers a passkey unlock button when already enrolled", async () => {
+    hasPasskeyEnrollment.mockReturnValue(true);
+    getPasskeyEnrollment.mockReturnValue({
+      version: 2,
+      address: "ccx7test",
+      credentials: [
+        {
+          credentialId: "c",
+          label: "This device",
+          encrypted: { iv: "x", ciphertext: "y" },
+          createdAt: "",
+        },
+      ],
+    });
     openUnlockDialog();
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /unlock with biometrics/i })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /unlock with a passkey/i })).toBeInTheDocument(),
     );
   });
 });
