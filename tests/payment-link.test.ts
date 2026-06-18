@@ -42,6 +42,32 @@ describe("buildPaymentSendUrl", () => {
       `https://wallet.example/#!send?address=${encodeURIComponent(ADDRESS)}&amount=5&txDesc=note`,
     );
   });
+
+  it("carries a label query param (parity with the QR/CoinUri path)", () => {
+    const url = buildPaymentSendUrl({
+      address: ADDRESS,
+      amount: "10",
+      label: "Acme Corp",
+      v1: false,
+      origin: "https://wallet.example",
+    });
+    expect(url).toBe(
+      `https://wallet.example/wallet/send?address=${encodeURIComponent(ADDRESS)}&amount=10&label=Acme+Corp`,
+    );
+  });
+
+  it("leaves label out when blank", () => {
+    const url = buildPaymentSendUrl({
+      address: ADDRESS,
+      amount: "10",
+      label: "   ",
+      v1: false,
+      origin: "https://wallet.example",
+    });
+    expect(url).toBe(
+      `https://wallet.example/wallet/send?address=${encodeURIComponent(ADDRESS)}&amount=10`,
+    );
+  });
 });
 
 describe("parsePaymentSendDraft", () => {
@@ -99,5 +125,82 @@ describe("parsePaymentSendDraft", () => {
     expect(draft?.address).toBe(ADDRESS);
     expect(draft?.amount).toBe(1);
     expect(draft?.message).toBe("b64.@@@invalid@@@");
+  });
+
+  it("accepts a plain (non-b64.) message value", () => {
+    const params = new URLSearchParams({
+      address: ADDRESS,
+      amount: "2",
+      message: "plain text",
+    });
+    expect(parsePaymentSendDraft(params.toString())).toEqual({
+      address: ADDRESS,
+      amount: 2,
+      message: "plain text",
+    });
+  });
+
+  it("reads a label query param", () => {
+    const params = new URLSearchParams({
+      address: ADDRESS,
+      amount: "2",
+      label: "Acme Corp",
+    });
+    expect(parsePaymentSendDraft(params.toString())).toEqual({
+      address: ADDRESS,
+      amount: 2,
+      label: "Acme Corp",
+    });
+  });
+
+  it("reads a recipient_name alias as label", () => {
+    const params = new URLSearchParams({
+      address: ADDRESS,
+      amount: "2",
+      recipient_name: "Bob",
+    });
+    expect(parsePaymentSendDraft(params.toString())).toEqual({
+      address: ADDRESS,
+      amount: 2,
+      label: "Bob",
+    });
+  });
+
+  it("accepts a period-decimal amount", () => {
+    const params = new URLSearchParams({ address: ADDRESS, amount: "1.5" });
+    expect(parsePaymentSendDraft(params.toString())?.amount).toBe(1.5);
+  });
+
+  it("rejects a comma-decimal amount (BIP21 mandates period decimals)", () => {
+    // "1,5" would otherwise parseFloat to 1 — silently sending the wrong amount.
+    const params = new URLSearchParams({ address: ADDRESS, amount: "1,5" });
+    expect(parsePaymentSendDraft(params.toString())).toBeNull();
+  });
+
+  it("rejects an amount with trailing junk", () => {
+    const params = new URLSearchParams({ address: ADDRESS, amount: "1.5abc" });
+    expect(parsePaymentSendDraft(params.toString())).toBeNull();
+  });
+});
+
+describe("buildPaymentSendUrl → parsePaymentSendDraft round-trip", () => {
+  it("preserves address, amount, paymentId, message, and label", () => {
+    const url = buildPaymentSendUrl({
+      address: ADDRESS,
+      amount: "12.5",
+      paymentId: "pid",
+      message: "hello there",
+      label: "Acme Corp",
+      v1: false,
+      origin: "https://wallet.example",
+    });
+    const search = url.slice(url.indexOf("?"));
+    expect(parsePaymentSendDraft(search)).toEqual({
+      address: ADDRESS,
+      amount: 12.5,
+      paymentId: "pid",
+      message: "hello there",
+      label: "Acme Corp",
+    });
   });
 });

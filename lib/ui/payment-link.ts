@@ -29,6 +29,8 @@ export type PaymentSendDraft = {
   amount: number;
   paymentId?: string;
   message?: string;
+  /** Recipient name / label — parity with the QR/CoinUri `recipient_name`/`label`. */
+  label?: string;
 };
 
 export type PaymentLinkInput = {
@@ -36,6 +38,8 @@ export type PaymentLinkInput = {
   amount: string;
   paymentId?: string;
   message?: string;
+  /** Recipient name / label — parity with the QR/CoinUri `recipient_name`/`label`. */
+  label?: string;
   /** v1 web-wallet hash URL (`#!send?…`); otherwise v3 app route. */
   v1: boolean;
   origin?: string;
@@ -62,6 +66,7 @@ export function buildPaymentSendUrl(input: PaymentLinkInput): string {
     if (input.v1) params.set("txDesc", message);
     else params.set("message", encodePaymentMessage(message));
   }
+  if (input.label?.trim()) params.set("label", input.label.trim());
 
   if (input.v1) {
     return `${origin}/#!send?${params.toString()}`;
@@ -76,8 +81,13 @@ export function parsePaymentSendDraft(search?: string): PaymentSendDraft | null 
     search ?? (typeof window !== "undefined" ? window.location.search : ""),
   );
   const address = params.get("address")?.trim();
-  const amountRaw = params.get("amount");
+  const amountRaw = params.get("amount")?.trim();
   if (!address || !amountRaw) return null;
+
+  // BIP21 mandates a period decimal separator. parseFloat would silently
+  // truncate a comma-decimal amount ("1,5" → 1), so reject any non-numeric
+  // shape (commas, spaces, trailing junk) up front rather than misreading it.
+  if (!/^\d+(\.\d+)?$/.test(amountRaw)) return null;
 
   const amount = Number.parseFloat(amountRaw);
   if (!Number.isFinite(amount) || amount <= 0) return null;
@@ -85,7 +95,12 @@ export function parsePaymentSendDraft(search?: string): PaymentSendDraft | null 
   const paymentId =
     params.get("paymentId")?.trim() || params.get("payment_id")?.trim() || undefined;
   const messageRaw = params.get("message")?.trim() || params.get("txDesc")?.trim() || undefined;
+  // `message` may be a `b64.`-encoded token (our links) or a plain value
+  // (other-wallet / hand-written links); decodePaymentMessage returns plain
+  // values unchanged, so this covers both.
   const message = messageRaw ? decodePaymentMessage(messageRaw) : undefined;
+  const label =
+    params.get("label")?.trim() || params.get("recipient_name")?.trim() || undefined;
 
-  return { address, amount, paymentId, message };
+  return { address, amount, paymentId, message, label };
 }
