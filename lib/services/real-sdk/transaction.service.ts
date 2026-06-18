@@ -5,6 +5,7 @@ import {
   WALLET_DONATION_ADDRESS,
 } from "@/lib/config/config";
 import { mapTransaction, mapTransactions } from "@/lib/services/real-sdk/mappers";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
   broadcast,
@@ -24,12 +25,14 @@ const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
 
 export const realSdkTransactionService: TransactionService = {
   async listTransactions(): Promise<Transaction[]> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
     return mapTransactions(rt.state, networkHeight);
   },
 
   async sendTransaction(input: SendTransactionInput): Promise<Transaction> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlySendDisabled);
 

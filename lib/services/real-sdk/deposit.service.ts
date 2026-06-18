@@ -13,6 +13,7 @@ import {
 } from "conceal-wallet-sdk";
 import { COIN_UNIT_PLACES } from "@/lib/config/config";
 import { deriveApr, mapDeposit, mapDeposits } from "@/lib/services/real-sdk/mappers";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
   broadcast,
@@ -36,12 +37,14 @@ const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
 
 export const realSdkDepositService: DepositService = {
   async listDeposits(): Promise<Deposit[]> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
     return mapDeposits(rt.state, networkHeight);
   },
 
   async getDepositConstraints(): Promise<DepositConstraints> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
     const balance = getBalance(rt.state);
@@ -62,6 +65,7 @@ export const realSdkDepositService: DepositService = {
   },
 
   async previewCreateDeposit(input: PreviewCreateDepositInput) {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const lockHeight = await rt.daemon.getHeight();
     const months = clampMonths(input.durationMonths);
@@ -79,6 +83,7 @@ export const realSdkDepositService: DepositService = {
   },
 
   async createDeposit(input: CreateDepositInput): Promise<Deposit> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyDepositDisabled);
 
@@ -148,6 +153,7 @@ export const realSdkDepositService: DepositService = {
   },
 
   async withdrawDeposit(input: WithdrawDepositInput): Promise<Transaction> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyDepositDisabled);
 

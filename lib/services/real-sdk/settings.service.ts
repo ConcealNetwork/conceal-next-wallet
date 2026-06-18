@@ -5,6 +5,7 @@ import {
   type RawWalletV1,
   selectFusionInputs,
 } from "conceal-wallet-sdk";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   buildDaemon,
   defaultNodeUrl,
@@ -37,6 +38,7 @@ function readAutoLockMinutes(raw: { [key: string]: unknown }): number {
 
 export const realSdkSettingsService: SettingsService = {
   async getSettings(): Promise<WalletSettings> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const options = rt.raw.options ?? {};
     const useCustomNode = Boolean(options.customNode);
@@ -52,6 +54,7 @@ export const realSdkSettingsService: SettingsService = {
   },
 
   async updateSettings(input: Partial<WalletSettings>): Promise<WalletSettings> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const options = { ...(rt.raw.options ?? {}) };
     let rebuildDaemon = false;
@@ -135,6 +138,7 @@ export const realSdkSettingsService: SettingsService = {
   },
 
   async getOptimizationStatus(): Promise<OptimizationStatus> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const blockchainHeight = await rt.daemon.getHeight();
     const balance = getBalance(rt.state);
@@ -147,6 +151,7 @@ export const realSdkSettingsService: SettingsService = {
   },
 
   async optimizeWallet(): Promise<OptimizeWalletResult> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyOptimizeDisabled);
 
@@ -182,6 +187,7 @@ export const realSdkSettingsService: SettingsService = {
   },
 
   async resetAndRescan(): Promise<{ ok: true }> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     // Wipe scanned history and re-scan from the wallet's creation height.
     const creationHeight = Math.max(0, Number(rt.raw.creationHeight ?? 0) || 0);

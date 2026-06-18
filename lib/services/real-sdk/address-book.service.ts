@@ -1,4 +1,5 @@
 import { isValidAddress, type RawAddressEntry } from "conceal-wallet-sdk";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime, type SdkRuntime } from "@/lib/services/real-sdk/runtime";
 import type { AddressBookService, AddressEntryInput } from "@/lib/services/address-book.service";
 import type { AddressEntry } from "@/lib/types";
@@ -55,11 +56,13 @@ function validateEntryInput(input: AddressEntryInput) {
 
 export const realSdkAddressBookService: AddressBookService = {
   async listEntries(): Promise<AddressEntry[]> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     return readEntries(rt).map(toAddressEntry);
   },
 
   async createEntry(input): Promise<AddressEntry> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const validated = validateEntryInput(input);
     const entry: RawAddressEntry = {
@@ -72,6 +75,7 @@ export const realSdkAddressBookService: AddressBookService = {
   },
 
   async updateEntry(id, input): Promise<AddressEntry> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const validated = validateEntryInput(input);
     const entries = readEntries(rt);
@@ -87,6 +91,7 @@ export const realSdkAddressBookService: AddressBookService = {
   },
 
   async deleteEntry(id): Promise<{ ok: true }> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     const entries = readEntries(rt);
     const next = entries.filter((entry) => entry.id !== id);

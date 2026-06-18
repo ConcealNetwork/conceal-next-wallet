@@ -57,6 +57,7 @@ import {
   type SdkMessageRecord,
   withReceivedRecords,
 } from "@/lib/services/real-sdk/messages-store";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
 
 /**
@@ -209,6 +210,8 @@ export async function unlock(password: string): Promise<SdkRuntime> {
   if (!password) {
     throw new Error("Password is required to open a stored wallet.");
   }
+  // Await WASM crypto init before openStoredWallet → buildAccount derive keys.
+  await ensureSdkReady();
   const storage = getSdkWalletStorage();
   let opened: { raw: RawWalletV1; keys: UserKeys } | null;
   try {
@@ -238,6 +241,8 @@ export async function adopt(input: {
   keys: UserKeys;
   password: string;
 }): Promise<SdkRuntime> {
+  // Await WASM crypto init before buildAccount/buildState derive the address.
+  await ensureSdkReady();
   const account = buildAccount(input.keys);
   const state = buildState(account, input.raw);
   const daemon = buildDaemon(nodeUrlFromRaw(input.raw));
@@ -307,6 +312,8 @@ async function runSyncChain(): Promise<number> {
  */
 async function syncOnce(): Promise<number> {
   const rt = requireRuntime();
+  // Await WASM crypto init before scanTransactionOutputsAndDeposits / ring math.
+  await ensureSdkReady();
   const height = await rt.daemon.getHeight();
   const batchSize = 100;
   // Coinbase (miner) outputs are scanned only when the wallet opts in (solo mining).

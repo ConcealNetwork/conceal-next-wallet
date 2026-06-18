@@ -1,4 +1,5 @@
 import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { getRuntime } from "@/lib/services/real-sdk/runtime";
 import type { NetworkService } from "@/lib/services/network.service";
 import type { NodeStatus } from "@/lib/types";
@@ -12,6 +13,7 @@ import type { NodeStatus } from "@/lib/types";
  */
 export const realSdkNetworkService: NetworkService = {
   async getNodeStatus(): Promise<NodeStatus> {
+    await ensureSdkReady();
     const rt = getRuntime();
     if (rt === null) {
       throw new Error("Wallet is not open. Unlock the wallet to view node status.");

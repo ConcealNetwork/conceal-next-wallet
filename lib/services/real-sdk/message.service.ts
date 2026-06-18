@@ -15,6 +15,7 @@ import {
   withReceivedRecords,
   withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime, type SdkRuntime, sync } from "@/lib/services/real-sdk/runtime";
 import {
   broadcast,
@@ -37,6 +38,7 @@ function allRecords(rt: SdkRuntime): SdkMessageRecord[] {
 
 export const realSdkMessageService: MessageService = {
   async listMessages(): Promise<Message[]> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     // Surface received messages reconstructed during sync alongside sent copies; a
     // fresh sync is what populates inbound history (no-op once caught up).
@@ -47,6 +49,7 @@ export const realSdkMessageService: MessageService = {
   },
 
   async sendMessage(input: SendMessageInput): Promise<Message> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyMessageDisabled);
 
@@ -130,6 +133,7 @@ export const realSdkMessageService: MessageService = {
   },
 
   async markRead(id: string): Promise<Message> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     // A message may live in either array (sent copies start read; received start
     // unread) — flip the unread flag wherever its tx hash matches.

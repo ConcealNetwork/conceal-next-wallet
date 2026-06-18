@@ -15,6 +15,7 @@ import {
   mnemonicFromSpendKey,
 } from "@/lib/services/real-sdk/wallet-build";
 import { mapWalletInfo } from "@/lib/services/real-sdk/mappers";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   adopt,
   buildDaemon,
@@ -77,18 +78,22 @@ async function safeNetworkHeight(): Promise<number> {
 
 export const realSdkWalletService: WalletService = {
   async getWalletInfo(): Promise<WalletInfo> {
+    await ensureSdkReady();
     return syncedInfo();
   },
 
   async refreshWallet(): Promise<WalletInfo> {
+    await ensureSdkReady();
     return syncedInfo();
   },
 
   async hasStoredWallet(): Promise<boolean> {
+    await ensureSdkReady();
     return runtimeHasStoredWallet();
   },
 
   async openWallet(input): Promise<WalletInfo> {
+    await ensureSdkReady();
     if (!input?.password) {
       throw new Error("Password is required to open a stored wallet.");
     }
@@ -98,6 +103,7 @@ export const realSdkWalletService: WalletService = {
   },
 
   async prepareCreateWallet() {
+    await ensureSdkReady();
     // Seed the draft at the current tip so a new wallet doesn't rescan history.
     let creationHeight = 0;
     try {
@@ -113,6 +119,7 @@ export const realSdkWalletService: WalletService = {
   },
 
   async finalizeCreateWallet(input: FinalizeCreateWalletInput): Promise<WalletInfo> {
+    await ensureSdkReady();
     if (pendingDraft === null) {
       throw new Error("No wallet draft found. Start creation again.");
     }
@@ -131,12 +138,14 @@ export const realSdkWalletService: WalletService = {
   },
 
   async deleteStoredWallet() {
+    await ensureSdkReady();
     await disconnectRuntime();
     await removeStoredWallet();
     createdMnemonic = null;
   },
 
   async panicWipe() {
+    await ensureSdkReady();
     // Lock first (no flush) so nothing re-persists after the erase, then remove
     // the stored record. The SDK engine runs no workers/timers to terminate.
     await disconnectRuntime();
@@ -151,6 +160,7 @@ export const realSdkWalletService: WalletService = {
   },
 
   async importWallet(input: ImportWalletInput): Promise<WalletInfo> {
+    await ensureSdkReady();
     createdMnemonic = null;
     if (input.method === "open") {
       await unlockRuntime(input.password);
@@ -185,6 +195,7 @@ export const realSdkWalletService: WalletService = {
   },
 
   async previewKeys(input: PreviewKeysInput) {
+    await ensureSdkReady();
     const spend = input.spendKey.trim();
     let view = (input.viewKey ?? "").trim();
     if (view === "") {
@@ -196,6 +207,7 @@ export const realSdkWalletService: WalletService = {
   },
 
   async exportWallet(): Promise<ExportWalletData> {
+    await ensureSdkReady();
     const rt = requireRuntime();
     if (rt.viewOnly) {
       // A view-only wallet has no spend secret / mnemonic to export.
@@ -226,6 +238,7 @@ export const realSdkWalletService: WalletService = {
   },
 
   async downloadWalletBackup(input: DownloadWalletBackupInput) {
+    await ensureSdkReady();
     const rt = requireRuntime();
     if (!input.password) {
       throw new Error("Password is required to download a backup.");
@@ -246,6 +259,7 @@ export const realSdkWalletService: WalletService = {
   },
 
   async changePassword(input) {
+    await ensureSdkReady();
     const rt = requireRuntime();
     if (!input.currentPassword || !input.newPassword) {
       throw new Error("Both the current and new password are required.");
@@ -260,6 +274,7 @@ export const realSdkWalletService: WalletService = {
   },
 
   async verifyPassword(password) {
+    await ensureSdkReady();
     if (!password) return false;
     const stored = await getSdkWalletStorage().getItem("wallet");
     if (stored === null) return false;
