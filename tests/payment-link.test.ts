@@ -204,3 +204,28 @@ describe("buildPaymentSendUrl → parsePaymentSendDraft round-trip", () => {
     });
   });
 });
+
+describe("parsePaymentSendDraft — uri= (PWA protocol handler)", () => {
+  it("decodes a web+conceal: CoinUri into a draft", () => {
+    const uri = `web+conceal:${ADDRESS}?amount=1.5?payment_id=pid?recipient_name=Bob`;
+    const params = new URLSearchParams({ uri });
+    expect(parsePaymentSendDraft(params.toString())).toEqual({
+      address: ADDRESS,
+      amount: 1.5,
+      paymentId: "pid",
+      message: undefined,
+      label: "Bob",
+    });
+  });
+
+  it("decodes a bare-address CoinUri too", () => {
+    const params = new URLSearchParams({ uri: `${ADDRESS}?amount=2` });
+    expect(parsePaymentSendDraft(params.toString())?.amount).toBe(2);
+  });
+
+  it("returns null (never throws) on a malformed uri", () => {
+    const params = new URLSearchParams({ uri: "web+conceal:not-an-address" });
+    expect(() => parsePaymentSendDraft(params.toString())).not.toThrow();
+    expect(parsePaymentSendDraft(params.toString())).toBeNull();
+  });
+});

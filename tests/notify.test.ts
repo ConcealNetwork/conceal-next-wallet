@@ -44,6 +44,7 @@ function removeNotification(): void {
 afterEach(() => {
   removeNotification();
   Reflect.deleteProperty(navigator as unknown as Record<string, unknown>, "serviceWorker");
+  setOptedIn(false);
   vi.restoreAllMocks();
 });
 
@@ -55,7 +56,8 @@ describe("feature detection", () => {
     expect(canNotify()).toBe(false);
   });
 
-  it("reflects the live permission when supported", () => {
+  it("reflects the live permission when supported (and opted in)", () => {
+    setOptedIn(true); // canNotify requires opt-in too; isolate the permission axis here
     installNotification("granted");
     expect(isNotificationSupported()).toBe(true);
     expect(getPermission()).toBe("granted");
@@ -100,6 +102,10 @@ describe("requestNotificationPermission", () => {
 });
 
 describe("notify()", () => {
+  // notify() requires BOTH opt-in and granted permission — opt in for the
+  // granted-path cases (the opt-out case overrides below).
+  beforeEach(() => setOptedIn(true));
+
   it("is a no-op when unsupported (never throws, never constructs)", async () => {
     removeNotification();
     await expect(notify("hi")).resolves.toBeUndefined();
@@ -107,6 +113,13 @@ describe("notify()", () => {
 
   it("is a no-op when permission is not granted", async () => {
     const ctor = installNotification("default");
+    await notify("hi");
+    expect(ctor).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op when granted but not opted in (strict opt-in)", async () => {
+    setOptedIn(false);
+    const ctor = installNotification("granted");
     await notify("hi");
     expect(ctor).not.toHaveBeenCalled();
   });

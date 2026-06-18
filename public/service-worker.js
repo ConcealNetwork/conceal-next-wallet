@@ -160,9 +160,12 @@ self.addEventListener("notificationclick", (event) => {
           includeUncontrolled: true,
         });
         for (const client of clientList) {
-          // Same-origin window already open → focus it rather than spawning one.
+          // A window WITHIN OUR SCOPE is already open → focus it rather than
+          // spawning one. Scope (not just origin) matters: GitHub Pages hosts
+          // many projects on one origin, so an origin-only check could focus a
+          // different app's window.
           try {
-            if (new URL(client.url).origin === target.origin && "focus" in client) {
+            if (new URL(client.url).href.startsWith(target.href) && "focus" in client) {
               return await client.focus();
             }
           } catch {

@@ -110,7 +110,7 @@ export class CoinUri {
     // bare address. Upstream conceal-web-wallet dropped the 'conceal:' prefix —
     // "the char ':' was creating scanning issue" — so QRs scan in the legacy
     // wallet. decodeTx stays tolerant of 'conceal:'/'conceal.'/bare for back-compat.
-    version: "v1" | "v3" = "v3",
+    _version: "v1" | "v3" = "v3",
   ): string {
     let encoded = address; //legacy: version === "v3" ? COIN_URI_PREFIX + address : address
     if (address.length !== CoinUri.coinAddressLength) throw "invalid_address_length";

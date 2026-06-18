@@ -5,30 +5,6 @@ var logDebugMsg = self.logDebugMsg || function () {};
 var reportError = self.reportError || function (e) { console.error(e); };
 "use strict";
 (() => {
-  // lib/wallet-core/MathUtil.ts
-  var MathUtil = class _MathUtil {
-    static randomFloat() {
-      const randomBuffer = new Uint32Array(1);
-      window.crypto.getRandomValues(randomBuffer);
-      return randomBuffer[0] / (4294967295 + 1);
-    }
-    static randomUint32() {
-      const randomBuffer = new Uint32Array(1);
-      window.crypto.getRandomValues(randomBuffer);
-      return randomBuffer[0];
-    }
-    static getRandomInt(min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-    static randomTriangularSimplified(max) {
-      const r = _MathUtil.randomUint32() % (1 << 53);
-      const frac = Math.sqrt(r / (1 << 53));
-      let i = frac * max | 0;
-      if (i === max) --i;
-      return i;
-    }
-  };
-
   // lib/messages/smart-message.ts
   var PREFIX = "{";
   var SUFFIX = "}";
@@ -1706,6 +1682,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
             const rawMessArrFull = new Uint8Array(rawMessArr.length + 4);
             rawMessArrFull.set(rawMessArr);
             rawMessArrFull.set([0, 0, 0, 0], rawMessArr.length);
+            if (rawMessArrFull.length > 255) {
+              throw "Encrypted message too long: " + rawMessArrFull.length + " bytes (max 255)";
+            }
             let _buf;
             if (isKnownSmartMessage(message)) {
               _buf = concealjs.cypher.chacha12(hashBuf, nonceBuf, rawMessArrFull);
@@ -2085,6 +2064,150 @@ var reportError = self.reportError || function (e) { console.error(e); };
     const headerSize = TRANSACTION_VERSION_SIZE + TRANSACTION_UNLOCK_TIME_SIZE + EXTRA_TAG_SIZE + PUBLIC_KEY_SIZE;
     const inputSize = INPUT_TAG_SIZE + AMOUNT_SIZE + KEY_IMAGE_SIZE + SIGNATURE_SIZE + GLOBAL_INDEXES_VECTOR_SIZE_SIZE + GLOBAL_INDEXES_INITIAL_VALUE_SIZE + mixinCount * (GLOBAL_INDEXES_DIFFERENCE_SIZE + SIGNATURE_SIZE);
     return headerSize + inputCount * inputSize + outputsSize;
+  };
+
+  // lib/wallet-core/Interest.ts
+  var _InterestCalculator = class _InterestCalculator {
+    /**
+     * Calculates interest for a deposit based on amount, term, and lock height
+     * @param amount - Amount of the deposit in atomic units
+     * @param term - Term of the deposit in blocks
+     * @param lockHeight - Block height when the deposit was made
+     * @returns The calculated interest amount in atomic units
+     */
+    static calculateInterest(amount, term, lockHeight) {
+      if (lockHeight === _InterestCalculator.BLOCK_WITH_MISSING_INTEREST) {
+        lockHeight = lockHeight + term;
+      }
+      if (term % _InterestCalculator.DEPOSIT_MIN_TERM_V3 === 0 && lockHeight > (config.depositHeightV3 || _InterestCalculator.DEPOSIT_HEIGHT_V3)) {
+        return _InterestCalculator.calculateInterestV3(amount, term);
+      }
+      if (term % 64800 === 0 || term % _InterestCalculator.DEPOSIT_MIN_TERM === 0) {
+        return _InterestCalculator.calculateInterestV2(amount, term);
+      }
+      logDebugMsg("Warning: Using legacy V1 interest calculation");
+      const m_depositMaxTerm = _InterestCalculator.DEPOSIT_MAX_TERM;
+      const a = term * _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE - _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
+      const product = BigInt(Math.trunc(amount)) * BigInt(a);
+      const base = Number(product / BigInt(100 * m_depositMaxTerm));
+      return lockHeight <= _InterestCalculator.END_MULTIPLIER_BLOCK ? base * _InterestCalculator.MULTIPLIER_FACTOR : base;
+    }
+    /**
+     * Calculates interest for V3 deposits (monthly terms)
+     * @param amount - Amount of the deposit in atomic units
+     * @param term - Term of the deposit in blocks
+     * @returns The calculated interest amount in atomic units
+     */
+    static calculateInterestV3(amount, term) {
+      const m_coin = Math.pow(10, config.coinUnitPlaces);
+      const amount4Humans = amount / m_coin;
+      let baseInterest = config.depositRateV3[0] || 0.029;
+      if (amount4Humans >= 2e4) {
+        baseInterest = config.depositRateV3[2] || 0.049;
+      } else if (amount4Humans >= 1e4) {
+        baseInterest = config.depositRateV3[1] || 0.039;
+      }
+      let months = term / _InterestCalculator.DEPOSIT_MIN_TERM_V3;
+      if (months > 12) {
+        months = 12;
+      }
+      const ear = baseInterest + (months - 1) * 1e-3;
+      const eir = ear / 12 * months;
+      const interest = amount * eir;
+      return Math.floor(interest);
+    }
+    /**
+     * Calculates interest for V2 deposits (investment or weekly terms)
+     * @param amount - Amount of the deposit in atomic units
+     * @param term - Term of the deposit in blocks
+     * @returns The calculated interest amount in atomic units
+     */
+    static calculateInterestV2(amount, term) {
+      const m_coin = Math.pow(10, config.coinUnitPlaces);
+      if (term % 64800 === 0) {
+        const amount4Humans = amount / m_coin;
+        let qTier = 1;
+        if (amount4Humans > 11e4 && amount4Humans < 18e4) qTier = 1.01;
+        if (amount4Humans >= 18e4 && amount4Humans < 26e4) qTier = 1.02;
+        if (amount4Humans >= 26e4 && amount4Humans < 35e4) qTier = 1.03;
+        if (amount4Humans >= 35e4 && amount4Humans < 45e4) qTier = 1.04;
+        if (amount4Humans >= 45e4 && amount4Humans < 56e4) qTier = 1.05;
+        if (amount4Humans >= 56e4 && amount4Humans < 68e4) qTier = 1.06;
+        if (amount4Humans >= 68e4 && amount4Humans < 81e4) qTier = 1.07;
+        if (amount4Humans >= 81e4 && amount4Humans < 95e4) qTier = 1.08;
+        if (amount4Humans >= 95e4 && amount4Humans < 11e5) qTier = 1.09;
+        if (amount4Humans >= 11e5 && amount4Humans < 126e4) qTier = 1.1;
+        if (amount4Humans >= 126e4 && amount4Humans < 143e4) qTier = 1.11;
+        if (amount4Humans >= 143e4 && amount4Humans < 161e4) qTier = 1.12;
+        if (amount4Humans >= 161e4 && amount4Humans < 18e5) qTier = 1.13;
+        if (amount4Humans >= 18e5 && amount4Humans < 2e6) qTier = 1.14;
+        if (amount4Humans > 2e6) qTier = 1.15;
+        const mq = config.investmentMq || 1.4473;
+        const termQuarters = term / 64800;
+        const m8 = 100 * Math.pow(1 + mq / 100, termQuarters) - 100;
+        const m5 = termQuarters * 0.5;
+        const m7 = m8 * (1 + m5 / 100);
+        const rate = m7 * qTier;
+        const interest = amount * (rate / 100);
+        return Math.floor(interest);
+      }
+      if (term % _InterestCalculator.DEPOSIT_MIN_TERM === 0) {
+        const weeks = term / _InterestCalculator.DEPOSIT_MIN_TERM;
+        const baseInterest = config.weeklyBaseInterest || 0.0696;
+        const interestPerWeek = config.weeklyInterestIncrement || 2e-4;
+        const interestRate = baseInterest + weeks * interestPerWeek;
+        const interest = amount * (weeks * interestRate / 100);
+        return Math.floor(interest);
+      }
+      return 0;
+    }
+  };
+  // Constants from C++ implementation
+  _InterestCalculator.DEPOSIT_MIN_TERM = 5040;
+  // One week
+  // conceal-core uses DEPOSIT_MAX_TERM (one year) as the legacy-interest divisor,
+  // NOT the five-year DEPOSIT_MAX_TERM_V1 (which only bounds the term in
+  // validation). See conceal-core src/CryptoNoteConfig.h + Currency.cpp:1371.
+  _InterestCalculator.DEPOSIT_MAX_TERM = 1 * 12 * 21900;
+  // 262800 — one year
+  _InterestCalculator.DEPOSIT_MIN_TERM_V3 = 21900;
+  // One month
+  _InterestCalculator.DEPOSIT_HEIGHT_V3 = 413400;
+  // Height when V3 deposit rates were activated
+  _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR = 0;
+  // Constant rate
+  _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE = 4;
+  // Legacy deposits
+  _InterestCalculator.BLOCK_WITH_MISSING_INTEREST = 425799;
+  // Block with special handling
+  // Early-deposit multiplier (conceal-core src/CryptoNoteConfig.h:85-86): deposits
+  // locked on/before block 12750 earned 100× the base legacy rate.
+  _InterestCalculator.END_MULTIPLIER_BLOCK = 12750;
+  _InterestCalculator.MULTIPLIER_FACTOR = 100;
+  var InterestCalculator = _InterestCalculator;
+
+  // lib/wallet-core/MathUtil.ts
+  var MathUtil = class _MathUtil {
+    static randomFloat() {
+      const randomBuffer = new Uint32Array(1);
+      window.crypto.getRandomValues(randomBuffer);
+      return randomBuffer[0] / (4294967295 + 1);
+    }
+    static randomUint32() {
+      const randomBuffer = new Uint32Array(1);
+      window.crypto.getRandomValues(randomBuffer);
+      return randomBuffer[0];
+    }
+    static getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    static randomTriangularSimplified(max) {
+      const r = _MathUtil.randomUint32() % (1 << 53);
+      const frac = Math.sqrt(r / (1 << 53));
+      let i = frac * max | 0;
+      if (i === max) --i;
+      return i;
+    }
   };
 
   // lib/wallet-core/Transaction.ts
@@ -2530,126 +2653,6 @@ var reportError = self.reportError || function (e) { console.error(e); };
   };
   var TransactionData = _TransactionData;
 
-  // lib/wallet-core/Interest.ts
-  var _InterestCalculator = class _InterestCalculator {
-    /**
-     * Calculates interest for a deposit based on amount, term, and lock height
-     * @param amount - Amount of the deposit in atomic units
-     * @param term - Term of the deposit in blocks
-     * @param lockHeight - Block height when the deposit was made
-     * @returns The calculated interest amount in atomic units
-     */
-    static calculateInterest(amount, term, lockHeight) {
-      if (lockHeight === _InterestCalculator.BLOCK_WITH_MISSING_INTEREST) {
-        lockHeight = lockHeight + term;
-      }
-      if (term % _InterestCalculator.DEPOSIT_MIN_TERM_V3 === 0 && lockHeight > (config.depositHeightV3 || _InterestCalculator.DEPOSIT_HEIGHT_V3)) {
-        return _InterestCalculator.calculateInterestV3(amount, term);
-      }
-      if (term % 64800 === 0 || term % _InterestCalculator.DEPOSIT_MIN_TERM === 0) {
-        return _InterestCalculator.calculateInterestV2(amount, term);
-      }
-      logDebugMsg("Warning: Using legacy V1 interest calculation");
-      const m_depositMaxTerm = _InterestCalculator.DEPOSIT_MAX_TERM;
-      const a = term * _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE - _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
-      const product = BigInt(Math.trunc(amount)) * BigInt(a);
-      const base = Number(product / BigInt(100 * m_depositMaxTerm));
-      return lockHeight <= _InterestCalculator.END_MULTIPLIER_BLOCK ? base * _InterestCalculator.MULTIPLIER_FACTOR : base;
-    }
-    /**
-     * Calculates interest for V3 deposits (monthly terms)
-     * @param amount - Amount of the deposit in atomic units
-     * @param term - Term of the deposit in blocks
-     * @returns The calculated interest amount in atomic units
-     */
-    static calculateInterestV3(amount, term) {
-      const m_coin = Math.pow(10, config.coinUnitPlaces);
-      const amount4Humans = amount / m_coin;
-      let baseInterest = config.depositRateV3[0] || 0.029;
-      if (amount4Humans >= 2e4) {
-        baseInterest = config.depositRateV3[2] || 0.049;
-      } else if (amount4Humans >= 1e4) {
-        baseInterest = config.depositRateV3[1] || 0.039;
-      }
-      let months = term / _InterestCalculator.DEPOSIT_MIN_TERM_V3;
-      if (months > 12) {
-        months = 12;
-      }
-      const ear = baseInterest + (months - 1) * 1e-3;
-      const eir = ear / 12 * months;
-      const interest = amount * eir;
-      return Math.floor(interest);
-    }
-    /**
-     * Calculates interest for V2 deposits (investment or weekly terms)
-     * @param amount - Amount of the deposit in atomic units
-     * @param term - Term of the deposit in blocks
-     * @returns The calculated interest amount in atomic units
-     */
-    static calculateInterestV2(amount, term) {
-      const m_coin = Math.pow(10, config.coinUnitPlaces);
-      if (term % 64800 === 0) {
-        const amount4Humans = amount / m_coin;
-        let qTier = 1;
-        if (amount4Humans > 11e4 && amount4Humans < 18e4) qTier = 1.01;
-        if (amount4Humans >= 18e4 && amount4Humans < 26e4) qTier = 1.02;
-        if (amount4Humans >= 26e4 && amount4Humans < 35e4) qTier = 1.03;
-        if (amount4Humans >= 35e4 && amount4Humans < 45e4) qTier = 1.04;
-        if (amount4Humans >= 45e4 && amount4Humans < 56e4) qTier = 1.05;
-        if (amount4Humans >= 56e4 && amount4Humans < 68e4) qTier = 1.06;
-        if (amount4Humans >= 68e4 && amount4Humans < 81e4) qTier = 1.07;
-        if (amount4Humans >= 81e4 && amount4Humans < 95e4) qTier = 1.08;
-        if (amount4Humans >= 95e4 && amount4Humans < 11e5) qTier = 1.09;
-        if (amount4Humans >= 11e5 && amount4Humans < 126e4) qTier = 1.1;
-        if (amount4Humans >= 126e4 && amount4Humans < 143e4) qTier = 1.11;
-        if (amount4Humans >= 143e4 && amount4Humans < 161e4) qTier = 1.12;
-        if (amount4Humans >= 161e4 && amount4Humans < 18e5) qTier = 1.13;
-        if (amount4Humans >= 18e5 && amount4Humans < 2e6) qTier = 1.14;
-        if (amount4Humans > 2e6) qTier = 1.15;
-        const mq = config.investmentMq || 1.4473;
-        const termQuarters = term / 64800;
-        const m8 = 100 * Math.pow(1 + mq / 100, termQuarters) - 100;
-        const m5 = termQuarters * 0.5;
-        const m7 = m8 * (1 + m5 / 100);
-        const rate = m7 * qTier;
-        const interest = amount * (rate / 100);
-        return Math.floor(interest);
-      }
-      if (term % _InterestCalculator.DEPOSIT_MIN_TERM === 0) {
-        const weeks = term / _InterestCalculator.DEPOSIT_MIN_TERM;
-        const baseInterest = config.weeklyBaseInterest || 0.0696;
-        const interestPerWeek = config.weeklyInterestIncrement || 2e-4;
-        const interestRate = baseInterest + weeks * interestPerWeek;
-        const interest = amount * (weeks * interestRate / 100);
-        return Math.floor(interest);
-      }
-      return 0;
-    }
-  };
-  // Constants from C++ implementation
-  _InterestCalculator.DEPOSIT_MIN_TERM = 5040;
-  // One week
-  // conceal-core uses DEPOSIT_MAX_TERM (one year) as the legacy-interest divisor,
-  // NOT the five-year DEPOSIT_MAX_TERM_V1 (which only bounds the term in
-  // validation). See conceal-core src/CryptoNoteConfig.h + Currency.cpp:1371.
-  _InterestCalculator.DEPOSIT_MAX_TERM = 1 * 12 * 21900;
-  // 262800 — one year
-  _InterestCalculator.DEPOSIT_MIN_TERM_V3 = 21900;
-  // One month
-  _InterestCalculator.DEPOSIT_HEIGHT_V3 = 413400;
-  // Height when V3 deposit rates were activated
-  _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR = 0;
-  // Constant rate
-  _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE = 4;
-  // Legacy deposits
-  _InterestCalculator.BLOCK_WITH_MISSING_INTEREST = 425799;
-  // Block with special handling
-  // Early-deposit multiplier (conceal-core src/CryptoNoteConfig.h:85-86): deposits
-  // locked on/before block 12750 earned 100× the base legacy rate.
-  _InterestCalculator.END_MULTIPLIER_BLOCK = 12750;
-  _InterestCalculator.MULTIPLIER_FACTOR = 100;
-  var InterestCalculator = _InterestCalculator;
-
   // lib/wallet-core/Varint.ts
   var MSB = 128;
   var REST = 127;
@@ -2882,7 +2885,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
         }
         if (checksumOk) {
           const candidate = new TextDecoder().decode(c12).slice(0, -TX_EXTRA_MESSAGE_CHECKSUM_SIZE);
-          if (isKnownSmartMessage(candidate)) {
+          if (isSmartMessage(candidate)) {
             return candidate;
           }
         }
@@ -3637,7 +3640,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
     depositMaxTermMonth: 12,
     depositSmallWithdrawFee: 10,
     avgBlockTime: 120,
-    maxMessageSize: 260,
+    // Max ENCRYPTED-BODY length in UTF-8 BYTES. The on-chain tx_extra message
+    // length field is a single byte (≤255) and the blob = body bytes + 4-byte
+    // zero checksum, so the body ceiling is 255 − 4 = 251 bytes. Treated as a
+    // byte budget everywhere it's checked (NOT a UTF-16 char count) — a value
+    // >251 here would silently corrupt long/multi-byte messages.
+    maxMessageSize: 251,
     cryptonoteMemPoolTxLifetimeSeconds: 60 * 60 * 12
   };
 
@@ -3654,7 +3662,6 @@ var reportError = self.reportError || function (e) { console.error(e); };
   var MAX_MESSAGE_SIZE = walletNetworkScalars2.maxMessageSize;
   var MAX_TTL_MINUTES = walletNetworkScalars2.cryptonoteMemPoolTxLifetimeSeconds / 60;
   var MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars2.messageTxAmountAtomic;
-  var DUST_THRESHOLD_ATOMIC = walletNetworkScalars2.defaultDustThresholdAtomic;
   var SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE_NODE_FEE_ATOMIC;
   var SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
 

@@ -116,6 +116,10 @@ export default function MessagesPage() {
   );
 
   const showMdPreview = composeViewMd && shouldShowMessagePreview(composeBody);
+  // The engine caps messages by UTF-8 BYTES (MAX_MESSAGE_SIZE), not characters,
+  // so count bytes here too — otherwise a multi-byte (emoji/accent) message could
+  // pass the UI but be rejected on send.
+  const composeByteLength = new TextEncoder().encode(composeBody).length;
   const replyEnabled = active ? canReplyToConversation(active) : false;
 
   useEffect(() => {
@@ -237,7 +241,7 @@ export default function MessagesPage() {
       toast.error("Payment ID must be 16 or 64 hex characters.");
       return;
     }
-    if (composeBody.length > MAX_MESSAGE_SIZE) {
+    if (composeByteLength > MAX_MESSAGE_SIZE) {
       toast.error(walletCopy.messageTooLong);
       return;
     }
@@ -457,7 +461,7 @@ export default function MessagesPage() {
                 placeholder="Write your message…"
                 maxLength={MAX_MESSAGE_SIZE}
               />
-              {composeBody.length > MAX_MESSAGE_SIZE ? (
+              {composeByteLength > MAX_MESSAGE_SIZE ? (
                 <p className="text-sm text-destructive">{walletCopy.messageTooLong}</p>
               ) : null}
               {showMdPreview ? (
@@ -499,7 +503,7 @@ export default function MessagesPage() {
             <Button
               type="button"
               onClick={sendCompose}
-              disabled={send.isPending || composeBody.length > MAX_MESSAGE_SIZE || viewOnly}
+              disabled={send.isPending || composeByteLength > MAX_MESSAGE_SIZE || viewOnly}
               title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
             >
               {send.isPending ? "Sending…" : "Send"}

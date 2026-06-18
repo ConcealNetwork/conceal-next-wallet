@@ -64,7 +64,7 @@ describe("message byte-length validation (single-byte tx_extra length field)", (
 
   it("accepts a multi-byte body whose UTF-8 length is exactly at the budget", () => {
     // "é" = 2 UTF-8 bytes. 125 × 2 = 250 bytes + a trailing ASCII char = 251.
-    const body = "é".repeat(125) + "a";
+    const body = `${"é".repeat(125)}a`;
     expect(new TextEncoder().encode(body).length).toBe(251);
     expect(validateBodySize(body)).toBeNull();
   });

@@ -59,21 +59,21 @@ declare var config: {
   [key: string]: any;
 };
 
-import type { Wallet } from "./Wallet";
-import { MathUtil } from "./MathUtil";
 import { isSmartMessage } from "@/lib/messages/smart-message";
+import type { RawDaemon_Out, RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
 import { Cn, CnTransactions } from "./Cn";
-import type { RawDaemon_Transaction, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
+import { Currency } from "./Currency";
+import { InterestCalculator } from "./Interest";
+import { MathUtil } from "./MathUtil";
 import {
+  Deposit,
   Transaction,
   TransactionData,
-  Deposit,
   TransactionIn,
   TransactionOut,
 } from "./Transaction";
-import { InterestCalculator } from "./Interest";
-import { Currency } from "./Currency";
 import { decode as varintDecode } from "./Varint";
+import type { Wallet } from "./Wallet";
 
 export const TX_EXTRA_PADDING_MAX_COUNT = 255;
 export const TX_EXTRA_NONCE_MAX_COUNT = 255;
@@ -386,9 +386,7 @@ export class TransactionsExplorer {
         }
       }
       if (checksumOk) {
-        const candidate = new TextDecoder()
-          .decode(c12)
-          .slice(0, -TX_EXTRA_MESSAGE_CHECKSUM_SIZE);
+        const candidate = new TextDecoder().decode(c12).slice(0, -TX_EXTRA_MESSAGE_CHECKSUM_SIZE);
         if (isSmartMessage(candidate)) {
           return candidate;
         }

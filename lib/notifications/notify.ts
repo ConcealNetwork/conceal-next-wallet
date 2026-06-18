@@ -67,9 +67,10 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   }
 }
 
-/** True when notifications can actually be shown right now (granted + supported). */
+/** True only when the user has both opted in AND granted OS permission — the
+ *  strict opt-in contract, enforced here so no caller can bypass it. */
 export function canNotify(): boolean {
-  return getPermission() === "granted";
+  return isOptedIn() && getPermission() === "granted";
 }
 
 /**
