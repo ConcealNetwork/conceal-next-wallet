@@ -35,14 +35,49 @@ describe("CoinUri.decodeTx", () => {
 });
 
 describe("CoinUri.encodeTx", () => {
-  it("v3 (default) uses conceal: prefix", () => {
-    expect(CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v3")).toBe(
-      `${COIN_URI_PREFIX}${ADDRESS}${QUERY}`,
-    );
+  // Upstream conceal-web-wallet dropped the 'conceal:' prefix from tx URIs
+  // ("the char ':' was creating scanning issue"), so both v1 and v3 now emit a
+  // bare address — otherwise our QRs may fail to scan in the legacy wallet.
+  it("v3 (default) emits a bare address — no conceal: prefix", () => {
+    const encoded = CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v3");
+    expect(encoded).toBe(`${ADDRESS}${QUERY}`);
+    expect(encoded.startsWith(COIN_URI_PREFIX)).toBe(false);
+    expect(encoded.startsWith(ADDRESS)).toBe(true);
   });
 
   it("v1 omits prefix", () => {
     expect(CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v1")).toBe(`${ADDRESS}${QUERY}`);
+  });
+
+  it("default version (no arg) also emits a bare address", () => {
+    expect(CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello")).toBe(`${ADDRESS}${QUERY}`);
+  });
+
+  it("round-trips a freshly-encoded bare URI through decodeTx", () => {
+    const encoded = CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v3");
+    expect(CoinUri.decodeTx(encoded)).toEqual({
+      address: ADDRESS,
+      paymentId: "pid",
+      amount: "5",
+      description: "hello",
+    });
+  });
+
+  it("still decodes our previously-produced conceal: v3 QR (back-compat)", () => {
+    // A QR string our earlier build emitted with the now-removed prefix.
+    const legacyConcealColon = `${COIN_URI_PREFIX}${ADDRESS}${QUERY}`;
+    expect(CoinUri.decodeTx(legacyConcealColon)).toEqual({
+      address: ADDRESS,
+      paymentId: "pid",
+      amount: "5",
+      description: "hello",
+    });
+  });
+
+  it("decodes all three tx forms (conceal:, conceal., bare) to the same address", () => {
+    expect(CoinUri.decodeTx(`${COIN_URI_PREFIX}${ADDRESS}`)).toEqual({ address: ADDRESS });
+    expect(CoinUri.decodeTx(`conceal.${ADDRESS}`)).toEqual({ address: ADDRESS });
+    expect(CoinUri.decodeTx(ADDRESS)).toEqual({ address: ADDRESS });
   });
 });
 

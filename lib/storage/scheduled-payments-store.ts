@@ -18,7 +18,8 @@ function isScheduledPayment(value: unknown): value is ScheduledPayment {
     typeof s.address === "string" &&
     typeof s.amount === "string" &&
     typeof s.anchorDate === "string" &&
-    isCadence(s.cadence)
+    isCadence(s.cadence) &&
+    (s.snoozedUntil === undefined || typeof s.snoozedUntil === "string")
   );
 }
 
@@ -53,9 +54,21 @@ export function removeSchedule(id: string): ScheduledPayment[] {
   return next;
 }
 
-/** Stamp a schedule as paid `at` (ISO), advancing its next-due. */
+/** Stamp a schedule as paid `at` (ISO), advancing its next-due (and clearing any snooze). */
 export function markSchedulePaid(id: string, at: string): ScheduledPayment[] {
-  const next = listSchedules().map((s) => (s.id === id ? { ...s, lastPaidAt: at } : s));
+  const next = listSchedules().map((s) =>
+    s.id === id ? { ...s, lastPaidAt: at, snoozedUntil: undefined } : s,
+  );
+  persist(next);
+  return next;
+}
+
+/**
+ * Set (or clear, when `until` is undefined) a reminder's snooze. While snoozed,
+ * the schedule is excluded from `isDue`/`countDue`. Returns the new list.
+ */
+export function snoozeSchedule(id: string, until: string | undefined): ScheduledPayment[] {
+  const next = listSchedules().map((s) => (s.id === id ? { ...s, snoozedUntil: until } : s));
   persist(next);
   return next;
 }

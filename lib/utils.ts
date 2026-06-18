@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { COIN_UNIT_PLACES } from "@/lib/config/config";
 import type { CcxAmount, UsdAmount } from "@/lib/types";
@@ -37,13 +37,21 @@ export function walletBalanceUsd(balance: CcxAmount, priceUsd: number): number {
   return ccxToNumber(balance) * priceUsd;
 }
 
+/**
+ * Default BCP-47 locale for the bare (non-hook) formatters. Matches the wallet's
+ * source language so existing tests and non-component callers keep today's output.
+ * Locale-aware UI should call the `useFormatters()` hook (see `lib/i18n`).
+ */
+export const DEFAULT_FORMAT_LOCALE = "en-US";
+
 export function formatCcx(
   amount: CcxAmount | number,
   decimals = CCX_HUMAIN_DECIMAL_DISPLAY,
   trimTrailingZeros = false,
+  locale: string = DEFAULT_FORMAT_LOCALE,
 ): string {
   const value = typeof amount === "number" ? amount : ccxToNumber(amount);
-  return `${value.toLocaleString("en-US", {
+  return `${value.toLocaleString(locale, {
     minimumFractionDigits: trimTrailingZeros ? 0 : decimals,
     maximumFractionDigits: decimals,
   })} ${getDisplayTicker()}`;
@@ -51,9 +59,13 @@ export function formatCcx(
 
 export { stripTickerSuffix } from "@/lib/ui/ticker-preference";
 
-export function formatUsd(amount: UsdAmount | number, decimals = 4): string {
+export function formatUsd(
+  amount: UsdAmount | number,
+  decimals = 4,
+  locale: string = DEFAULT_FORMAT_LOCALE,
+): string {
   const value = typeof amount === "number" ? amount : amount.value;
-  return `$${value.toLocaleString("en-US", {
+  return `$${value.toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   })}`;
@@ -72,17 +84,53 @@ export function truncateAddress(address: string, head = 8, tail = 6): string {
   return `${address.slice(0, head)}...${address.slice(-tail)}`;
 }
 
-export function timeAgo(date: string | Date, now = new Date()): string {
+/** A bucketed past duration: the largest whole unit that fits, plus its count. */
+type RelativeBucket =
+  | { kind: "now" }
+  | { kind: "unit"; value: number; unit: Intl.RelativeTimeFormatUnit };
+
+/** Bucket an elapsed (non-negative) span in seconds into the unit `timeAgo` shows. */
+function bucketElapsedSeconds(seconds: number): RelativeBucket {
+  if (seconds < 60) return { kind: "now" };
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return { kind: "unit", value: minutes, unit: "minute" };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { kind: "unit", value: hours, unit: "hour" };
+  const days = Math.floor(hours / 24);
+  if (days < 30) return { kind: "unit", value: days, unit: "day" };
+  const months = Math.floor(days / 30);
+  if (months < 12) return { kind: "unit", value: months, unit: "month" };
+  return { kind: "unit", value: Math.floor(months / 12), unit: "year" };
+}
+
+/**
+ * Compact relative time (e.g. `"5m ago"`).
+ *
+ * With no `locale`, returns the wallet's original English shorthand (`"just now"`,
+ * `"5m ago"`, `"3mo ago"`) so existing tests and non-component callers are
+ * unchanged. With a `locale`, formats the same bucket via `Intl.RelativeTimeFormat`
+ * (narrow style) so e.g. `es` renders `"hace 5 min"`. Locale-aware UI should use
+ * the `useFormatters()` hook rather than passing `locale` directly.
+ */
+export function timeAgo(date: string | Date, now = new Date(), locale?: string): string {
   const timestamp = typeof date === "string" ? new Date(date) : date;
   const seconds = Math.max(0, Math.floor((now.getTime() - timestamp.getTime()) / 1000));
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
+  const bucket = bucketElapsedSeconds(seconds);
+
+  if (locale === undefined) {
+    // Original behavior — preserved exactly for backward compatibility.
+    if (bucket.kind === "now") return "just now";
+    const suffix: Partial<Record<Intl.RelativeTimeFormatUnit, string>> = {
+      minute: "m",
+      hour: "h",
+      day: "d",
+      month: "mo",
+      year: "y",
+    };
+    return `${bucket.value}${suffix[bucket.unit] ?? ""} ago`;
+  }
+
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "narrow" });
+  if (bucket.kind === "now") return formatter.format(0, "second");
+  return formatter.format(-bucket.value, bucket.unit);
 }

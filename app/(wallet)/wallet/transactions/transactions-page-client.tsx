@@ -46,18 +46,12 @@ import { TransactionNote } from "@/components/wallet/transaction-note";
 import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
+import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { downloadCsvFile, transactionCsvFilename } from "@/lib/ui/download-csv-file";
 import { transactionsToCsv } from "@/lib/ui/transaction-csv";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import {
-  CCX_PRECISION_DECIMAL_DISPLAY,
-  ccxToNumber,
-  cn,
-  formatCcx,
-  timeAgo,
-  truncateAddress,
-} from "@/lib/utils";
+import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber, cn, truncateAddress } from "@/lib/utils";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
 
 const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals", "Messages"];
@@ -67,10 +61,10 @@ type TransactionStatus = "Confirmed" | "Pending";
 type DateGroup = "Today" | "Yesterday" | "This Week" | "Earlier";
 
 const dateGroups: DateGroup[] = ["Today", "Yesterday", "This Week", "Earlier"];
-const timestampFormatter = new Intl.DateTimeFormat("en-US", {
+const TIMESTAMP_FORMAT: Intl.DateTimeFormatOptions = {
   dateStyle: "medium",
   timeStyle: "short",
-});
+};
 
 const transactionMeta: Record<
   TransactionType,
@@ -134,6 +128,7 @@ const transactionMeta: Record<
 };
 
 export default function TransactionsPageClient() {
+  const fmt = useFormatters();
   const { data = [] } = useTransactions();
   const [active, setActive] = useState("All");
   const [search, setSearch] = useState("");
@@ -153,7 +148,7 @@ export default function TransactionsPageClient() {
           transaction.type,
           transaction.paymentId,
           transaction.message,
-          formatCcx(transaction.amount),
+          fmt.formatCcx(transaction.amount),
         ]
           .filter(Boolean)
           .join(" ")
@@ -162,7 +157,7 @@ export default function TransactionsPageClient() {
         return matchesTab && matchesSearch;
       })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [active, data, search]);
+  }, [active, data, search, fmt]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / size));
   const safePage = Math.min(currentPage, totalPages);
@@ -355,6 +350,7 @@ function TransactionSummary({
   netFlow: number;
   transactionCount: number;
 }) {
+  const { formatCcx, formatNumber } = useFormatters();
   const totalFlow = received + sent + deposits;
   const flowSegments = [
     {
@@ -383,7 +379,7 @@ function TransactionSummary({
     formatter: (value) => `${value >= 0 ? "+" : "−"}${formatCcx(Math.abs(value))}`,
   });
   const transactionCountLabel = useCountUp(transactionCount, {
-    formatter: (value) => Math.round(value).toLocaleString("en-US"),
+    formatter: (value) => formatNumber(Math.round(value)),
   });
 
   return (
@@ -486,6 +482,7 @@ function SummaryMetricCard({
   detail: string;
   tone: "incoming" | "outgoing" | "deposit";
 }) {
+  const { formatCcx } = useFormatters();
   const valueLabel = useCountUp(value, {
     formatter: (countedValue) => `${prefix}${formatCcx(countedValue)}`,
   });
@@ -555,6 +552,7 @@ function TransactionListRow({
   transaction: Transaction;
   onSelect: (transaction: Transaction) => void;
 }) {
+  const fmt = useFormatters();
   const meta = transactionMeta[resolveUiTransactionType(transaction)];
   const status = getTransactionStatus(transaction.confirmations);
   const Icon = meta.icon;
@@ -564,7 +562,7 @@ function TransactionListRow({
       type="button"
       onClick={() => onSelect(transaction)}
       className="group flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors duration-200 hover:bg-secondary/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between"
-      aria-label={`${meta.label} transaction for ${formatSignedAmount(transaction)} from ${timeAgo(transaction.timestamp)}`}
+      aria-label={`${meta.label} transaction for ${formatSignedAmount(transaction, fmt)} from ${fmt.timeAgo(transaction.timestamp)}`}
     >
       <div className="flex min-w-0 items-start gap-3">
         <span
@@ -579,7 +577,7 @@ function TransactionListRow({
             <StatusPill status={status} />
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            <span>{timeAgo(transaction.timestamp)}</span>
+            <span>{fmt.timeAgo(transaction.timestamp)}</span>
             <span aria-hidden="true">•</span>
             <span>{transaction.confirmations} confirmations</span>
           </div>
@@ -590,7 +588,7 @@ function TransactionListRow({
           {meta.label}
         </Badge>
         <span className={cn("font-mono text-base font-semibold", meta.amountClassName)}>
-          <CcxAmount>{formatSignedAmount(transaction)}</CcxAmount>
+          <CcxAmount>{formatSignedAmount(transaction, fmt)}</CcxAmount>
         </span>
         <span className="hidden text-xs text-muted-foreground sm:block">{meta.label}</span>
       </div>
@@ -605,6 +603,7 @@ function TransactionDetailsDialog({
   transaction: Transaction | null;
   onOpenChange: (open: boolean) => void;
 }) {
+  const fmt = useFormatters();
   if (!transaction) {
     return null;
   }
@@ -630,7 +629,8 @@ function TransactionDetailsDialog({
             <div>
               <DialogTitle>{meta.label} Transaction</DialogTitle>
               <DialogDescription>
-                {formatTimestamp(transaction.timestamp)} · {transaction.confirmations} confirmations
+                {formatTimestamp(transaction.timestamp, fmt)} · {transaction.confirmations}{" "}
+                confirmations
               </DialogDescription>
             </div>
           </div>
@@ -641,7 +641,7 @@ function TransactionDetailsDialog({
             <p className="text-sm text-muted-foreground">Signed Amount</p>
             <p className={cn("mt-1 font-mono text-3xl font-bold", meta.amountClassName)}>
               <CcxAmount>
-                {formatSignedAmount(transaction, CCX_PRECISION_DECIMAL_DISPLAY)}
+                {formatSignedAmount(transaction, fmt, CCX_PRECISION_DECIMAL_DISPLAY)}
               </CcxAmount>
             </p>
           </div>
@@ -652,7 +652,7 @@ function TransactionDetailsDialog({
           <DetailRow label="Type" value={meta.label} />
           <DetailRow
             label="Timestamp"
-            value={formatTimestamp(transaction.timestamp)}
+            value={formatTimestamp(transaction.timestamp, fmt)}
             icon={CalendarClock}
           />
           <DetailRow
@@ -660,6 +660,7 @@ function TransactionDetailsDialog({
             value={formatHeightWithConfirmations(
               transaction.blockHeight,
               transaction.confirmations,
+              fmt,
             )}
           />
           <DetailRow label="Status" value={status} />
@@ -727,10 +728,15 @@ function DetailRow({
   );
 }
 
-function formatHeightWithConfirmations(blockHeight: number, confirmations: number): string {
-  const height = blockHeight > 0 ? blockHeight.toLocaleString("en-US") : "Pending";
+function formatHeightWithConfirmations(
+  blockHeight: number,
+  confirmations: number,
+  fmt: Formatters,
+): string {
+  const height = blockHeight > 0 ? fmt.formatNumber(blockHeight) : "Pending";
+  // English plural wording only; full ICU pluralization is out of scope (future).
   const confLabel = confirmations === 1 ? "confirmation" : "confirmations";
-  return `${height} (${confirmations.toLocaleString("en-US")} ${confLabel})`;
+  return `${height} (${fmt.formatNumber(confirmations)} ${confLabel})`;
 }
 
 function StatusPill({ status }: { status: TransactionStatus }) {
@@ -752,11 +758,11 @@ function getTransactionStatus(confirmations: number): TransactionStatus {
   return confirmations >= TX_CONFIRMED_THRESHOLD ? "Confirmed" : "Pending";
 }
 
-function formatSignedAmount(transaction: Transaction, decimals?: number) {
+function formatSignedAmount(transaction: Transaction, fmt: Formatters, decimals?: number) {
   const effectiveType = resolveUiTransactionType(transaction);
   const meta = transactionMeta[effectiveType];
   const sign = effectiveType === "message" && isUiMessageOut(transaction) ? "−" : meta.sign;
-  return `${sign}${formatCcx(transaction.amount, decimals)}`;
+  return `${sign}${fmt.formatCcx(transaction.amount, decimals)}`;
 }
 
 function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
@@ -781,8 +787,8 @@ function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
   }
 }
 
-function formatTimestamp(timestamp: string) {
-  return timestampFormatter.format(new Date(timestamp));
+function formatTimestamp(timestamp: string, fmt: Formatters) {
+  return fmt.formatDate(new Date(timestamp), TIMESTAMP_FORMAT);
 }
 
 function groupTransactionDate(timestamp: string): DateGroup {

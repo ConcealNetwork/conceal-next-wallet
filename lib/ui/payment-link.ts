@@ -1,3 +1,8 @@
+// CoinUri is a pure string codec (only pulls a config constant — no wallet
+// engine), so importing it here keeps mock mode engine-free. Same precedent as
+// lib/ui/parse-scanned-send-payload.ts.
+import { CoinUri } from "@/lib/wallet-core/CoinUri";
+
 const PAYMENT_MESSAGE_ENC_PREFIX = "b64.";
 
 function encodePaymentMessage(message: string): string {
@@ -29,6 +34,8 @@ export type PaymentSendDraft = {
   amount: number;
   paymentId?: string;
   message?: string;
+  /** Recipient name / label — parity with the QR/CoinUri `recipient_name`/`label`. */
+  label?: string;
 };
 
 export type PaymentLinkInput = {
@@ -36,6 +43,8 @@ export type PaymentLinkInput = {
   amount: string;
   paymentId?: string;
   message?: string;
+  /** Recipient name / label — parity with the QR/CoinUri `recipient_name`/`label`. */
+  label?: string;
   /** v1 web-wallet hash URL (`#!send?…`); otherwise v3 app route. */
   v1: boolean;
   origin?: string;
@@ -62,6 +71,7 @@ export function buildPaymentSendUrl(input: PaymentLinkInput): string {
     if (input.v1) params.set("txDesc", message);
     else params.set("message", encodePaymentMessage(message));
   }
+  if (input.label?.trim()) params.set("label", input.label.trim());
 
   if (input.v1) {
     return `${origin}/#!send?${params.toString()}`;
@@ -71,13 +81,44 @@ export function buildPaymentSendUrl(input: PaymentLinkInput): string {
   return `${origin}${basePath}/wallet/send?${params.toString()}`;
 }
 
+/** Build a draft from a `conceal:`/`web+conceal:`/bare CoinUri string. */
+function draftFromCoinUri(raw: string): PaymentSendDraft | null {
+  let decoded: ReturnType<typeof CoinUri.decodeTx>;
+  try {
+    // CoinUri.decodeTx tolerates `conceal:`/`conceal.`/bare; strip our PWA
+    // protocol scheme first. It throws bare strings on malformed input.
+    decoded = CoinUri.decodeTx(raw.replace(/^web\+conceal:/i, ""));
+  } catch {
+    return null;
+  }
+  if (!decoded?.address || !decoded.amount || !/^\d+(\.\d+)?$/.test(decoded.amount)) return null;
+  const amount = Number.parseFloat(decoded.amount);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return {
+    address: decoded.address,
+    amount,
+    paymentId: decoded.paymentId || undefined,
+    message: decoded.description || undefined,
+    label: decoded.recipientName || undefined,
+  };
+}
+
 export function parsePaymentSendDraft(search?: string): PaymentSendDraft | null {
   const params = new URLSearchParams(
     search ?? (typeof window !== "undefined" ? window.location.search : ""),
   );
+  // PWA protocol-handler / standard-URI form: `?uri=web+conceal:ccx7…?amount=…`.
+  const uri = params.get("uri")?.trim();
+  if (uri) return draftFromCoinUri(uri);
+
   const address = params.get("address")?.trim();
-  const amountRaw = params.get("amount");
+  const amountRaw = params.get("amount")?.trim();
   if (!address || !amountRaw) return null;
+
+  // BIP21 mandates a period decimal separator. parseFloat would silently
+  // truncate a comma-decimal amount ("1,5" → 1), so reject any non-numeric
+  // shape (commas, spaces, trailing junk) up front rather than misreading it.
+  if (!/^\d+(\.\d+)?$/.test(amountRaw)) return null;
 
   const amount = Number.parseFloat(amountRaw);
   if (!Number.isFinite(amount) || amount <= 0) return null;
@@ -85,7 +126,11 @@ export function parsePaymentSendDraft(search?: string): PaymentSendDraft | null 
   const paymentId =
     params.get("paymentId")?.trim() || params.get("payment_id")?.trim() || undefined;
   const messageRaw = params.get("message")?.trim() || params.get("txDesc")?.trim() || undefined;
+  // `message` may be a `b64.`-encoded token (our links) or a plain value
+  // (other-wallet / hand-written links); decodePaymentMessage returns plain
+  // values unchanged, so this covers both.
   const message = messageRaw ? decodePaymentMessage(messageRaw) : undefined;
+  const label = params.get("label")?.trim() || params.get("recipient_name")?.trim() || undefined;
 
-  return { address, amount, paymentId, message };
+  return { address, amount, paymentId, message, label };
 }

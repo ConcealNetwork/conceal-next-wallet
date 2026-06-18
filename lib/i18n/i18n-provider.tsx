@@ -18,6 +18,16 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+// Track keys already warned about so a missing translation logs once per key
+// rather than on every render. Dev-only — never runs in a production build.
+const warnedMissingKeys = new Set<string>();
+
+function warnMissingKey(key: string, locale: Locale): void {
+  if (warnedMissingKeys.has(key)) return;
+  warnedMissingKeys.add(key);
+  console.warn(`[i18n] Missing translation for "${key}" (locale "${locale}"); rendering raw key.`);
+}
+
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   // Match SSR (default) on first render to avoid a hydration mismatch; the real
   // locale is read from storage / the browser in the mount effect.
@@ -58,7 +68,19 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     return {
       locale,
       setLocale,
-      t: (key, vars) => translate(dict, fallback, key, vars),
+      t: (key, vars) => {
+        // Dev-only visibility: warn once we hit a key absent from both the active
+        // locale and the English fallback, so missing translations surface during
+        // development instead of silently rendering the raw key. Stripped in prod.
+        if (
+          process.env.NODE_ENV !== "production" &&
+          !Object.hasOwn(dict, key) &&
+          !Object.hasOwn(fallback, key)
+        ) {
+          warnMissingKey(key, locale);
+        }
+        return translate(dict, fallback, key, vars);
+      },
     };
   }, [locale, setLocale]);
 

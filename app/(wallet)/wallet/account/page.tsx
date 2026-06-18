@@ -11,8 +11,6 @@ import { CcxAmount } from "@/components/wallet/ccx";
 import { PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
-import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
-import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types";
 import {
   useDeposits,
   useMarketData,
@@ -21,17 +19,11 @@ import {
   useWalletInfo,
   useWalletViewOnly,
 } from "@/lib/hooks";
-import {
-  ccxToNumber,
-  cn,
-  formatCcx,
-  formatUsd,
-  stripTickerSuffix,
-  timeAgo,
-  truncateAddress,
-  walletBalanceUsd,
-} from "@/lib/utils";
+import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
+import { useFormatters } from "@/lib/i18n/use-formatters";
+import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types";
 import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
+import { ccxToNumber, cn, stripTickerSuffix, truncateAddress, walletBalanceUsd } from "@/lib/utils";
 
 const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false });
 const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false });
@@ -140,7 +132,7 @@ export default function AccountPage() {
                 sent={totals.sent}
                 deposits={totals.deposits}
                 transactionCount={transactions.data?.length ?? 0}
-                lastActivity="1h ago"
+                lastActivityAt={transactions.data?.[0]?.timestamp}
               />
             )}
             {transactions.data && transactions.data.length > 0 ? (
@@ -197,15 +189,17 @@ function TransactionFlowSummary({
   sent,
   deposits,
   transactionCount,
-  lastActivity,
+  lastActivityAt,
 }: {
   received: number;
   sent: number;
   deposits: number;
   transactionCount: number;
-  lastActivity: string;
+  lastActivityAt?: string;
 }) {
+  const { formatCcx, timeAgo } = useFormatters();
   const total = received + sent + deposits;
+  const lastActivity = lastActivityAt ? timeAgo(lastActivityAt) : "—";
   const segments = [
     {
       label: "In",
@@ -282,6 +276,7 @@ const TX_META: Record<TransactionType, { label: string; sign: string; className:
 };
 
 function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
+  const { formatCcx, timeAgo } = useFormatters();
   return (
     <div className="mt-5">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -329,6 +324,7 @@ function MarketSummaryHybrid({
   market: MarketData;
   walletInfo: WalletInfo;
 }) {
+  const { formatCcx, formatUsd } = useFormatters();
   const prefersReducedMotion = usePrefersReducedMotion();
   const available = ccxToNumber(walletInfo.available);
   const locked = ccxToNumber(walletInfo.lockedDeposits);

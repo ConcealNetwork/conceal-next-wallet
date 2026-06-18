@@ -6,7 +6,6 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { InfoPillButton } from "@/components/ui/info-pill-button";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InfoPillButton } from "@/components/ui/info-pill-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -30,6 +30,11 @@ import { EmptyState, PageHeader, SectionCard, ViewOnlyBadge } from "@/components
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import {
+  COIN_FEE_ATOMIC,
+  COIN_UNIT_PLACES,
+  DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC,
+} from "@/lib/config/config";
+import {
   useCreateDeposit,
   useDepositConstraints,
   useDepositPreview,
@@ -39,19 +44,15 @@ import {
   useWithdrawDeposit,
 } from "@/lib/hooks";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
-import {
-  COIN_FEE_ATOMIC,
-  COIN_UNIT_PLACES,
-  DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC,
-} from "@/lib/config/config";
+import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
+import type { CreateDepositInput } from "@/lib/services/deposit.service";
 import {
   DEPOSIT_DURATION_OPTIONS,
   estimateDepositUnlockDays,
 } from "@/lib/services/deposit.service";
-import type { CreateDepositInput } from "@/lib/services/deposit.service";
 import type { Deposit } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { ccxToNumber, cn, formatCcx, truncateAddress, usdSubline } from "@/lib/utils";
+import { ccxToNumber, cn, truncateAddress, usdSubline } from "@/lib/utils";
 import { InterestCalculatorDialog } from "./interest-calculator-dialog";
 
 const ResponsiveContainer = dynamic(
@@ -78,11 +79,11 @@ const DEPOSIT_SERIES_COLORS = [
 ];
 const PROJECTION_SAMPLES = 28;
 
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   day: "numeric",
   month: "short",
   year: "numeric",
-});
+};
 
 type DepositView = "cards" | "table" | "timeline";
 
@@ -258,6 +259,8 @@ function buildProjection(deposits: Deposit[], maxDays: number): ProjectionPoint[
 }
 
 function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
+  const fmt = useFormatters();
+  const { formatCcx, formatNumber } = fmt;
   const activeDeposits = useMemo(
     () => deposits.filter((deposit) => deposit.status === "active"),
     [deposits],
@@ -320,7 +323,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
         <SummaryCard
           label="Active Deposits"
           value={activeDeposits.length}
-          formatter={(value) => Math.round(value).toLocaleString("en-US")}
+          formatter={(value) => formatNumber(Math.round(value))}
           detail="Time locks open"
           tone="default"
           index={1}
@@ -341,7 +344,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
         <SummaryCard
           label="Weighted Avg APR"
           value={weightedApr}
-          formatter={(value) => `${value.toLocaleString("en-US", { maximumFractionDigits: 2 })}%`}
+          formatter={(value) => `${formatNumber(value, { maximumFractionDigits: 2 })}%`}
           detail="Amount-weighted"
           tone="incoming"
           index={3}
@@ -353,7 +356,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           formatter={(value) => (nextUnlock ? `${Math.round(value)} days` : "None")}
           detail={
             nextUnlock
-              ? `Matures ${formatMaturityDate(nextUnlock.unlocksInDays)}`
+              ? `Matures ${formatMaturityDate(nextUnlock.unlocksInDays, fmt)}`
               : "No active deposits"
           }
           tone="default"
@@ -564,6 +567,7 @@ function ProjectionChart({
   nextUnlock: Deposit | null;
   maxUnlock: number;
 }) {
+  const { formatCcx } = useFormatters();
   return (
     <div className="rounded-xl border border-border bg-secondary/60 p-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -634,6 +638,7 @@ function CompositionDonut({
   segments: DepositSegment[];
   totalLocked: number;
 }) {
+  const { formatCcx, formatNumber } = useFormatters();
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
   const arcs = segments.reduce<{ segment: DepositSegment; fraction: number; start: number }[]>(
@@ -680,7 +685,7 @@ function CompositionDonut({
           </svg>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <span className="font-mono text-xl font-bold leading-none text-foreground">
-              {Math.round(totalLocked).toLocaleString("en-US")}
+              {formatNumber(Math.round(totalLocked))}
             </span>
             <span className="mt-1 text-[10px] text-muted-foreground">CCX locked</span>
           </div>
@@ -793,6 +798,8 @@ function DepositsView({ deposits, view }: { deposits: Deposit[]; view: DepositVi
 }
 
 function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
+  const fmt = useFormatters();
+  const { formatCcx } = fmt;
   const status = getDepositStatus(deposit);
   const isWithdrawn = deposit.status === "spent";
   const Icon = isWithdrawn || status === "matured" ? Unlock : Lock;
@@ -800,7 +807,7 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
   const principal = ccxToNumber(deposit.amount);
   const interest = ccxToNumber(deposit.interest);
   const maturityValue = principal + interest;
-  const maturityDate = formatMaturityDate(deposit.unlocksInDays);
+  const maturityDate = formatMaturityDate(deposit.unlocksInDays, fmt);
   const usd = (ccx: number) => usdSubline(ccx, price);
 
   return (
@@ -890,6 +897,7 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
 }
 
 function DepositsTable({ deposits }: { deposits: Deposit[] }) {
+  const { formatCcx } = useFormatters();
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full min-w-[880px] text-sm">
@@ -965,6 +973,8 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
 }
 
 function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
+  const fmt = useFormatters();
+  const { formatCcx } = fmt;
   return (
     <div className="relative pl-7 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-px before:bg-border">
       {deposits.map((deposit, index) => {
@@ -992,7 +1002,7 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
               )}
               aria-hidden="true"
             />
-            <p className="text-xs text-muted-foreground">{getTimelineDateLabel(deposit)}</p>
+            <p className="text-xs text-muted-foreground">{getTimelineDateLabel(deposit, fmt)}</p>
             <div className="mt-2 flex flex-col gap-3 rounded-xl border border-border bg-secondary/60 p-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1072,6 +1082,7 @@ function DepositWithdrawButton({
   deposit: Deposit;
   size?: "default" | "xs";
 }) {
+  const { formatCcx } = useFormatters();
   const withdraw = useWithdrawDeposit();
   const viewOnly = useWalletViewOnly();
   const [open, setOpen] = useState(false);
@@ -1264,6 +1275,8 @@ function CreateDepositDialog({
   onOpenChange: (open: boolean) => void;
   onCreate: (input: CreateDepositInput) => void;
 }) {
+  const fmt = useFormatters();
+  const { formatCcx, formatNumber } = fmt;
   const viewOnly = useWalletViewOnly();
   const [amount, setAmount] = useState("100");
   const [duration, setDuration] = useState("12");
@@ -1284,7 +1297,10 @@ function CreateDepositDialog({
   const previewInterest = preview.data?.interestCcx ?? 0;
   const previewApr = preview.data?.indicativeApr ?? 0;
   const createFee = COIN_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
-  const maturityDate = formatDate(addDays(new Date(), estimateDepositUnlockDays(durationMonths)));
+  const maturityDate = formatDate(
+    addDays(new Date(), estimateDepositUnlockDays(durationMonths)),
+    fmt,
+  );
 
   useEffect(() => {
     if (!open) setStep("form");
@@ -1296,7 +1312,7 @@ function CreateDepositDialog({
       return;
     }
     if (maxAmount > 0 && amountValue > maxAmount) {
-      setAmountError(`Maximum deposit is ${maxAmount.toLocaleString("en-US")} CCX.`);
+      setAmountError(`Maximum deposit is ${formatNumber(maxAmount)} CCX.`);
       return;
     }
     setAmountError("");
@@ -1359,7 +1375,7 @@ function CreateDepositDialog({
                           className="cursor-pointer font-semibold text-primary hover:text-primary/80"
                           onClick={() => setAmount(String(maxAmount))}
                         >
-                          Max {maxAmount.toLocaleString("en-US")} CCX
+                          Max {formatNumber(maxAmount)} CCX
                         </button>
                       ) : (
                         "Available balance loading…"
@@ -1542,19 +1558,19 @@ function getUnlocksLabel(deposit: Deposit, variant: "table" | "timeline") {
   return `${deposit.unlocksInDays} day${deposit.unlocksInDays === 1 ? "" : "s"}`;
 }
 
-function getTimelineDateLabel(deposit: Deposit) {
+function getTimelineDateLabel(deposit: Deposit, fmt: Formatters) {
   if (deposit.status === "spent") return "Withdrawn";
   if (deposit.withdrawPending) return "Withdrawal pending";
   if (canWithdrawDeposit(deposit)) return "Ready now";
-  return `${formatMaturityDate(deposit.unlocksInDays)} - in ${getUnlocksLabel(deposit, "timeline")}`;
+  return `${formatMaturityDate(deposit.unlocksInDays, fmt)} - in ${getUnlocksLabel(deposit, "timeline")}`;
 }
 
-function formatMaturityDate(unlocksInDays: number) {
-  return formatDate(addDays(new Date(), unlocksInDays));
+function formatMaturityDate(unlocksInDays: number, fmt: Formatters) {
+  return formatDate(addDays(new Date(), unlocksInDays), fmt);
 }
 
-function formatDate(date: Date) {
-  return dateFormatter.format(date);
+function formatDate(date: Date, fmt: Formatters) {
+  return fmt.formatDate(date, DATE_FORMAT);
 }
 
 function addDays(date: Date, days: number) {

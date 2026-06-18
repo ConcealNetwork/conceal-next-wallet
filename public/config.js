@@ -39,7 +39,7 @@ myGlobal.config = {
     optimizeOutputs: 100,
     optimizeThreshold: 900000000,
     messageTxAmount: new JSBigInt('100'),
-    maxMessageSize: 260,
+    maxMessageSize: 251,
     cryptonoteMemPoolTxLifetime: (60 * 60 * 12),
     fusionTxMinInOutCountRatio: 4,
     maxFusionOutputs: 8,

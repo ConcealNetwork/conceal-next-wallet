@@ -59,21 +59,21 @@ declare var config: {
   [key: string]: any;
 };
 
-import type { Wallet } from "./Wallet";
-import { MathUtil } from "./MathUtil";
-import { isKnownSmartMessage } from "@/lib/messages/smart-message";
+import { isSmartMessage } from "@/lib/messages/smart-message";
+import type { RawDaemon_Out, RawDaemon_Transaction } from "./blockchain/BlockchainExplorer";
 import { Cn, CnTransactions } from "./Cn";
-import type { RawDaemon_Transaction, RawDaemon_Out } from "./blockchain/BlockchainExplorer";
+import { Currency } from "./Currency";
+import { InterestCalculator } from "./Interest";
+import { MathUtil } from "./MathUtil";
 import {
+  Deposit,
   Transaction,
   TransactionData,
-  Deposit,
   TransactionIn,
   TransactionOut,
 } from "./Transaction";
-import { InterestCalculator } from "./Interest";
-import { Currency } from "./Currency";
 import { decode as varintDecode } from "./Varint";
+import type { Wallet } from "./Wallet";
 
 export const TX_EXTRA_PADDING_MAX_COUNT = 255;
 export const TX_EXTRA_NONCE_MAX_COUNT = 255;
@@ -366,9 +366,16 @@ export class TransactionsExplorer {
     // make a binary array out of raw message
     const rawMessArr = concealjs.cnutils.hextobin(rawMessage);
 
-    // Smart messages (e.g. {status,alive} check-ins) are ChaCha12 — try that
-    // first and accept it only as a valid, checksummed smart message; otherwise
-    // fall through to the unchanged ChaCha8 path below for ordinary chat.
+    // Smart messages (e.g. {status,alive} check-ins) ride ChaCha12 — try that
+    // first and accept it when the checksum is valid AND the plaintext is
+    // structurally a smart message (a single `{...}` brace token). We gate on
+    // the STRUCTURE, not our known-module allow-list: other Conceal wallets
+    // send smart messages with modules we don't recognise, and rejecting them
+    // here would push them to the ChaCha8 path, fail its checksum and DROP the
+    // message entirely. ChaCha8 is the cipher, not a smart-message frame, so a
+    // chat plaintext decrypted under ChaCha12 won't pass the checksum + brace
+    // check — ordinary chat still falls through to ChaCha8 below. (Encrypt side
+    // is unchanged: we only ever SEND known modules over ChaCha12.)
     try {
       const c12: Uint8Array = concealjs.cypher.chacha12(hashBuf, nonceBuf, rawMessArr);
       let checksumOk = true;
@@ -379,10 +386,8 @@ export class TransactionsExplorer {
         }
       }
       if (checksumOk) {
-        const candidate = new TextDecoder()
-          .decode(c12)
-          .slice(0, -TX_EXTRA_MESSAGE_CHECKSUM_SIZE);
-        if (isKnownSmartMessage(candidate)) {
+        const candidate = new TextDecoder().decode(c12).slice(0, -TX_EXTRA_MESSAGE_CHECKSUM_SIZE);
+        if (isSmartMessage(candidate)) {
           return candidate;
         }
       }

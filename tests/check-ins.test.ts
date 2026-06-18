@@ -10,6 +10,7 @@ import {
   lastReceivedForWatcher,
   lastReceivedFrom,
   messageMatchesWatcher,
+  overdueInstanceKeys,
   type WatchedContact,
 } from "@/lib/ui/check-ins";
 
@@ -69,7 +70,9 @@ describe("check-in freshness (indicator)", () => {
     const fresh = [msg({ body: checkin, timestamp: "2026-02-01T00:00:00.000Z" })];
     expect(hasFreshCheckIn(w, fresh, "2026-02-10T00:00:00.000Z")).toBe(true);
     expect(hasFreshCheckIn(w, fresh, "2026-03-15T00:00:00.000Z")).toBe(false); // overdue
-    expect(hasFreshCheckIn(watcher({ paused: true }), fresh, "2026-02-10T00:00:00.000Z")).toBe(false);
+    expect(hasFreshCheckIn(watcher({ paused: true }), fresh, "2026-02-10T00:00:00.000Z")).toBe(
+      false,
+    );
     // No check-in messages → no indicator even if plain messages exist.
     expect(hasFreshCheckIn(w, [msg({ body: "hi" })], "2026-01-01T12:00:00.000Z")).toBe(false);
   });
@@ -108,7 +111,9 @@ describe("checkInStatus", () => {
     expect(checkInStatus(watcher(), null, "2026-06-01T00:00:00.000Z")).toBe("waiting");
   });
   it("paused when explicitly paused", () => {
-    expect(checkInStatus(watcher({ paused: true }), last, "2026-06-01T00:00:00.000Z")).toBe("paused");
+    expect(checkInStatus(watcher({ paused: true }), last, "2026-06-01T00:00:00.000Z")).toBe(
+      "paused",
+    );
   });
   it("paused while snoozed, then evaluates normally after", () => {
     const w = watcher({ snoozedUntil: "2026-02-01T00:00:00.000Z" });
@@ -137,5 +142,35 @@ describe("daysSince", () => {
   it("whole days, clamped at zero", () => {
     expect(daysSince("2026-01-01T00:00:00.000Z", "2026-01-04T00:00:00.000Z")).toBe(3);
     expect(daysSince("2026-01-04T00:00:00.000Z", "2026-01-01T00:00:00.000Z")).toBe(0);
+  });
+});
+
+describe("overdueInstanceKeys (per-instance de-dupe for alerts)", () => {
+  const now = "2026-03-01T00:00:00.000Z";
+
+  it("keys only overdue contacts by id + last-heard", () => {
+    const stale = [msg({ counterpartyAddress: BOB, timestamp: "2026-01-01T00:00:00.000Z" })];
+    const keys = overdueInstanceKeys([watcher({ id: "bob", address: BOB })], stale, now);
+    expect(keys).toEqual(["bob@2026-01-01T00:00:00.000Z"]);
+  });
+
+  it("omits fresh, waiting, and paused contacts", () => {
+    const messages = [msg({ counterpartyAddress: BOB, timestamp: "2026-02-28T00:00:00.000Z" })];
+    const watchers = [
+      watcher({ id: "bob", address: BOB }), // fresh → ok
+      watcher({ id: "mum", address: "ccx7mum" }), // never heard → waiting
+      watcher({ id: "srv", address: "ccx7srv", paused: true }), // paused
+    ];
+    expect(overdueInstanceKeys(watchers, messages, now)).toEqual([]);
+  });
+
+  it("mints a fresh key once a newer message advances last-heard", () => {
+    const w = watcher({ id: "bob", address: BOB });
+    const old = [msg({ counterpartyAddress: BOB, timestamp: "2026-01-01T00:00:00.000Z" })];
+    const [firstKey] = overdueInstanceKeys([w], old, now);
+    // A newer (but still stale relative to now) message changes the basis.
+    const newer = [msg({ counterpartyAddress: BOB, timestamp: "2026-01-15T00:00:00.000Z" })];
+    const [secondKey] = overdueInstanceKeys([w], newer, now);
+    expect(secondKey).not.toBe(firstKey);
   });
 });

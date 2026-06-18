@@ -5,11 +5,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/wallet/common";
 import { useNetworkStatus, useSmartNodes } from "@/lib/hooks";
 import { useNetworkTelemetry } from "@/lib/hooks/network-telemetry-provider";
+import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import {
   ensureSparklinePoints,
   normalizeHashrateChartSeries,
 } from "@/lib/hooks/use-network-telemetry-history";
-import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
+import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import { formatNodeVersion } from "@/lib/network/format-node-version";
 import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
 import type { SmartNode } from "@/lib/types";
@@ -19,6 +20,7 @@ const BLOCK_TARGET_SECONDS = 120;
 const TELEMETRY_SKELETON_KEYS = ["height", "hashrate", "peers", "block-time"] as const;
 
 export default function NetworkPage() {
+  const fmt = useFormatters();
   const { data, isLoading } = useNetworkStatus();
   const { history: telemetry, hashrateChart } = useNetworkTelemetry();
   const {
@@ -32,7 +34,7 @@ export default function NetworkPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const animate = !prefersReducedMotion;
   const heightLabel = useCountUp(data?.height ?? 0, {
-    formatter: (value) => Math.round(value).toLocaleString(),
+    formatter: (value) => fmt.formatNumber(Math.round(value)),
   });
   const peersLabel = useCountUp(data?.peers ?? 0, {
     formatter: (value) => String(Math.round(value)),
@@ -112,8 +114,10 @@ export default function NetworkPage() {
           <SyncRing pct={syncPct} />
           <div className="text-center">
             <p className="font-mono text-sm text-foreground">
-              {data.height.toLocaleString()}{" "}
-              <span className="text-muted-foreground">/ {data.networkHeight.toLocaleString()}</span>
+              {fmt.formatNumber(data.height)}{" "}
+              <span className="text-muted-foreground">
+                / {fmt.formatNumber(data.networkHeight)}
+              </span>
             </p>
             <p className="mt-1 text-xs text-muted-foreground">block height · network tip</p>
           </div>
@@ -141,7 +145,7 @@ export default function NetworkPage() {
         <ChartCard
           label="Block Height"
           value={heightLabel}
-          detail={`+1 block · ${formatRelative(data.lastBlockSecondsAgo)}`}
+          detail={`+1 block · ${formatRelative(data.lastBlockSecondsAgo, fmt)}`}
           tone="amber"
           delay={210}
           chart={<BlockChainStrip blocks={heightBars} animate={animate} />}
@@ -150,7 +154,7 @@ export default function NetworkPage() {
           label="Network Hashrate"
           value={formatHashrate(data.hashrate)}
           secondaryLabel="Difficulty"
-          secondaryValue={formatDifficulty(data.difficulty)}
+          secondaryValue={formatDifficulty(data.difficulty, fmt)}
           delay={260}
           chart={<MiniArea values={hashrateSeries} color="hsl(var(--chart-1))" />}
         />
@@ -625,14 +629,19 @@ function formatHashrate(hps: number) {
   return `${Math.round(hps)} H/s`;
 }
 
-function formatDifficulty(difficulty: number) {
+function formatDifficulty(difficulty: number, fmt: Formatters) {
   if (difficulty >= 1e9) return `${(difficulty / 1e9).toFixed(2)} G`;
   if (difficulty >= 1e6) return `${(difficulty / 1e6).toFixed(2)} M`;
-  return difficulty.toLocaleString();
+  return fmt.formatNumber(difficulty);
 }
 
-function formatRelative(seconds: number) {
-  if (seconds < 60) return `${Math.round(seconds)}s ago`;
-  const minutes = Math.round(seconds / 60);
-  return `${minutes}m ago`;
+/**
+ * Localized "N seconds/minutes ago". Uses `Intl.RelativeTimeFormat` directly (not
+ * the shared `timeAgo`) because this label needs second-level resolution, which
+ * `timeAgo`'s bucketing collapses to "just now".
+ */
+function formatRelative(seconds: number, fmt: Formatters) {
+  const relative = new Intl.RelativeTimeFormat(fmt.locale, { numeric: "auto", style: "narrow" });
+  if (seconds < 60) return relative.format(-Math.round(seconds), "second");
+  return relative.format(-Math.round(seconds / 60), "minute");
 }

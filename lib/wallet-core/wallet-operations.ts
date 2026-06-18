@@ -469,8 +469,16 @@ export async function sendMessageOperation(input: SendMessageInput): Promise<Mes
 
   const body = input.body.trim();
   if (!body) throw new Error("Message is required.");
-  if (body.length > MAX_MESSAGE_SIZE) {
-    throw new Error(`Message exceeds maximum length of ${MAX_MESSAGE_SIZE} characters.`);
+  // Validate in UTF-8 BYTES, not UTF-16 char count: the encrypted blob is the
+  // body's UTF-8 bytes + a 4-byte zero checksum, and the on-chain tx_extra
+  // length field is a single byte (≤255). So the real body ceiling is
+  // MAX_MESSAGE_SIZE (251) bytes. A 252+ char ASCII message — or a shorter
+  // multi-byte/emoji message whose UTF-8 length exceeds the budget — would
+  // pass a `.length` check but frame corrupt on-chain (the high byte of the
+  // length is dropped). MAX_MESSAGE_SIZE is a byte budget (251 = 255 − 4).
+  const bodyByteLength = new TextEncoder().encode(body).length;
+  if (bodyByteLength > MAX_MESSAGE_SIZE) {
+    throw new Error(`Message exceeds maximum length of ${MAX_MESSAGE_SIZE} bytes.`);
   }
 
   const destinationAddress = input.recipientAddress.trim();
