@@ -11,6 +11,7 @@
  * a secret, so enrollment refuses them with a clear message rather than silently
  * failing — the password remains the always-available unlock.
  */
+import { aaguidFromAuthData, authenticatorLabel } from "@/lib/auth/aaguid-names";
 import type { PasskeyCredential, PasskeyEnrollment } from "@/lib/auth/biometric-store";
 import {
   base64urlToBytes,
@@ -20,7 +21,14 @@ import {
   PRF_SALT,
 } from "@/lib/auth/webauthn-crypto";
 
-export type PasskeyErrorCode = "cancelled" | "no-prf" | "failed" | "unsupported";
+const CEREMONY_TIMEOUT_MS = 60_000;
+
+export type PasskeyErrorCode =
+  | "cancelled"
+  | "no-prf"
+  | "failed"
+  | "unsupported"
+  | "already-enrolled";
 
 /** Typed failure so the UI can show the right message instead of a raw string. */
 export class PasskeyError extends Error {
@@ -33,6 +41,8 @@ export class PasskeyError extends Error {
   }
 }
 
+type CredentialRef = { id: string; transports?: AuthenticatorTransport[] };
+
 /** WebAuthn is usable for passkey unlock at all (platform OR roaming authenticators). */
 export function isPasskeyUnlockAvailable(): boolean {
   return typeof window !== "undefined" && typeof window.PublicKeyCredential !== "undefined";
@@ -43,9 +53,31 @@ export function isPasskeyUnlockAvailable(): boolean {
  * Used only to tailor copy ("biometric" vs "passkey"); roaming security keys and
  * phone passkeys still work when this is false.
  */
+/**
+ * Modern feature/capability detection (WebAuthn L3 `getClientCapabilities`).
+ * Returns a flag map like `{ userVerifyingPlatformAuthenticator, hybridTransport,
+ * signalUnknownCredential, … }`, or `{}` where the API is unsupported.
+ */
+export async function getPasskeyCapabilities(): Promise<Record<string, boolean>> {
+  if (!isPasskeyUnlockAvailable()) return {};
+  try {
+    // biome-ignore lint/suspicious/noExplicitAny: getClientCapabilities isn't in lib.dom yet
+    const getCaps = (window.PublicKeyCredential as any).getClientCapabilities;
+    if (typeof getCaps !== "function") return {};
+    return ((await getCaps.call(window.PublicKeyCredential)) as Record<string, boolean>) ?? {};
+  } catch {
+    return {};
+  }
+}
+
 export async function isPlatformAuthenticatorAvailable(): Promise<boolean> {
   if (!isPasskeyUnlockAvailable()) return false;
   try {
+    // Prefer the modern capability map; fall back to the classic probe.
+    const caps = await getPasskeyCapabilities();
+    if (typeof caps.userVerifyingPlatformAuthenticator === "boolean") {
+      return caps.userVerifyingPlatformAuthenticator;
+    }
     return await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
   } catch {
     return false;
@@ -58,21 +90,46 @@ function prfResult(credential: PublicKeyCredential | null): ArrayBuffer | undefi
   return results instanceof ArrayBuffer ? results : undefined;
 }
 
-function labelFor(credential: PublicKeyCredential): string {
-  // biome-ignore lint/suspicious/noExplicitAny: authenticatorAttachment isn't on the lib.dom type
-  const attachment = (credential as any).authenticatorAttachment;
-  if (attachment === "platform") return "This device";
-  if (attachment === "cross-platform") return "Security key or phone";
-  return "Passkey";
+function transportsOf(
+  response: AuthenticatorAttestationResponse,
+): AuthenticatorTransport[] | undefined {
+  const list = response.getTransports?.() as AuthenticatorTransport[] | undefined;
+  return list?.length ? list : undefined;
+}
+
+function labelFor(
+  credential: PublicKeyCredential,
+  transports: AuthenticatorTransport[] | undefined,
+): string {
+  const response = credential.response as AuthenticatorAttestationResponse;
+  const authData = response.getAuthenticatorData?.();
+  return authenticatorLabel({
+    aaguid: aaguidFromAuthData(authData),
+    transports,
+    // biome-ignore lint/suspicious/noExplicitAny: authenticatorAttachment isn't on the lib.dom type
+    attachment: (credential as any).authenticatorAttachment,
+  });
+}
+
+function descriptor(ref: CredentialRef): PublicKeyCredentialDescriptor {
+  return {
+    id: base64urlToBytes(ref.id),
+    type: "public-key",
+    ...(ref.transports ? { transports: ref.transports } : {}),
+  };
 }
 
 /**
  * Register an authenticator and encrypt `password` with its PRF secret. No
  * `authenticatorAttachment` is pinned, so platform and roaming authenticators
- * both qualify. Throws a {@link PasskeyError} on cancel or when the chosen
- * authenticator can't produce a PRF secret.
+ * both qualify. `existing` is passed as excludeCredentials so the same
+ * authenticator can't be enrolled twice. Throws a {@link PasskeyError} on cancel,
+ * a duplicate, or when the chosen authenticator can't produce a PRF secret.
  */
-export async function enrollPasskeyCredential(password: string): Promise<PasskeyCredential> {
+export async function enrollPasskeyCredential(
+  password: string,
+  existing: PasskeyCredential[] = [],
+): Promise<PasskeyCredential> {
   if (!isPasskeyUnlockAvailable()) {
     throw new PasskeyError("unsupported", "This browser doesn't support passkeys.");
   }
@@ -97,23 +154,37 @@ export async function enrollPasskeyCredential(password: string): Promise<Passkey
           userVerification: "required",
           residentKey: "discouraged",
         },
+        excludeCredentials: existing.map((c) =>
+          descriptor({ id: c.credentialId, transports: c.transports }),
+        ),
+        timeout: CEREMONY_TIMEOUT_MS,
         attestation: "none",
-        // biome-ignore lint/suspicious/noExplicitAny: PRF extension input isn't in lib.dom yet
-        extensions: { prf: { eval: { first: PRF_SALT } } } as any,
+        // biome-ignore lint/suspicious/noExplicitAny: PRF/credProps inputs aren't in lib.dom yet
+        extensions: { prf: { eval: { first: PRF_SALT } }, credProps: true } as any,
       },
     })) as PublicKeyCredential | null;
   } catch (error) {
+    if (error instanceof DOMException && error.name === "InvalidStateError") {
+      throw new PasskeyError(
+        "already-enrolled",
+        "This authenticator is already registered — use it to unlock, or add a different one.",
+      );
+    }
     throw new PasskeyError("cancelled", asCancelMessage(error));
   }
 
   if (!created) throw new PasskeyError("cancelled", "Passkey enrollment was cancelled.");
   const credentialId = bytesToBase64url(created.rawId);
+  const transports = transportsOf(created.response as AuthenticatorAttestationResponse);
+  // credProps.rk === true → a discoverable/synced passkey (iCloud, Google, …).
+  // biome-ignore lint/suspicious/noExplicitAny: credProps isn't in lib.dom yet
+  const discoverable = (created.getClientExtensionResults() as any)?.credProps?.rk === true;
 
   // Some authenticators return the PRF result from create(); others only from a
   // follow-up get(). Try create() first, then fall back to an assertion.
   let secret = prfResult(created);
   if (!secret) {
-    secret = (await assertPrfSecret([credentialId])).secret;
+    secret = (await assertPrfSecret([{ id: credentialId, transports }])).secret;
   }
   if (!secret) {
     throw new PasskeyError(
@@ -124,9 +195,11 @@ export async function enrollPasskeyCredential(password: string): Promise<Passkey
 
   return {
     credentialId,
-    label: labelFor(created),
+    label: labelFor(created, transports),
     encrypted: await encryptWithSecret(secret, password),
     createdAt: new Date().toISOString(),
+    ...(transports ? { transports } : {}),
+    ...(discoverable ? { discoverable: true } : {}),
   };
 }
 
@@ -139,22 +212,20 @@ function asCancelMessage(error: unknown): string {
 }
 
 async function assertPrfSecret(
-  credentialIds: string[],
+  credentials: CredentialRef[],
 ): Promise<{ secret?: ArrayBuffer; credentialId?: string }> {
-  if (!credentialIds.length) return {};
+  if (!credentials.length) return {};
   // Per-credential PRF salts — every enrolled credential evaluates the same app
   // salt, so whichever one the user taps yields its decryption secret.
   const evalByCredential: Record<string, { first: BufferSource }> = {};
-  for (const id of credentialIds) evalByCredential[id] = { first: PRF_SALT };
+  for (const c of credentials) evalByCredential[c.id] = { first: PRF_SALT };
 
   const assertion = (await navigator.credentials.get({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      allowCredentials: credentialIds.map((id) => ({
-        id: base64urlToBytes(id),
-        type: "public-key",
-      })),
+      allowCredentials: credentials.map(descriptor),
       userVerification: "required",
+      timeout: CEREMONY_TIMEOUT_MS,
       // biome-ignore lint/suspicious/noExplicitAny: PRF extension input isn't in lib.dom yet
       extensions: { prf: { evalByCredential } } as any,
     },
@@ -169,10 +240,13 @@ async function assertPrfSecret(
  * enrolled credentials. Throws a {@link PasskeyError} on cancel/failure.
  */
 export async function unlockWithPasskey(enrollment: PasskeyEnrollment): Promise<string> {
-  const ids = enrollment.credentials.map((c) => c.credentialId);
+  const refs = enrollment.credentials.map((c) => ({
+    id: c.credentialId,
+    transports: c.transports,
+  }));
   let result: { secret?: ArrayBuffer; credentialId?: string };
   try {
-    result = await assertPrfSecret(ids);
+    result = await assertPrfSecret(refs);
   } catch (error) {
     throw new PasskeyError("cancelled", asCancelMessage(error));
   }
@@ -185,4 +259,21 @@ export async function unlockWithPasskey(enrollment: PasskeyEnrollment): Promise<
     );
   }
   return decryptWithSecret(result.secret, match.encrypted);
+}
+
+/**
+ * Best-effort: tell the OS / passkey provider that a credential we removed is no
+ * longer valid here, so it can prune its own copy (WebAuthn L3 signal API).
+ * No-op where unsupported; never throws.
+ */
+export async function signalPasskeyRemoved(credentialId: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    // biome-ignore lint/suspicious/noExplicitAny: signal* methods aren't in lib.dom yet
+    const signal = (window.PublicKeyCredential as any)?.signalUnknownCredential;
+    if (typeof signal !== "function") return;
+    await signal({ rpId: window.location.hostname, credentialId });
+  } catch {
+    // provider cleanup is a nicety — never let it block or surface on remove
+  }
 }

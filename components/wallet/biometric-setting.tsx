@@ -19,12 +19,14 @@ import {
   getPasskeyEnrollment,
   type PasskeyEnrollment,
   removePasskeyCredential,
+  renamePasskeyCredential,
   savePasskeyEnrollment,
 } from "@/lib/auth/biometric-store";
 import {
   enrollPasskeyCredential,
   isPasskeyUnlockAvailable,
   PasskeyError,
+  signalPasskeyRemoved,
 } from "@/lib/auth/webauthn-prf";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -39,6 +41,8 @@ export function PasskeySetting() {
   const [available, setAvailable] = useState(false);
   const [enrollment, setEnrollment] = useState<PasskeyEnrollment | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
 
   useEffect(() => {
     setAvailable(isPasskeyUnlockAvailable());
@@ -65,14 +69,31 @@ export function PasskeySetting() {
     } else {
       clearPasskeyEnrollment();
     }
+    // Best-effort: ask the OS/provider to prune its copy of the removed passkey.
+    void signalPasskeyRemoved(credentialId);
     refresh();
     toast.success("Passkey removed.");
   }
 
   function removeAll() {
+    const ids = (getPasskeyEnrollment()?.credentials ?? []).map((c) => c.credentialId);
     clearPasskeyEnrollment();
+    ids.forEach((id) => void signalPasskeyRemoved(id));
     refresh();
     toast.success("Passkey unlock disabled.");
+  }
+
+  function startRename(credentialId: string, label: string) {
+    setEditingId(credentialId);
+    setEditLabel(label);
+  }
+
+  function saveRename() {
+    if (!editingId) return;
+    const current = getPasskeyEnrollment();
+    if (current) savePasskeyEnrollment(renamePasskeyCredential(current, editingId, editLabel));
+    setEditingId(null);
+    refresh();
   }
 
   return (
@@ -84,24 +105,69 @@ export function PasskeySetting() {
               key={credential.credentialId}
               className="flex items-center justify-between gap-3 text-sm"
             >
-              <span className="text-foreground">
-                {credential.label}
-                {credential.createdAt ? (
-                  <span className="text-muted-foreground">
-                    {" · "}
-                    {new Date(credential.createdAt).toLocaleDateString()}
+              {editingId === credential.credentialId ? (
+                <form
+                  className="flex flex-1 items-center gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    saveRename();
+                  }}
+                >
+                  <Input
+                    value={editLabel}
+                    onChange={(event) => setEditLabel(event.target.value)}
+                    aria-label="Passkey name"
+                    autoFocus
+                    className="h-8"
+                  />
+                  <Button type="submit" variant="ghost" size="sm">
+                    Save
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingId(null)}
+                  >
+                    Cancel
+                  </Button>
+                </form>
+              ) : (
+                <>
+                  <span className="text-foreground">
+                    {credential.label}
+                    {credential.createdAt ? (
+                      <span className="text-muted-foreground">
+                        {" · "}
+                        {new Date(credential.createdAt).toLocaleDateString()}
+                      </span>
+                    ) : null}
+                    {credential.discoverable ? (
+                      <span className="text-muted-foreground">{" · synced"}</span>
+                    ) : null}
                   </span>
-                ) : null}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => remove(credential.credentialId)}
-                aria-label={`Remove ${credential.label}`}
-              >
-                Remove
-              </Button>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => startRename(credential.credentialId, credential.label)}
+                      aria-label={`Rename ${credential.label}`}
+                    >
+                      Rename
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => remove(credential.credentialId)}
+                      aria-label={`Remove ${credential.label}`}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -146,16 +212,23 @@ function AddPasskeyDialog({
   async function submit() {
     setLoading(true);
     try {
+      // Bind the enrollment to the open wallet. If the session lapsed while the
+      // dialog was open, bail rather than store an enrollment with no wallet
+      // (which the address-mismatch self-heal couldn't later drop).
+      const address = walletInfo?.address;
+      if (!address) {
+        toast.error("Wallet session expired — reopen your wallet to add a passkey.");
+        return;
+      }
       // Confirm the password before encrypting it under the new credential — a
       // typo would otherwise enroll an unusable passkey.
       if (!(await services.wallet.verifyPassword(password))) {
         toast.error("That password doesn't match this wallet.");
         return;
       }
-      const credential = await enrollPasskeyCredential(password);
-      savePasskeyEnrollment(
-        addPasskeyCredential(getPasskeyEnrollment(), credential, walletInfo?.address),
-      );
+      const current = getPasskeyEnrollment();
+      const credential = await enrollPasskeyCredential(password, current?.credentials ?? []);
+      savePasskeyEnrollment(addPasskeyCredential(current, credential, address));
       toast.success("Passkey added.");
       onAdded();
       onOpenChange(false);

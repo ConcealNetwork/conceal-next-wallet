@@ -1,0 +1,11 @@
+# gitleaks configuration — extends the default ruleset (so all built-in secret
+# rules still run) with narrow allowlists for known non-secret matches.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public WebAuthn AAGUIDs — authenticator model identifiers, not secrets."
+# lib/auth/aaguid-names.ts is a static map of published AAGUIDs (UUID strings) to
+# provider names; the generic-api-key heuristic mis-flags the UUIDs on lines that
+# contain words like "Keychain". These are public identifiers, never credentials.
+paths = ['''lib/auth/aaguid-names\.ts''']
