@@ -11,6 +11,11 @@ const FILES = [
   "_next/static/media/font.woff2",
   "_next/static/chunks/main-abc123.js.map", // source map — excluded
   "manifest.webmanifest",
+  "icon-192.png", // manifest install icon — precached
+  "icon-512.png", // manifest install icon — precached
+  "icon-maskable-512.png", // maskable install icon — precached
+  "og.png", // social card — precached
+  "screenshot.png", // unrelated top-level PNG — excluded
   "lib/concealjs/concealjs.js", // runtime-cached — excluded
   "workers/sync-worker.js", // runtime-cached — excluded
   "404.html", // error page — served via offline fallback, not precached
@@ -31,9 +36,18 @@ describe("buildPrecacheList", () => {
     expect(list).toContain("manifest.webmanifest");
   });
 
-  it("excludes mockups, runtime-cached libs/workers, error pages, maps, and sidecars", () => {
+  it("includes the manifest icon PNGs and social card for offline install/splash", () => {
+    const list = buildPrecacheList(FILES);
+    expect(list).toContain("icon-192.png");
+    expect(list).toContain("icon-512.png");
+    expect(list).toContain("icon-maskable-512.png");
+    expect(list).toContain("og.png");
+  });
+
+  it("excludes mockups, runtime-cached libs/workers, error pages, maps, sidecars, and unlisted PNGs", () => {
     const list = buildPrecacheList(FILES);
     expect(list).not.toContain("explorations/landing-index.html");
+    expect(list).not.toContain("screenshot.png");
     expect(list).not.toContain("lib/concealjs/concealjs.js");
     expect(list).not.toContain("workers/sync-worker.js");
     expect(list).not.toContain("404.html");

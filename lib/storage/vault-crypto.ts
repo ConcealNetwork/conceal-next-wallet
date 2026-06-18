@@ -7,7 +7,14 @@ import { base64urlToBytes, bytesToBase64url } from "@/lib/auth/webauthn-crypto";
  * AES-GCM authentication fails and decrypt throws.
  */
 
-const PBKDF2_ITERATIONS = 210_000;
+// OWASP guidance for PBKDF2-HMAC-SHA256 is 600,000 iterations (the 210k figure
+// is for SHA-512). New backups use this; old backups still decrypt because
+// decrypt reads `payload.iterations` from the stored envelope.
+const PBKDF2_ITERATIONS = 600_000;
+// Sane clamp for the iteration count read from an (untrusted) backup file:
+// below the floor weakens the KDF, above the ceiling is a CPU-DoS vector.
+const MIN_ITERATIONS = 100_000;
+const MAX_ITERATIONS = 10_000_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
 
@@ -69,9 +76,14 @@ export async function decryptVault(payload: EncryptedVault, password: string): P
   if (payload.v !== 1 || payload.kdf !== "PBKDF2-SHA256") {
     throw new Error("Unsupported vault format.");
   }
-  const key = await deriveKey(password, base64urlToBytes(payload.salt), payload.iterations);
+  // Clamp the (untrusted) iteration count to a sane range so a malicious backup
+  // can't drive a CPU-DoS via an absurd value (or weaken the KDF with a tiny one).
+  const iterations = Math.min(Math.max(payload.iterations, MIN_ITERATIONS), MAX_ITERATIONS);
   let plaintext: ArrayBuffer;
   try {
+    // base64url decodes live inside the try so malformed input (a hand-corrupted
+    // backup) maps to the friendly error below instead of a raw InvalidCharacterError.
+    const key = await deriveKey(password, base64urlToBytes(payload.salt), iterations);
     plaintext = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv: base64urlToBytes(payload.iv) },
       key,

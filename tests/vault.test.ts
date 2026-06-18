@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { bytesToBase64url } from "@/lib/auth/webauthn-crypto";
 import { createTxNotesStore, inMemoryTxNotesBackend, txNotes } from "@/lib/storage/tx-notes";
 import {
   buildVaultFile,
@@ -24,6 +25,61 @@ describe("vault-crypto", () => {
     const encrypted = await encryptVault("secret", "pw");
     const tampered = { ...encrypted, ciphertext: `${encrypted.ciphertext.slice(0, -2)}AA` };
     await expect(decryptVault(tampered, "pw")).rejects.toThrow();
+  });
+
+  it("encrypts new backups at the current OWASP iteration count (>= 600k)", async () => {
+    const encrypted = await encryptVault("secret", "pw");
+    expect(encrypted.iterations).toBeGreaterThanOrEqual(600_000);
+  });
+
+  it("still decrypts an OLD backup made at 210k iterations (back-compat)", async () => {
+    // Build a 210k envelope the way the old code would have: derive the key at
+    // 210k, encrypt, and stamp iterations:210000. decrypt must honor the stored
+    // count, not the new constant.
+    const password = "legacy-pw";
+    const plaintext = '{"legacy":true}';
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const baseKey = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(password),
+      "PBKDF2",
+      false,
+      ["deriveKey"],
+    );
+    const key = await crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt, iterations: 210_000, hash: "SHA-256" },
+      baseKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"],
+    );
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      new TextEncoder().encode(plaintext),
+    );
+    const oldEnvelope = {
+      v: 1 as const,
+      kdf: "PBKDF2-SHA256" as const,
+      iterations: 210_000,
+      salt: bytesToBase64url(salt),
+      iv: bytesToBase64url(iv),
+      ciphertext: bytesToBase64url(ciphertext),
+    };
+
+    expect(await decryptVault(oldEnvelope, password)).toBe(plaintext);
+  });
+
+  it("maps malformed base64 to the friendly error (not a raw throw)", async () => {
+    const encrypted = await encryptVault("secret", "pw");
+    // `!` is not a base64url char → atob throws InvalidCharacterError. The decode
+    // now lives inside the try, so it must surface as the friendly message.
+    const corruptSalt = { ...encrypted, salt: "!!!not-base64!!!" };
+    await expect(decryptVault(corruptSalt, "pw")).rejects.toThrow(/wrong password|corrupt/i);
+
+    const corruptCiphertext = { ...encrypted, ciphertext: "@@@nope@@@" };
+    await expect(decryptVault(corruptCiphertext, "pw")).rejects.toThrow(/wrong password|corrupt/i);
   });
 });
 
