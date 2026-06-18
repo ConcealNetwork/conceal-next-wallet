@@ -137,9 +137,32 @@ export function countOverdue(
   nowISO: string,
 ): number {
   return watchers.reduce(
-    (n, w) => (checkInStatus(w, lastReceivedForWatcher(messages, w), nowISO) === "overdue" ? n + 1 : n),
+    (n, w) =>
+      checkInStatus(w, lastReceivedForWatcher(messages, w), nowISO) === "overdue" ? n + 1 : n,
     0,
   );
+}
+
+/**
+ * Stable keys identifying "this contact, overdue on this last-heard basis".
+ * Used by the alert hook to notify at most once per overdue-instance per
+ * session: when a fresh message arrives the last-heard advances → a new key is
+ * minted → the alert can fire again later. A never-heard ("waiting") contact is
+ * not overdue, so it produces no key.
+ */
+export function overdueInstanceKeys(
+  watchers: readonly WatchedContact[],
+  messages: readonly Message[],
+  nowISO: string,
+): string[] {
+  const keys: string[] = [];
+  for (const w of watchers) {
+    const lastHeard = lastReceivedForWatcher(messages, w);
+    if (checkInStatus(w, lastHeard, nowISO) === "overdue") {
+      keys.push(`${w.id}@${lastHeard ?? "never"}`);
+    }
+  }
+  return keys;
 }
 
 /** Whole days between two ISO instants (for "heard 3 days ago"). */

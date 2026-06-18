@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useMessages, useWalletInfo } from "@/lib/hooks";
+import { canNotify, isOptedIn, notify, selectNewKeys } from "@/lib/notifications/notify";
 import { listWatchers } from "@/lib/storage/check-ins-store";
-import { countOverdue } from "@/lib/ui/check-ins";
+import type { Message } from "@/lib/types";
+import { countOverdue, overdueInstanceKeys } from "@/lib/ui/check-ins";
 
 /**
  * True once the wallet has caught up to the network tip. Check-in evaluation is
@@ -25,22 +27,52 @@ export function useOverdueCheckInCount(): number {
   return countOverdue(listWatchers(), messages.data, new Date().toISOString());
 }
 
-// Once per app load — a nudge, not a per-navigation nag.
-let announced = false;
-
-/** One toast on first synced load if any watched contacts are overdue. */
+/**
+ * Surface a nudge when watched contacts are overdue — on first synced load, on
+ * message updates, and whenever the tab returns to the foreground.
+ *
+ * De-dupe is per overdue-instance (contact id + its last-heard basis), not a
+ * once-per-load latch, so returning to a backgrounded tab re-evaluates without
+ * re-alerting contacts already announced this session. Toasts are the default;
+ * OS notifications fire additionally only when opted in + permission granted.
+ */
 export function useCheckInAlerts(): void {
   const synced = useWalletSynced();
   const messages = useMessages();
   const ready = synced && messages.data !== undefined;
-  useEffect(() => {
-    if (announced || !ready) return;
-    announced = true;
-    const overdue = countOverdue(listWatchers(), messages.data ?? [], new Date().toISOString());
+  // Per-session memory of overdue-instances already announced.
+  const announcedRef = useRef<Set<string>>(new Set());
+
+  const evaluate = useCallback((data: readonly Message[]) => {
+    const nowISO = new Date().toISOString();
+    const watchers = listWatchers();
+    const fresh = selectNewKeys(overdueInstanceKeys(watchers, data, nowISO), announcedRef.current);
+    if (fresh.length === 0) return;
+    for (const key of fresh) announcedRef.current.add(key);
+
+    const overdue = countOverdue(watchers, data, nowISO);
     if (overdue > 0) {
       toast.warning(
         `${overdue} check-in${overdue === 1 ? "" : "s"} overdue — you may want to reach out.`,
       );
     }
-  }, [ready, messages.data]);
+    if (isOptedIn() && canNotify()) {
+      void notify("Check-in overdue", {
+        body: `${fresh.length} watched contact${fresh.length === 1 ? " is" : "s are"} overdue — you may want to reach out.`,
+        tag: "ccx-check-ins",
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    const data = messages.data ?? [];
+    evaluate(data);
+    if (typeof document === "undefined") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") evaluate(data);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [ready, messages.data, evaluate]);
 }

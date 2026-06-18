@@ -39,6 +39,14 @@ import {
 } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { checkCustomNodeLag } from "@/lib/network/node-lag";
+import {
+  getPermission,
+  isNotificationSupported,
+  isOptedIn,
+  type NotificationPermissionState,
+  requestNotificationPermission,
+  setOptedIn,
+} from "@/lib/notifications/notify";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
 import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
@@ -106,6 +114,72 @@ function SyncSpeedSelector({
         </button>
       ))}
     </fieldset>
+  );
+}
+
+/**
+ * Opt-in OS notifications for due reminders / overdue check-ins. Strictly
+ * additive: toasts remain the default. The toggle persists the user's intent
+ * and, on enable, requests browser permission from this click (a user gesture,
+ * required by the API). Shows the current permission state.
+ */
+function NotificationsSetting() {
+  // Start "false" to match SSR (the API is client-only); hydrate on mount.
+  const [supported, setSupported] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermissionState>("default");
+  const [optedIn, setOptedInState] = useState(false);
+
+  useEffect(() => {
+    setSupported(isNotificationSupported());
+    setPermission(getPermission());
+    setOptedInState(isOptedIn());
+  }, []);
+
+  async function handleToggle(checked: boolean) {
+    if (!checked) {
+      setOptedIn(false);
+      setOptedInState(false);
+      toast.success("Notifications disabled.");
+      return;
+    }
+    const result = await requestNotificationPermission();
+    setPermission(result);
+    if (result === "granted") {
+      setOptedIn(true);
+      setOptedInState(true);
+      toast.success("Notifications enabled.");
+    } else {
+      // Keep opt-in off when permission isn't granted — never alert silently.
+      setOptedIn(false);
+      setOptedInState(false);
+      toast.error(
+        result === "denied"
+          ? "Notifications are blocked in your browser settings."
+          : "Notification permission was not granted.",
+      );
+    }
+  }
+
+  if (!supported) {
+    return <p className="text-xs text-muted-foreground">Not supported in this browser.</p>;
+  }
+
+  const stateLabel =
+    permission === "granted"
+      ? "Allowed"
+      : permission === "denied"
+        ? "Blocked in browser settings"
+        : "Not yet allowed";
+
+  return (
+    <div className="flex w-full flex-col items-end gap-1.5 sm:w-auto">
+      <Switch
+        checked={optedIn && permission === "granted"}
+        onCheckedChange={(checked: boolean) => void handleToggle(checked)}
+        aria-label="Enable notifications"
+      />
+      <p className="text-right text-xs text-muted-foreground">{stateLabel}</p>
+    </div>
   );
 }
 
@@ -322,6 +396,12 @@ export default function SettingsPage() {
                   <PasskeySetting />
                 </div>
               ) : null}
+              <Row
+                label="Enable notifications"
+                description="Get OS notifications for due payment reminders and overdue check-ins, in addition to in-app toasts. Opt-in — nothing is sent automatically."
+              >
+                <NotificationsSetting />
+              </Row>
               <Row label="Ticker" description="Amount suffix shown across the wallet">
                 <select
                   className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"

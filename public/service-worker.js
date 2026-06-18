@@ -144,3 +144,37 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Clicking an OS notification (from reminders / check-ins) focuses an existing
+// wallet window if one is open, otherwise opens a new one. Best-effort and
+// additive — it never touches the cache logic above. Resolves to the SW scope
+// so it works under any deploy base path.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    (async () => {
+      try {
+        const target = new URL(self.registration.scope);
+        const clientList = await self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true,
+        });
+        for (const client of clientList) {
+          // Same-origin window already open → focus it rather than spawning one.
+          try {
+            if (new URL(client.url).origin === target.origin && "focus" in client) {
+              return await client.focus();
+            }
+          } catch {
+            // Skip clients with unparseable URLs.
+          }
+        }
+        if (self.clients.openWindow) {
+          return await self.clients.openWindow(target.href);
+        }
+      } catch {
+        // Best-effort only — never let a focus/open failure surface an error.
+      }
+    })(),
+  );
+});
