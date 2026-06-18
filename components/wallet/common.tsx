@@ -3,7 +3,6 @@
 import { Check, Clipboard, EyeOff, Inbox } from "lucide-react";
 import { cloneElement, isValidElement, useState } from "react";
 import { DottedQrCode } from "@/components/qr/dotted-qr";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,9 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CcxAmount } from "@/components/wallet/ccx";
-import type { Transaction, TransactionType } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
+import { cn, withBasePath } from "@/lib/utils";
 
 export function PageHeader({
   title,
@@ -205,30 +203,6 @@ function InlineSparkline({ values, className }: { values: number[]; className?: 
   );
 }
 
-export function AmountText({
-  amount,
-  type,
-}: {
-  amount: string;
-  type: TransactionType | "positive" | "negative";
-}) {
-  const color =
-    type === "send" || type === "negative"
-      ? "text-wallet-outgoing"
-      : type === "fusion"
-        ? "text-muted-foreground"
-        : type === "deposit"
-          ? "text-wallet-deposit"
-          : type === "message"
-            ? "text-primary"
-            : "text-wallet-incoming";
-  return (
-    <span className={cn("font-semibold", color)}>
-      <CcxAmount>{amount}</CcxAmount>
-    </span>
-  );
-}
-
 export function FilterTabs({
   tabs,
   active,
@@ -270,40 +244,6 @@ export function FilterTabs({
           </span>
         </button>
       ))}
-    </div>
-  );
-}
-
-export function TransactionRow({ transaction }: { transaction: Transaction }) {
-  const label = {
-    receive: "Receive",
-    send: "Send",
-    deposit: "Deposit",
-    withdrawal: "Withdrawal",
-    fusion: "Fusion",
-    miner: "Miner",
-    message: "Message",
-  }[transaction.type];
-  const prefix =
-    transaction.type === "send" ||
-    transaction.type === "fusion" ||
-    transaction.type === "withdrawal" ||
-    (transaction.type === "message" && transaction.outgoing)
-      ? "-"
-      : "+";
-
-  return (
-    <div className="flex flex-col gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary">{label}</Badge>
-          <p className="font-medium text-foreground">{truncateAddress(transaction.address)}</p>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {timeAgo(transaction.timestamp)} • {transaction.confirmations} conf
-        </p>
-      </div>
-      <AmountText amount={`${prefix}${formatCcx(transaction.amount)}`} type={transaction.type} />
     </div>
   );
 }

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTxNotesStore, inMemoryTxNotesBackend, txNotes } from "@/lib/storage/tx-notes";
-import { decryptVault, encryptVault } from "@/lib/storage/vault-crypto";
 import {
   buildVaultFile,
   openVaultFile,
   parseVaultFile,
   restoreVaultData,
 } from "@/lib/storage/vault";
+import { decryptVault, encryptVault } from "@/lib/storage/vault-crypto";
 
 describe("vault-crypto", () => {
   it("round-trips plaintext through password encryption", async () => {
@@ -56,6 +56,7 @@ describe("vault build → parse → open → restore", () => {
     await txNotes.setNote("hashA", "rent payment");
     localStorage.setItem("ccx-theme", "dark");
     localStorage.setItem("ccx-locale", "es");
+    localStorage.setItem("useShortTicker", "true"); // canonical ticker store — must travel
     localStorage.setItem("not-allowlisted", "should-not-travel");
 
     const file = await buildVaultFile("pw123", "2026-06-17T00:00:00.000Z");
@@ -71,6 +72,7 @@ describe("vault build → parse → open → restore", () => {
     expect(await txNotes.getNote("hashA")).toBe("rent payment");
     expect(localStorage.getItem("ccx-theme")).toBe("dark");
     expect(localStorage.getItem("ccx-locale")).toBe("es");
+    expect(localStorage.getItem("useShortTicker")).toBe("true");
     // The non-allowlisted key was never captured.
     expect(localStorage.getItem("not-allowlisted")).toBeNull();
   });

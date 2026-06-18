@@ -1,10 +1,6 @@
+import { fetchCcxMarketData, fetchCcxPriceHistory } from "@/lib/market/coingecko";
 import type { MarketService } from "@/lib/services/market.service";
 import type { MarketData, MarketHistoryPoint, MarketTimeframe } from "@/lib/types";
-import {
-  fetchCcxMarketData,
-  fetchCcxPriceHistory,
-  hydrateMarketHistory,
-} from "@/lib/market/coingecko";
 
 let cachedMarketData: MarketData | null = null;
 
@@ -28,10 +24,3 @@ export const realMarketService: MarketService = {
     return points;
   },
 };
-
-export async function hydrateMarketDataForRange(
-  data: MarketData,
-  range: MarketTimeframe,
-): Promise<MarketData> {
-  return hydrateMarketHistory(data, range);
-}
