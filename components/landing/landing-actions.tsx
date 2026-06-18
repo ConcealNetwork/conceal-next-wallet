@@ -70,10 +70,12 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
       // Opt-in enrollment: the password just verified, so encrypt it now.
       if (passkeyEnabled && passkeyAvailable && enablePasskey && passwordValue) {
         try {
-          const credential = await enrollPasskeyCredential(passwordValue);
-          savePasskeyEnrollment(
-            addPasskeyCredential(getPasskeyEnrollment(), credential, wallet.address),
+          const current = getPasskeyEnrollment();
+          const credential = await enrollPasskeyCredential(
+            passwordValue,
+            current?.credentials ?? [],
           );
+          savePasskeyEnrollment(addPasskeyCredential(current, credential, wallet.address));
           setEnrolled(true);
           toast.success("Passkey unlock enabled for this device.");
         } catch (error) {

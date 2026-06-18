@@ -7,6 +7,7 @@ import {
   type PasskeyCredential,
   type PasskeyEnrollment,
   removePasskeyCredential,
+  renamePasskeyCredential,
   savePasskeyEnrollment,
 } from "@/lib/auth/biometric-store";
 
@@ -95,6 +96,25 @@ describe("passkey enrollment store", () => {
     const afterOne = removePasskeyCredential(two, "cred-a");
     expect(afterOne?.credentials.map((c) => c.credentialId)).toEqual(["cred-b"]);
     expect(removePasskeyCredential(afterOne as PasskeyEnrollment, "cred-b")).toBeNull();
+  });
+
+  it("renames a credential immutably; a blank name falls back to 'Passkey'", () => {
+    const enrollment = addPasskeyCredential(null, credential("cred-a", "This device"), "ccx7abc");
+    const renamed = renamePasskeyCredential(enrollment, "cred-a", "  Work MacBook  ");
+    expect(renamed.credentials[0].label).toBe("Work MacBook");
+    expect(enrollment.credentials[0].label).toBe("This device"); // original untouched
+    expect(renamePasskeyCredential(enrollment, "cred-a", "   ").credentials[0].label).toBe(
+      "Passkey",
+    );
+  });
+
+  it("preserves transports through save/load", () => {
+    const cred = {
+      ...credential("cred-a"),
+      transports: ["usb", "nfc"] as AuthenticatorTransport[],
+    };
+    savePasskeyEnrollment({ version: 2, address: "ccx7abc", credentials: [cred] });
+    expect(getPasskeyEnrollment()?.credentials[0].transports).toEqual(["usb", "nfc"]);
   });
 
   it("clears an enrollment", () => {

@@ -2,17 +2,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { base64urlToBytes, encryptWithSecret } from "@/lib/auth/webauthn-crypto";
 import {
   enrollPasskeyCredential,
+  getPasskeyCapabilities,
   isPasskeyUnlockAvailable,
+  isPlatformAuthenticatorAvailable,
   PasskeyError,
+  signalPasskeyRemoved,
   unlockWithPasskey,
 } from "@/lib/auth/webauthn-prf";
 
 // Real WebCrypto (Node) does the AES; only the WebAuthn ceremony is mocked.
-function fakeCredential(idBase64url: string, secret?: ArrayBuffer) {
+function fakeCredential(
+  idBase64url: string,
+  secret?: ArrayBuffer,
+  opts: { transports?: AuthenticatorTransport[]; authData?: ArrayBuffer; rk?: boolean } = {},
+) {
   return {
     rawId: base64urlToBytes(idBase64url).buffer,
     authenticatorAttachment: "platform",
-    getClientExtensionResults: () => (secret ? { prf: { results: { first: secret } } } : { prf: {} }),
+    response: {
+      getTransports: () => opts.transports ?? ["internal"],
+      getAuthenticatorData: () => opts.authData,
+    },
+    getClientExtensionResults: () => ({
+      ...(secret ? { prf: { results: { first: secret } } } : { prf: {} }),
+      ...(opts.rk !== undefined ? { credProps: { rk: opts.rk } } : {}),
+    }),
   };
 }
 
@@ -75,6 +89,101 @@ describe("enrollPasskeyCredential", () => {
     expect(error).toBeInstanceOf(PasskeyError);
     expect(error.code).toBe("cancelled");
   });
+
+  it("excludes already-enrolled credentials and sets a timeout", async () => {
+    create.mockResolvedValue(fakeCredential("Y3JlZEI", new Uint8Array(32).fill(5).buffer));
+    await enrollPasskeyCredential("pw", [
+      {
+        credentialId: "Y3JlZEE",
+        label: "x",
+        encrypted: { iv: "i", ciphertext: "c" },
+        createdAt: "",
+        transports: ["internal"],
+      },
+    ]);
+    const options = create.mock.calls[0][0].publicKey;
+    expect(options.excludeCredentials).toHaveLength(1);
+    expect(options.excludeCredentials[0].transports).toEqual(["internal"]);
+    expect(options.timeout).toBe(60000);
+  });
+
+  it("captures transports and derives a label from them", async () => {
+    create.mockResolvedValue(
+      fakeCredential("Y3JlZEE", new Uint8Array(32).fill(5).buffer, { transports: ["usb", "nfc"] }),
+    );
+    const credential = await enrollPasskeyCredential("pw");
+    expect(credential.transports).toEqual(["usb", "nfc"]);
+    expect(credential.label).toBe("Security key");
+  });
+
+  it("maps a duplicate authenticator (InvalidStateError) to already-enrolled", async () => {
+    create.mockRejectedValue(new DOMException("dup", "InvalidStateError"));
+    const error = await enrollPasskeyCredential("pw", []).catch((e) => e);
+    expect(error).toBeInstanceOf(PasskeyError);
+    expect(error.code).toBe("already-enrolled");
+  });
+
+  it("requests credProps and records a discoverable/synced passkey", async () => {
+    create.mockResolvedValue(
+      fakeCredential("Y3JlZEE", new Uint8Array(32).fill(5).buffer, { rk: true }),
+    );
+    const credential = await enrollPasskeyCredential("pw");
+    expect(credential.discoverable).toBe(true);
+    expect(create.mock.calls[0][0].publicKey.extensions.credProps).toBe(true);
+  });
+});
+
+describe("capability detection", () => {
+  it("returns the capability map and prefers it for platform availability", async () => {
+    const getClientCapabilities = vi
+      .fn()
+      .mockResolvedValue({ userVerifyingPlatformAuthenticator: true, hybridTransport: false });
+    Object.defineProperty(globalThis, "window", {
+      value: { PublicKeyCredential: Object.assign(class {}, { getClientCapabilities }) },
+      configurable: true,
+    });
+    expect(await getPasskeyCapabilities()).toMatchObject({
+      userVerifyingPlatformAuthenticator: true,
+    });
+    expect(await isPlatformAuthenticatorAvailable()).toBe(true);
+  });
+
+  it("falls back to isUserVerifyingPlatformAuthenticatorAvailable when getClientCapabilities is absent", async () => {
+    const iuvpaa = vi.fn().mockResolvedValue(true);
+    Object.defineProperty(globalThis, "window", {
+      value: {
+        PublicKeyCredential: Object.assign(class {}, {
+          isUserVerifyingPlatformAuthenticatorAvailable: iuvpaa,
+        }),
+      },
+      configurable: true,
+    });
+    expect(await isPlatformAuthenticatorAvailable()).toBe(true);
+    expect(iuvpaa).toHaveBeenCalled();
+  });
+});
+
+describe("signalPasskeyRemoved", () => {
+  it("calls signalUnknownCredential when the browser supports it", async () => {
+    const signal = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(globalThis, "window", {
+      value: {
+        PublicKeyCredential: Object.assign(class {}, { signalUnknownCredential: signal }),
+        location: { hostname: "wallet.example" },
+      },
+      configurable: true,
+    });
+    await signalPasskeyRemoved("Y3JlZEE");
+    expect(signal).toHaveBeenCalledWith({ rpId: "wallet.example", credentialId: "Y3JlZEE" });
+  });
+
+  it("is a no-op (never throws) when unsupported", async () => {
+    Object.defineProperty(globalThis, "window", {
+      value: { PublicKeyCredential: class {}, location: { hostname: "wallet.example" } },
+      configurable: true,
+    });
+    await expect(signalPasskeyRemoved("x")).resolves.toBeUndefined();
+  });
 });
 
 describe("unlockWithPasskey", () => {
@@ -107,6 +216,25 @@ describe("unlockWithPasskey", () => {
     const options = get.mock.calls[0][0].publicKey;
     expect(options.allowCredentials).toHaveLength(2);
     expect(Object.keys(options.extensions.prf.evalByCredential)).toEqual(["Y3JlZEE", "Y3JlZEI"]);
+  });
+
+  it("includes per-credential transports in allowCredentials", async () => {
+    const secret = new Uint8Array(32).fill(8).buffer;
+    const enrollment = {
+      version: 2 as const,
+      credentials: [
+        {
+          credentialId: "Y3JlZEE",
+          label: "Security key",
+          encrypted: await encryptWithSecret(secret, "pw"),
+          createdAt: "",
+          transports: ["usb"] as AuthenticatorTransport[],
+        },
+      ],
+    };
+    get.mockResolvedValue(fakeCredential("Y3JlZEE", secret));
+    await unlockWithPasskey(enrollment);
+    expect(get.mock.calls[0][0].publicKey.allowCredentials[0].transports).toEqual(["usb"]);
   });
 
   it("fails clearly when the responding credential has no matching enrollment", async () => {

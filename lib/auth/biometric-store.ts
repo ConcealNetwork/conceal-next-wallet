@@ -18,12 +18,17 @@ const STORAGE_KEY = "ccx-biometric-enrollment";
 export interface PasskeyCredential {
   /** base64url credential id, listed in allowCredentials on unlock. */
   credentialId: string;
-  /** User-facing name, e.g. "This device" or "Security key or phone". */
+  /** User-facing name, e.g. "iCloud Keychain", "This device", or a custom rename. */
   label: string;
   /** Wallet password encrypted under this credential's PRF secret. */
   encrypted: EncryptedSecret;
   /** ISO timestamp the credential was registered; "" for migrated v1 entries. */
   createdAt: string;
+  /** Authenticator transports (from getTransports()) — passed in allowCredentials
+   *  on unlock for correct/faster routing. Absent for migrated v1 entries. */
+  transports?: AuthenticatorTransport[];
+  /** credProps.rk — true for a discoverable/synced passkey (iCloud, Google, …). */
+  discoverable?: boolean;
 }
 
 export interface PasskeyEnrollment {
@@ -64,6 +69,8 @@ export function getPasskeyEnrollment(): PasskeyEnrollment | null {
           label: typeof entry.label === "string" && entry.label ? entry.label : "Passkey",
           encrypted: entry.encrypted,
           createdAt: typeof entry.createdAt === "string" ? entry.createdAt : "",
+          ...(Array.isArray(entry.transports) ? { transports: entry.transports } : {}),
+          ...(entry.discoverable === true ? { discoverable: true as const } : {}),
         };
       });
       // De-dupe by id on read too (write already dedupes) — a duplicate id would
@@ -146,4 +153,19 @@ export function removePasskeyCredential(
 ): PasskeyEnrollment | null {
   const credentials = enrollment.credentials.filter((c) => c.credentialId !== credentialId);
   return credentials.length ? { ...enrollment, credentials } : null;
+}
+
+/** Rename a credential immutably; a blank label falls back to "Passkey". */
+export function renamePasskeyCredential(
+  enrollment: PasskeyEnrollment,
+  credentialId: string,
+  label: string,
+): PasskeyEnrollment {
+  const next = label.trim() || "Passkey";
+  return {
+    ...enrollment,
+    credentials: enrollment.credentials.map((c) =>
+      c.credentialId === credentialId ? { ...c, label: next } : c,
+    ),
+  };
 }
