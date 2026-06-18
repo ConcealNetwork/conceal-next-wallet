@@ -1,0 +1,139 @@
+/**
+ * Pure mappers from the SDK's wallet model ({@link WalletState}, {@link OwnedDeposit},
+ * built/scanned transactions) to the app's UI types (`WalletInfo`, `Transaction`,
+ * `Deposit`, `Message`). No network, no runtime, no `lib/wallet-core` — these are
+ * the SDK-engine analogue of `lib/wallet-core/mappers.ts`.
+ */
+import {
+  DEPOSIT_MIN_TERM_BLOCK,
+  getBalance,
+  getLockedDeposits,
+  getTransactions,
+  getUnlockedDeposits,
+  type OwnedDeposit,
+  type WalletState,
+  type WalletTransaction,
+} from "conceal-wallet-sdk";
+import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
+import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
+import type { CcxAmount, Deposit, Transaction, TransactionType, WalletInfo } from "@/lib/types";
+
+const SECONDS_PER_DAY = 86_400;
+
+/** Wrap an atomic integer in the {@link CcxAmount} shape. */
+export function atomic(value: number): CcxAmount {
+  return { atomic: Math.max(0, Math.round(value)) };
+}
+
+/** Confirmations for a transaction at `txHeight` given the current `networkHeight`. */
+function confirmationsFor(txHeight: number, networkHeight: number): number {
+  if (txHeight <= 0) return 0;
+  return Math.max(0, networkHeight - txHeight + 1);
+}
+
+/** ISO timestamp from a unix-seconds value, or `now` when absent. */
+function isoFromUnix(seconds?: number): string {
+  const ms = typeof seconds === "number" && seconds > 0 ? seconds * 1000 : Date.now();
+  return new Date(ms).toISOString();
+}
+
+/** Map one SDK history entry to the UI {@link Transaction}. */
+export function mapTransaction(tx: WalletTransaction, networkHeight: number): Transaction {
+  const type: TransactionType = tx.direction === "out" ? "send" : "receive";
+  return {
+    id: tx.hash,
+    hash: tx.hash,
+    type,
+    amount: atomic(tx.amount),
+    address: "",
+    timestamp: isoFromUnix(tx.timestamp),
+    blockHeight: tx.height,
+    confirmations: confirmationsFor(tx.height, networkHeight),
+  };
+}
+
+/** Map the wallet's transaction history (newest first) to UI transactions. */
+export function mapTransactions(state: WalletState, networkHeight: number): Transaction[] {
+  return getTransactions(state).map((tx) => mapTransaction(tx, networkHeight));
+}
+
+/** Map one owned deposit to the UI {@link Deposit}. */
+export function mapDeposit(
+  deposit: OwnedDeposit,
+  networkHeight: number,
+  address: string,
+  spentIndexes: ReadonlySet<number>,
+): Deposit {
+  const unlockHeight = deposit.blockHeight + deposit.term;
+  const isSpent = spentIndexes.has(deposit.globalIndex);
+  const isUnlocked = networkHeight >= unlockHeight;
+  const status = isSpent ? "spent" : isUnlocked ? "unlocked" : "active";
+
+  const blocksRemaining = Math.max(0, unlockHeight - networkHeight);
+  const unlocksInDays = Math.ceil((blocksRemaining * AVG_BLOCK_TIME_SECONDS) / SECONDS_PER_DAY);
+  const elapsed = deposit.term > 0 ? (networkHeight - deposit.blockHeight) / deposit.term : 1;
+  const progressPct = Math.min(100, Math.max(0, Math.round(elapsed * 100)));
+
+  const months = Math.max(1, Math.round(deposit.term / DEPOSIT_MIN_TERM_BLOCK));
+  const apr = deriveApr(deposit.amount, deposit.interest, deposit.term);
+
+  return {
+    id: `${deposit.txHash}:${deposit.globalIndex}`,
+    txHash: deposit.txHash,
+    globalOutputIndex: deposit.globalIndex,
+    amount: atomic(deposit.amount),
+    status,
+    durationMonths: months,
+    apr,
+    interest: atomic(deposit.interest),
+    unlocksInDays,
+    progressPct,
+    address,
+  };
+}
+
+/** Map all owned deposits (locked + unlocked + spent) to UI deposits. */
+export function mapDeposits(state: WalletState, networkHeight: number): Deposit[] {
+  const spent = new Set(state.spentDepositIndexes);
+  return state.deposits.map((deposit) => mapDeposit(deposit, networkHeight, state.address, spent));
+}
+
+/** Indicative annualized rate from principal / earned interest / term (blocks). */
+export function deriveApr(amount: number, interest: number, term: number): number {
+  if (amount <= 0 || term <= 0) return 0;
+  const months = term / DEPOSIT_MIN_TERM_BLOCK;
+  if (months <= 0) return 0;
+  const periodRate = interest / amount;
+  const annualRate = (periodRate / months) * 12;
+  return Math.round(annualRate * 1000) / 10;
+}
+
+/** Build the UI {@link WalletInfo} from the runtime state + heights. */
+export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): WalletInfo {
+  const { state } = runtime;
+  const balance = getBalance(state);
+  const locked = getLockedDeposits(state, networkHeight);
+  const unlocked = getUnlockedDeposits(state, networkHeight);
+  const lockedTotal = locked.reduce((sum, d) => sum + d.amount, 0);
+  const withdrawable = unlocked.reduce((sum, d) => sum + d.amount + d.interest, 0);
+
+  return {
+    address: state.address,
+    viewOnly: runtime.viewOnly,
+    balanceTotal: atomic(balance.total),
+    available: atomic(balance.spendable),
+    dust: atomic(0),
+    pending: atomic(0),
+    lockedDeposits: atomic(lockedTotal),
+    withdrawable: atomic(withdrawable),
+    creationHeight: Math.max(0, Number(runtime.raw.creationHeight ?? 0) || 0),
+    currentHeight: state.scannedHeight,
+    networkHeight,
+  };
+}
+
+/** Stable thread key for a recipient + payment id (shared with the mock/UI). */
+export function threadKeyFor(address: string, paymentId?: string): string {
+  return buildMessageThreadKey(address, paymentId);
+}

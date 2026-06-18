@@ -1,0 +1,285 @@
+// @vitest-environment node
+import {
+  createAccount,
+  createWalletState,
+  crypto,
+  decodeAddress,
+  type RawWalletV1,
+  transactions as txns,
+} from "conceal-wallet-sdk";
+import { afterEach, describe, expect, it } from "vitest";
+
+/**
+ * Regression coverage for the migration-review fixes (node env — the conceal-lib-js
+ * `secretbox` persist path rejects jsdom's cross-realm typed arrays):
+ *   - buildState fallback: legacy blob (no creationHeight, no sdkWalletState) → 0.
+ *   - sync concurrency guard: two concurrent sync() never run in parallel / lose state.
+ *   - inbound message 100-atomic marker gate.
+ *   - sendMessage doesn't persist a sent record when broadcast fails.
+ */
+
+type DaemonStub = {
+  nodeUrl: string;
+  getHeight: () => Promise<number>;
+  getNodeFeeAddress: () => Promise<string>;
+  sendRawTransaction: (hex: string) => Promise<{ status: string }>;
+  getRandomOuts: () => Promise<never[]>;
+  getWalletSyncData: (start: number, end: number) => Promise<unknown[]>;
+};
+
+function legacyRaw(spend: string, view: string, spendPub: string, viewPub: string): RawWalletV1 {
+  // An OLD legacy blob: carries lastHeight (the synced tip) but NO creationHeight
+  // and NO sdkWalletState — the catastrophic case from review item #1.
+  return {
+    deposits: [],
+    withdrawals: [],
+    transactions: [],
+    lastHeight: 900_000,
+    nonce: "",
+    keys: { pub: { spend: spendPub, view: viewPub }, priv: { spend, view } },
+    options: {},
+  };
+}
+
+afterEach(async () => {
+  const { _setRuntimeForTest } = await import("@/lib/services/real-sdk/runtime");
+  _setRuntimeForTest(null);
+});
+
+describe("buildState fallback (review #1)", () => {
+  it("seeds scannedHeight at 0 for a legacy blob with no creationHeight, NOT lastHeight", async () => {
+    const acct = createAccount("english");
+    const raw = legacyRaw(
+      acct.keys.spend.sec,
+      acct.keys.view.sec,
+      acct.keys.spend.pub,
+      acct.keys.view.pub,
+    );
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const rt = await runtimeMod.adopt({
+      raw,
+      keys: {
+        pub: { spend: acct.keys.spend.pub, view: acct.keys.view.pub },
+        priv: { spend: acct.keys.spend.sec, view: acct.keys.view.sec },
+      },
+      password: "pw",
+    });
+
+    // The fix: fall back to 0 (full re-scan), never to lastHeight (900_000), which
+    // would skip the wallet's entire history.
+    expect(rt.state.scannedHeight).toBe(0);
+  });
+});
+
+describe("sync concurrency guard (review #2)", () => {
+  it("never runs two scans in parallel and does not lose state", async () => {
+    const acct = createAccount("english");
+    const networkHeight = 50;
+
+    let activeScans = 0;
+    let maxConcurrent = 0;
+    let syncDataCalls = 0;
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(networkHeight),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: async () => {
+        activeScans += 1;
+        maxConcurrent = Math.max(maxConcurrent, activeScans);
+        syncDataCalls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        activeScans -= 1;
+        return [];
+      },
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    runtimeMod._setRuntimeForTest({
+      account: acct,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+      },
+      state: { ...createWalletState(acct), scannedHeight: networkHeight - 1 },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    // Fire two concurrent syncs. They must serialize (never overlap a scan).
+    const [h1, h2] = await Promise.all([runtimeMod.sync(), runtimeMod.sync()]);
+
+    expect(h1).toBe(networkHeight);
+    expect(h2).toBe(networkHeight);
+    expect(maxConcurrent).toBe(1); // no parallel scan
+    expect(syncDataCalls).toBeGreaterThanOrEqual(1);
+    // State advanced to the tip and was not reverted by a racing writer.
+    expect(runtimeMod.getRuntime()?.state.scannedHeight).toBe(networkHeight);
+  });
+});
+
+describe("inbound message 100-atomic marker gate (review #6)", () => {
+  it("treats a message tx (owned 100-atomic output) as inbound", async () => {
+    const { reconstructReceivedMessage } = await import("@/lib/services/real-sdk/messages-store");
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const bobDecoded = decodeAddress(bob.address);
+
+    const built = txns.buildMessageTransaction({
+      keys: alice.keys,
+      recipient: {
+        spendPublicKey: bobDecoded.spendPublicKey,
+        viewPublicKey: bobDecoded.viewPublicKey,
+      },
+      body: "ping",
+      changeKeys: { spendPublicKey: alice.keys.spend.pub, viewPublicKey: alice.keys.view.pub },
+      unspentOutputs: [fundOwnedOutput(alice, 5_000_000)],
+      decoys: [fakeDecoys(5_000_000, 6)],
+      fee: 1000,
+      mixin: 5,
+      ttlUnixSeconds: 0,
+      nodeFee: null,
+      messageAmount: 100,
+    });
+
+    const scanTx: txns.RawTransaction = {
+      extra: built.extra,
+      vout: built.outputs.map((out) => ({
+        amount: out.amount,
+        target: { type: "02", data: { key: out.publicKey } },
+      })),
+      outputIndexes: built.outputs.map((_, i) => 5000 + i),
+      hash: built.hash,
+      height: 10,
+    };
+
+    const inbound = reconstructReceivedMessage(scanTx, bob.keys, { sentHashes: new Set() });
+    expect(inbound).not.toBeNull();
+    expect(inbound?.body).toBe("ping");
+  });
+
+  it("does NOT surface a message when the owned output isn't the 100-atomic marker", async () => {
+    const { reconstructReceivedMessage } = await import("@/lib/services/real-sdk/messages-store");
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const bobDecoded = decodeAddress(bob.address);
+
+    // Build a real message tx, then rewrite the owned (recipient) output amount to a
+    // non-marker value (50000) — simulating a normal payment carrying a stray tag.
+    const built = txns.buildMessageTransaction({
+      keys: alice.keys,
+      recipient: {
+        spendPublicKey: bobDecoded.spendPublicKey,
+        viewPublicKey: bobDecoded.viewPublicKey,
+      },
+      body: "not-a-message",
+      changeKeys: { spendPublicKey: alice.keys.spend.pub, viewPublicKey: alice.keys.view.pub },
+      unspentOutputs: [fundOwnedOutput(alice, 5_000_000)],
+      decoys: [fakeDecoys(5_000_000, 6)],
+      fee: 1000,
+      mixin: 5,
+      ttlUnixSeconds: 0,
+      nodeFee: null,
+      messageAmount: 50_000, // NOT the 100-atomic marker
+    });
+
+    const scanTx: txns.RawTransaction = {
+      extra: built.extra,
+      vout: built.outputs.map((out) => ({
+        amount: out.amount,
+        target: { type: "02", data: { key: out.publicKey } },
+      })),
+      outputIndexes: built.outputs.map((_, i) => 5000 + i),
+      hash: built.hash,
+      height: 10,
+    };
+
+    const inbound = reconstructReceivedMessage(scanTx, bob.keys, { sentHashes: new Set() });
+    expect(inbound).toBeNull();
+  });
+});
+
+describe("sendMessage broadcast failure (review #5)", () => {
+  it("does not persist a sent record when broadcast throws", async () => {
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(10),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      // Broadcast rejects → the optimistic sent record must NOT be persisted.
+      sendRawTransaction: () => Promise.reject(new Error("relay refused")),
+      getRandomOuts: () =>
+        Promise.resolve([
+          { amount: 5_000_000, outs: fakeDecoys(5_000_000, 6).outs },
+        ] as unknown as never[]),
+      getWalletSyncData: () => Promise.resolve([]),
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const fundedState = {
+      ...createWalletState(alice),
+      scannedHeight: 10,
+      outputs: [fundOwnedOutput(alice, 5_000_000)],
+    };
+    runtimeMod._setRuntimeForTest({
+      account: alice,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+      },
+      state: fundedState,
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    const { realSdkMessageService } = await import("@/lib/services/real-sdk/message.service");
+    const { readSentRecords } = await import("@/lib/services/real-sdk/messages-store");
+
+    await expect(
+      realSdkMessageService.sendMessage({ recipientAddress: bob.address, body: "hi" }),
+    ).rejects.toThrow();
+
+    // No phantom sent record left behind on the blob.
+    expect(readSentRecords(runtimeMod.getRuntime()?.raw as RawWalletV1)).toHaveLength(0);
+  });
+});
+
+// --- helpers (shared with real-sdk-messages.test.ts) -------------------------
+
+function fundOwnedOutput(
+  owner: ReturnType<typeof createAccount>,
+  amount: number,
+): txns.SpendableOutput {
+  const txKeys = crypto.generateKeys(crypto.randomSeed());
+  const txPublicKey = txKeys.pub;
+  const outputIndex = 0;
+  const derivation = crypto.generateKeyDerivation(txPublicKey, owner.keys.view.sec);
+  const publicKey = crypto.derivePublicKey(derivation, outputIndex, owner.keys.spend.pub);
+  const ephemeralSecret = crypto.deriveSecretKey(derivation, outputIndex, owner.keys.spend.sec);
+  const keyImage = crypto.generateKeyImage(publicKey, ephemeralSecret);
+  return { amount, globalIndex: 1000, outputIndex, txPublicKey, publicKey, keyImage };
+}
+
+function fakeDecoys(amount: number, count: number): txns.DecoySet {
+  const outs = Array.from({ length: count }, (_, i) => ({
+    globalIndex: 2000 + i,
+    publicKey: crypto.generateKeys(crypto.randomSeed()).pub,
+  }));
+  return { amount, outs };
+}
