@@ -9,6 +9,7 @@ import type { Deposit, Message, NodeStatus, Transaction, WalletInfo } from "@/li
 import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 import { Cn, CnUtils } from "./Cn";
 import { CoinUri } from "./CoinUri";
+import { chooseRemoteFeeAddress } from "./fee-address";
 import { InterestCalculator } from "./Interest";
 import { KeysRepository } from "./KeysRepository";
 import { Mnemonic } from "./Mnemonic";
@@ -394,6 +395,16 @@ export async function listTransactionsOperation(): Promise<Transaction[]> {
   return listWalletTransactions(wallet, height);
 }
 
+/** True when `address` is a decodable CCX address (prefix + checksum). */
+function addressDecodes(address: string): boolean {
+  try {
+    Cn.decode_address(address);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function sendTransactionOperation(input: SendTransactionInput): Promise<Transaction> {
   await ensureAllWalletLegacyLibs();
   const wallet = getRuntimeWallet();
@@ -406,11 +417,19 @@ export async function sendTransactionOperation(input: SendTransactionInput): Pro
     throw new Error("Amount exceeds available balance.");
   }
 
+  // Fail fast on a malformed recipient (mirror sendMessageOperation) instead of
+  // throwing deep inside createTx with an opaque error.
+  if (!addressDecodes(input.address)) {
+    throw new Error("Invalid recipient address.");
+  }
+
   const destinations = [{ address: input.address, amount: amountAtomic }];
   const remoteFeeAddress = await explorer.getSessionNodeFeeAddress();
   if (remoteFeeAddress !== wallet.getPublicAddress()) {
+    // The fee address comes from the untrusted node — only use it if it decodes,
+    // else fall back to the donation address (bounds a bad node to the fee amount).
     destinations.push({
-      address: remoteFeeAddress || config.donationAddress,
+      address: chooseRemoteFeeAddress(remoteFeeAddress, config.donationAddress, addressDecodes),
       amount: config.remoteNodeFee,
     });
   }
@@ -498,8 +517,9 @@ export async function sendMessageOperation(input: SendMessageInput): Promise<Mes
   const destinations = [{ address: destinationAddress, amount: amountToSend }];
   const remoteFeeAddress = await explorer.getSessionNodeFeeAddress();
   if (remoteFeeAddress !== wallet.getPublicAddress() && ttlMinutes === 0) {
+    // Same untrusted-node fee-address guard as sendTransactionOperation.
     destinations.push({
-      address: remoteFeeAddress || config.donationAddress,
+      address: chooseRemoteFeeAddress(remoteFeeAddress, config.donationAddress, addressDecodes),
       amount: config.remoteNodeFee,
     });
   }
