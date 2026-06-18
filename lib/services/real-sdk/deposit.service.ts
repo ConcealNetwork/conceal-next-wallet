@@ -1,0 +1,198 @@
+import {
+  calculateDepositInterest,
+  DEPOSIT_MAX_TERM_MONTH,
+  DEPOSIT_MIN_AMOUNT_COIN,
+  DEPOSIT_MIN_TERM_BLOCK,
+  DEPOSIT_MIN_TERM_MONTH,
+  DEPOSIT_SMALL_WITHDRAW_FEE,
+  DEPOSIT_TX_FEE,
+  getBalance,
+  getLockedDeposits,
+  getUnlockedDeposits,
+  transactions as txns,
+} from "conceal-wallet-sdk";
+import { COIN_UNIT_PLACES } from "@/lib/config/config";
+import { deriveApr, mapDeposit, mapDeposits } from "@/lib/services/real-sdk/mappers";
+import { requireRuntime } from "@/lib/services/real-sdk/runtime";
+import {
+  broadcast,
+  fetchDecoys,
+  MIXIN,
+  ownKeys,
+  unspentOutputs,
+} from "@/lib/services/real-sdk/spend";
+import type {
+  CreateDepositInput,
+  DepositConstraints,
+  DepositService,
+  PreviewCreateDepositInput,
+  WithdrawDepositInput,
+} from "@/lib/services/deposit.service";
+import { assertCanSpend } from "@/lib/services/view-only";
+import type { Deposit, Transaction } from "@/lib/types";
+import { walletCopy } from "@/lib/ui/wallet-copy";
+
+const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
+
+export const realSdkDepositService: DepositService = {
+  async listDeposits(): Promise<Deposit[]> {
+    const rt = requireRuntime();
+    const networkHeight = await rt.daemon.getHeight();
+    return mapDeposits(rt.state, networkHeight);
+  },
+
+  async getDepositConstraints(): Promise<DepositConstraints> {
+    const rt = requireRuntime();
+    const networkHeight = await rt.daemon.getHeight();
+    const balance = getBalance(rt.state);
+    const maxDepositAmount = Math.max(
+      0,
+      Math.floor((balance.spendable - DEPOSIT_TX_FEE) / ATOMIC_PER_CCX),
+    );
+    const isWalletSyncing = rt.state.scannedHeight < networkHeight;
+    const hasPendingDeposit = getLockedDeposits(rt.state, networkHeight).some(
+      (deposit) => deposit.blockHeight === 0,
+    );
+    return {
+      maxDepositAmount,
+      isDepositDisabled: rt.viewOnly || maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN,
+      isWalletSyncing,
+      hasPendingDeposit,
+    };
+  },
+
+  async previewCreateDeposit(input: PreviewCreateDepositInput) {
+    const rt = requireRuntime();
+    const lockHeight = await rt.daemon.getHeight();
+    const months = clampMonths(input.durationMonths);
+    const termBlocks = months * DEPOSIT_MIN_TERM_BLOCK;
+    const amountAtomic = Math.floor(input.amount) * ATOMIC_PER_CCX;
+    const interestAtomic = calculateDepositInterest({
+      amount: amountAtomic,
+      term: termBlocks,
+      lockHeight,
+    });
+    return {
+      interestCcx: interestAtomic / ATOMIC_PER_CCX,
+      indicativeApr: deriveApr(amountAtomic, interestAtomic, termBlocks),
+    };
+  },
+
+  async createDeposit(input: CreateDepositInput): Promise<Deposit> {
+    const rt = requireRuntime();
+    assertCanSpend(rt.viewOnly, walletCopy.viewOnlyDepositDisabled);
+
+    const amountCoins = Math.floor(input.amount);
+    if (!Number.isFinite(amountCoins) || amountCoins < DEPOSIT_MIN_AMOUNT_COIN) {
+      throw new Error(`Deposit amount must be at least ${DEPOSIT_MIN_AMOUNT_COIN} CCX.`);
+    }
+    const months = Math.floor(input.durationMonths);
+    if (months < DEPOSIT_MIN_TERM_MONTH || months > DEPOSIT_MAX_TERM_MONTH) {
+      throw new Error(
+        `Deposit term must be between ${DEPOSIT_MIN_TERM_MONTH} and ${DEPOSIT_MAX_TERM_MONTH} months.`,
+      );
+    }
+
+    const amountAtomic = amountCoins * ATOMIC_PER_CCX;
+    const termBlocks = months * DEPOSIT_MIN_TERM_BLOCK;
+    const balance = getBalance(rt.state);
+    if (amountAtomic + DEPOSIT_TX_FEE > balance.spendable) {
+      throw new Error("Not enough unlocked balance for deposit and network fee.");
+    }
+
+    const outputs = unspentOutputs(rt);
+    const decoys = await fetchDecoys(rt, outputs);
+    const built = txns.buildDepositTransaction({
+      keys: rt.account.keys,
+      amount: amountAtomic,
+      termBlocks,
+      ownKeys: ownKeys(rt),
+      unspentOutputs: outputs,
+      decoys,
+      fee: DEPOSIT_TX_FEE,
+      mixin: MIXIN,
+    });
+
+    await broadcast(rt, built);
+
+    const networkHeight = await rt.daemon.getHeight();
+    const matched = mapDeposits(rt.state, networkHeight).find(
+      (deposit) => deposit.txHash === built.hash,
+    );
+    if (matched) return matched;
+
+    // Optimistic pending entry until the deposit confirms and scans in.
+    const interestAtomic = calculateDepositInterest({
+      amount: amountAtomic,
+      term: termBlocks,
+      lockHeight: networkHeight,
+    });
+    return mapDeposit(
+      {
+        amount: amountAtomic,
+        globalIndex: 0,
+        outputIndex: 0,
+        txPublicKey: built.txPublicKey,
+        publicKey: built.outputs[0]?.publicKey ?? "",
+        keys: [built.outputs[0]?.publicKey ?? ""],
+        term: termBlocks,
+        blockHeight: 0,
+        txHash: built.hash,
+        interest: interestAtomic,
+        unlockHeight: termBlocks,
+      },
+      networkHeight,
+      rt.account.address,
+      new Set<number>(),
+    );
+  },
+
+  async withdrawDeposit(input: WithdrawDepositInput): Promise<Transaction> {
+    const rt = requireRuntime();
+    assertCanSpend(rt.viewOnly, walletCopy.viewOnlyDepositDisabled);
+
+    const networkHeight = await rt.daemon.getHeight();
+    const deposit = getUnlockedDeposits(rt.state, networkHeight).find(
+      (entry) => entry.txHash === input.txHash && entry.globalIndex === input.globalOutputIndex,
+    );
+    if (!deposit) {
+      // Distinguish "still locked" from "unknown" for a clearer message.
+      const locked = getLockedDeposits(rt.state, networkHeight).find(
+        (entry) => entry.txHash === input.txHash && entry.globalIndex === input.globalOutputIndex,
+      );
+      throw new Error(
+        locked ? "Deposit is still locked." : "Deposit not found or already withdrawn.",
+      );
+    }
+
+    const built = txns.buildWithdrawTransaction({
+      keys: rt.account.keys,
+      deposit,
+      ownKeys: ownKeys(rt),
+      // The SDK defaults this to DEPOSIT_SMALL_WITHDRAW_FEE; pass it explicitly so
+      // the withdraw fee stays correct even if the SDK default ever changes.
+      withdrawFee: DEPOSIT_SMALL_WITHDRAW_FEE,
+    });
+
+    await broadcast(rt, built);
+
+    return {
+      id: built.hash,
+      hash: built.hash,
+      type: "withdrawal",
+      amount: { atomic: built.sentAmount },
+      address: rt.account.address,
+      timestamp: new Date().toISOString(),
+      blockHeight: 0,
+      confirmations: 0,
+    };
+  },
+};
+
+/** Clamp a requested deposit term to the supported month range. */
+function clampMonths(durationMonths: number): number {
+  const months = Math.floor(durationMonths);
+  if (months < DEPOSIT_MIN_TERM_MONTH) return DEPOSIT_MIN_TERM_MONTH;
+  if (months > DEPOSIT_MAX_TERM_MONTH) return DEPOSIT_MAX_TERM_MONTH;
+  return months;
+}

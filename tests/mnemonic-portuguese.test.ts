@@ -67,7 +67,9 @@ describe("Portuguese mnemonic decoding", () => {
     }
     // Guard: ensure we actually exercised the collision path the fix addresses.
     expect(exercisedCollision).toBe(true);
-  });
+    // 1000 encode+decode round-trips is compute-heavy; the 5s default flakes under
+    // parallel WASM-warmup load (passes in isolation). Give it room.
+  }, 30_000);
 
   it("leaves prefix-based decoding intact for other languages", () => {
     const seed = seededHex(42);
