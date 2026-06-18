@@ -99,6 +99,11 @@ export const mockWalletService: WalletService = {
     await mockDelay();
     return { ok: true };
   },
+  async verifyPassword(password: string) {
+    // No real password in mock mode; accept any non-empty value.
+    await mockDelay();
+    return password.length > 0;
+  },
   async disconnect() {
     // no runtime in mock mode; clear view-only so the next open starts clean
     mockViewOnly = false;

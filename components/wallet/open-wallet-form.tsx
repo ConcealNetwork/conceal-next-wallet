@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { clearBiometricEnrollment } from "@/lib/auth/biometric-store";
+import { clearPasskeyEnrollment } from "@/lib/auth/biometric-store";
 import { useQueryClient } from "@/lib/hooks/query-provider";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -15,7 +15,7 @@ import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
 
 /** Remove the local biometric enrollment (stale after delete / password change). */
 export function forgetBiometricEnrollment(): void {
-  clearBiometricEnrollment();
+  clearPasskeyEnrollment();
 }
 
 export function useWalletDisconnect() {
@@ -44,7 +44,7 @@ export function useWalletDelete() {
     void (async () => {
       try {
         await services.wallet.deleteStoredWallet();
-        clearBiometricEnrollment();
+        clearPasskeyEnrollment();
         queryClient.clear();
         resetMessageNavBadge();
         closeSession();

@@ -87,5 +87,11 @@ export interface WalletService {
   exportWalletPdf(): Promise<{ filename: string }>;
   downloadWalletBackup(input: DownloadWalletBackupInput): Promise<DownloadWalletBackupResult>;
   changePassword(input: { currentPassword: string; newPassword: string }): Promise<{ ok: true }>;
+  /**
+   * Verify a password against the stored wallet WITHOUT opening it — used to
+   * confirm the password before encrypting it for a newly added passkey. Returns
+   * false on a wrong password rather than throwing.
+   */
+  verifyPassword(password: string): Promise<boolean>;
   disconnect?(): Promise<void>;
 }

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { clearBiometricEnrollment, getBiometricEnrollment } from "@/lib/auth/biometric-store";
+import { clearPasskeyEnrollment, getPasskeyEnrollment } from "@/lib/auth/biometric-store";
 import { env } from "@/lib/env";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQueryClient } from "@/lib/hooks/query-provider";
@@ -76,11 +76,11 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
       // Opening the wallet is a user gesture — request durable storage now so the
       // browser is less likely to evict the encrypted wallet (best-effort).
       void requestPersistentStorage();
-      // Drop a biometric enrollment bound to a different wallet (import / re-create)
+      // Drop a passkey enrollment bound to a different wallet (import / re-create)
       // so a stale ciphertext can't recover the previous wallet's password.
-      const enrollment = getBiometricEnrollment();
+      const enrollment = getPasskeyEnrollment();
       if (enrollment?.address && enrollment.address !== nextWalletInfo.address) {
-        clearBiometricEnrollment();
+        clearPasskeyEnrollment();
       }
       setStatus("open");
       setWalletInfo(nextWalletInfo);

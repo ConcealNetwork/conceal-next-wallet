@@ -64,6 +64,9 @@ export const realWalletService: WalletService = {
     await (await walletOps()).changePasswordOperation(input.currentPassword, input.newPassword);
     return { ok: true as const };
   },
+  async verifyPassword(password) {
+    return (await walletOps()).verifyPasswordOperation(password);
+  },
   async disconnect() {
     await disconnectWalletRuntime();
   },

@@ -67,6 +67,14 @@ export async function unlockStoredWallet(password: string): Promise<WalletInfo> 
   return mapWalletToInfo(wallet, height);
 }
 
+/** Decrypt-check a password against the stored wallet WITHOUT opening the runtime. */
+export async function verifyPasswordOperation(password: string): Promise<boolean> {
+  await ensureAllWalletLegacyLibs();
+  await WalletRepository.migrateWallet();
+  const wallet = await WalletRepository.getLocalWalletWithPassword(password);
+  return wallet !== null;
+}
+
 export async function generateWalletDraftOperation(): Promise<{
   mnemonic: string;
   address: string;
