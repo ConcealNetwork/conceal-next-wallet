@@ -4,33 +4,26 @@ import {
   BarChart3,
   BookOpen,
   CalendarClock,
-  ChevronLeft,
-  ChevronRight,
   Coins,
   Download,
   Gift,
   HeartPulse,
   Home,
-  LogOut,
   LineChart,
+  LogOut,
   Mail,
-  Menu,
-  Monitor,
-  Moon,
   Network,
   QrCode,
   Send,
   Settings,
-  Sun,
-  Wallet,
   WalletCards,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useState } from "react";
 import { NavMessageBadge } from "@/components/layout/nav-message-badge";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
-import { WalletSwitcher } from "@/components/layout/wallet-switcher";
+import { WalletAvatar } from "@/components/layout/wallet-switcher";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,39 +36,55 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
+import { useWallets } from "@/lib/hooks";
 import {
   useAcknowledgeMessagesSinceOpen,
   useNewMessagesSinceOpen,
 } from "@/lib/hooks/use-new-messages-since-open";
 import { useOverdueCheckInCount } from "@/lib/hooks/use-check-ins";
 import { useI18n } from "@/lib/i18n/i18n-provider";
-import { THEME_PREFERENCES, type ThemePreference } from "@/lib/ui/theme";
-import { useTheme } from "@/lib/ui/theme-provider";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 
-const mainNav = [
-  { href: "/wallet/account", labelKey: "nav.account", icon: Home },
-  { href: "/wallet/market", labelKey: "nav.market", icon: BarChart3 },
-  { href: "/wallet/transactions", labelKey: "nav.transactions", icon: WalletCards },
-  { href: "/wallet/insights", labelKey: "nav.insights", icon: LineChart },
-  { href: "/wallet/send", labelKey: "nav.send", icon: Send },
-  { href: "/wallet/scheduled", labelKey: "nav.scheduled", icon: CalendarClock },
-  { href: "/wallet/receive", labelKey: "nav.receive", icon: QrCode },
-  { href: "/wallet/deposits", labelKey: "nav.deposits", icon: Coins },
-  { href: "/wallet/messages", labelKey: "nav.messages", icon: Mail },
-  { href: "/wallet/check-ins", labelKey: "nav.checkIns", icon: HeartPulse },
-  { href: "/wallet/address-book", labelKey: "nav.addressBook", icon: BookOpen },
-];
+type NavItem = { href: string; labelKey: string; icon: LucideIcon };
+type NavSectionDef = { label: string; items: NavItem[] };
 
-const bottomNav = [
-  { href: "/wallet/settings", labelKey: "nav.settings", icon: Settings },
-  { href: "/wallet/export", labelKey: "nav.export", icon: Download },
-  { href: "/wallet/network", labelKey: "nav.network", icon: Network },
-  { href: "/wallet/donate", labelKey: "nav.donate", icon: Gift },
+// Nav is grouped into labeled sections (issue #122, stage 1). The section
+// HEADERS are hardcoded English for now — a later #84 chunk localizes them (no
+// new i18n keys yet, so the locale-parity test stays green). Each ITEM keeps its
+// `t(labelKey)` accessible name so every locale still translates the links.
+const NAV_SECTIONS: NavSectionDef[] = [
+  {
+    label: "Wallet",
+    items: [
+      { href: "/wallet/account", labelKey: "nav.account", icon: Home },
+      { href: "/wallet/transactions", labelKey: "nav.transactions", icon: WalletCards },
+      { href: "/wallet/send", labelKey: "nav.send", icon: Send },
+      { href: "/wallet/receive", labelKey: "nav.receive", icon: QrCode },
+      { href: "/wallet/messages", labelKey: "nav.messages", icon: Mail },
+      { href: "/wallet/market", labelKey: "nav.market", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Banking",
+    items: [
+      { href: "/wallet/deposits", labelKey: "nav.deposits", icon: Coins },
+      { href: "/wallet/scheduled", labelKey: "nav.scheduled", icon: CalendarClock },
+      { href: "/wallet/check-ins", labelKey: "nav.checkIns", icon: HeartPulse },
+      { href: "/wallet/insights", labelKey: "nav.insights", icon: LineChart },
+    ],
+  },
+  {
+    label: "More",
+    items: [
+      { href: "/wallet/address-book", labelKey: "nav.addressBook", icon: BookOpen },
+      { href: "/wallet/network", labelKey: "nav.network", icon: Network },
+      { href: "/wallet/export", labelKey: "nav.export", icon: Download },
+      { href: "/wallet/donate", labelKey: "nav.donate", icon: Gift },
+    ],
+  },
 ];
 
 function NavLink({
@@ -84,7 +93,7 @@ function NavLink({
   badge,
   onNavigate,
 }: {
-  item: (typeof mainNav)[number];
+  item: NavItem;
   collapsed?: boolean;
   badge?: number;
   onNavigate?: () => void;
@@ -102,13 +111,13 @@ function NavLink({
       aria-label={collapsed ? (showBadge ? `${label}, ${badge} new since open` : label) : undefined}
       onClick={onNavigate}
       className={cn(
-        "flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+        "flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         active &&
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+          "bg-wallet-amber/12 text-wallet-amber hover:bg-wallet-amber/12 hover:text-wallet-amber",
       )}
     >
       <span className={cn("relative shrink-0", collapsed && showBadge && "mr-auto")}>
-        <Icon className="size-4" aria-hidden="true" />
+        <Icon className="size-[17px]" aria-hidden="true" />
         {showBadge && collapsed ? (
           <NavMessageBadge count={badge} className="absolute -right-2 -top-2" />
         ) : null}
@@ -143,45 +152,33 @@ function NavLink({
   );
 }
 
-const THEME_META: Record<ThemePreference, { labelKey: string; icon: typeof Sun }> = {
-  system: { labelKey: "theme.system", icon: Monitor },
-  light: { labelKey: "theme.light", icon: Sun },
-  dark: { labelKey: "theme.dark", icon: Moon },
-};
-
-/** Globally-accessible theme switch: cycles System → Light → Dark. */
-function SidebarThemeToggle({ collapsed }: { collapsed: boolean }) {
-  const { preference, setPreference } = useTheme();
-  const { t } = useI18n();
-  const { labelKey, icon: Icon } = THEME_META[preference];
-  const label = t(labelKey);
-  const next =
-    THEME_PREFERENCES[(THEME_PREFERENCES.indexOf(preference) + 1) % THEME_PREFERENCES.length];
-
+function NavSection({
+  label,
+  collapsed,
+  first,
+  children,
+}: {
+  label: string;
+  collapsed: boolean;
+  first: boolean;
+  children: React.ReactNode;
+}) {
+  if (collapsed) {
+    // No labels when collapsed; just space the section groups apart.
+    return <div className={cn("flex flex-col", !first && "mt-2")}>{children}</div>;
+  }
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          aria-label={`${t("theme.label")}: ${label}. ${t("theme.switchTo", { name: t(THEME_META[next].labelKey) })}`}
-          onClick={() => setPreference(next)}
-          className="h-11 w-full shrink-0 justify-start gap-3 px-3 text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <Icon className="size-4 shrink-0" aria-hidden="true" />
-          <span
-            className={cn(
-              "whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none",
-              collapsed && "pointer-events-none opacity-0",
-            )}
-            aria-hidden={collapsed}
-          >
-            {t("theme.label")} · {label}
-          </span>
-        </Button>
-      </TooltipTrigger>
-      {collapsed && <TooltipContent side="right">{`${t("theme.label")}: ${label}`}</TooltipContent>}
-    </Tooltip>
+    <div className="flex flex-col">
+      <div
+        className={cn(
+          "px-3 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70",
+          first ? "pb-1.5 pt-1" : "pb-1.5 pt-4",
+        )}
+      >
+        {label}
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -199,9 +196,9 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
               type="button"
               variant="ghost"
               aria-label={collapsed ? disconnectLabel : undefined}
-              className="mt-4 h-11 w-full shrink-0 justify-start gap-3 px-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              className="mt-2 h-11 w-full shrink-0 justify-start gap-3 px-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             >
-              <LogOut className="size-4 shrink-0" aria-hidden="true" />
+              <LogOut className="size-[17px] shrink-0" aria-hidden="true" />
               <span
                 className={cn(
                   "whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none",
@@ -235,7 +232,68 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function SidebarContent({
+function SidebarFooter({
+  collapsed,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const { t } = useI18n();
+  const { data: wallets } = useWallets();
+  const list = wallets ?? [];
+  const active = list.find((wallet) => wallet.isActive) ?? list[0];
+  const settingsLabel = t("nav.settings");
+
+  const gear = (
+    <Link
+      href="/wallet/settings"
+      onClick={onNavigate}
+      aria-label={settingsLabel}
+      className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Settings className="size-[18px]" aria-hidden="true" />
+    </Link>
+  );
+
+  return (
+    <div className="border-t border-border px-3 py-3">
+      <div className={cn("flex items-center gap-2", collapsed && "justify-center")}>
+        {active ? (
+          <span
+            className={cn(
+              "flex items-center gap-2.5 rounded-lg",
+              collapsed ? "px-0" : "min-w-0 flex-1 px-1",
+            )}
+          >
+            <WalletAvatar wallet={active} className="size-8" />
+            {!collapsed ? (
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-semibold leading-tight text-foreground">
+                  {active.label}
+                </span>
+                <span className="block text-[11px] leading-tight text-muted-foreground">
+                  {list.length} {list.length === 1 ? "wallet" : "wallets"}
+                </span>
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{gear}</TooltipTrigger>
+            <TooltipContent side="right">{settingsLabel}</TooltipContent>
+          </Tooltip>
+        ) : (
+          gear
+        )}
+      </div>
+      <DisconnectButton collapsed={collapsed} />
+    </div>
+  );
+}
+
+export function SidebarContent({
   collapsed = false,
   onNavigate,
 }: {
@@ -246,112 +304,62 @@ function SidebarContent({
   const acknowledgeMessages = useAcknowledgeMessagesSinceOpen();
   const overdueCheckIns = useOverdueCheckInCount();
 
+  function badgeFor(item: NavItem): number | undefined {
+    if (item.href === "/wallet/messages") return newMessages;
+    if (item.href === "/wallet/check-ins") return overdueCheckIns;
+    return undefined;
+  }
+
+  function navigateFor(item: NavItem): (() => void) | undefined {
+    if (item.href !== "/wallet/messages") return onNavigate;
+    return () => {
+      acknowledgeMessages();
+      onNavigate?.();
+    };
+  }
+
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[hsl(var(--chrome))] px-3 py-5">
-      <div className="mb-4 flex h-10 items-center">
-        <Link
-          href="/wallet/account"
-          aria-label="Conceal Wallet"
-          onClick={onNavigate}
-          className="flex min-h-10 cursor-pointer items-center gap-3 rounded-xl px-3 transition-opacity duration-200 hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Wallet className="size-5 shrink-0 text-primary" aria-hidden="true" />
-          <span
-            className={cn(
-              "whitespace-nowrap text-lg font-bold text-foreground transition-opacity duration-200 motion-reduce:transition-none",
-              collapsed && "pointer-events-none opacity-0",
-            )}
-            aria-hidden={collapsed}
-          >
-            Conceal Wallet
-          </span>
-        </Link>
-      </div>
-      {!collapsed ? (
-        <div className="mb-5">
-          <WalletSwitcher collapsed={collapsed} />
-        </div>
-      ) : null}
-      <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-x-visible overflow-y-auto">
-        {mainNav.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
+    <div className="flex h-full flex-col overflow-hidden">
+      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-x-visible overflow-y-auto px-3 py-4">
+        {NAV_SECTIONS.map((section, sectionIndex) => (
+          <NavSection
+            key={section.label}
+            label={section.label}
             collapsed={collapsed}
-            badge={
-              item.href === "/wallet/messages"
-                ? newMessages
-                : item.href === "/wallet/check-ins"
-                  ? overdueCheckIns
-                  : undefined
-            }
-            onNavigate={
-              item.href === "/wallet/messages"
-                ? () => {
-                    acknowledgeMessages();
-                    onNavigate?.();
-                  }
-                : onNavigate
-            }
-          />
-        ))}
-        <div className="my-4 border-t border-border" />
-        {bottomNav.map((item) => (
-          <NavLink key={item.href} item={item} collapsed={collapsed} onNavigate={onNavigate} />
+            first={sectionIndex === 0}
+          >
+            {section.items.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                collapsed={collapsed}
+                badge={badgeFor(item)}
+                onNavigate={navigateFor(item)}
+              />
+            ))}
+          </NavSection>
         ))}
       </nav>
-      <SidebarThemeToggle collapsed={collapsed} />
-      <DisconnectButton collapsed={collapsed} />
+      <SidebarFooter collapsed={collapsed} onNavigate={onNavigate} />
     </div>
   );
 }
 
 export function Sidebar() {
-  const { collapsed, toggle } = useSidebarCollapse();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const closeMobileNav = useCallback(() => setMobileOpen(false), []);
-  const EdgeToggleIcon = collapsed ? ChevronRight : ChevronLeft;
-  const { t } = useI18n();
+  const { collapsed } = useSidebarCollapse();
+  // The mobile drawer + its toggle live in <GlobalHeader />; this is the
+  // desktop rail only. Starts below the 56px header (top-14).
 
   return (
-    <>
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-30 hidden overflow-visible border-r border-border transition-[width] duration-300 ease-in-out motion-reduce:transition-none lg:block",
-          collapsed ? "w-[64px]" : "w-[260px]",
-        )}
-      >
-        <TooltipProvider>
-          <SidebarContent collapsed={collapsed} />
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={collapsed ? t("action.expandMenu") : t("action.collapseMenu")}
-            onClick={toggle}
-            className="absolute right-0 top-7 z-50 size-7 min-h-0 translate-x-1/2 rounded-full border border-border bg-card p-0 text-muted-foreground shadow-xs hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <EdgeToggleIcon className="size-4" aria-hidden="true" />
-          </Button>
-        </TooltipProvider>
-      </aside>
-      <div className="sticky top-0 z-40 flex h-16 items-center border-b border-border bg-background/95 px-4 backdrop-blur-sm lg:hidden">
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={t("action.openNavigation")}
-            >
-              <Menu className="size-5" aria-hidden="true" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[290px] border-border bg-[hsl(var(--chrome))] p-0">
-            <SidebarContent onNavigate={closeMobileNav} />
-          </SheetContent>
-        </Sheet>
-        <p className="ml-3 text-base font-semibold">Conceal Wallet</p>
-      </div>
-    </>
+    <aside
+      className={cn(
+        "fixed bottom-0 left-0 top-14 z-30 hidden overflow-visible border-r border-border bg-[hsl(var(--chrome))] transition-[width] duration-300 ease-in-out motion-reduce:transition-none lg:block",
+        collapsed ? "w-[64px]" : "w-[260px]",
+      )}
+    >
+      <TooltipProvider>
+        <SidebarContent collapsed={collapsed} />
+      </TooltipProvider>
+    </aside>
   );
 }

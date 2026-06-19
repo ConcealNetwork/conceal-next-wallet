@@ -80,7 +80,6 @@ describe("wallet components", () => {
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <ThemeProvider>
-            {/* Sidebar's WalletSwitcher consumes the in-app unlock context (smooth switching). */}
             <UnlockWalletProvider defaultRedirect={null} autoOpenFromNext={false}>
               <Sidebar />
             </UnlockWalletProvider>
@@ -88,7 +87,7 @@ describe("wallet components", () => {
         </I18nProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole("link", { name: /Send/ })).toHaveClass("bg-primary");
+    expect(screen.getByRole("link", { name: /Send/ })).toHaveClass("bg-wallet-amber/12");
     fireEvent.click(screen.getByRole("button", { name: /Disconnect/ }));
     fireEvent.click(
       within(screen.getByRole("alertdialog")).getByRole("button", { name: "Disconnect" }),
