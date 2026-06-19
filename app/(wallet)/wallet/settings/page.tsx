@@ -26,6 +26,7 @@ import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ThemeToggle } from "@/components/wallet/theme-toggle";
 import { VaultBackup } from "@/components/wallet/vault-backup";
+import { WalletsSetting } from "@/components/wallet/wallets-setting";
 import { env } from "@/lib/env";
 import {
   useOptimizationStatus,
@@ -455,6 +456,13 @@ export default function SettingsPage() {
                   ) : null}
                 </div>
               </Row>
+            </Section>
+
+            <Section title={t("wallets.title")}>
+              <div className="flex flex-col gap-3 py-4 first:pt-0">
+                <p className="text-xs text-muted-foreground">{t("wallets.description")}</p>
+                <WalletsSetting />
+              </div>
             </Section>
 
             {current && (

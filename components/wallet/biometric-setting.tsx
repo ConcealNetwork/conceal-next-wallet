@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,7 @@ import {
   PasskeyError,
   signalPasskeyRemoved,
 } from "@/lib/auth/webauthn-prf";
+import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
 
@@ -43,10 +44,20 @@ export function PasskeySetting() {
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
+  // Active wallet id for per-wallet passkey keying (#95).
+  const walletIdRef = useRef<string>("default");
 
   useEffect(() => {
     setAvailable(isPasskeyUnlockAvailable());
-    setEnrollment(getPasskeyEnrollment());
+    let cancelled = false;
+    void getActiveWalletId().then((walletId) => {
+      if (cancelled) return;
+      walletIdRef.current = walletId;
+      setEnrollment(getPasskeyEnrollment(walletId));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!available) return null;
@@ -54,20 +65,21 @@ export function PasskeySetting() {
   const credentials = enrollment?.credentials ?? [];
 
   function refresh() {
-    setEnrollment(getPasskeyEnrollment());
+    setEnrollment(getPasskeyEnrollment(walletIdRef.current));
   }
 
   function remove(credentialId: string) {
-    const current = getPasskeyEnrollment();
+    const walletId = walletIdRef.current;
+    const current = getPasskeyEnrollment(walletId);
     if (!current) {
       refresh();
       return;
     }
     const next = removePasskeyCredential(current, credentialId);
     if (next) {
-      savePasskeyEnrollment(next);
+      savePasskeyEnrollment(next, walletId);
     } else {
-      clearPasskeyEnrollment();
+      clearPasskeyEnrollment(walletId);
     }
     // Best-effort: ask the OS/provider to prune its copy of the removed passkey.
     void signalPasskeyRemoved(credentialId);
@@ -76,8 +88,9 @@ export function PasskeySetting() {
   }
 
   function removeAll() {
-    const ids = (getPasskeyEnrollment()?.credentials ?? []).map((c) => c.credentialId);
-    clearPasskeyEnrollment();
+    const walletId = walletIdRef.current;
+    const ids = (getPasskeyEnrollment(walletId)?.credentials ?? []).map((c) => c.credentialId);
+    clearPasskeyEnrollment(walletId);
     ids.forEach((id) => void signalPasskeyRemoved(id));
     refresh();
     toast.success("Passkey unlock disabled.");
@@ -90,8 +103,10 @@ export function PasskeySetting() {
 
   function saveRename() {
     if (!editingId) return;
-    const current = getPasskeyEnrollment();
-    if (current) savePasskeyEnrollment(renamePasskeyCredential(current, editingId, editLabel));
+    const walletId = walletIdRef.current;
+    const current = getPasskeyEnrollment(walletId);
+    if (current)
+      savePasskeyEnrollment(renamePasskeyCredential(current, editingId, editLabel), walletId);
     setEditingId(null);
     refresh();
   }
@@ -226,9 +241,10 @@ function AddPasskeyDialog({
         toast.error("That password doesn't match this wallet.");
         return;
       }
-      const current = getPasskeyEnrollment();
+      const walletId = await getActiveWalletId();
+      const current = getPasskeyEnrollment(walletId);
       const credential = await enrollPasskeyCredential(password, current?.credentials ?? []);
-      savePasskeyEnrollment(addPasskeyCredential(current, credential, address));
+      savePasskeyEnrollment(addPasskeyCredential(current, credential, address), walletId);
       toast.success("Passkey added.");
       onAdded();
       onOpenChange(false);

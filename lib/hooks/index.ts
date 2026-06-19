@@ -17,7 +17,7 @@ import type { AddressEntryInput } from "@/lib/services/address-book.service";
 import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
-import type { Message, WalletInfo, WalletSettings } from "@/lib/types";
+import type { Message, WalletInfo, WalletSettings, WalletSummary } from "@/lib/types";
 import { sortMessagesNewestFirst } from "@/lib/messages/conversations";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -48,6 +48,59 @@ export function useWalletSyncStatus() {
 /** True when the open wallet is watch-only (no spend key) — drives view-only UI. */
 export function useWalletViewOnly(): boolean {
   return useWalletInfo().data?.viewOnly ?? false;
+}
+
+// --- multi-wallet (#95) ----------------------------------------------------
+
+/** The wallets registered on this device, with the active one flagged. */
+export function useWallets() {
+  const { status } = useWalletSession();
+  return useQuery({
+    queryKey: queryKeys.wallets,
+    queryFn: () => services.wallet.listWallets(),
+    enabled: status === "open",
+  });
+}
+
+/**
+ * Switch the active wallet. The engine closes the session (keys are never kept),
+ * so this clears the query cache; the caller then drives the unlock flow for the
+ * target. Returns the mutation so the caller can await/observe it.
+ */
+export function useSwitchWallet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.wallet.switchWallet(id),
+    onSuccess: () => {
+      queryClient.clear();
+    },
+  });
+}
+
+/** Rename a wallet (label only) and refresh the list. */
+export function useRenameWallet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, label }: { id: string; label: string }) =>
+      services.wallet.renameWallet(id, label),
+    onSuccess: (_result, { id, label }) => {
+      queryClient.setQueryData<WalletSummary[]>(queryKeys.wallets, (current) =>
+        (current ?? []).map((wallet) => (wallet.id === id ? { ...wallet, label } : wallet)),
+      );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+    },
+  });
+}
+
+/** Delete a wallet by id (erases its keyspace) and refresh the list. */
+export function useDeleteWallet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.wallet.deleteWallet(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+    },
+  });
 }
 
 export function useRefreshWallet() {

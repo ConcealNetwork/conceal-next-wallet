@@ -30,6 +30,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
 import { NavMessageBadge } from "@/components/layout/nav-message-badge";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
+import { WalletSwitcher } from "@/components/layout/wallet-switcher";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -247,7 +248,7 @@ function SidebarContent({
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[hsl(var(--chrome))] px-3 py-5">
-      <div className="mb-8 flex h-10 items-center">
+      <div className="mb-4 flex h-10 items-center">
         <Link
           href="/wallet/account"
           aria-label="Conceal Wallet"
@@ -266,6 +267,11 @@ function SidebarContent({
           </span>
         </Link>
       </div>
+      {!collapsed ? (
+        <div className="mb-5">
+          <WalletSwitcher collapsed={collapsed} />
+        </div>
+      ) : null}
       <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-x-visible overflow-y-auto">
         {mainNav.map((item) => (
           <NavLink

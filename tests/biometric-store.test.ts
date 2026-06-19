@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   addPasskeyCredential,
   clearPasskeyEnrollment,
+  DEFAULT_WALLET_ID,
   getPasskeyEnrollment,
   hasPasskeyEnrollment,
   type PasskeyCredential,
@@ -134,5 +135,55 @@ describe("passkey enrollment store", () => {
     expect(getPasskeyEnrollment()).toBeNull();
     localStorage.setItem(STORAGE_KEY, "not json");
     expect(getPasskeyEnrollment()).toBeNull();
+  });
+});
+
+describe("passkey enrollment store — per-wallet keying (#95)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function envelope(address: string, credId: string): PasskeyEnrollment {
+    return { version: 2, address, credentials: [credential(credId)] };
+  }
+
+  it("stores the default wallet under the legacy global key (back-compat)", () => {
+    const enrollment = envelope("ccx7default", "cred-d");
+    savePasskeyEnrollment(enrollment, DEFAULT_WALLET_ID);
+    // Reading with no arg defaults to the default wallet id → same key.
+    expect(getPasskeyEnrollment()).toEqual(enrollment);
+    // It lives at the unchanged legacy key, so existing enrollments keep working.
+    expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+  });
+
+  it("keys a namespaced wallet under a suffixed key, isolated from the default", () => {
+    const def = envelope("ccx7default", "cred-d");
+    const other = envelope("ccx7other", "cred-o");
+    savePasskeyEnrollment(def, DEFAULT_WALLET_ID);
+    savePasskeyEnrollment(other, "wallet-2");
+
+    expect(getPasskeyEnrollment(DEFAULT_WALLET_ID)).toEqual(def);
+    expect(getPasskeyEnrollment("wallet-2")).toEqual(other);
+    expect(localStorage.getItem(`${STORAGE_KEY}:wallet-2`)).not.toBeNull();
+    expect(hasPasskeyEnrollment("wallet-2")).toBe(true);
+    // A wallet with no enrollment is null and unaffected by the others.
+    expect(getPasskeyEnrollment("wallet-3")).toBeNull();
+  });
+
+  it("clears only the targeted wallet's enrollment", () => {
+    savePasskeyEnrollment(envelope("ccx7default", "cred-d"), DEFAULT_WALLET_ID);
+    savePasskeyEnrollment(envelope("ccx7other", "cred-o"), "wallet-2");
+
+    clearPasskeyEnrollment("wallet-2");
+    expect(getPasskeyEnrollment("wallet-2")).toBeNull();
+    // The default wallet's enrollment survives.
+    expect(hasPasskeyEnrollment(DEFAULT_WALLET_ID)).toBe(true);
+  });
+
+  it("migrates a pre-multi-wallet global enrollment as the default wallet's", () => {
+    // A legacy install wrote the single global key with no multi-wallet suffix.
+    savePasskeyEnrollment(envelope("ccx7legacy", "cred-l"), DEFAULT_WALLET_ID);
+    // The default wallet reads it transparently — no migration step needed.
+    expect(getPasskeyEnrollment(DEFAULT_WALLET_ID)?.address).toBe("ccx7legacy");
   });
 });

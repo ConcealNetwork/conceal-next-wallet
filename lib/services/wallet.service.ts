@@ -1,7 +1,11 @@
-import type { WalletInfo } from "@/lib/types";
+import type { WalletInfo, WalletSummary } from "@/lib/types";
+
+export type { WalletSummary };
 
 export type FinalizeCreateWalletInput = {
   password: string;
+  /** Optional wallet label (multi-wallet #95); defaults applied by the engine. */
+  label?: string;
 };
 
 export type PrepareCreateWalletResult = {
@@ -94,4 +98,21 @@ export interface WalletService {
    */
   verifyPassword(password: string): Promise<boolean>;
   disconnect?(): Promise<void>;
+  /**
+   * Multi-wallet (#95). The engine can hold several encrypted wallets on one
+   * device; these manage the switcher + Settings list. Creating/importing a wallet
+   * (`finalizeCreateWallet` / `importWallet`) ADDS a wallet rather than replacing
+   * the current one. `deleteStoredWallet` / `panicWipe` target the active wallet.
+   */
+  /** All wallets registered on this device, with the active one flagged. */
+  listWallets(): Promise<WalletSummary[]>;
+  /**
+   * Make `id` the active wallet. The in-memory session is closed (keys are never
+   * kept), so the UI must drive an unlock for the target afterward.
+   */
+  switchWallet(id: string): Promise<void>;
+  /** Rename a wallet (label only). */
+  renameWallet(id: string, label: string): Promise<void>;
+  /** Delete a wallet by id (erases its keyspace + drops it from the registry). */
+  deleteWallet(id: string): Promise<void>;
 }

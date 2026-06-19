@@ -2,8 +2,9 @@
 
 import { Fingerprint } from "lucide-react";
 import Link from "next/link";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -60,6 +61,9 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
   const [passkeyAvailable, setPasskeyAvailable] = useState(false);
   const [enrolled, setEnrolled] = useState(false);
   const [enablePasskey, setEnablePasskey] = useState(false);
+  // Active wallet id for per-wallet passkey keying (#95). Resolved when the unlock
+  // dialog opens; defaults to the default wallet id until then.
+  const walletIdRef = useRef<string>("default");
 
   async function unlock(passwordValue?: string) {
     setLoading(true);
@@ -70,12 +74,13 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
       // Opt-in enrollment: the password just verified, so encrypt it now.
       if (passkeyEnabled && passkeyAvailable && enablePasskey && passwordValue) {
         try {
-          const current = getPasskeyEnrollment();
+          const walletId = walletIdRef.current;
+          const current = getPasskeyEnrollment(walletId);
           const credential = await enrollPasskeyCredential(
             passwordValue,
             current?.credentials ?? [],
           );
-          savePasskeyEnrollment(addPasskeyCredential(current, credential, wallet.address));
+          savePasskeyEnrollment(addPasskeyCredential(current, credential, wallet.address), walletId);
           setEnrolled(true);
           toast.success("Passkey unlock enabled for this device.");
         } catch (error) {
@@ -96,7 +101,8 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
   }
 
   async function unlockPasskey() {
-    const enrollment = getPasskeyEnrollment();
+    const walletId = walletIdRef.current;
+    const enrollment = getPasskeyEnrollment(walletId);
     if (!enrollment) return;
     setLoading(true);
     let recovered: string;
@@ -118,7 +124,7 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
     } catch {
       // Decrypted fine, but the password no longer opens the wallet (changed /
       // re-imported elsewhere) — the enrollment is stale, so drop it.
-      clearPasskeyEnrollment();
+      clearPasskeyEnrollment(walletId);
       setEnrolled(false);
       toast.error("Passkey unlock is out of date — unlock with your password to re-enable it.");
     } finally {
@@ -127,10 +133,19 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
   }
 
   // Reflect passkey availability/enrollment whenever the unlock dialog opens.
+  // Resolve the active wallet id first so enrollment is read for the right wallet.
   useEffect(() => {
     if (!passkeyEnabled || !unlockDialogOpen) return;
-    setEnrolled(hasPasskeyEnrollment());
     setPasskeyAvailable(isPasskeyUnlockAvailable());
+    let cancelled = false;
+    void getActiveWalletId().then((walletId) => {
+      if (cancelled) return;
+      walletIdRef.current = walletId;
+      setEnrolled(hasPasskeyEnrollment(walletId));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [passkeyEnabled, unlockDialogOpen]);
 
   useEffect(() => {

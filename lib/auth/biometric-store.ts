@@ -3,17 +3,33 @@
  * keys / phone passkeys — anything exposing the WebAuthn PRF extension).
  *
  * Stored in localStorage as an envelope of one-or-more registered authenticators
- * for the current wallet. Each entry holds an AES-GCM ciphertext of the wallet
- * password encrypted under that authenticator's PRF secret — useless without a
+ * for a SPECIFIC wallet. Each entry holds an AES-GCM ciphertext of THAT wallet's
+ * password encrypted under the authenticator's PRF secret — useless without a
  * user-verifying assertion from the matching authenticator. Cleared on wallet
  * delete, password change, panic wipe, and when a different wallet opens.
+ *
+ * MULTI-WALLET (#95): a passkey encrypts ONE wallet's password, so enrollments are
+ * keyed per wallet id — `ccx-biometric-enrollment:<walletId>`. The legacy GLOBAL
+ * key (`ccx-biometric-enrollment`, single-wallet) is migrated on first read to the
+ * default wallet id, so an existing enrollment keeps working seamlessly.
  *
  * v1 (single-credential) enrollments are migrated to the v2 envelope on read; the
  * ciphertext is unchanged, so existing enrollments keep working.
  */
 import type { EncryptedSecret } from "@/lib/auth/webauthn-crypto";
 
-const STORAGE_KEY = "ccx-biometric-enrollment";
+/** Legacy GLOBAL storage key (pre-multi-wallet). Migrated to the default id. */
+const LEGACY_STORAGE_KEY = "ccx-biometric-enrollment";
+/** The default wallet id (mirrors `real-sdk/wallets-index` `DEFAULT_WALLET_ID`,
+ *  duplicated here to keep this mode-agnostic store free of engine imports). */
+export const DEFAULT_WALLET_ID = "default";
+
+/** Per-wallet storage key. The default wallet inherits the legacy global key. */
+function storageKeyFor(walletId: string): string {
+  return walletId === DEFAULT_WALLET_ID
+    ? LEGACY_STORAGE_KEY
+    : `${LEGACY_STORAGE_KEY}:${walletId}`;
+}
 
 export interface PasskeyCredential {
   /** base64url credential id, listed in allowCredentials on unlock. */
@@ -52,10 +68,12 @@ function isCredentialShape(
   );
 }
 
-/** Read + migrate the stored enrollment, or null if none/invalid. */
-export function getPasskeyEnrollment(): PasskeyEnrollment | null {
+/** Read + migrate the stored enrollment for `walletId`, or null if none/invalid. */
+export function getPasskeyEnrollment(
+  walletId: string = DEFAULT_WALLET_ID,
+): PasskeyEnrollment | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKeyFor(walletId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const address = typeof parsed?.address === "string" ? parsed.address : undefined;
@@ -105,24 +123,27 @@ export function getPasskeyEnrollment(): PasskeyEnrollment | null {
   }
 }
 
-export function savePasskeyEnrollment(enrollment: PasskeyEnrollment): void {
+export function savePasskeyEnrollment(
+  enrollment: PasskeyEnrollment,
+  walletId: string = DEFAULT_WALLET_ID,
+): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(enrollment));
+    localStorage.setItem(storageKeyFor(walletId), JSON.stringify(enrollment));
   } catch {
     // storage unavailable — passkey unlock just won't persist
   }
 }
 
-export function clearPasskeyEnrollment(): void {
+export function clearPasskeyEnrollment(walletId: string = DEFAULT_WALLET_ID): void {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKeyFor(walletId));
   } catch {
     // best-effort
   }
 }
 
-export function hasPasskeyEnrollment(): boolean {
-  return getPasskeyEnrollment() !== null;
+export function hasPasskeyEnrollment(walletId: string = DEFAULT_WALLET_ID): boolean {
+  return getPasskeyEnrollment(walletId) !== null;
 }
 
 /**
