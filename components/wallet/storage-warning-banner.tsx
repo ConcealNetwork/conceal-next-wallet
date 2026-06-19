@@ -4,13 +4,16 @@ import { DatabaseBackup, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { useStorageHealth } from "@/lib/hooks/use-storage-health";
+import { toast } from "sonner";
+import { queryKeys } from "@/lib/hooks/query-keys";
+import { useQueryClient } from "@/lib/hooks/query-provider";
+import { requestPersistentStorage, useStorageHealth } from "@/lib/hooks/use-storage-health";
 
 const COPY = {
   "low-space":
     "This browser is low on storage. Back up your wallet now so you can restore it if the data is evicted.",
   "not-persisted":
-    "This browser hasn't granted persistent storage, so it may clear the wallet automatically. Back up your recovery phrase to be safe.",
+    "This browser hasn't granted persistent storage, so it may clear the wallet automatically. Ask the browser to keep it on this device, and back up your recovery phrase to be safe.",
 } as const;
 
 // Per-session dismissal: re-warn next session (a seed-loss risk shouldn't be
@@ -30,11 +33,18 @@ function readDismissed(): boolean {
  * durable storage was denied, or the quota is nearly full (see `useStorageHealth`).
  * Rendered globally in the wallet shell; hidden when storage is healthy, on the
  * export page itself, or once dismissed for the session.
+ *
+ * For the not-persisted case it also offers "Keep on this device", which requests
+ * durable storage from a user gesture (`navigator.storage.persist()`) — the gesture
+ * gives the best chance of a grant (Chrome decides on engagement heuristics; Firefox
+ * prompts). On a grant the re-probe flips storage to healthy and the banner hides.
  */
 export function StorageWarningBanner() {
   const { data } = useStorageHealth();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const [dismissed, setDismissed] = useState(readDismissed);
+  const [requesting, setRequesting] = useState(false);
 
   if (!data || data === "none" || dismissed || pathname === "/wallet/export") {
     return null;
@@ -49,6 +59,24 @@ export function StorageWarningBanner() {
     setDismissed(true);
   }
 
+  async function keepOnDevice() {
+    setRequesting(true);
+    try {
+      const granted = await requestPersistentStorage();
+      // Re-probe so the banner reflects the new state (hides on a grant).
+      await queryClient.invalidateQueries({ queryKey: queryKeys.storageHealth });
+      if (granted) {
+        toast.success("This browser will now keep your wallet — it won't auto-clear it.");
+      } else {
+        toast.info(
+          "Your browser didn't grant persistent storage. Back up your recovery phrase to be safe.",
+        );
+      }
+    } finally {
+      setRequesting(false);
+    }
+  }
+
   return (
     <div
       className="mb-4 flex items-start gap-3 rounded-xl border border-wallet-amber/30 bg-wallet-amber/10 px-4 py-3 text-sm text-foreground"
@@ -59,12 +87,24 @@ export function StorageWarningBanner() {
       <div className="min-w-0 flex-1">
         <p className="font-semibold">Back up your wallet</p>
         <p className="text-muted-foreground">{COPY[data]}</p>
-        <Link
-          href="/wallet/export"
-          className="mt-1 inline-block font-semibold text-wallet-amber underline-offset-4 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Back up now →
-        </Link>
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+          {data === "not-persisted" ? (
+            <button
+              type="button"
+              onClick={() => void keepOnDevice()}
+              disabled={requesting}
+              className="cursor-pointer font-semibold text-wallet-amber underline-offset-4 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {requesting ? "Requesting…" : "Keep on this device"}
+            </button>
+          ) : null}
+          <Link
+            href="/wallet/export"
+            className="inline-block font-semibold text-wallet-amber underline-offset-4 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Back up now →
+          </Link>
+        </div>
       </div>
       <button
         type="button"
