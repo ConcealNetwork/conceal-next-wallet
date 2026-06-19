@@ -58,6 +58,11 @@ import {
   withReceivedRecords,
 } from "@/lib/services/real-sdk/messages-store";
 import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
+import {
+  prunePendingRecords,
+  readPendingRecords,
+  withPendingRecords,
+} from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
 
@@ -86,6 +91,15 @@ interface DaemonRandomOutsForAmount {
 
 /** Field we add to the persisted blob to carry the serialized SDK wallet state. */
 const SDK_STATE_FIELD = "sdkWalletState";
+
+/**
+ * Re-scan this many blocks below the last scanned height on every sync. A daemon can
+ * return a block range via `getWalletSyncData` BEFORE it has indexed a tx that was just
+ * mined into one of those blocks; without re-scanning, `scannedHeight` advances past it
+ * and the tx is dropped until a manual full rescan (#98). Folding is idempotent, so
+ * re-scanning recent blocks every sync is safe and also covers small chain reorgs.
+ */
+const RESCAN_LAG_BLOCKS = 10;
 
 /** A live, unlocked SDK wallet runtime. */
 export interface SdkRuntime {
@@ -328,7 +342,10 @@ async function syncOnce(): Promise<number> {
   const batchSize = 100;
   // Coinbase (miner) outputs are scanned only when the wallet opts in (solo mining).
   const includeMinerTxs = Boolean(rt.raw.options?.checkMinerTx);
-  let scanned = rt.state.scannedHeight;
+  // Resume from a re-scan window below the last scanned height (see RESCAN_LAG_BLOCKS),
+  // floored at the wallet's seed/creation height so we never scan pre-existence blocks.
+  const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
+  let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS);
   let state = rt.state;
 
   // Our own outbound message txs already live in `sentMessages`; never reclassify
@@ -367,17 +384,35 @@ async function syncOnce(): Promise<number> {
       }
     }
     scanned = endBlock;
-    state = { ...state, scannedHeight: scanned };
   }
 
-  const stateChanged = state !== rt.state;
+  // Advance the scan cursor to the highest block scanned (never backwards). Only
+  // allocate a new state object when the cursor or folded data actually changed, so an
+  // idle re-scan (nothing new in the window) does not churn the serialized persist.
+  const finalScanned = Math.max(rt.state.scannedHeight, scanned);
+  const nextState =
+    finalScanned !== state.scannedHeight ? { ...state, scannedHeight: finalScanned } : state;
+  const stateChanged = nextState !== rt.state;
   if (stateChanged) {
-    rt.state = state;
+    rt.state = nextState;
   }
   if (receivedChanged) {
     rt.raw = withReceivedRecords(rt.raw, [...received.values()]);
   }
-  if (stateChanged || receivedChanged) {
+
+  // Reconcile optimistic pending sends: drop any whose tx is now scanned into state
+  // (mined), or that have expired without ever mining (#96).
+  const currentPending = readPendingRecords(rt.raw);
+  let pendingChanged = false;
+  if (currentPending.length > 0) {
+    const survivors = prunePendingRecords(rt.raw, nextState, Date.now());
+    if (survivors.length !== currentPending.length) {
+      rt.raw = withPendingRecords(rt.raw, survivors);
+      pendingChanged = true;
+    }
+  }
+
+  if (stateChanged || receivedChanged || pendingChanged) {
     await persist();
   }
   return height;

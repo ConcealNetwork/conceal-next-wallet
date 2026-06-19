@@ -11,6 +11,7 @@ import {
   readSentRecords,
   withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
+import { addPendingRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
@@ -34,7 +35,7 @@ export const realSdkTransactionService: TransactionService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
-    return mapTransactions(rt.state, networkHeight);
+    return mapTransactions(rt.state, networkHeight, readPendingRecords(rt.raw));
   },
 
   async sendTransaction(input: SendTransactionInput): Promise<Transaction> {
@@ -118,7 +119,20 @@ export const realSdkTransactionService: TransactionService = {
 
     await broadcast(rt, built);
 
-    // Persist a sender copy of the message so it shows in the sender's Messages.
+    // Optimistic pending entry (show the outgoing tx + hold the balance until it mines,
+    // and lock its inputs against re-selection) plus, if present, the sender's message
+    // copy — mutated together and persisted once.
+    rt.raw = addPendingRecord(rt.raw, {
+      hash: built.hash,
+      amountAtomic:
+        input.address === rt.account.address
+          ? FEE_ATOMIC + nodeFeeAtomic
+          : amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
+      timestampIso: new Date().toISOString(),
+      address: input.address,
+      ...(input.paymentId?.trim() ? { paymentId: input.paymentId.trim() } : {}),
+      spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+    });
     if (hasMessage) {
       rt.raw = withSentRecords(rt.raw, [
         ...readSentRecords(rt.raw),
@@ -130,13 +144,13 @@ export const realSdkTransactionService: TransactionService = {
           timestampIso: new Date().toISOString(),
         }),
       ]);
-      try {
-        await persist();
-      } catch {
-        // Non-fatal: the tx is already relayed (broadcast persisted state itself), so
-        // failing the send here would invite a retry → double-spend. Losing only the
-        // sender's UI copy of the message is acceptable; the next persist reconciles it.
-      }
+    }
+    try {
+      await persist();
+    } catch {
+      // Non-fatal: the tx is already relayed (broadcast persisted state itself), so
+      // failing the send here would invite a retry → double-spend. Losing only the
+      // optimistic pending / message UI records is acceptable; sync reconciles them.
     }
 
     const networkHeight = await rt.daemon.getHeight();

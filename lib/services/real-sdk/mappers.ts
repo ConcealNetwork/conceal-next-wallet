@@ -10,11 +10,16 @@ import {
   getLockedDeposits,
   getTransactions,
   getUnlockedDeposits,
+  getUnspentOutputs,
   type OwnedDeposit,
   type WalletState,
   type WalletTransaction,
 } from "conceal-wallet-sdk";
 import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
+import {
+  type PendingTxRecord,
+  readPendingRecords,
+} from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { CcxAmount, Deposit, Transaction, TransactionType, WalletInfo } from "@/lib/types";
@@ -53,9 +58,38 @@ export function mapTransaction(tx: WalletTransaction, networkHeight: number): Tr
   };
 }
 
-/** Map the wallet's transaction history (newest first) to UI transactions. */
-export function mapTransactions(state: WalletState, networkHeight: number): Transaction[] {
-  return getTransactions(state).map((tx) => mapTransaction(tx, networkHeight));
+/** Map an optimistic pending (broadcast, not-yet-mined) outbound tx to the UI shape. */
+export function mapPendingTransaction(record: PendingTxRecord): Transaction {
+  return {
+    id: record.hash,
+    hash: record.hash,
+    type: "send",
+    amount: atomic(record.amountAtomic),
+    address: record.address,
+    timestamp: record.timestampIso,
+    blockHeight: 0,
+    confirmations: 0,
+    ...(record.paymentId ? { paymentId: record.paymentId } : {}),
+  };
+}
+
+/**
+ * Map the wallet's transaction history (newest first) to UI transactions, with any
+ * optimistic pending sends shown FIRST (0 confirmations) until the scanned tx of the
+ * same hash supersedes them.
+ */
+export function mapTransactions(
+  state: WalletState,
+  networkHeight: number,
+  pending: readonly PendingTxRecord[] = [],
+): Transaction[] {
+  const scanned = getTransactions(state).map((tx) => mapTransaction(tx, networkHeight));
+  if (pending.length === 0) return scanned;
+  const scannedHashes = new Set(scanned.map((tx) => tx.hash));
+  const pendingTxs = pending
+    .filter((record) => !scannedHashes.has(record.hash))
+    .map(mapPendingTransaction);
+  return [...pendingTxs, ...scanned];
 }
 
 /** Map one owned deposit to the UI {@link Deposit}. */
@@ -118,13 +152,30 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
   const lockedTotal = locked.reduce((sum, d) => sum + d.amount, 0);
   const withdrawable = unlocked.reduce((sum, d) => sum + d.amount + d.interest, 0);
 
+  // Hold the balance for broadcast-but-not-yet-mined sends (#96). Count ONLY pending
+  // records not yet scanned into state — a record mined just before its (synchronous)
+  // prune must not be double-counted against the on-chain balance. `available` is the
+  // unspent set minus the inputs those live-pending sends locked (so it matches what a
+  // new send can actually select); `pending` is their outflow; `balanceTotal` stays the
+  // on-chain total.
+  const minedHashes = new Set(state.transactions.map((tx) => tx.hash));
+  const livePending = readPendingRecords(runtime.raw).filter(
+    (record) => !minedHashes.has(record.hash),
+  );
+  const pendingOut = livePending.reduce((sum, record) => sum + Math.max(0, record.amountAtomic), 0);
+  const pendingSpent = new Set(livePending.flatMap((record) => record.spentKeyImages));
+  const availableAtomic = getUnspentOutputs(state).reduce(
+    (sum, out) => sum + (pendingSpent.has(out.keyImage) ? 0 : out.amount),
+    0,
+  );
+
   return {
     address: state.address,
     viewOnly: runtime.viewOnly,
     balanceTotal: atomic(balance.total),
-    available: atomic(balance.spendable),
+    available: atomic(availableAtomic),
     dust: atomic(0),
-    pending: atomic(0),
+    pending: atomic(pendingOut),
     lockedDeposits: atomic(lockedTotal),
     withdrawable: atomic(withdrawable),
     creationHeight: Math.max(0, Number(runtime.raw.creationHeight ?? 0) || 0),

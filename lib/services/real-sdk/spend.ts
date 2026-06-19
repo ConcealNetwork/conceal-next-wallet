@@ -17,6 +17,7 @@ import {
   type transactions as txns,
 } from "conceal-wallet-sdk";
 import { COIN_FEE_ATOMIC } from "@/lib/config/config";
+import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
 import { decoysFromDaemon, persist, type SdkRuntime, sync } from "@/lib/services/real-sdk/runtime";
 
 /** Local aliases for types that live inside the SDK's `transactions` namespace. */
@@ -55,9 +56,15 @@ export function ownKeys(runtime: SdkRuntime): { spendPublicKey: string; viewPubl
   };
 }
 
-/** The wallet's currently-spendable outputs. */
+/** The wallet's currently-spendable outputs, excluding any held by a pending tx. */
 export function unspentOutputs(runtime: SdkRuntime): OwnedOutput[] {
-  return getUnspentOutputs(runtime.state);
+  // Outputs spent by a broadcast-but-not-yet-mined tx must not be re-selected, or a
+  // second send would build on already-spent inputs and be rejected at relay (#96).
+  const pendingSpent = pendingSpentKeyImages(runtime.raw);
+  const unspent = getUnspentOutputs(runtime.state);
+  return pendingSpent.size === 0
+    ? unspent
+    : unspent.filter((output) => !pendingSpent.has(output.keyImage));
 }
 
 /**

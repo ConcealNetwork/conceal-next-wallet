@@ -246,6 +246,174 @@ describe("real-sdk inbound message reconstruction", () => {
   });
 });
 
+describe("real-sdk pending tx + balance hold (#96)", () => {
+  afterEach(async () => {
+    const { _setRuntimeForTest } = await import("@/lib/services/real-sdk/runtime");
+    _setRuntimeForTest(null);
+  });
+
+  it("records a pending send, holds the balance, and locks the spent inputs", async () => {
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const aliceOutput = fundOwnedOutput(alice, 5_000_000);
+    const networkHeight = 100;
+
+    const fakeDaemon = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(networkHeight),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: (amounts: number[], count: number) =>
+        Promise.resolve(
+          amounts.map((amount) => ({
+            amount,
+            outs: Array.from({ length: count }, (_, i) => ({
+              globalIndex: 3000 + i,
+              publicKey: crypto.generateKeys(crypto.randomSeed()).pub,
+            })),
+          })),
+        ),
+      getWalletSyncData: () => Promise.resolve([]), // spend not mined during this test
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    runtimeMod._setRuntimeForTest({
+      account: alice,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: networkHeight,
+        nonce: "",
+        keys: {
+          pub: { spend: alice.keys.spend.pub, view: alice.keys.view.pub },
+          priv: { spend: alice.keys.spend.sec, view: alice.keys.view.sec },
+        },
+        creationHeight: 0,
+        options: {},
+      },
+      state: { ...createWalletState(alice), outputs: [aliceOutput], scannedHeight: networkHeight },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: fakeDaemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    await realSdkTransactionService.sendTransaction({ address: bob.address, amount: 0.5 });
+
+    const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
+    const { mapWalletInfo } = await import("@/lib/services/real-sdk/mappers");
+    const { unspentOutputs } = await import("@/lib/services/real-sdk/spend");
+    const rt = runtimeMod.getRuntime();
+    if (rt === null) throw new Error("runtime missing");
+
+    // A pending record exists for the broadcast tx.
+    const pending = readPendingRecords(rt.raw);
+    expect(pending).toHaveLength(1);
+    expect(pending[0]?.amountAtomic).toBeGreaterThanOrEqual(500_000); // 0.5 CCX + fees
+
+    // Balance held: pending bucket carries the outflow, available drops by it, total unchanged.
+    const info = mapWalletInfo(rt, networkHeight);
+    expect(info.pending.atomic).toBe(pending[0]?.amountAtomic);
+    expect(info.balanceTotal.atomic).toBe(5_000_000);
+    expect(info.available.atomic).toBe(0);
+
+    // The spent input is locked against re-selection until the tx mines.
+    expect(unspentOutputs(rt)).toHaveLength(0);
+
+    // The pending send shows in history with 0 confirmations.
+    const txs = await realSdkTransactionService.listTransactions();
+    expect(txs.some((t) => t.type === "send" && t.confirmations === 0)).toBe(true);
+  });
+});
+
+describe("real-sdk sync re-scan window (#98)", () => {
+  afterEach(async () => {
+    const { _setRuntimeForTest } = await import("@/lib/services/real-sdk/runtime");
+    _setRuntimeForTest(null);
+  });
+
+  it("recovers an incoming tx in a block already passed (late daemon indexing), no manual rescan", async () => {
+    // Regression #98: the recipient's incremental sync advanced scannedHeight past a
+    // block whose getWalletSyncData came back before the daemon indexed a just-mined
+    // tx, dropping it permanently. A small re-scan window must recover it.
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const bobDecoded = decodeAddress(bob.address);
+    const TX_HEIGHT = 47;
+    const SYNCED_HEIGHT = 50; // bob has ALREADY scanned past TX_HEIGHT (the tx was missed)
+
+    const built = txns.buildMessageTransaction({
+      keys: alice.keys,
+      recipient: {
+        spendPublicKey: bobDecoded.spendPublicKey,
+        viewPublicKey: bobDecoded.viewPublicKey,
+      },
+      body: "late",
+      changeKeys: { spendPublicKey: alice.keys.spend.pub, viewPublicKey: alice.keys.view.pub },
+      unspentOutputs: [fundOwnedOutput(alice, 5_000_000)],
+      decoys: [fakeDecoys(5_000_000, 6)],
+      fee: 1000,
+      mixin: 5,
+      ttlUnixSeconds: 0,
+      nodeFee: null,
+      messageAmount: 1_000_000,
+    });
+
+    const daemon = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(SYNCED_HEIGHT),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: (start: number, end: number) =>
+        Promise.resolve(
+          start <= TX_HEIGHT && end >= TX_HEIGHT
+            ? [toDaemonRawTransaction(built, TX_HEIGHT, 1_700_000_900)]
+            : [],
+        ),
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    runtimeMod._setRuntimeForTest({
+      account: bob,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: SYNCED_HEIGHT,
+        nonce: "",
+        keys: {
+          pub: { spend: bob.keys.spend.pub, view: bob.keys.view.pub },
+          priv: { spend: bob.keys.spend.sec, view: bob.keys.view.sec },
+        },
+        creationHeight: 0,
+        options: {},
+      },
+      state: { ...createWalletState(bob), scannedHeight: SYNCED_HEIGHT },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    await runtimeMod.sync();
+
+    const { getBalance, getTransactions } = await import("conceal-wallet-sdk");
+    const rt = runtimeMod.getRuntime();
+    expect(rt).not.toBeNull();
+    if (rt === null) throw new Error("runtime missing");
+    expect(getBalance(rt.state).total).toBe(1_000_000);
+
+    // Re-syncing must NOT duplicate the recovered tx in history (idempotent fold).
+    await runtimeMod.sync();
+    expect(getTransactions(runtimeMod.getRuntime()?.state ?? rt.state)).toHaveLength(1);
+  });
+});
+
 describe("real-sdk sendTransaction with a message (#97)", () => {
   afterEach(async () => {
     const { _setRuntimeForTest } = await import("@/lib/services/real-sdk/runtime");
