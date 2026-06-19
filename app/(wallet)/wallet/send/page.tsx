@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -45,6 +45,7 @@ import {
   useWalletViewOnly,
 } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
@@ -65,29 +66,38 @@ const REMOTE_NODE_FEE =
   walletNetworkScalars.remoteNodeFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
 const SEND_FEE = NETWORK_FEE + REMOTE_NODE_FEE;
 
-const sendSchema = z.object({
-  address: z
-    .string()
-    .regex(/^ccx7/, "CCX addresses start with ccx7")
-    .min(90, "A CCX address is ~98 characters"),
-  amount: z.number().positive("Amount must be greater than zero"),
-  paymentId: z
-    .string()
-    .regex(/^[0-9a-fA-F]*$/, "Payment ID must be hexadecimal")
-    .max(64, "Max 64 characters")
-    .optional(),
-  message: z
-    .string()
-    .refine(
-      (value) => new TextEncoder().encode(value).length <= MAX_MESSAGE_SIZE,
-      `Message exceeds ${MAX_MESSAGE_SIZE} bytes`,
-    )
-    .optional(),
-});
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
-type SendForm = z.infer<typeof sendSchema>;
+// Schema factory so the localizable validation messages can be threaded through
+// `t`. The address-format and message-size messages stay English by design (the
+// address rules are recipient-correctness copy, kept in the source language).
+function makeSendSchema(t: Translate) {
+  return z.object({
+    address: z
+      .string()
+      .regex(/^ccx7/, "CCX addresses start with ccx7")
+      .min(90, "A CCX address is ~98 characters"),
+    amount: z.number().positive(t("send.errAmountPositive")),
+    paymentId: z
+      .string()
+      .regex(/^[0-9a-fA-F]*$/, t("send.errPaymentIdHex"))
+      .max(64, t("send.errPaymentIdMax"))
+      .optional(),
+    message: z
+      .string()
+      .refine(
+        (value) => new TextEncoder().encode(value).length <= MAX_MESSAGE_SIZE,
+        `Message exceeds ${MAX_MESSAGE_SIZE} bytes`,
+      )
+      .optional(),
+  });
+}
+
+type SendForm = z.infer<ReturnType<typeof makeSendSchema>>;
 
 export default function SendPage() {
+  const { t } = useI18n();
+  const sendSchema = useMemo(() => makeSendSchema(t), [t]);
   const wallet = useWalletInfo();
   const { isSyncing } = useWalletSyncStatus();
   const viewOnly = useWalletViewOnly();
@@ -208,18 +218,15 @@ export default function SendPage() {
   return (
     <>
       <PageHeader
-        title="Send CCX"
-        subtitle="Transfer Conceal Coins to another address"
+        title={t("send.title")}
+        subtitle={t("send.subtitle")}
         badge={viewOnly ? <ViewOnlyBadge /> : null}
       />
       <WalletSyncingBanner />
       <ViewOnlyBanner />
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
-          <SectionCard
-            title="Send Transaction"
-            description="All fields are required except Payment ID and Message"
-          >
+          <SectionCard title={t("send.formTitle")} description={t("send.formDescription")}>
             <form
               className="space-y-5"
               onSubmit={form.handleSubmit((values) => {
@@ -231,7 +238,7 @@ export default function SendPage() {
               })}
             >
               <div className="space-y-2">
-                <Label htmlFor="address">Destination Address</Label>
+                <Label htmlFor="address">{t("send.addressLabel")}</Label>
                 <AddressBookContactPicker
                   contacts={addressBook.data ?? []}
                   selectedId={selectedContactId}
@@ -273,7 +280,7 @@ export default function SendPage() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="amount">Amount to Send</Label>
+                  <Label htmlFor="amount">{t("send.amountLabel")}</Label>
                   <button
                     type="button"
                     onClick={() =>
@@ -285,7 +292,9 @@ export default function SendPage() {
                     }
                     className="cursor-pointer rounded-sm text-xs font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    Max: {formatCcx(available, CCX_PRECISION_DECIMAL_DISPLAY)}
+                    {t("send.amountMax", {
+                      amount: formatCcx(available, CCX_PRECISION_DECIMAL_DISPLAY),
+                    })}
                   </button>
                 </div>
                 <Input
@@ -300,9 +309,11 @@ export default function SendPage() {
                   {...form.register("amount", { valueAsNumber: true })}
                 />
                 <div id="amount-help" className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">≈ {formatUsd(amount * price)} USD</span>
+                  <span className="text-muted-foreground">
+                    {t("send.approxUsd", { usd: formatUsd(amount * price) })}
+                  </span>
                   {amount + SEND_FEE > available && amount > 0 ? (
-                    <span className="text-wallet-outgoing">Exceeds available balance</span>
+                    <span className="text-wallet-outgoing">{t("send.errExceedsBalance")}</span>
                   ) : null}
                 </div>
                 {form.formState.errors.amount && (
@@ -313,10 +324,10 @@ export default function SendPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="paymentId">Payment ID (optional)</Label>
+                <Label htmlFor="paymentId">{t("send.paymentIdLabel")}</Label>
                 <Input
                   id="paymentId"
-                  placeholder="64 character hex string"
+                  placeholder={t("send.paymentIdPlaceholder")}
                   autoComplete="off"
                   aria-invalid={form.formState.errors.paymentId ? true : undefined}
                   aria-describedby={form.formState.errors.paymentId ? "paymentId-error" : undefined}
@@ -330,10 +341,10 @@ export default function SendPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="message">Message (optional)</Label>
+                <Label htmlFor="message">{t("send.messageLabel")}</Label>
                 <Textarea
                   id="message"
-                  placeholder="Optional message to include with the transaction"
+                  placeholder={t("send.messagePlaceholder")}
                   aria-invalid={form.formState.errors.message ? true : undefined}
                   aria-describedby={
                     form.formState.errors.message ? "message-count message-error" : "message-count"
@@ -351,7 +362,7 @@ export default function SendPage() {
               </div>
 
               <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3 text-sm">
-                <span className="text-muted-foreground">Estimated fees</span>
+                <span className="text-muted-foreground">{t("send.estimatedFees")}</span>
                 <span className="font-mono">
                   <CcxAmount>{formatCcx(SEND_FEE, 6)}</CcxAmount>
                 </span>
@@ -363,7 +374,7 @@ export default function SendPage() {
                 disabled={send.isPending || sendToSelf || isSyncing || viewOnly}
                 title={viewOnly ? walletCopy.viewOnlySendDisabled : undefined}
               >
-                Review Send
+                {t("send.reviewButton")}
               </Button>
               {viewOnly ? (
                 <p className="text-center text-xs text-wallet-amber">
@@ -376,22 +387,22 @@ export default function SendPage() {
 
         <div className="space-y-6">
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
-            <SectionCard title="Available" description="Ready to spend">
+            <SectionCard title={t("rail.available")} description={t("send.readyToSpend")}>
               {wallet.data ? (
                 <div className="space-y-4">
                   <div>
                     <p className="font-mono text-2xl font-bold">{availableLabel}</p>
                     <p className="text-sm text-muted-foreground">
-                      ≈ {formatUsd(available * price)} USD
+                      {t("send.approxUsd", { usd: formatUsd(available * price) })}
                     </p>
                   </div>
                   <p className="break-all rounded-xl bg-secondary p-3 text-xs text-muted-foreground">
                     {wallet.data.address}
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    <CopyButton value={wallet.data.address} label="Copy Address" />
+                    <CopyButton value={wallet.data.address} label={t("send.copyAddress")} />
                     <Button asChild variant="outline">
-                      <Link href="/wallet/receive">Open Receive</Link>
+                      <Link href="/wallet/receive">{t("send.openReceive")}</Link>
                     </Button>
                   </div>
                   <WalletQrCode value={wallet.data.address} size={140} />
@@ -401,7 +412,7 @@ export default function SendPage() {
           </div>
 
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
-            <SectionCard title="Recently Sent" description="Last 5 outgoing transactions">
+            <SectionCard title={t("send.recentlySent")} description={t("send.recentlySentDesc")}>
               {recentSent.length > 0 ? (
                 <ul className="divide-y divide-border">
                   {recentSent.map((transaction) => (
@@ -424,7 +435,7 @@ export default function SendPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No outgoing transactions yet.</p>
+                <p className="text-sm text-muted-foreground">{t("send.noOutgoing")}</p>
               )}
             </SectionCard>
           </div>
@@ -442,7 +453,7 @@ export default function SendPage() {
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setSelfSendFromLink(null)}>
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button
               type="button"
@@ -461,34 +472,46 @@ export default function SendPage() {
       <Dialog open={review !== null} onOpenChange={(open) => !open && setReview(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm send</DialogTitle>
+            <DialogTitle>{t("send.confirmTitle")}</DialogTitle>
             <DialogDescription>{walletCopy.sendConfirm}</DialogDescription>
           </DialogHeader>
           {sendWarnings.length > 0 ? <SendReviewWarnings warnings={sendWarnings} /> : null}
           {review ? (
             <div className="space-y-3 text-sm">
-              <Row label="To" value={truncateAddress(review.address, 10, 8)} mono />
+              <Row label={t("rail.to")} value={truncateAddress(review.address, 10, 8)} mono />
               <Row
-                label="Amount"
+                label={t("rail.amount")}
                 value={formatCcx(review.amount, CCX_PRECISION_DECIMAL_DISPLAY)}
                 mono
               />
-              <Row label="Network fee" value={formatCcx(NETWORK_FEE, 6)} mono />
-              <Row label="Remote node fee" value={formatCcx(REMOTE_NODE_FEE, 6)} mono />
+              <Row label={t("send.networkFee")} value={formatCcx(NETWORK_FEE, 6)} mono />
+              <Row label={t("send.remoteNodeFee")} value={formatCcx(REMOTE_NODE_FEE, 6)} mono />
               <div className="my-1 border-t border-border" />
-              <Row label="Total" value={formatCcx(review.amount + SEND_FEE, 6)} mono strong />
-              <Row label="≈ USD" value={formatUsd((review.amount + SEND_FEE) * price)} />
+              <Row
+                label={t("send.total")}
+                value={formatCcx(review.amount + SEND_FEE, 6)}
+                mono
+                strong
+              />
+              <Row
+                label={t("send.approxUsdLabel")}
+                value={formatUsd((review.amount + SEND_FEE) * price)}
+              />
               {review.paymentId ? (
-                <Row label="Payment ID" value={truncateAddress(review.paymentId, 8, 6)} mono />
+                <Row
+                  label={t("rail.paymentId")}
+                  value={truncateAddress(review.paymentId, 8, 6)}
+                  mono
+                />
               ) : null}
             </div>
           ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setReview(null)}>
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button type="button" onClick={confirmSend} disabled={send.isPending}>
-              {send.isPending ? "Sending…" : "Confirm & Send"}
+              {send.isPending ? t("send.sending") : t("send.confirmSend")}
             </Button>
           </DialogFooter>
         </DialogContent>
