@@ -99,7 +99,11 @@ export function UnlockWalletProvider({
   // Multi-wallet (#95): the wallets on this device + which one the unlock dialog will
   // open, so the user always knows which password to use (and can pick another).
   const [wallets, setWallets] = useState<WalletSummary[]>([]);
-  const [selectedId, setSelectedId] = useState<string>(DEFAULT_WALLET_ID);
+  // Empty until the wallets load (#113): seeding this to the default wallet id made the
+  // load effect ALWAYS keep "default" (it's always in the list), so the cold-start
+  // dialog pre-selected the default wallet instead of the active/last-used one — and
+  // keyed the passkey lookup to the wrong wallet. "" lets the effect default to active.
+  const [selectedId, setSelectedId] = useState<string>("");
   // Passkey-first (smooth switching): auto-trigger the passkey prompt once when the
   // dialog opens targeting a wallet that has an enrollment. A ref so a re-render
   // (e.g. after listWallets resolves) doesn't re-fire the assertion.
@@ -117,12 +121,17 @@ export function UnlockWalletProvider({
     setLoading(true);
     try {
       // Open the SELECTED wallet: make it active first if the user picked another.
-      if (!env.useMockWallet && selectedId) {
+      // Before listWallets resolves, selectedId is "" — fall back to the default wallet
+      // id so we never switch to / key a passkey under a phantom empty id (#113 review):
+      // an empty id maps to "ccx-biometric-enrollment:" rather than the default wallet's
+      // legacy key, so enrolling under it would be unfindable on the next unlock.
+      if (!env.useMockWallet) {
+        const targetId = selectedId || DEFAULT_WALLET_ID;
         const activeId = wallets.find((wallet) => wallet.isActive)?.id;
-        if (activeId && selectedId !== activeId) {
-          await services.wallet.switchWallet(selectedId);
+        if (activeId && targetId !== activeId) {
+          await services.wallet.switchWallet(targetId);
         }
-        walletIdRef.current = selectedId;
+        walletIdRef.current = targetId;
       }
       const wallet = await services.wallet.openWallet(
         env.useMockWallet ? {} : { password: passwordValue },
@@ -226,11 +235,14 @@ export function UnlockWalletProvider({
   }, [unlockDialogOpen]);
 
   // Reflect passkey availability/enrollment for the SELECTED wallet (per-wallet keyed).
+  // Fall back to the default wallet id until the list resolves selectedId, so the
+  // passkey is never probed/enrolled under an empty key (#113 review).
   useEffect(() => {
     if (!passkeyEnabled || !unlockDialogOpen) return;
     setPasskeyAvailable(isPasskeyUnlockAvailable());
-    walletIdRef.current = selectedId;
-    setEnrolled(hasPasskeyEnrollment(selectedId));
+    const id = selectedId || DEFAULT_WALLET_ID;
+    walletIdRef.current = id;
+    setEnrolled(hasPasskeyEnrollment(id));
   }, [passkeyEnabled, unlockDialogOpen, selectedId]);
 
   // Passkey-first: when the dialog opens for a wallet that has an enrollment and the

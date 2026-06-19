@@ -303,6 +303,99 @@ describe("sendMessage broadcast failure (review #5)", () => {
   });
 });
 
+describe("createDeposit pending record (#110)", () => {
+  it("records a deposit-typed pending entry that locks the deposit's spent inputs", async () => {
+    const alice = createAccount("english");
+    const funded = fundOwnedOutput(alice, 5_000_000);
+
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(2000),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () =>
+        Promise.resolve([{ amount: 5_000_000, outs: fakeDecoys(5_000_000, 6).outs }] as never[]),
+      getWalletSyncData: () => Promise.resolve([]),
+    };
+
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => Promise.resolve(store.get(k) ?? null),
+      setItem: (k: string, v: string) => {
+        store.set(k, v);
+        return Promise.resolve();
+      },
+      removeItem: (k: string) => {
+        store.delete(k);
+        return Promise.resolve();
+      },
+      keys: () => Promise.resolve([...store.keys()]),
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    runtimeMod._setRuntimeForTest({
+      account: alice,
+      raw: { deposits: [], withdrawals: [], transactions: [], lastHeight: 0, nonce: "", options: {} },
+      state: { ...createWalletState(alice), scannedHeight: 2000, outputs: [funded] },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      // biome-ignore lint/suspicious/noExplicitAny: minimal storage stub for the test
+      storage: storage as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    const { realSdkDepositService } = await import("@/lib/services/real-sdk/deposit.service");
+    const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
+    const { DEPOSIT_TX_FEE } = await import("conceal-wallet-sdk");
+
+    await realSdkDepositService.createDeposit({ amount: 1, durationMonths: 1 });
+
+    const records = readPendingRecords(runtimeMod.getRuntime()?.raw as RawWalletV1);
+    expect(records).toHaveLength(1);
+    // Typed "deposit" so the optimistic history entry renders correctly (not "send").
+    expect(records[0].type).toBe("deposit");
+    // The deposited 1 CCX + the network fee is held against the balance.
+    expect(records[0].amountAtomic).toBe(1_000_000 + DEPOSIT_TX_FEE);
+    // The spent input is locked so a second spend in the mempool window can't reuse it.
+    expect(records[0].spentKeyImages).toContain(funded.keyImage);
+  });
+
+  it("maps a pending deposit into lockedDeposits, not the pending-outflow bucket (#110 review)", async () => {
+    const alice = createAccount("english");
+    const funded = fundOwnedOutput(alice, 5_000_000);
+    const { mapWalletInfo } = await import("@/lib/services/real-sdk/mappers");
+    const { addPendingRecord } = await import("@/lib/services/real-sdk/pending-store");
+
+    const raw = addPendingRecord(
+      { deposits: [], withdrawals: [], transactions: [], lastHeight: 0, nonce: "", options: {} },
+      {
+        hash: "deposit-tx",
+        type: "deposit",
+        amountAtomic: 1_001_000, // 1 CCX principal + 0.001 fee
+        timestampIso: new Date(1_700_000_000_000).toISOString(),
+        address: alice.address,
+        spentKeyImages: [funded.keyImage],
+      },
+    );
+    const runtime = {
+      account: alice,
+      raw,
+      state: { ...createWalletState(alice), scannedHeight: 2000, outputs: [funded] },
+      password: "pw",
+      viewOnly: false,
+      // biome-ignore lint/suspicious/noExplicitAny: minimal runtime stub for a pure mapper
+    } as any;
+
+    const info = mapWalletInfo(runtime, 2000);
+    // Deposit principal shows as locked (becoming locked), NOT as a pending outflow.
+    expect(info.lockedDeposits.atomic).toBe(1_001_000);
+    expect(info.pending.atomic).toBe(0);
+    // Its spent input is still excluded from available (double-spend protection).
+    expect(info.available.atomic).toBe(0);
+  });
+});
+
 // --- helpers (shared with real-sdk-messages.test.ts) -------------------------
 
 function fundOwnedOutput(
