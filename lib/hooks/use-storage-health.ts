@@ -5,18 +5,20 @@ import { useQuery } from "@/lib/hooks/query-provider";
 import { evaluateStorageHealth, type StorageWarning } from "@/lib/ui/storage-health";
 
 /**
- * Best-effort request for durable storage. Call from a user gesture (wallet
- * unlock) — `persist()` may prompt (Firefox) or auto-deny without a gesture, so
- * it must NOT run in a background query. Idempotent: once granted/denied the
- * browser remembers the decision.
+ * Best-effort request for durable storage. Call from a user gesture (wallet unlock,
+ * or the "Keep on this device" banner action) — `persist()` may prompt (Firefox) or
+ * auto-deny without a gesture, so it must NOT run in a background query. Idempotent:
+ * once granted/denied the browser remembers the decision. Returns whether durable
+ * storage is now granted (false when unsupported or denied) so a caller can give
+ * feedback; the watchdog banner also re-reflects the resulting state.
  */
-export async function requestPersistentStorage(): Promise<void> {
+export async function requestPersistentStorage(): Promise<boolean> {
   const storage = typeof navigator !== "undefined" ? navigator.storage : undefined;
-  if (!storage || typeof storage.persist !== "function") return;
+  if (!storage || typeof storage.persist !== "function") return false;
   try {
-    await storage.persist();
+    return await storage.persist();
   } catch {
-    // best-effort — the watchdog banner reflects the resulting state
+    return false;
   }
 }
 
