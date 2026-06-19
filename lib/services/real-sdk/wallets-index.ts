@@ -176,10 +176,17 @@ export async function unregisterWallet(id: string): Promise<string | null> {
   const target = index.wallets.find((w) => w.id === id);
   if (!target) return index.activeId;
 
-  // Erase the wallet's records from its keyspace.
-  const storage = storageForWallet(target);
-  for (const key of await storage.keys()) {
-    await storage.removeItem(key);
+  // Erase the wallet's records from its keyspace. The DEFAULT wallet's storage is the
+  // RAW adapter (namespace ""), whose keys() returns the registry AND every other
+  // wallet's namespaced keys — so for the default we erase ONLY its envelope key, never
+  // iterate. A namespaced adapter's keys() is already scoped to that one wallet.
+  if (target.namespace === "") {
+    await storageForWallet(target).removeItem(LEGACY_WALLET_KEY);
+  } else {
+    const storage = storageForWallet(target);
+    for (const key of await storage.keys()) {
+      await storage.removeItem(key);
+    }
   }
 
   const wallets = index.wallets.filter((w) => w.id !== id);

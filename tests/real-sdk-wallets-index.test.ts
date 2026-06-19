@@ -78,6 +78,23 @@ describe("wallets-index (#95)", () => {
     expect(meta?.address).toBe("ccx7AAA");
   });
 
+  it("unregistering the DEFAULT wallet erases only its blob, never other wallets or the index", async () => {
+    // Regression: the default wallet's storage is the RAW adapter, whose keys() lists
+    // the registry + every namespaced wallet — iterating it would wipe everything.
+    const def = await registerWallet({ label: "Default" }); // bare "wallet"
+    const other = await registerWallet({ label: "Other" }); // namespaced
+    await storageForWallet(def).setItem("wallet", "DEFAULT-BLOB");
+    await storageForWallet(other).setItem("wallet", "OTHER-BLOB");
+
+    const newActive = await unregisterWallet(def.id);
+
+    expect(await storageForWallet(def).getItem("wallet")).toBeNull(); // default erased
+    expect(await storageForWallet(other).getItem("wallet")).toBe("OTHER-BLOB"); // survives
+    const index = await readWalletsIndex();
+    expect(index.wallets.map((w) => w.id)).toEqual([other.id]); // registry intact
+    expect(newActive).toBe(other.id);
+  });
+
   it("unregister erases the wallet's storage and reassigns active", async () => {
     const a = await registerWallet({ label: "A" });
     const b = await registerWallet({ label: "B" }); // active
