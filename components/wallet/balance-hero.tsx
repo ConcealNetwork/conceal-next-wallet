@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCountUp } from "@/lib/hooks/use-count-up";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
 import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
 import {
@@ -38,6 +39,7 @@ type Segment = {
 const BALANCE_SEGMENT_LABELS = ["Available", "Pending", "Locked", "Withdrawable", "Dust"] as const;
 
 export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
+  const { t } = useI18n();
   const [availableHovered, setAvailableHovered] = useState(false);
   const available = ccxToNumber(wallet.available);
   const dust = ccxToNumber(wallet.dust);
@@ -62,44 +64,47 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
 
   const segments: Segment[] = [
     {
-      label: "Available",
+      label: t("rail.available"),
       value: available,
       pct: availablePct,
       dotClassName: "bg-primary",
       barClassName: "bg-primary",
-      note: `ready to spend · ${Math.round(availablePct)}%`,
+      note: t("account.availableNotePct", { pct: Math.round(availablePct) }),
     },
     {
-      label: "Pending",
+      label: t("rail.pending"),
       value: pending,
       pct: getPct(pending, total),
       dotClassName: "bg-wallet-outgoing",
       barClassName: "bg-wallet-outgoing",
-      note: "awaiting confirmation",
+      note: t("rail.pendingNote"),
     },
     {
-      label: "Locked",
+      label: t("rail.locked"),
       value: locked,
       pct: getPct(locked, total),
       dotClassName: "bg-wallet-deposit",
       barClassName: "bg-wallet-deposit",
-      note: soonestUnlockDays === null ? "no active lock" : `unlocks in ${soonestUnlockDays} days`,
+      note:
+        soonestUnlockDays === null
+          ? t("account.noActiveLock")
+          : t("account.unlocksInDays", { days: soonestUnlockDays }),
     },
     {
-      label: "Withdrawable",
+      label: t("rail.withdrawable"),
       value: withdrawable,
       pct: getPct(withdrawable, total),
       dotClassName: "bg-wallet-incoming",
       barClassName: "bg-wallet-incoming",
-      note: withdrawable > 0 ? "ready to claim" : "no matured deposits",
+      note: withdrawable > 0 ? t("rail.withdrawableNote") : t("account.noMaturedDeposits"),
     },
     {
-      label: "Dust",
+      label: t("account.dust"),
       value: dust,
       pct: getPct(dust, total),
       dotClassName: "bg-muted-foreground/50",
       barClassName: "bg-muted-foreground/40",
-      note: "un-mixable",
+      note: t("account.unmixable"),
       valueDecimals: CCX_PRECISION_DECIMAL_DISPLAY,
       valueClassName: "text-sm text-muted-foreground",
     },
@@ -110,7 +115,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
       <CardContent>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
-            <p className="text-sm text-muted-foreground">Available · ready to spend</p>
+            <p className="text-sm text-muted-foreground">{t("account.availableReadyToSpend")}</p>
             <p
               className="mt-2 wrap-break-word font-mono text-[2.5rem] font-bold leading-none tracking-tight text-foreground sm:text-[2.75rem]"
               onMouseEnter={() => setAvailableHovered(true)}
@@ -121,16 +126,15 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
                 : availableLabel}
               <TickerBadge className="ml-2 align-baseline text-xl font-medium text-primary" />
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              of <span className="font-semibold text-muted-foreground">{totalLabel}</span> total ·{" "}
-              <span className="font-semibold text-muted-foreground">{formatUsd(totalUsd)}</span> USD
+            <p className="mt-2 text-sm font-semibold text-muted-foreground">
+              {t("account.ofTotalUsd", { total: totalLabel, usd: formatUsd(totalUsd) })}
             </p>
           </div>
           <div className="shrink-0 text-left sm:text-right">
             <span
               role="status"
               className="inline-flex items-center gap-1 rounded-full bg-wallet-incoming/10 px-2.5 py-1 text-xs font-semibold text-wallet-incoming"
-              aria-label={`Market change up ${changeLabel}`}
+              aria-label={t("account.marketChangeUp", { change: changeLabel })}
             >
               <span aria-hidden="true">▲</span>
               {changeLabel}
@@ -155,14 +159,17 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
           ))}
         </div>
         <p className="sr-only">
-          Balance composition:{" "}
-          {segments
-            .map(
-              (segment) =>
-                `${segment.label} ${formatCcx(segment.value)}, ${Math.round(segment.pct)} percent`,
-            )
-            .join("; ")}
-          .
+          {t("account.balanceComposition", {
+            items: segments
+              .map((segment) =>
+                t("account.balanceCompositionItem", {
+                  label: segment.label,
+                  value: formatCcx(segment.value),
+                  pct: Math.round(segment.pct),
+                }),
+              )
+              .join("; "),
+          })}
         </p>
 
         <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-5">

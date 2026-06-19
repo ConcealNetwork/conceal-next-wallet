@@ -19,11 +19,13 @@ import {
   useWalletInfo,
   useWalletViewOnly,
 } from "@/lib/hooks";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { ccxToNumber, cn, truncateAddress } from "@/lib/utils";
 
 export default function AccountPage() {
+  const { t } = useI18n();
   // Register the Account rail (Market + Holdings + Quick actions) in the
   // contextual right column. The rail element is registered once on mount; its
   // sections read their own hooks to stay live.
@@ -57,8 +59,8 @@ export default function AccountPage() {
   return (
     <>
       <PageHeader
-        title="Account Overview"
-        subtitle="Manage your CCX holdings and view transaction summary"
+        title={t("account.title")}
+        subtitle={t("account.subtitle")}
         badge={viewOnly ? <ViewOnlyBadge /> : null}
         action={
           <Button
@@ -74,7 +76,7 @@ export default function AccountPage() {
               )}
               aria-hidden="true"
             />
-            {refresh.isPending ? "Refreshing" : "Refresh"}
+            {refresh.isPending ? t("account.refreshing") : t("account.refresh")}
           </Button>
         }
       />
@@ -85,8 +87,10 @@ export default function AccountPage() {
           className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           role="alert"
         >
-          Could not load wallet data:{" "}
-          {wallet.error instanceof Error ? wallet.error.message : "Unknown error"}
+          {t("account.loadError", {
+            message:
+              wallet.error instanceof Error ? wallet.error.message : t("account.unknownError"),
+          })}
         </div>
       )}
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
@@ -98,15 +102,15 @@ export default function AccountPage() {
       </div>
       <div className="mt-6 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
         <SectionCard
-          title="Transaction Summary"
-          description="Net flow this period"
+          title={t("account.transactionSummary")}
+          description={t("account.netFlowThisPeriod")}
           fill
           footer={
             <Link
               className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
               href="/wallet/transactions"
             >
-              View All Transactions →
+              {t("account.viewAllTransactions")} →
             </Link>
           }
         >
@@ -157,26 +161,27 @@ function TransactionFlowSummary({
   transactionCount: number;
   lastActivityAt?: string;
 }) {
+  const { t } = useI18n();
   const { formatCcx, timeAgo } = useFormatters();
   const total = received + sent + deposits;
   const lastActivity = lastActivityAt ? timeAgo(lastActivityAt) : "—";
   const segments = [
     {
-      label: "In",
+      label: t("account.flowIn"),
       value: received,
       className: "bg-wallet-incoming",
       textClassName: "text-wallet-incoming",
       prefix: "+",
     },
     {
-      label: "Out",
+      label: t("account.flowOut"),
       value: sent,
       className: "bg-wallet-outgoing",
       textClassName: "text-wallet-outgoing",
       prefix: "",
     },
     {
-      label: "Deposits",
+      label: t("account.flowDeposits"),
       value: deposits,
       className: "bg-wallet-deposit",
       textClassName: "text-wallet-deposit",
@@ -199,8 +204,11 @@ function TransactionFlowSummary({
         ))}
       </div>
       <p className="sr-only">
-        Transaction flow: {formatCcx(received)} received, {formatCcx(sent)} sent,{" "}
-        {formatCcx(deposits)} deposits.
+        {t("account.flowSrOnly", {
+          received: formatCcx(received),
+          sent: formatCcx(sent),
+          deposits: formatCcx(deposits),
+        })}
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {segments.map((segment) => (
@@ -219,28 +227,29 @@ function TransactionFlowSummary({
         ))}
       </div>
       <p className="mt-4 text-sm text-muted-foreground">
-        {transactionCount} transactions · last activity {lastActivity}
+        {t("account.txCountActivity", { count: transactionCount, lastActivity })}
       </p>
     </div>
   );
 }
 
-const TX_META: Record<TransactionType, { label: string; sign: string; className: string }> = {
-  receive: { label: "Receive", sign: "+", className: "text-wallet-incoming" },
-  miner: { label: "Miner", sign: "+", className: "text-wallet-incoming" },
-  message: { label: "Message", sign: "+", className: "text-primary" },
-  deposit: { label: "Deposit", sign: "+", className: "text-wallet-deposit" },
-  send: { label: "Send", sign: "−", className: "text-wallet-outgoing" },
-  withdrawal: { label: "Withdraw", sign: "+", className: "text-wallet-incoming" },
-  fusion: { label: "Fusion", sign: "−", className: "text-muted-foreground" },
+const TX_META: Record<TransactionType, { labelKey: string; sign: string; className: string }> = {
+  receive: { labelKey: "account.txReceive", sign: "+", className: "text-wallet-incoming" },
+  miner: { labelKey: "account.txMiner", sign: "+", className: "text-wallet-incoming" },
+  message: { labelKey: "account.txMessage", sign: "+", className: "text-primary" },
+  deposit: { labelKey: "account.txDeposit", sign: "+", className: "text-wallet-deposit" },
+  send: { labelKey: "account.txSend", sign: "−", className: "text-wallet-outgoing" },
+  withdrawal: { labelKey: "account.txWithdraw", sign: "+", className: "text-wallet-incoming" },
+  fusion: { labelKey: "account.txFusion", sign: "−", className: "text-muted-foreground" },
 };
 
 function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
+  const { t } = useI18n();
   const { formatCcx, timeAgo } = useFormatters();
   return (
     <div className="mt-5">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Recent Activity
+        {t("account.recentActivity")}
       </p>
       <ul className="mt-1 divide-y divide-border">
         {transactions.map((transaction, index) => {
@@ -254,7 +263,7 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
             >
               <div className="flex min-w-0 items-center gap-2.5">
                 <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-[10.5px] text-muted-foreground">
-                  {meta.label}
+                  {t(meta.labelKey)}
                 </span>
                 <span className="truncate font-mono text-xs text-muted-foreground">
                   {truncateAddress(transaction.address)}
