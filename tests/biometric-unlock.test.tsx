@@ -108,4 +108,31 @@ describe("OpenWalletProvider unlock dialog — passkey (real mode)", () => {
       expect(screen.getByRole("button", { name: /unlock with a passkey/i })).toBeInTheDocument(),
     );
   });
+
+  // #113: the cold-start picker must pre-select the ACTIVE/last-used wallet, not the
+  // default one. Regression for selectedId seeding to "default" (always in the list),
+  // which made the dialog always pre-select the default wallet.
+  it("pre-selects the active wallet, not the default, on cold start", async () => {
+    listWallets.mockResolvedValueOnce([
+      { id: "default", label: "Funding", address: "ccx7funding", isActive: false },
+      { id: "w2", label: "Savings", address: "ccx7savings", isActive: true },
+    ]);
+    openUnlockDialog();
+
+    const savings = await screen.findByRole("button", { name: /Savings/ });
+    const funding = screen.getByRole("button", { name: /Funding/ });
+    // The selected option carries the primary border/background; the other does not.
+    await waitFor(() => expect(savings.className).toContain("border-primary"));
+    expect(funding.className).not.toContain("border-primary");
+  });
+
+  // #113 review (Codex): seeding selectedId="" must never reach the passkey store as an
+  // empty key — the pre-resolve window has to fall back to the default wallet id, or an
+  // enrollment lands under "ccx-biometric-enrollment:" and is unfindable on next unlock.
+  it("never probes the passkey store with an empty wallet id (falls back to default)", async () => {
+    openUnlockDialog();
+    await waitFor(() => expect(hasPasskeyEnrollment).toHaveBeenCalled());
+    expect(hasPasskeyEnrollment).not.toHaveBeenCalledWith("");
+    expect(hasPasskeyEnrollment).toHaveBeenCalledWith("default");
+  });
 });

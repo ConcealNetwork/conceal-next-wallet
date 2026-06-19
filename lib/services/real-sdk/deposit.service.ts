@@ -13,8 +13,9 @@ import {
 } from "conceal-wallet-sdk";
 import { COIN_UNIT_PLACES } from "@/lib/config/config";
 import { deriveApr, mapDeposit, mapDeposits } from "@/lib/services/real-sdk/mappers";
+import { addPendingRecord } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { requireRuntime } from "@/lib/services/real-sdk/runtime";
+import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
   broadcast,
   fetchDecoys,
@@ -119,6 +120,27 @@ export const realSdkDepositService: DepositService = {
     });
 
     await broadcast(rt, built);
+
+    // Optimistic pending entry (#110): mirror the send path so the deposit's inputs are
+    // locked against re-selection until it mines (otherwise a second spend in the
+    // mempool window builds on already-spent inputs and is rejected at relay), the
+    // balance reflects the outflow immediately, and the outgoing tx shows in history
+    // (typed "deposit"). Reconciles/expires via prunePendingRecords like a send.
+    rt.raw = addPendingRecord(rt.raw, {
+      hash: built.hash,
+      type: "deposit",
+      amountAtomic: amountAtomic + DEPOSIT_TX_FEE,
+      timestampIso: new Date().toISOString(),
+      address: rt.account.address,
+      spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+    });
+    try {
+      await persist();
+    } catch {
+      // Non-fatal: the tx is already relayed (broadcast persisted state), so failing the
+      // create here would invite a retry → double-spend. Losing only the optimistic
+      // pending record is acceptable; the next sync reconciles it.
+    }
 
     const networkHeight = await rt.daemon.getHeight();
     const matched = mapDeposits(rt.state, networkHeight).find(

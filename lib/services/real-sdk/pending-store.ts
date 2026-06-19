@@ -12,11 +12,18 @@
  */
 import type { RawWalletV1, WalletState } from "conceal-wallet-sdk";
 import { walletNetworkScalars } from "@/lib/config/config";
+import type { TransactionType } from "@/lib/types";
 
 /** An optimistic outbound tx awaiting its first confirmation. */
 export interface PendingTxRecord {
   /** Transaction hash (matches the scanned tx once mined → reconcile key). */
   hash: string;
+  /**
+   * Transaction kind, so the optimistic entry renders with the right label/sign while
+   * pending (a deposit shows as "deposit", not "send"). Defaults to "send" when absent
+   * (older records, plain transfers). #110.
+   */
+  type?: TransactionType;
   /** Atomic amount that left the wallet (destinations + all fees). */
   amountAtomic: number;
   /** ISO timestamp when the tx was broadcast. */
