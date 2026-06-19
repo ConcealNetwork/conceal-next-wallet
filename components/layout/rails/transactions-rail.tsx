@@ -95,7 +95,7 @@ function TransactionDetail({
           <Icon className="size-5" />
         </span>
         <div className="min-w-0">
-          <p className="text-[13.5px] font-semibold text-foreground">{meta.label}</p>
+          <p className="text-[13.5px] font-semibold text-foreground">{t(meta.labelKey)}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {fmt.timeAgo(transaction.timestamp)}
           </p>
@@ -117,7 +117,7 @@ function TransactionDetail({
           {formatTimestamp(transaction.timestamp, fmt)}
         </DetailField>
         <DetailField label={t("rail.block")}>
-          {formatHeightWithConfirmations(transaction.blockHeight, transaction.confirmations, fmt)}
+          {formatHeightWithConfirmations(transaction.blockHeight, transaction.confirmations, fmt, t)}
         </DetailField>
         {transaction.paymentId ? (
           <DetailField label={t("rail.paymentId")} mono copyValue={transaction.paymentId}>

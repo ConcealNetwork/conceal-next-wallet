@@ -9,10 +9,14 @@ import {
   Pickaxe,
 } from "lucide-react";
 import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { Formatters } from "@/lib/i18n/use-formatters";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/ui/transaction-kind";
+
+// `t` resolves an i18n key against the active locale; matches useI18n().t.
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 // Shared transaction presentation helpers, used by both the Transactions page
 // (list rows + detail dialog) and the contextual Transactions rail (#122 stage 3).
@@ -26,10 +30,13 @@ export const TIMESTAMP_FORMAT: Intl.DateTimeFormatOptions = {
   timeStyle: "short",
 };
 
+// `transactionMeta` is a module-level const, so it cannot call hooks. Each entry
+// carries an i18n `labelKey` instead of a literal label; resolve the display
+// string at render time with `transactionLabel(meta, t)` (or `t(meta.labelKey)`).
 export const transactionMeta: Record<
   TransactionType,
   {
-    label: string;
+    labelKey: string;
     icon: LucideIcon;
     sign: "+" | "−";
     amountClassName: string;
@@ -37,49 +44,49 @@ export const transactionMeta: Record<
   }
 > = {
   receive: {
-    label: "Receive",
+    labelKey: "account.txReceive",
     icon: ArrowDownLeft,
     sign: "+",
     amountClassName: "text-wallet-incoming",
     chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
   },
   send: {
-    label: "Send",
+    labelKey: "account.txSend",
     icon: ArrowUpRight,
     sign: "−",
     amountClassName: "text-wallet-outgoing",
     chipClassName: "bg-wallet-outgoing/10 text-wallet-outgoing",
   },
   deposit: {
-    label: "Deposit",
+    labelKey: "account.txDeposit",
     icon: Lock,
     sign: "+",
     amountClassName: "text-wallet-deposit",
     chipClassName: "bg-wallet-deposit/10 text-wallet-deposit",
   },
   withdrawal: {
-    label: "Withdrawal",
+    labelKey: "txn.typeWithdrawal",
     icon: ArrowUpFromLine,
     sign: "+",
     amountClassName: "text-wallet-incoming",
     chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
   },
   fusion: {
-    label: "Fusion",
+    labelKey: "account.txFusion",
     icon: Combine,
     sign: "−",
     amountClassName: "text-muted-foreground",
     chipClassName: "bg-secondary text-muted-foreground",
   },
   miner: {
-    label: "Miner",
+    labelKey: "account.txMiner",
     icon: Pickaxe,
     sign: "+",
     amountClassName: "text-wallet-incoming",
     chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
   },
   message: {
-    label: "Message",
+    labelKey: "account.txMessage",
     icon: Mail,
     sign: "+",
     amountClassName: "text-primary",
@@ -87,8 +94,20 @@ export const transactionMeta: Record<
   },
 };
 
+// Resolve a transaction type's localized display label from its meta entry.
+export function transactionLabel(meta: { labelKey: string }, t: Translate): string {
+  return t(meta.labelKey);
+}
+
+// Logical status used for branching/styling; keep returning the canonical
+// "Confirmed"/"Pending" tokens. Use `statusLabelKey` + `t()` for display text.
 export function getTransactionStatus(confirmations: number): TransactionStatus {
   return confirmations >= TX_CONFIRMED_THRESHOLD ? "Confirmed" : "Pending";
+}
+
+// Map a logical status to its i18n key, resolved with `t()` at render time.
+export function statusLabelKey(status: TransactionStatus): string {
+  return status === "Confirmed" ? "txn.statusConfirmed" : "txn.statusPending";
 }
 
 export function formatSignedAmount(transaction: Transaction, fmt: Formatters, decimals?: number) {
@@ -106,14 +125,16 @@ export function formatHeightWithConfirmations(
   blockHeight: number,
   confirmations: number,
   fmt: Formatters,
+  t: Translate,
 ): string {
-  const height = blockHeight > 0 ? fmt.formatNumber(blockHeight) : "Pending";
-  // English plural wording only; full ICU pluralization is out of scope (future).
-  const confLabel = confirmations === 1 ? "confirmation" : "confirmations";
-  return `${height} (${fmt.formatNumber(confirmations)} ${confLabel})`;
+  const height = blockHeight > 0 ? fmt.formatNumber(blockHeight) : t("txn.statusPending");
+  // Simple singular/plural split; full ICU pluralization is out of scope (future).
+  const key = confirmations === 1 ? "txn.heightConfirmationsOne" : "txn.heightConfirmations";
+  return t(key, { height, count: fmt.formatNumber(confirmations) });
 }
 
 export function StatusPill({ status }: { status: TransactionStatus }) {
+  const { t } = useI18n();
   const confirmed = status === "Confirmed";
 
   return (
@@ -123,7 +144,7 @@ export function StatusPill({ status }: { status: TransactionStatus }) {
         confirmed ? "bg-wallet-incoming/10 text-wallet-incoming" : "bg-primary/10 text-primary",
       )}
     >
-      {status}
+      {t(statusLabelKey(status))}
     </span>
   );
 }
