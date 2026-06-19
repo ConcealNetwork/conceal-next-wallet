@@ -35,6 +35,7 @@ import {
   sync,
   unlock as unlockRuntime,
 } from "@/lib/services/real-sdk/runtime";
+import { decodeWalletQr } from "@/lib/services/real-sdk/wallet-qr";
 import { getActiveWalletStorage } from "@/lib/services/real-sdk/wallets-index";
 import type {
   DownloadWalletBackupInput,
@@ -188,23 +189,72 @@ export const realSdkWalletService: WalletService = {
       return openedInfo();
     }
 
+    // Restore from an encrypted backup file: decode the envelope with the file
+    // password, then adopt the recovered wallet (its embedded creation/synced height
+    // drives the scan via buildState). Adopt registers it, so this also adds a wallet.
+    if (input.method === "file") {
+      try {
+        const text =
+          typeof input.file === "string"
+            ? input.file
+            : new TextDecoder().decode(input.file).replace(/^\uFEFF/, "").trim();
+        let envelope: unknown;
+        try {
+          envelope = JSON.parse(text);
+        } catch {
+          throw new Error("The selected file is not valid JSON.");
+        }
+        const opened = openEncryptedWallet(envelope as EncryptedWalletEnvelope, input.password);
+        if (opened === null) {
+          throw new Error("Invalid wallet file or password.");
+        }
+        await adopt({
+          raw: opened.raw,
+          keys: opened.keys,
+          password: input.password,
+          label: input.label,
+        });
+        return syncedInfo();
+      } catch (error) {
+        throw toFriendlyImportError(error);
+      }
+    }
+
     try {
-      const creationHeight = await importCreationHeight(input);
       let built: BuiltWallet;
       switch (input.method) {
         case "mnemonic":
           built = buildFromMnemonic(
             input.mnemonic,
-            creationHeight,
+            await importCreationHeight(input),
             input.language === "auto" ? undefined : input.language,
           );
           createdMnemonic = built.mnemonic ?? null;
           break;
         case "keys":
           built = input.viewOnly
-            ? buildViewOnly(input.address, input.privateViewKey, creationHeight)
-            : buildFromSpendKey(input.privateSpendKey, input.privateViewKey, creationHeight);
+            ? buildViewOnly(input.address, input.privateViewKey, await importCreationHeight(input))
+            : buildFromSpendKey(
+                input.privateSpendKey,
+                input.privateViewKey,
+                await importCreationHeight(input),
+              );
           break;
+        case "qr": {
+          const decoded = decodeWalletQr(input.payload);
+          const height = await clampScanHeight(decoded.height);
+          if (decoded.mnemonicSeed) {
+            built = buildFromMnemonic(decoded.mnemonicSeed, height);
+            createdMnemonic = built.mnemonic ?? null;
+          } else if (decoded.spendKey) {
+            built = buildFromSpendKey(decoded.spendKey, decoded.viewKey, height);
+          } else if (decoded.viewKey && decoded.address) {
+            built = buildViewOnly(decoded.address, decoded.viewKey, height);
+          } else {
+            throw new Error("Unsupported QR wallet payload.");
+          }
+          break;
+        }
         default:
           throw new Error("This import method is not supported by the SDK engine.");
       }
@@ -372,10 +422,8 @@ function freshOptionsRaw(): RawWalletV1 {
   };
 }
 
-/** Clamp a requested import scan height to `[0, networkHeight]`. */
-async function importCreationHeight(input: ImportWalletInput): Promise<number> {
-  const requested =
-    "scanHeight" in input && typeof input.scanHeight === "number" ? input.scanHeight : undefined;
+/** Clamp a requested scan height to `[0, networkTip]`; default to the current tip. */
+async function clampScanHeight(requested: number | undefined): Promise<number> {
   if (requested === undefined) {
     // Default to the current tip (a fresh import starts scanning from "now").
     try {
@@ -385,6 +433,12 @@ async function importCreationHeight(input: ImportWalletInput): Promise<number> {
     }
   }
   if (requested < 0) return 0;
-  const tip = await safeNetworkHeight();
-  return Math.min(requested, tip);
+  return Math.min(requested, await safeNetworkHeight());
+}
+
+/** Clamp a requested import scan height to `[0, networkHeight]`. */
+async function importCreationHeight(input: ImportWalletInput): Promise<number> {
+  const requested =
+    "scanHeight" in input && typeof input.scanHeight === "number" ? input.scanHeight : undefined;
+  return clampScanHeight(requested);
 }
