@@ -95,9 +95,10 @@ function SyncSpeedSelector({
   disabled?: boolean;
   onChange: (speed: SyncSpeed) => void;
 }) {
+  const { t } = useI18n();
   return (
     <fieldset className="flex flex-wrap gap-2 border-0 p-0">
-      <legend className="sr-only">Wallet sync speed</legend>
+      <legend className="sr-only">{t("settings.syncSpeedLegend")}</legend>
       {SYNC_SPEED_OPTIONS.map((speed) => (
         <button
           key={speed}
@@ -125,6 +126,7 @@ function SyncSpeedSelector({
  * required by the API). Shows the current permission state.
  */
 function NotificationsSetting() {
+  const { t } = useI18n();
   // Start "false" to match SSR (the API is client-only); hydrate on mount.
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermissionState>("default");
@@ -162,22 +164,24 @@ function NotificationsSetting() {
   }
 
   if (!supported) {
-    return <p className="text-xs text-muted-foreground">Not supported in this browser.</p>;
+    return (
+      <p className="text-xs text-muted-foreground">{t("settings.notificationsUnsupported")}</p>
+    );
   }
 
   const stateLabel =
     permission === "granted"
-      ? "Allowed"
+      ? t("settings.notificationsAllowed")
       : permission === "denied"
-        ? "Blocked in browser settings"
-        : "Not yet allowed";
+        ? t("settings.notificationsBlocked")
+        : t("settings.notificationsNotYet");
 
   return (
     <div className="flex w-full flex-col items-end gap-1.5 sm:w-auto">
       <Switch
         checked={optedIn && permission === "granted"}
         onCheckedChange={(checked: boolean) => void handleToggle(checked)}
-        aria-label="Enable notifications"
+        aria-label={t("settings.notificationsAriaLabel")}
       />
       <p className="text-right text-xs text-muted-foreground">{stateLabel}</p>
     </div>
@@ -373,13 +377,13 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" subtitle="Change your parameters here" />
-      <WalletSyncingBanner hint="optimization is disabled until the chain is caught up" />
+      <PageHeader title={t("nav.settings")} subtitle={t("settings.subtitle")} />
+      <WalletSyncingBanner hint={t("settings.syncingHint")} />
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <Card className="wallet-card">
           <CardContent className="divide-y divide-border">
-            <Section title="General">
-              <Row label="Theme" description="Light, dark, or follow your system setting">
+            <Section title={t("settings.general")}>
+              <Row label={t("theme.label")} description={t("settings.themeDescription")}>
                 <ThemeToggle />
               </Row>
               <Row label={t("settings.language")} description={t("settings.languageDescription")}>
@@ -388,22 +392,23 @@ export default function SettingsPage() {
               {!isMock ? (
                 <div className="flex flex-col gap-3 border-t border-border py-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Passkey unlock</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {t("settings.passkeyUnlock")}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Unlock with Touch ID / Windows Hello, a security key, or your phone — on this
-                      device
+                      {t("settings.passkeyUnlockDescription")}
                     </p>
                   </div>
                   <PasskeySetting />
                 </div>
               ) : null}
               <Row
-                label="Enable notifications"
-                description="Get OS notifications for due payment reminders and overdue check-ins, in addition to in-app toasts. Opt-in — nothing is sent automatically."
+                label={t("settings.notifications")}
+                description={t("settings.notificationsDescription")}
               >
                 <NotificationsSetting />
               </Row>
-              <Row label="Ticker" description="Amount suffix shown across the wallet">
+              <Row label={t("settings.ticker")} description={t("settings.tickerDescription")}>
                 <select
                   className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
                   value={ticker.useShortTicker ? "short" : "full"}
@@ -422,8 +427,8 @@ export default function SettingsPage() {
                 </select>
               </Row>
               <Row
-                label="Wallet optimization"
-                description="Compact transaction outputs to reduce wallet size"
+                label={t("settings.optimization")}
+                description={t("settings.optimizationDescription")}
               >
                 <div className="flex w-full flex-col items-end gap-1.5 sm:w-auto">
                   <Button
@@ -439,11 +444,13 @@ export default function SettingsPage() {
                     onClick={handleOptimize}
                     title={viewOnly ? walletCopy.viewOnlyOptimizeDisabled : undefined}
                   >
-                    {optimizeWallet.isPending ? "Optimizing…" : "Optimize Now"}
+                    {optimizeWallet.isPending
+                      ? t("settings.optimizing")
+                      : t("settings.optimizeNow")}
                   </Button>
                   {isSyncing ? (
                     <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
-                      Wait for sync to finish before optimizing.
+                      {t("settings.optimizeWaitForSync")}
                     </p>
                   ) : viewOnly ? (
                     <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
@@ -451,7 +458,7 @@ export default function SettingsPage() {
                     </p>
                   ) : optimizationNeeded ? (
                     <p className="max-w-xs text-right text-xs text-amber-400/90 sm:max-w-sm">
-                      Optimization can be attempted — {unspentOutputs} unspent UTXOs
+                      {t("settings.optimizeAvailable", { count: unspentOutputs })}
                     </p>
                   ) : null}
                 </div>
@@ -466,10 +473,10 @@ export default function SettingsPage() {
             </Section>
 
             {current && (
-              <Section title="Node">
+              <Section title={t("settings.node")}>
                 <Row
-                  label="Use custom node"
-                  description="Pin the URL below instead of rotating public nodes"
+                  label={t("settings.useCustomNode")}
+                  description={t("settings.useCustomNodeDescription")}
                 >
                   <Switch
                     checked={current.useCustomNode}
@@ -478,11 +485,11 @@ export default function SettingsPage() {
                   />
                 </Row>
                 <Row
-                  label="Node URL"
+                  label={t("settings.nodeUrl")}
                   description={
                     current.useCustomNode
-                      ? "Custom daemon — edit and press Enter to reconnect"
-                      : "Currently connected daemon — edit before enabling custom node"
+                      ? t("settings.nodeUrlDescriptionCustom")
+                      : t("settings.nodeUrlDescriptionPublic")
                   }
                 >
                   <div className="flex w-full flex-col gap-1.5 sm:w-80">
@@ -515,7 +522,9 @@ export default function SettingsPage() {
                       </div>
                     )}
                     {updateSettings.isPending && (
-                      <p className="text-xs text-muted-foreground">Testing node connection…</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t("settings.testingNodeConnection")}
+                      </p>
                     )}
                   </div>
                 </Row>
@@ -523,10 +532,10 @@ export default function SettingsPage() {
             )}
 
             {current && (
-              <Section title="Wallet">
+              <Section title={t("settings.wallet")}>
                 <Row
-                  label="Sync speed"
-                  description="Higher speeds use more CPU and network resources while scanning blocks"
+                  label={t("settings.syncSpeed")}
+                  description={t("settings.syncSpeedDescription")}
                 >
                   <SyncSpeedSelector
                     value={current.syncSpeed}
@@ -535,8 +544,8 @@ export default function SettingsPage() {
                   />
                 </Row>
                 <Row
-                  label="Read miner transactions"
-                  description="Include coinbase outputs when syncing — required for solo mining"
+                  label={t("settings.readMinerTx")}
+                  description={t("settings.readMinerTxDescription")}
                 >
                   <Switch
                     checked={current.readMinorTx}
@@ -545,8 +554,8 @@ export default function SettingsPage() {
                   />
                 </Row>
                 <Row
-                  label="Block heights"
-                  description="Creation height (editable while syncing) / current synced height"
+                  label={t("settings.blockHeights")}
+                  description={t("settings.blockHeightsDescription")}
                 >
                   <div className="flex gap-2">
                     <Input
@@ -557,7 +566,7 @@ export default function SettingsPage() {
                         setCreationHeightDirty(true);
                       }}
                       className="w-32"
-                      aria-label="Creation height"
+                      aria-label={t("settings.creationHeightAriaLabel")}
                       inputMode="numeric"
                     />
                     <Input
@@ -565,14 +574,14 @@ export default function SettingsPage() {
                       readOnly
                       disabled
                       className="w-32"
-                      aria-label="Current synced height"
+                      aria-label={t("settings.currentSyncedHeightAriaLabel")}
                       inputMode="numeric"
                     />
                   </div>
                 </Row>
                 <Row
-                  label="Maintenance"
-                  description="Update applies creation height and restarts the scan from that block"
+                  label={t("settings.maintenance")}
+                  description={t("settings.maintenanceDescription")}
                 >
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -580,7 +589,7 @@ export default function SettingsPage() {
                       disabled={updateSettings.isPending}
                       onClick={applyHeights}
                     >
-                      Update
+                      {t("settings.update")}
                     </Button>
                     <Button
                       type="button"
@@ -588,13 +597,15 @@ export default function SettingsPage() {
                       disabled={resetAndRescan.isPending}
                       onClick={handleResetAndRescan}
                     >
-                      {resetAndRescan.isPending ? "Rescanning…" : "Reset & rescan"}
+                      {resetAndRescan.isPending
+                        ? t("settings.rescanning")
+                        : t("settings.resetAndRescan")}
                     </Button>
                   </div>
                 </Row>
                 <Row
-                  label="Device data backup"
-                  description="Export or restore an encrypted backup of your transaction notes and display preferences (not your wallet keys — those export separately)"
+                  label={t("settings.deviceDataBackup")}
+                  description={t("settings.deviceDataBackupDescription")}
                 >
                   <VaultBackup />
                 </Row>
@@ -643,8 +654,8 @@ export default function SettingsPage() {
             )}
 
             {current && (
-              <Section title="Security">
-                <Row label="Auto-lock" description="Lock the wallet after a period of inactivity">
+              <Section title={t("settings.security")}>
+                <Row label={t("settings.autoLock")} description={t("settings.autoLockDescription")}>
                   <select
                     className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
                     value={String(current.autoLockMinutes)}
@@ -654,21 +665,21 @@ export default function SettingsPage() {
                         isMock ? "Mock auto-lock updated." : "Auto-lock updated.",
                       )
                     }
-                    aria-label="Auto-lock timeout"
+                    aria-label={t("settings.autoLockTimeoutAriaLabel")}
                   >
-                    <option value="0">Off</option>
-                    <option value="5">After 5 minutes</option>
-                    <option value="15">After 15 minutes</option>
-                    <option value="30">After 30 minutes</option>
+                    <option value="0">{t("settings.autoLockOff")}</option>
+                    <option value="5">{t("settings.autoLockAfter", { minutes: 5 })}</option>
+                    <option value="15">{t("settings.autoLockAfter", { minutes: 15 })}</option>
+                    <option value="30">{t("settings.autoLockAfter", { minutes: 30 })}</option>
                   </select>
                 </Row>
-                <Row label="Password" description="Change the local wallet password">
+                <Row label={t("settings.password")} description={t("settings.passwordDescription")}>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => router.push("/wallet/change-password")}
                   >
-                    Change Password
+                    {t("settings.changePassword")}
                   </Button>
                 </Row>
               </Section>
