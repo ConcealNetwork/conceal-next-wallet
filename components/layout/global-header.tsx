@@ -30,7 +30,7 @@ import { useTransactions, useWalletSyncStatus } from "@/lib/hooks";
 import { THEME_PREFERENCES, type ThemePreference } from "@/lib/ui/theme";
 import { useTheme } from "@/lib/ui/theme-provider";
 import type { TransactionType } from "@/lib/types";
-import { resolveUiTransactionType } from "@/lib/wallet-core/mappers";
+import { resolveUiTransactionType } from "@/lib/ui/transaction-kind";
 import { cn, truncateAddress } from "@/lib/utils";
 
 const THEME_META: Record<ThemePreference, { labelKey: string; icon: LucideIcon }> = {

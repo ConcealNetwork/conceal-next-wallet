@@ -12,7 +12,7 @@ import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import type { Formatters } from "@/lib/i18n/use-formatters";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
+import { isUiMessageOut, resolveUiTransactionType } from "@/lib/ui/transaction-kind";
 
 // Shared transaction presentation helpers, used by both the Transactions page
 // (list rows + detail dialog) and the contextual Transactions rail (#122 stage 3).

@@ -18,7 +18,7 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import type { Transaction } from "@/lib/types";
 import { cn, truncateAddress } from "@/lib/utils";
-import { resolveUiTransactionType } from "@/lib/wallet-core/mappers";
+import { resolveUiTransactionType } from "@/lib/ui/transaction-kind";
 
 // Issue #122, stage 3 — the Transactions-page contextual rail. With no row
 // selected it shows a hint; selecting a row (>=1200px, where the rail is visible)
