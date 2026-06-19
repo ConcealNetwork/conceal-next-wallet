@@ -44,6 +44,7 @@ import {
   useWithdrawDeposit,
 } from "@/lib/hooks";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import type { CreateDepositInput } from "@/lib/services/deposit.service";
 import {
@@ -90,6 +91,7 @@ type DepositView = "cards" | "table" | "timeline";
 const DEPOSITS_VIEW_KEY = "conceal-deposits-view";
 
 export default function DepositsPageClient() {
+  const { t } = useI18n();
   const { data = [] } = useDeposits();
   const constraints = useDepositConstraints();
   const createDeposit = useCreateDeposit();
@@ -129,8 +131,8 @@ export default function DepositsPageClient() {
   return (
     <>
       <PageHeader
-        title="Deposits"
-        subtitle="Create time-locked deposits and track projected returns"
+        title={t("nav.deposits")}
+        subtitle={t("deposits.pageSubtitle")}
         badge={viewOnly ? <ViewOnlyBadge /> : null}
         action={
           <Button
@@ -141,12 +143,12 @@ export default function DepositsPageClient() {
             title={viewOnly ? walletCopy.viewOnlyDepositDisabled : undefined}
           >
             <Plus className="size-4" aria-hidden="true" />
-            Create New Deposit
+            {t("deposits.createNew")}
           </Button>
         }
       />
 
-      <WalletSyncingBanner hint="create and withdraw are disabled until the chain is caught up" />
+      <WalletSyncingBanner hint={t("deposits.syncingHint")} />
       <ViewOnlyBanner />
 
       {constraints.data?.hasPendingDeposit ? (
@@ -154,18 +156,18 @@ export default function DepositsPageClient() {
           className="mb-4 rounded-xl border border-border bg-secondary/60 px-4 py-3 text-sm text-muted-foreground"
           role="status"
         >
-          A deposit transaction is pending confirmation in the mempool.
+          {t("deposits.pendingMempool")}
         </div>
       ) : null}
 
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <SectionCard
-          title="Summary"
-          description="Locked CCX, maturity timing, and blended APR"
+          title={t("txn.summary")}
+          description={t("deposits.summaryDescription")}
           headerAction={
             <InfoPillButton
               onClick={() => setCalcOpen(true)}
-              aria-label="Open deposit interest calculator"
+              aria-label={t("deposits.openCalculator")}
             />
           }
         >
@@ -178,16 +180,23 @@ export default function DepositsPageClient() {
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold leading-none tracking-tight text-card-foreground">
-                {withdrawnDeposits.length > 0 ? "All Deposits" : "Active Deposits"}
+                {withdrawnDeposits.length > 0 ? t("deposits.allHeading") : t("deposits.activeHeading")}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 {data.length === 0
-                  ? "No deposits yet"
+                  ? t("deposits.noneYet")
                   : [
                       openDeposits.length > 0
-                        ? `${openDeposits.length} open position${openDeposits.length === 1 ? "" : "s"}`
+                        ? t(
+                            openDeposits.length === 1
+                              ? "deposits.openPositionsOne"
+                              : "deposits.openPositionsOther",
+                            { count: openDeposits.length },
+                          )
                         : null,
-                      withdrawnDeposits.length > 0 ? `${withdrawnDeposits.length} withdrawn` : null,
+                      withdrawnDeposits.length > 0
+                        ? t("deposits.withdrawnCount", { count: withdrawnDeposits.length })
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -215,7 +224,7 @@ export default function DepositsPageClient() {
               setOpen(false);
             },
             onError: (error) => {
-              toast.error(error instanceof Error ? error.message : "Failed to create deposit.");
+              toast.error(error instanceof Error ? error.message : t("deposits.createFailed"));
             },
           });
         }}
@@ -259,6 +268,7 @@ function buildProjection(deposits: Deposit[], maxDays: number): ProjectionPoint[
 }
 
 function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
+  const { t } = useI18n();
   const fmt = useFormatters();
   const { formatCcx, formatNumber } = fmt;
   const activeDeposits = useMemo(
@@ -311,29 +321,34 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
     <div className="space-y-4">
       <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <SummaryCard
-          label="Total Locked"
+          label={t("deposits.totalLocked")}
           value={totalLocked}
           formatter={(value) => formatCcx(value)}
-          detail={`${activeDeposits.length} position${activeDeposits.length === 1 ? "" : "s"} earning`}
+          detail={t(
+            activeDeposits.length === 1
+              ? "deposits.positionsEarningOne"
+              : "deposits.positionsEarningOther",
+            { count: activeDeposits.length },
+          )}
           tone="deposit"
           index={0}
           usd={usdSubline(totalLocked, price)}
           chart={<CompositionBar segments={segments} total={totalLocked} />}
         />
         <SummaryCard
-          label="Active Deposits"
+          label={t("deposits.activeDeposits")}
           value={activeDeposits.length}
           formatter={(value) => formatNumber(Math.round(value))}
-          detail="Time locks open"
+          detail={t("deposits.timeLocksOpen")}
           tone="default"
           index={1}
           chart={<AmountBars segments={segments} max={maxAmount} />}
         />
         <SummaryCard
-          label="Total Est. Interest"
+          label={t("deposits.totalEstInterest")}
           value={totalInterest}
           formatter={(value) => formatCcx(value, 4)}
-          detail="Projected return"
+          detail={t("deposits.projectedReturn")}
           tone="amber"
           index={2}
           usd={usdSubline(totalInterest, price)}
@@ -342,22 +357,30 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           }
         />
         <SummaryCard
-          label="Weighted Avg APR"
+          label={t("deposits.weightedAvgApr")}
           value={weightedApr}
           formatter={(value) => `${formatNumber(value, { maximumFractionDigits: 2 })}%`}
-          detail="Amount-weighted"
+          detail={t("deposits.amountWeighted")}
           tone="incoming"
           index={3}
           chart={<AprBars segments={segments} max={maxApr} weighted={weightedApr} />}
         />
         <SummaryCard
-          label="Next Unlock"
+          label={t("deposits.nextUnlock")}
           value={nextUnlock?.unlocksInDays ?? 0}
-          formatter={(value) => (nextUnlock ? `${Math.round(value)} days` : "None")}
+          formatter={(value) =>
+            nextUnlock
+              ? t(Math.round(value) === 1 ? "deposits.daysLabelOne" : "deposits.daysLabelOther", {
+                  count: Math.round(value),
+                })
+              : t("deposits.none")
+          }
           detail={
             nextUnlock
-              ? `Matures ${formatMaturityDate(nextUnlock.unlocksInDays, fmt)}`
-              : "No active deposits"
+              ? t("deposits.maturesOn", {
+                  date: formatMaturityDate(nextUnlock.unlocksInDays, fmt),
+                })
+              : t("deposits.noActiveDeposits")
           }
           tone="default"
           index={4}
@@ -567,11 +590,12 @@ function ProjectionChart({
   nextUnlock: Deposit | null;
   maxUnlock: number;
 }) {
+  const { t } = useI18n();
   const { formatCcx } = useFormatters();
   return (
     <div className="rounded-xl border border-border bg-secondary/60 p-4">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm text-muted-foreground">Projected value to maturity</p>
+        <p className="text-sm text-muted-foreground">{t("deposits.projectedToMaturity")}</p>
         <p className="font-mono text-xs text-muted-foreground">
           <CcxAmount>{formatCcx(totalLocked)}</CcxAmount>{" "}
           <span className="text-muted-foreground/60">→</span>{" "}
@@ -607,8 +631,12 @@ function ProjectionChart({
                 color: "hsl(var(--foreground))",
                 fontSize: 12,
               }}
-              labelFormatter={(label) => `In ${label} day${label === 1 ? "" : "s"}`}
-              formatter={(value) => [formatCcx(Number(value)), "Value"]}
+              labelFormatter={(label) =>
+                t(label === 1 ? "deposits.inDaysOne" : "deposits.inDaysOther", {
+                  count: Number(label),
+                })
+              }
+              formatter={(value) => [formatCcx(Number(value)), t("deposits.valueLabel")]}
             />
             <Area
               type="monotone"
@@ -621,11 +649,13 @@ function ProjectionChart({
         </ResponsiveContainer>
       </div>
       <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
-        <span>Today</span>
+        <span>{t("deposits.today")}</span>
         {nextUnlock ? (
-          <span className="text-wallet-deposit">{nextUnlock.unlocksInDays}d · first unlock</span>
+          <span className="text-wallet-deposit">
+            {t("deposits.firstUnlockMarker", { days: nextUnlock.unlocksInDays })}
+          </span>
         ) : null}
-        <span>{maxUnlock}d · maturity</span>
+        <span>{t("deposits.maturityMarker", { days: maxUnlock })}</span>
       </div>
     </div>
   );
@@ -638,6 +668,7 @@ function CompositionDonut({
   segments: DepositSegment[];
   totalLocked: number;
 }) {
+  const { t } = useI18n();
   const { formatCcx, formatNumber } = useFormatters();
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
@@ -653,7 +684,7 @@ function CompositionDonut({
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-border bg-secondary/60 p-4">
-      <p className="text-sm text-muted-foreground">Locked composition</p>
+      <p className="text-sm text-muted-foreground">{t("deposits.lockedComposition")}</p>
       <div className="mt-3 flex flex-1 items-center gap-5">
         <div className="relative h-[128px] w-[128px] shrink-0">
           <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
@@ -687,7 +718,7 @@ function CompositionDonut({
             <span className="font-mono text-xl font-bold leading-none text-foreground">
               {formatNumber(Math.round(totalLocked))}
             </span>
-            <span className="mt-1 text-[10px] text-muted-foreground">CCX locked</span>
+            <span className="mt-1 text-[10px] text-muted-foreground">{t("deposits.ccxLocked")}</span>
           </div>
         </div>
         <ul className="flex min-w-0 flex-1 flex-col justify-center gap-4 text-sm">
@@ -717,7 +748,7 @@ function CompositionDonut({
                   />
                 </div>
                 <span className="shrink-0 text-xs text-muted-foreground/70">
-                  unlocks {segment.unlocksInDays}d
+                  {t("deposits.unlocksInDaysShort", { days: segment.unlocksInDays })}
                 </span>
               </div>
             </li>
@@ -735,19 +766,28 @@ function DepositViewSwitcher({
   value: DepositView;
   onChange: (view: DepositView) => void;
 }) {
+  const { t } = useI18n();
   return (
     <fieldset className="m-0 inline-flex min-w-0 rounded-xl border border-border p-1">
-      <legend className="sr-only">Deposit view</legend>
-      <DepositViewToggle active={value === "cards"} onClick={() => onChange("cards")} label="Cards">
+      <legend className="sr-only">{t("deposits.viewLegend")}</legend>
+      <DepositViewToggle
+        active={value === "cards"}
+        onClick={() => onChange("cards")}
+        label={t("deposits.viewCards")}
+      >
         <LayoutGrid className="size-4" aria-hidden="true" />
       </DepositViewToggle>
-      <DepositViewToggle active={value === "table"} onClick={() => onChange("table")} label="Table">
+      <DepositViewToggle
+        active={value === "table"}
+        onClick={() => onChange("table")}
+        label={t("deposits.viewTable")}
+      >
         <Table2 className="size-4" aria-hidden="true" />
       </DepositViewToggle>
       <DepositViewToggle
         active={value === "timeline"}
         onClick={() => onChange("timeline")}
-        label="Timeline"
+        label={t("deposits.viewTimeline")}
       >
         <CalendarClock className="size-4" aria-hidden="true" />
       </DepositViewToggle>
@@ -798,6 +838,7 @@ function DepositsView({ deposits, view }: { deposits: Deposit[]; view: DepositVi
 }
 
 function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
+  const { t } = useI18n();
   const fmt = useFormatters();
   const { formatCcx } = fmt;
   const status = getDepositStatus(deposit);
@@ -836,19 +877,26 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
             <div className="flex flex-wrap items-center gap-2">
               <h2 id={`${deposit.id}-title`} className="font-semibold text-foreground">
                 {isWithdrawn
-                  ? "Withdrawn"
+                  ? t("deposits.statusWithdrawn")
                   : status === "withdrawing"
-                    ? "Withdrawal in progress"
+                    ? t("deposits.withdrawalInProgress")
                     : status === "matured"
-                      ? "Ready to withdraw"
-                      : `Unlocks in ${deposit.unlocksInDays} days`}
+                      ? t("deposits.readyToWithdraw")
+                      : t("deposits.unlocksInDaysTitle", { days: deposit.unlocksInDays })}
               </h2>
               <DepositStatusPill status={status} />
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {isWithdrawn
-                ? `Principal ${formatCcx(deposit.amount)} + ${formatCcx(deposit.interest, 4)} interest · ${truncateAddress(deposit.address)}`
-                : `Matures ${maturityDate} · wallet ${truncateAddress(deposit.address)}`}
+                ? t("deposits.cardWithdrawnSubtitle", {
+                    principal: formatCcx(deposit.amount),
+                    interest: formatCcx(deposit.interest, 4),
+                    address: truncateAddress(deposit.address),
+                  })
+                : t("deposits.cardOpenSubtitle", {
+                    date: maturityDate,
+                    address: truncateAddress(deposit.address),
+                  })}
             </p>
           </div>
         </div>
@@ -857,38 +905,47 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <DepositDetail
-          label="Principal"
+          label={t("deposits.principal")}
           value={formatCcx(deposit.amount)}
           tone="deposit"
           usd={usd(principal)}
         />
-        <DepositDetail label="APR" value={`${deposit.apr.toFixed(2)}%`} tone="amber" />
+        <DepositDetail label={t("deposits.apr")} value={`${deposit.apr.toFixed(2)}%`} tone="amber" />
         <DepositDetail
-          label="Est. Interest"
+          label={t("deposits.estInterest")}
           value={formatCcx(deposit.interest, 4)}
           tone="incoming"
           usd={usd(interest)}
         />
         <DepositDetail
-          label="Value at Maturity"
+          label={t("deposits.valueAtMaturity")}
           value={formatCcx(maturityValue, 4)}
           tone="default"
           usd={usd(maturityValue)}
         />
-        <DepositDetail label="Duration" value={`${deposit.durationMonths} months`} tone="default" />
+        <DepositDetail
+          label={t("deposits.duration")}
+          value={t(
+            deposit.durationMonths === 1 ? "deposits.monthsValueOne" : "deposits.monthsValue",
+            { count: deposit.durationMonths },
+          )}
+          tone="default"
+        />
       </dl>
 
       {!isWithdrawn ? (
         <div className="mt-5 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between gap-4">
-            <p className="text-sm font-medium text-muted-foreground">Deposit Progress</p>
+            <p className="text-sm font-medium text-muted-foreground">{t("deposits.progressLabel")}</p>
             <p className="font-mono text-sm font-semibold text-foreground">
-              {Math.min(deposit.progressPct, 100)}% complete
+              {t("deposits.percentComplete", { pct: Math.min(deposit.progressPct, 100) })}
             </p>
           </div>
           <AnimatedProgress
             value={deposit.progressPct}
-            label={`${Math.min(deposit.progressPct, 100)} percent complete`}
+            label={t("deposits.percentCompleteAria", {
+              pct: Math.min(deposit.progressPct, 100),
+            })}
           />
         </div>
       ) : null}
@@ -897,20 +954,21 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
 }
 
 function DepositsTable({ deposits }: { deposits: Deposit[] }) {
+  const { t } = useI18n();
   const { formatCcx } = useFormatters();
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full min-w-[880px] text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="px-4 py-3 font-medium">Amount</th>
-            <th className="px-4 py-3 font-medium">APR</th>
-            <th className="px-4 py-3 font-medium">Est. Interest</th>
-            <th className="px-4 py-3 font-medium">At Maturity</th>
-            <th className="px-4 py-3 font-medium">Progress</th>
-            <th className="px-4 py-3 font-medium">Unlocks</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 text-right font-medium">Action</th>
+            <th className="px-4 py-3 font-medium">{t("rail.amount")}</th>
+            <th className="px-4 py-3 font-medium">{t("deposits.apr")}</th>
+            <th className="px-4 py-3 font-medium">{t("deposits.estInterest")}</th>
+            <th className="px-4 py-3 font-medium">{t("deposits.atMaturity")}</th>
+            <th className="px-4 py-3 font-medium">{t("deposits.progressColumn")}</th>
+            <th className="px-4 py-3 font-medium">{t("deposits.unlocksColumn")}</th>
+            <th className="px-4 py-3 font-medium">{t("deposits.statusColumn")}</th>
+            <th className="px-4 py-3 text-right font-medium">{t("deposits.actionColumn")}</th>
           </tr>
         </thead>
         <tbody>
@@ -945,7 +1003,7 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
                   <div className="flex min-w-[132px] items-center gap-2">
                     <AnimatedProgress
                       value={progress}
-                      label={`${progress} percent complete`}
+                      label={t("deposits.percentCompleteAria", { pct: progress })}
                       className={cn(
                         "mt-0 h-1.5 min-w-[88px] bg-secondary",
                         status === "matured" ? "[&>div]:bg-wallet-incoming" : "[&>div]:bg-primary",
@@ -955,7 +1013,7 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
-                  {getUnlocksLabel(deposit, "table")}
+                  {getUnlocksLabel(deposit, "table", t)}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <DepositStatusPill status={status} />
@@ -973,6 +1031,7 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
 }
 
 function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
+  const { t } = useI18n();
   const fmt = useFormatters();
   const { formatCcx } = fmt;
   return (
@@ -1002,7 +1061,7 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
               )}
               aria-hidden="true"
             />
-            <p className="text-xs text-muted-foreground">{getTimelineDateLabel(deposit, fmt)}</p>
+            <p className="text-xs text-muted-foreground">{getTimelineDateLabel(deposit, fmt, t)}</p>
             <div className="mt-2 flex flex-col gap-3 rounded-xl border border-border bg-secondary/60 p-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1015,7 +1074,9 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
                   <DepositStatusPill status={status} />
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  <span className="font-mono text-primary">{deposit.apr.toFixed(2)}% APR</span>
+                  <span className="font-mono text-primary">
+                    {t("deposits.aprValue", { apr: deposit.apr.toFixed(2) })}
+                  </span>
                   <span aria-hidden="true"> · </span>
                   <span className="font-mono text-wallet-incoming">
                     +<CcxAmount>{formatCcx(interest, 4)}</CcxAmount>
@@ -1024,12 +1085,12 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
                   <span className="font-mono text-foreground">
                     <CcxAmount>{formatCcx(maturityValue, 4)}</CcxAmount>
                   </span>
-                  <span> at maturity</span>
+                  <span> {t("deposits.atMaturitySuffix")}</span>
                 </p>
                 <div className="mt-3 max-w-sm">
                   <AnimatedProgress
                     value={progress}
-                    label={`${progress} percent complete`}
+                    label={t("deposits.percentCompleteAria", { pct: progress })}
                     className={cn(
                       "mt-0 h-2 bg-card",
                       status === "matured" ? "[&>div]:bg-wallet-incoming" : "[&>div]:bg-primary",
@@ -1082,6 +1143,7 @@ function DepositWithdrawButton({
   deposit: Deposit;
   size?: "default" | "xs";
 }) {
+  const { t } = useI18n();
   const { formatCcx } = useFormatters();
   const withdraw = useWithdrawDeposit();
   const viewOnly = useWalletViewOnly();
@@ -1105,7 +1167,7 @@ function DepositWithdrawButton({
           setOpen(false);
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : "Withdrawal failed.");
+          toast.error(error instanceof Error ? error.message : t("deposits.withdrawFailed"));
         },
       },
     );
@@ -1114,7 +1176,7 @@ function DepositWithdrawButton({
   if (deposit.status === "spent") {
     return (
       <Badge variant="secondary" className="min-h-8 px-2.5 text-muted-foreground">
-        Withdrawn
+        {t("deposits.statusWithdrawn")}
       </Badge>
     );
   }
@@ -1135,27 +1197,39 @@ function DepositWithdrawButton({
         ) : (
           <Unlock className="size-4" aria-hidden="true" />
         )}
-        {viewOnly ? "View-only" : deposit.withdrawPending ? "Withdrawing…" : "Withdraw"}
+        {viewOnly
+          ? t("deposits.viewOnlyShort")
+          : deposit.withdrawPending
+            ? t("deposits.withdrawing")
+            : t("account.txWithdraw")}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm withdrawal</DialogTitle>
+            <DialogTitle>{t("deposits.confirmWithdrawalTitle")}</DialogTitle>
             <DialogDescription>{walletCopy.depositWithdrawConfirm}</DialogDescription>
           </DialogHeader>
           <dl className="space-y-2 text-sm">
-            <ConfirmRow label="Principal" value={formatCcx(deposit.amount)} />
-            <ConfirmRow label="Interest" value={formatCcx(deposit.interest, 4)} tone="incoming" />
-            <ConfirmRow label="Network fee" value={formatCcx(withdrawFee, 6)} />
-            <ConfirmRow label="You receive" value={formatCcx(Math.max(netReceive, 0), 4)} strong />
+            <ConfirmRow label={t("deposits.principal")} value={formatCcx(deposit.amount)} />
+            <ConfirmRow
+              label={t("deposits.interest")}
+              value={formatCcx(deposit.interest, 4)}
+              tone="incoming"
+            />
+            <ConfirmRow label={t("deposits.networkFee")} value={formatCcx(withdrawFee, 6)} />
+            <ConfirmRow
+              label={t("deposits.youReceive")}
+              value={formatCcx(Math.max(netReceive, 0), 4)}
+              strong
+            />
           </dl>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button type="button" onClick={confirmWithdraw} disabled={withdraw.isPending}>
-              {withdraw.isPending ? "Withdrawing…" : "Confirm & Withdraw"}
+              {withdraw.isPending ? t("deposits.withdrawing") : t("deposits.confirmAndWithdraw")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1173,6 +1247,7 @@ function AnimatedProgress({
   label: string;
   className?: string;
 }) {
+  const { t } = useI18n();
   const prefersReducedMotion = usePrefersReducedMotion();
   const [displayValue, setDisplayValue] = useState(prefersReducedMotion ? value : 0);
   const clampedValue = Math.min(Math.max(value, 0), 100);
@@ -1194,7 +1269,7 @@ function AnimatedProgress({
   return (
     <Progress
       value={displayValue}
-      aria-label="Deposit progress"
+      aria-label={t("deposits.progressAria")}
       aria-valuetext={label}
       className={cn(
         "mt-3 h-2 bg-secondary [&>div]:bg-linear-to-r [&>div]:from-primary [&>div]:to-[#ffc266]",
@@ -1204,14 +1279,17 @@ function AnimatedProgress({
   );
 }
 
+const DEPOSIT_STATUS_LABEL_KEYS: Record<DepositStatus, string> = {
+  matured: "deposits.pillReady",
+  soon: "deposits.pillUnlocksSoon",
+  active: "deposits.pillActive",
+  spent: "deposits.statusWithdrawn",
+  withdrawing: "deposits.pillWithdrawing",
+};
+
 function DepositStatusPill({ status }: { status: DepositStatus }) {
-  const label = {
-    matured: "Ready",
-    soon: "Unlocks soon",
-    active: "Active",
-    spent: "Withdrawn",
-    withdrawing: "Withdrawing",
-  }[status];
+  const { t } = useI18n();
+  const label = t(DEPOSIT_STATUS_LABEL_KEYS[status]);
 
   return (
     <Badge
@@ -1237,11 +1315,12 @@ function DepositEmptyState({
   onCreate: () => void;
   createDisabled?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <div>
       <EmptyState
-        title="No deposits yet"
-        description="Create a time-locked deposit to preview APR, maturity date, and projected interest."
+        title={t("deposits.emptyTitle")}
+        description={t("deposits.emptyDescription")}
         illustration="/brand/empty/deposits.png"
       />
       <div className="mt-4 flex justify-center">
@@ -1252,7 +1331,7 @@ function DepositEmptyState({
           className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
         >
           <Plus className="size-4" aria-hidden="true" />
-          Create New Deposit
+          {t("deposits.createNew")}
         </Button>
       </div>
     </div>
@@ -1275,6 +1354,7 @@ function CreateDepositDialog({
   onOpenChange: (open: boolean) => void;
   onCreate: (input: CreateDepositInput) => void;
 }) {
+  const { t } = useI18n();
   const fmt = useFormatters();
   const { formatCcx, formatNumber } = fmt;
   const viewOnly = useWalletViewOnly();
@@ -1308,11 +1388,11 @@ function CreateDepositDialog({
 
   function submitForm() {
     if (!Number.isFinite(amountValue) || amountValue < 1) {
-      setAmountError("Enter a whole CCX amount of at least 1.");
+      setAmountError(t("deposits.errorWholeAmount"));
       return;
     }
     if (maxAmount > 0 && amountValue > maxAmount) {
-      setAmountError(`Maximum deposit is ${formatNumber(maxAmount)} CCX.`);
+      setAmountError(t("deposits.errorMaxAmount", { max: formatNumber(maxAmount) }));
       return;
     }
     setAmountError("");
@@ -1339,17 +1419,21 @@ function CreateDepositDialog({
         {step === "form" ? (
           <>
             <DialogHeader>
-              <DialogTitle>Create New Deposit</DialogTitle>
+              <DialogTitle>{t("deposits.createNew")}</DialogTitle>
               <DialogDescription>
-                Lock CCX for {durationMonths} month{durationMonths === 1 ? "" : "s"} and earn
-                interest at term.
+                {t(
+                  durationMonths === 1
+                    ? "deposits.createDescriptionOne"
+                    : "deposits.createDescriptionOther",
+                  { count: durationMonths },
+                )}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-[1fr_170px]">
                 <div className="space-y-2">
-                  <Label htmlFor="deposit-amount">Amount (CCX)</Label>
+                  <Label htmlFor="deposit-amount">{t("deposits.amountCcx")}</Label>
                   <Input
                     id="deposit-amount"
                     value={amount}
@@ -1375,24 +1459,26 @@ function CreateDepositDialog({
                           className="cursor-pointer font-semibold text-primary hover:text-primary/80"
                           onClick={() => setAmount(String(maxAmount))}
                         >
-                          Max {formatNumber(maxAmount)} CCX
+                          {t("deposits.maxAmount", { max: formatNumber(maxAmount) })}
                         </button>
                       ) : (
-                        "Available balance loading…"
+                        t("deposits.balanceLoading")
                       )}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deposit-duration">Duration</Label>
+                  <Label htmlFor="deposit-duration">{t("deposits.duration")}</Label>
                   <Select value={duration} onValueChange={setDuration}>
-                    <SelectTrigger id="deposit-duration" aria-label="Deposit duration">
+                    <SelectTrigger id="deposit-duration" aria-label={t("deposits.durationAria")}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {DEPOSIT_DURATION_OPTIONS.map((months) => (
                         <SelectItem key={months} value={String(months)}>
-                          {months} month{months === 1 ? "" : "s"}
+                          {t(months === 1 ? "deposits.monthsValueOne" : "deposits.monthsValue", {
+                            count: months,
+                          })}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1403,21 +1489,21 @@ function CreateDepositDialog({
               <div className="rounded-xl border border-border bg-secondary/60 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <CalendarClock className="size-4 text-primary" aria-hidden="true" />
-                  Live Preview
+                  {t("deposits.livePreview")}
                 </div>
                 <dl className="mt-4 grid gap-3 sm:grid-cols-2">
                   <PreviewRow
-                    label="Indicative APR"
+                    label={t("deposits.indicativeApr")}
                     value={preview.isFetching ? "…" : `${previewApr.toFixed(2)}%`}
                   />
-                  <PreviewRow label="Est. unlock" value={maturityDate} />
+                  <PreviewRow label={t("deposits.estUnlock")} value={maturityDate} />
                   <PreviewRow
-                    label="Est. Interest"
+                    label={t("deposits.estInterest")}
                     value={preview.isFetching ? "…" : formatCcx(previewInterest, 4)}
                     tone="incoming"
                   />
                   <PreviewRow
-                    label="Value at Maturity"
+                    label={t("deposits.valueAtMaturity")}
                     value={
                       preview.isFetching || !amountIsValid
                         ? "…"
@@ -1438,40 +1524,43 @@ function CreateDepositDialog({
                 title={viewOnly ? walletCopy.viewOnlyDepositDisabled : undefined}
               >
                 <Lock className="size-4" aria-hidden="true" />
-                Review Deposit
+                {t("deposits.reviewDeposit")}
               </Button>
             </div>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Confirm deposit</DialogTitle>
+              <DialogTitle>{t("deposits.confirmDepositTitle")}</DialogTitle>
               <DialogDescription>{walletCopy.depositCreateConfirm}</DialogDescription>
             </DialogHeader>
             <dl className="space-y-2 text-sm">
-              <ConfirmRow label="Amount" value={formatCcx(amountValue)} />
+              <ConfirmRow label={t("rail.amount")} value={formatCcx(amountValue)} />
               <ConfirmRow
-                label="Term"
-                value={`${durationMonths} month${durationMonths === 1 ? "" : "s"}`}
+                label={t("deposits.term")}
+                value={t(
+                  durationMonths === 1 ? "deposits.monthsValueOne" : "deposits.monthsValue",
+                  { count: durationMonths },
+                )}
               />
               <ConfirmRow
-                label="Est. interest"
+                label={t("deposits.estInterestLower")}
                 value={formatCcx(previewInterest, 4)}
                 tone="incoming"
               />
-              <ConfirmRow label="Network fee" value={formatCcx(createFee, 6)} />
+              <ConfirmRow label={t("deposits.networkFee")} value={formatCcx(createFee, 6)} />
               <ConfirmRow
-                label="Total debit"
+                label={t("deposits.totalDebit")}
                 value={formatCcx(amountValue + createFee, 6)}
                 strong
               />
             </dl>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setStep("form")}>
-                Back
+                {t("deposits.back")}
               </Button>
               <Button type="button" onClick={confirmCreate} disabled={isPending}>
-                {isPending ? "Creating…" : "Confirm & Create"}
+                {isPending ? t("deposits.creating") : t("deposits.confirmAndCreate")}
               </Button>
             </DialogFooter>
           </>
@@ -1551,18 +1640,26 @@ function getProgressPct(deposit: Deposit) {
   return Math.min(Math.max(deposit.progressPct, 0), 100);
 }
 
-function getUnlocksLabel(deposit: Deposit, variant: "table" | "timeline") {
-  if (deposit.status === "spent") return "Withdrawn";
-  if (deposit.withdrawPending) return "Pending";
-  if (canWithdrawDeposit(deposit)) return variant === "table" ? "Ready" : "Ready now";
-  return `${deposit.unlocksInDays} day${deposit.unlocksInDays === 1 ? "" : "s"}`;
+type TFunction = (key: string, vars?: Record<string, string | number>) => string;
+
+function getUnlocksLabel(deposit: Deposit, variant: "table" | "timeline", t: TFunction) {
+  if (deposit.status === "spent") return t("deposits.statusWithdrawn");
+  if (deposit.withdrawPending) return t("rail.pending");
+  if (canWithdrawDeposit(deposit))
+    return variant === "table" ? t("deposits.pillReady") : t("deposits.readyNow");
+  return t(deposit.unlocksInDays === 1 ? "deposits.daysLabelOne" : "deposits.daysLabelOther", {
+    count: deposit.unlocksInDays,
+  });
 }
 
-function getTimelineDateLabel(deposit: Deposit, fmt: Formatters) {
-  if (deposit.status === "spent") return "Withdrawn";
-  if (deposit.withdrawPending) return "Withdrawal pending";
-  if (canWithdrawDeposit(deposit)) return "Ready now";
-  return `${formatMaturityDate(deposit.unlocksInDays, fmt)} - in ${getUnlocksLabel(deposit, "timeline")}`;
+function getTimelineDateLabel(deposit: Deposit, fmt: Formatters, t: TFunction) {
+  if (deposit.status === "spent") return t("deposits.statusWithdrawn");
+  if (deposit.withdrawPending) return t("deposits.withdrawalPending");
+  if (canWithdrawDeposit(deposit)) return t("deposits.readyNow");
+  return t("deposits.timelineDateLabel", {
+    date: formatMaturityDate(deposit.unlocksInDays, fmt),
+    relative: getUnlocksLabel(deposit, "timeline", t),
+  });
 }
 
 function formatMaturityDate(unlocksInDays: number, fmt: Formatters) {
