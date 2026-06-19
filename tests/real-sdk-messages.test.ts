@@ -173,4 +173,150 @@ describe("real-sdk inbound message reconstruction", () => {
     expect(inboundAgain).toHaveLength(1);
     expect(inboundAgain[0]?.unread).toBe(false);
   });
+
+  it("surfaces a message attached to a REAL-amount payment, not just the 100-atomic marker (#97)", async () => {
+    // Regression: the recipient classification used to require owning an output of
+    // EXACTLY 100 atomic, so a message attached to a real transfer was dropped.
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const aliceOutput = fundOwnedOutput(alice, 6_000_000);
+    const bobDecoded = decodeAddress(bob.address);
+
+    const built = txns.buildMessageTransaction({
+      keys: alice.keys,
+      recipient: {
+        spendPublicKey: bobDecoded.spendPublicKey,
+        viewPublicKey: bobDecoded.viewPublicKey,
+      },
+      body: MESSAGE_BODY,
+      changeKeys: { spendPublicKey: alice.keys.spend.pub, viewPublicKey: alice.keys.view.pub },
+      unspentOutputs: [aliceOutput],
+      decoys: [fakeDecoys(aliceOutput.amount, 6)],
+      fee: 1000,
+      mixin: 5,
+      ttlUnixSeconds: 0,
+      nodeFee: null,
+      messageAmount: 5_000_000, // a real 5 CCX payment carrying a message
+    });
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const networkHeight = 77;
+    const fakeDaemon = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(networkHeight),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: (start: number, end: number) =>
+        Promise.resolve(
+          start <= networkHeight && end >= networkHeight
+            ? [toDaemonRawTransaction(built, networkHeight, 1_700_000_500)]
+            : [],
+        ),
+    };
+    const bobRaw: RawWalletV1 = {
+      deposits: [],
+      withdrawals: [],
+      transactions: [],
+      lastHeight: 0,
+      nonce: "",
+      keys: {
+        pub: { spend: bob.keys.spend.pub, view: bob.keys.view.pub },
+        priv: { spend: bob.keys.spend.sec, view: bob.keys.view.sec },
+      },
+      creationHeight: 0,
+      options: {},
+    };
+    runtimeMod._setRuntimeForTest({
+      account: bob,
+      raw: bobRaw,
+      state: { ...createWalletState(bob), scannedHeight: networkHeight - 1 },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: fakeDaemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    const { realSdkMessageService } = await import("@/lib/services/real-sdk/message.service");
+    const inbound = (await realSdkMessageService.listMessages()).find(
+      (m) => m.direction === "received",
+    );
+    expect(inbound?.body).toBe(MESSAGE_BODY);
+    expect(inbound?.id).toBe(built.hash);
+  });
+});
+
+describe("real-sdk sendTransaction with a message (#97)", () => {
+  afterEach(async () => {
+    const { _setRuntimeForTest } = await import("@/lib/services/real-sdk/runtime");
+    _setRuntimeForTest(null);
+  });
+
+  it("embeds the message and persists a sender copy in Messages", async () => {
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const aliceOutput = fundOwnedOutput(alice, 6_000_000);
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const networkHeight = 100;
+    const fakeDaemon = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(networkHeight),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: (amounts: number[], count: number) =>
+        Promise.resolve(
+          amounts.map((amount) => ({
+            amount,
+            outs: Array.from({ length: count }, (_, i) => ({
+              globalIndex: 3000 + i,
+              publicKey: crypto.generateKeys(crypto.randomSeed()).pub,
+            })),
+          })),
+        ),
+      getWalletSyncData: () => Promise.resolve([]),
+    };
+    const aliceRaw: RawWalletV1 = {
+      deposits: [],
+      withdrawals: [],
+      transactions: [],
+      lastHeight: 0,
+      nonce: "",
+      keys: {
+        pub: { spend: alice.keys.spend.pub, view: alice.keys.view.pub },
+        priv: { spend: alice.keys.spend.sec, view: alice.keys.view.sec },
+      },
+      creationHeight: 0,
+      options: {},
+    };
+    runtimeMod._setRuntimeForTest({
+      account: alice,
+      raw: aliceRaw,
+      state: { ...createWalletState(alice), outputs: [aliceOutput], scannedHeight: networkHeight },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: fakeDaemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { readSentRecords } = await import("@/lib/services/real-sdk/messages-store");
+
+    await realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: 0.5,
+      message: "hi bob",
+    });
+
+    const rt = runtimeMod.getRuntime();
+    expect(rt).not.toBeNull();
+    if (rt === null) throw new Error("runtime should be installed after sendTransaction");
+    const sent = readSentRecords(rt.raw);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.body).toBe("hi bob");
+    expect(sent[0]?.direction).toBe("sent");
+    expect(sent[0]?.counterpartyAddress).toBe(bob.address);
+  });
 });

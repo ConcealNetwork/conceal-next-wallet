@@ -5,12 +5,11 @@ import {
   REMOTE_NODE_FEE_ATOMIC,
   WALLET_DONATION_ADDRESS,
 } from "@/lib/config/config";
-import { threadKeyFor } from "@/lib/services/real-sdk/mappers";
 import {
+  createSentMessageRecord,
   readReceivedRecords,
   readSentRecords,
   type SdkMessageRecord,
-  shortName,
   toMessage,
   withReceivedRecords,
   withSentRecords,
@@ -104,30 +103,28 @@ export const realSdkMessageService: MessageService = {
     });
 
     const paymentId = input.paymentId?.trim() || undefined;
-    const record: SdkMessageRecord = {
-      id: built.hash,
-      direction: "sent",
-      counterpartyAddress: destinationAddress,
-      counterpartyName: shortName(destinationAddress),
+    const record: SdkMessageRecord = createSentMessageRecord({
+      hash: built.hash,
+      recipientAddress: destinationAddress,
       body,
-      hasBody: true,
-      sentTo: destinationAddress,
-      paymentIdFrom: null,
-      paymentIdTo: paymentId ?? null,
-      timestamp: new Date().toISOString(),
-      unread: false,
-      blockHeight: 0,
-      threadKey: threadKeyFor(destinationAddress, paymentId),
+      paymentId,
+      timestampIso: new Date().toISOString(),
       ...(hasTtl ? { ttlExpiresAt: ttlUnixSeconds } : {}),
-    };
+    });
 
     // Broadcast FIRST; only record the sent copy AFTER the relay succeeds so a
     // broadcast failure can't leave a phantom sent message persisted in the blob.
-    // (Our own outbound is never misclassified as inbound: it has no owned
-    // 100-atomic marker output, and its hash joins `sentMessages` before it mines.)
+    // (Our own outbound is never misclassified as inbound: the body was encrypted to
+    // the RECIPIENT's spend key, so it never decrypts as ours during scan, and its
+    // hash joins `sentMessages` before it mines as a backstop.)
     await broadcast(rt, built);
     rt.raw = withSentRecords(rt.raw, [...readSentRecords(rt.raw), record]);
-    await persist();
+    try {
+      await persist();
+    } catch {
+      // Non-fatal: the message is already relayed, so failing here would invite a
+      // retry → double-spend. Only the sender's UI copy is lost; sync reconciles it.
+    }
 
     return toMessage(record);
   },
