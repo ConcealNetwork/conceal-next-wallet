@@ -13,11 +13,8 @@
  */
 
 import { createWalletNetworkConfig, type WalletNetworkConfig } from "@/lib/config/config";
-import {
-  MESSAGE_TX_AMOUNT_ATOMIC,
-  SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC,
-  SENT_MESSAGE_AMOUNT_SELF_ATOMIC,
-} from "@/lib/config/config";
+import { MESSAGE_TX_AMOUNT_ATOMIC } from "@/lib/config/config";
+import { isSentMessageAmount, isUiMessageOut } from "@/lib/ui/transaction-kind";
 import type {
   Deposit as UiDeposit,
   Message as UiMessage,
@@ -98,10 +95,14 @@ function getTxAmount(tx: CoreTransaction): number {
   return Math.abs(tx.getAmount());
 }
 
-/** Sent message envelope: self node (10100) or remote node (+ fee → 11100) atomic. */
-export function isSentMessageAmount(amount: number): boolean {
-  return amount === SENT_MESSAGE_AMOUNT_SELF_ATOMIC || amount === SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC;
-}
+// UI-layer classification helpers moved to @/lib/ui/transaction-kind (#91 decoupling);
+// re-exported here for back-compat with existing callers of this module.
+export {
+  isSentMessageAmount,
+  isUiMessageIn,
+  isUiMessageOut,
+  resolveUiTransactionType,
+} from "@/lib/ui/transaction-kind";
 
 function txHasMessage(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
   return !!(tx.message?.trim() || sentRecord?.messageBody?.trim());
@@ -139,25 +140,6 @@ export function isMinerRewardTx(tx: CoreTransaction): boolean {
 
 export function isWalletMessageTx(tx: CoreTransaction, sentRecord?: RawSentMessageRecord): boolean {
   return isMessageIn(tx) || isMessageOut(tx, sentRecord);
-}
-
-export function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amount">): boolean {
-  if (!transaction.message) return false;
-  return Math.abs(transaction.amount.atomic) === MESSAGE_TX_AMOUNT_ATOMIC;
-}
-
-export function isUiMessageOut(
-  transaction: Pick<UiTransaction, "message" | "amount" | "outgoing">,
-): boolean {
-  if (!transaction.message) return false;
-  if (transaction.outgoing) return true;
-  return isSentMessageAmount(Math.abs(transaction.amount.atomic));
-}
-
-/** Effective type for UI (icon, tabs, labels). */
-export function resolveUiTransactionType(transaction: UiTransaction): TransactionType {
-  if (isUiMessageOut(transaction) || isUiMessageIn(transaction)) return "message";
-  return transaction.type;
 }
 
 /** Classify a synced core transaction for the UI (matches Transaction.ts getters). */

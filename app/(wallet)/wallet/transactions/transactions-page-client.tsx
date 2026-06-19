@@ -50,7 +50,7 @@ import { downloadCsvFile, transactionCsvFilename } from "@/lib/ui/download-csv-f
 import { transactionsToCsv } from "@/lib/ui/transaction-csv";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber, cn, truncateAddress } from "@/lib/utils";
-import { resolveUiTransactionType } from "@/lib/wallet-core/mappers";
+import { resolveUiTransactionType } from "@/lib/ui/transaction-kind";
 
 const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals", "Messages"];
 const pageSizes = ["10", "25", "50"];
