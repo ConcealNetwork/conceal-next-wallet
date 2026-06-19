@@ -65,6 +65,20 @@ async function syncedInfo(): Promise<WalletInfo> {
   return mapWalletInfo(requireRuntime(), networkHeight);
 }
 
+/**
+ * Map the just-unlocked runtime's CURRENT (seeded) state immediately, WITHOUT
+ * waiting for a chain scan — so opening a wallet never blocks on sync. An existing
+ * wallet is seeded from its legacy blob, so the returned balance is already correct
+ * as of `lastHeight`; the shell's `getWalletInfo`/live-sync then closes the
+ * `lastHeight`→tip gap in the background (the `WalletSyncingBanner` reflects it).
+ * Only a single cheap `getHeight` is awaited, to mark the wallet as syncing.
+ */
+async function openedInfo(): Promise<WalletInfo> {
+  const rt = requireRuntime();
+  const networkHeight = await safeNetworkHeight();
+  return mapWalletInfo(rt, networkHeight);
+}
+
 /** A best-effort current network height for a clamp (falls back to a large bound). */
 async function safeNetworkHeight(): Promise<number> {
   const rt = getRuntime();
@@ -99,7 +113,8 @@ export const realSdkWalletService: WalletService = {
     }
     createdMnemonic = null;
     await unlockRuntime(input.password);
-    return syncedInfo();
+    // Open instantly from seeded state; the shell syncs the gap in the background.
+    return openedInfo();
   },
 
   async prepareCreateWallet() {
@@ -164,7 +179,8 @@ export const realSdkWalletService: WalletService = {
     createdMnemonic = null;
     if (input.method === "open") {
       await unlockRuntime(input.password);
-      return syncedInfo();
+      // Open instantly from seeded state; the shell syncs the gap in the background.
+      return openedInfo();
     }
 
     try {
