@@ -90,6 +90,10 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
       setStatus("open");
       setWalletInfo(nextWalletInfo);
       queryClient.setQueryData(queryKeys.wallet, nextWalletInfo);
+      // Refresh the multi-wallet list (#95): opening via create/import ADDS a wallet,
+      // so the switcher's cached list is now stale — invalidate it to surface the new
+      // wallet + the correct active entry without a reload.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
       if (env.persistWalletSession) {
         const nextSession: PersistedSession = { status: "open", walletInfo: nextWalletInfo };
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
