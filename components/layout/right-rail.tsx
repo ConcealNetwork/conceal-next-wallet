@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { cn } from "@/lib/utils";
 
 // Issue #122, stage 2 — the contextual right rail. Each page owns its rail
@@ -102,14 +103,16 @@ export function usePageRightRail(node: React.ReactNode, deps: React.DependencyLi
 /** Shared panel header: title + collapse pin (matches the mockup's Run-settings head). */
 export function RightRailHeader({ title }: { title: string }) {
   const { collapsed, setCollapsed } = useRightRailCollapse();
+  const { t } = useI18n();
+  const toggleLabel = collapsed ? t("rail.expandPanel") : t("rail.collapsePanel");
   return (
     <div className="mb-1.5 flex items-center gap-2 border-b border-border/70 px-1 pb-3.5">
       <span className="text-[13px] font-semibold tracking-[0.01em] text-foreground">{title}</span>
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
-        aria-label={collapsed ? "Expand panel" : "Collapse panel"}
-        title={collapsed ? "Expand panel" : "Collapse panel"}
+        aria-label={toggleLabel}
+        title={toggleLabel}
         className={cn(
           "ml-auto grid size-7 cursor-pointer place-items-center rounded-md border border-transparent text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         )}

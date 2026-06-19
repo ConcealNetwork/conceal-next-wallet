@@ -7,22 +7,23 @@ import { RightRailHeader } from "@/components/layout/right-rail";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMarketData, useWalletInfo } from "@/lib/hooks";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import { ccxToNumber, cn, stripTickerSuffix } from "@/lib/utils";
 
 // Issue #122, stage 2 — the Account-page contextual rail. Compact Market +
 // Holdings + Quick actions summary that complements (not duplicates) the dense
-// main content. Section labels are hardcoded English for now (a later #84 chunk
-// localizes them); the action labels mirror that staging decision for parity.
+// main content. Section labels and action labels are localized via i18n (#84).
 
 // `embedded` renders the same sections WITHOUT the panel header + collapse pin,
 // for the small-screen body fallback (< 1200px, where the rail column is hidden)
 // so narrow viewports never lose the market/holdings summary. Above the rail
 // breakpoint the body fallback is CSS-hidden and the registered rail shows instead.
 export function AccountRail({ embedded = false }: { embedded?: boolean }) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col gap-1">
-      {embedded ? null : <RightRailHeader title="Account" />}
+      {embedded ? null : <RightRailHeader title={t("nav.account")} />}
       <MarketSection />
       <HoldingsSection />
       <QuickActionsSection />
@@ -56,12 +57,13 @@ function RailSectionHeading({
 function MarketSection() {
   const market = useMarketData();
   const { formatUsd } = useFormatters();
+  const { t } = useI18n();
   const data = market.data;
 
   return (
     <section>
       <RailSectionHeading icon={LineChart} first>
-        Market
+        {t("nav.market")}
       </RailSectionHeading>
       <div className="mt-3.5 rounded-xl border border-border/70 p-5">
         {data ? (
@@ -90,14 +92,16 @@ function MarketSection() {
         href="/wallet/market"
         className="mt-2.5 inline-flex items-center gap-1 self-start rounded-sm px-1 text-[11.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       >
-        View full market →
+        {t("rail.viewFullMarket")} →
       </Link>
     </section>
   );
 }
 
 function MarketChangeBadge({ pct }: { pct: number }) {
+  const { t } = useI18n();
   const up = pct >= 0;
+  const abs = Math.abs(pct).toFixed(2);
   return (
     <span
       role="status"
@@ -105,7 +109,7 @@ function MarketChangeBadge({ pct }: { pct: number }) {
         "inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold",
         up ? "text-wallet-incoming" : "text-wallet-outgoing",
       )}
-      aria-label={`CCX price ${up ? "up" : "down"} ${Math.abs(pct).toFixed(2)} percent`}
+      aria-label={up ? t("rail.priceUp", { pct: abs }) : t("rail.priceDown", { pct: abs })}
     >
       <span aria-hidden="true">{up ? "▲" : "▼"}</span>
       {Math.abs(pct).toFixed(2)}%
@@ -168,32 +172,33 @@ type Holding = {
 function HoldingsSection() {
   const wallet = useWalletInfo();
   const { formatCcx } = useFormatters();
+  const { t } = useI18n();
   const info = wallet.data;
 
   const holdings: Holding[] = info
     ? [
         {
-          label: "Available",
+          label: t("rail.available"),
           value: ccxToNumber(info.available),
-          note: "ready to spend",
+          note: t("rail.availableNote"),
           barClassName: "bg-primary",
         },
         {
-          label: "Locked",
+          label: t("rail.locked"),
           value: ccxToNumber(info.lockedDeposits),
-          note: "in deposits",
+          note: t("rail.lockedNote"),
           barClassName: "bg-wallet-deposit",
         },
         {
-          label: "Pending",
+          label: t("rail.pending"),
           value: ccxToNumber(info.pending),
-          note: "awaiting confirmation",
+          note: t("rail.pendingNote"),
           barClassName: "bg-wallet-outgoing",
         },
         {
-          label: "Withdrawable",
+          label: t("rail.withdrawable"),
           value: ccxToNumber(info.withdrawable),
-          note: "ready to claim",
+          note: t("rail.withdrawableNote"),
           barClassName: "bg-wallet-incoming",
         },
       ]
@@ -201,7 +206,7 @@ function HoldingsSection() {
 
   return (
     <section>
-      <RailSectionHeading>Holdings</RailSectionHeading>
+      <RailSectionHeading>{t("rail.holdings")}</RailSectionHeading>
       <div className="mt-3.5 rounded-xl border border-border/70 px-5">
         {info ? (
           holdings.map((holding, index) => (
@@ -245,22 +250,33 @@ function HoldingsSection() {
   );
 }
 
-type QuickAction = { href: string; label: string; aria: string; icon: LucideIcon };
+type QuickAction = { href: string; labelKey: string; ariaKey: string; icon: LucideIcon };
 
 // `aria` is intentionally MORE specific than the bare nav-link labels ("Send", etc.):
 // it makes these rail shortcuts distinct in the accessibility tree so they don't collide
 // with the sidebar nav links (which the e2e selects by exact name), and reads better aloud.
 const QUICK_ACTIONS: QuickAction[] = [
-  { href: "/wallet/send", label: "Send", aria: "Send CCX", icon: Send },
-  { href: "/wallet/receive", label: "Receive", aria: "Receive CCX", icon: QrCode },
-  { href: "/wallet/deposits", label: "Deposit", aria: "Create a deposit", icon: PiggyBank },
-  { href: "/wallet/settings", label: "Optimize", aria: "Optimize wallet", icon: Repeat },
+  { href: "/wallet/send", labelKey: "nav.send", ariaKey: "rail.sendAria", icon: Send },
+  { href: "/wallet/receive", labelKey: "nav.receive", ariaKey: "rail.receiveAria", icon: QrCode },
+  {
+    href: "/wallet/deposits",
+    labelKey: "rail.deposit",
+    ariaKey: "rail.depositAria",
+    icon: PiggyBank,
+  },
+  {
+    href: "/wallet/settings",
+    labelKey: "rail.optimize",
+    ariaKey: "rail.optimizeAria",
+    icon: Repeat,
+  },
 ];
 
 function QuickActionsSection() {
+  const { t } = useI18n();
   return (
     <section>
-      <RailSectionHeading>Quick actions</RailSectionHeading>
+      <RailSectionHeading>{t("rail.quickActions")}</RailSectionHeading>
       <div className="mt-3.5 grid grid-cols-2 gap-3">
         {QUICK_ACTIONS.map((action) => {
           const Icon = action.icon;
@@ -268,11 +284,11 @@ function QuickActionsSection() {
             <Link
               key={action.href}
               href={action.href}
-              aria-label={action.aria}
+              aria-label={t(action.ariaKey)}
               className="flex flex-col items-center gap-2.5 rounded-xl border border-border/70 px-3 py-4 text-center text-[13px] font-semibold text-foreground transition-[border-color,background-color,transform] duration-150 hover:-translate-y-px hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none motion-reduce:transition-none"
             >
               <Icon className="size-[18px] text-muted-foreground" aria-hidden="true" />
-              {action.label}
+              {t(action.labelKey)}
             </Link>
           );
         })}

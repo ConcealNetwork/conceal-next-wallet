@@ -14,6 +14,7 @@ import {
   StatusPill,
   transactionMeta,
 } from "@/components/wallet/transaction-display";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import type { Transaction } from "@/lib/types";
 import { cn, truncateAddress } from "@/lib/utils";
@@ -33,9 +34,10 @@ export function TransactionsRail({
   transaction: Transaction | null;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col gap-1">
-      <RightRailHeader title="Transaction" />
+      <RightRailHeader title={t("rail.transaction")} />
       {transaction ? (
         <TransactionDetail transaction={transaction} onClose={onClose} />
       ) : (
@@ -46,6 +48,7 @@ export function TransactionsRail({
 }
 
 function EmptyDetail() {
+  const { t } = useI18n();
   return (
     <div className="mt-3.5 flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 px-5 py-12 text-center">
       <span
@@ -54,10 +57,8 @@ function EmptyDetail() {
       >
         <Receipt className="size-5" />
       </span>
-      <p className="text-[13px] font-medium text-foreground">No transaction selected</p>
-      <p className="text-xs text-muted-foreground">
-        Select a transaction from the list to see its details here.
-      </p>
+      <p className="text-[13px] font-medium text-foreground">{t("rail.noTransactionSelected")}</p>
+      <p className="text-xs text-muted-foreground">{t("rail.noTransactionSelectedHint")}</p>
     </div>
   );
 }
@@ -70,6 +71,7 @@ function TransactionDetail({
   onClose: () => void;
 }) {
   const fmt = useFormatters();
+  const { t } = useI18n();
   const meta = transactionMeta[resolveUiTransactionType(transaction)];
   const status: TransactionStatus = getTransactionStatus(transaction.confirmations);
   const Icon = meta.icon;
@@ -82,7 +84,7 @@ function TransactionDetail({
         className="-ml-1 inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-sm px-1 text-[11.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ArrowLeft className="size-3.5" aria-hidden="true" />
-        Back to list
+        {t("rail.backToList")}
       </button>
 
       <div className="flex items-center gap-3">
@@ -104,31 +106,31 @@ function TransactionDetail({
       </div>
 
       <div className="rounded-xl border border-border/70 p-4">
-        <p className="text-[11.5px] font-medium text-muted-foreground">Amount</p>
+        <p className="text-[11.5px] font-medium text-muted-foreground">{t("rail.amount")}</p>
         <p className={cn("mt-1 font-mono text-2xl font-bold leading-none", meta.amountClassName)}>
           <CcxAmount>{formatSignedAmount(transaction, fmt)}</CcxAmount>
         </p>
       </div>
 
       <dl className="flex flex-col gap-2.5">
-        <DetailField label="Time" icon={CalendarClock}>
+        <DetailField label={t("rail.time")} icon={CalendarClock}>
           {formatTimestamp(transaction.timestamp, fmt)}
         </DetailField>
-        <DetailField label="Block">
+        <DetailField label={t("rail.block")}>
           {formatHeightWithConfirmations(transaction.blockHeight, transaction.confirmations, fmt)}
         </DetailField>
         {transaction.paymentId ? (
-          <DetailField label="Payment ID" mono copyValue={transaction.paymentId}>
+          <DetailField label={t("rail.paymentId")} mono copyValue={transaction.paymentId}>
             {truncateAddress(transaction.paymentId, 8, 8)}
           </DetailField>
         ) : null}
         {transaction.message ? (
-          <DetailField label="Message">{transaction.message}</DetailField>
+          <DetailField label={t("rail.message")}>{transaction.message}</DetailField>
         ) : null}
-        <DetailField label="To" mono copyValue={transaction.address}>
+        <DetailField label={t("rail.to")} mono copyValue={transaction.address}>
           {truncateAddress(transaction.address, 8, 6)}
         </DetailField>
-        <DetailField label="Tx hash" icon={Hash} mono copyValue={transaction.hash}>
+        <DetailField label={t("rail.txHash")} icon={Hash} mono copyValue={transaction.hash}>
           {truncateAddress(transaction.hash, 8, 6)}
         </DetailField>
       </dl>
@@ -151,6 +153,7 @@ function DetailField({
   copyValue?: string;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-lg border border-border/70 px-3 py-2.5">
       <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/80">
@@ -165,7 +168,7 @@ function DetailField({
       >
         <span className="min-w-0 wrap-break-word">{children}</span>
         {copyValue ? (
-          <CopyButton value={copyValue} label={`Copy ${label.toLowerCase()}`} iconOnly />
+          <CopyButton value={copyValue} label={t("action.copyField", { label })} iconOnly />
         ) : null}
       </dd>
     </div>
