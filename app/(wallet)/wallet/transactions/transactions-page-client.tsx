@@ -1,19 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import {
-  ArrowDownLeft,
-  ArrowUpFromLine,
-  ArrowUpRight,
-  CalendarClock,
-  Combine,
-  Download,
-  Hash,
-  Lock,
-  Mail,
-  Pickaxe,
-  Search,
-} from "lucide-react";
+import { CalendarClock, Download, Hash, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -42,90 +30,34 @@ import {
   PageHeader,
   SectionCard,
 } from "@/components/wallet/common";
+import { TransactionsRail } from "@/components/layout/rails/transactions-rail";
+import { usePageRightRail, useRightRailCollapse } from "@/components/layout/right-rail";
 import { TransactionNote } from "@/components/wallet/transaction-note";
-import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
+import {
+  StatusPill,
+  formatHeightWithConfirmations,
+  formatSignedAmount,
+  formatTimestamp,
+  getTransactionStatus,
+  transactionMeta,
+} from "@/components/wallet/transaction-display";
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
-import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
-import type { Transaction, TransactionType } from "@/lib/types";
+import { useMediaQuery } from "@/lib/hooks/use-media-query";
+import { useFormatters } from "@/lib/i18n/use-formatters";
+import type { Transaction } from "@/lib/types";
 import { downloadCsvFile, transactionCsvFilename } from "@/lib/ui/download-csv-file";
 import { transactionsToCsv } from "@/lib/ui/transaction-csv";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber, cn, truncateAddress } from "@/lib/utils";
-import { isUiMessageOut, resolveUiTransactionType } from "@/lib/wallet-core/mappers";
+import { resolveUiTransactionType } from "@/lib/wallet-core/mappers";
 
 const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals", "Messages"];
 const pageSizes = ["10", "25", "50"];
 
-type TransactionStatus = "Confirmed" | "Pending";
 type DateGroup = "Today" | "Yesterday" | "This Week" | "Earlier";
 
 const dateGroups: DateGroup[] = ["Today", "Yesterday", "This Week", "Earlier"];
-const TIMESTAMP_FORMAT: Intl.DateTimeFormatOptions = {
-  dateStyle: "medium",
-  timeStyle: "short",
-};
-
-const transactionMeta: Record<
-  TransactionType,
-  {
-    label: string;
-    icon: LucideIcon;
-    sign: "+" | "−";
-    amountClassName: string;
-    chipClassName: string;
-  }
-> = {
-  receive: {
-    label: "Receive",
-    icon: ArrowDownLeft,
-    sign: "+",
-    amountClassName: "text-wallet-incoming",
-    chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
-  },
-  send: {
-    label: "Send",
-    icon: ArrowUpRight,
-    sign: "−",
-    amountClassName: "text-wallet-outgoing",
-    chipClassName: "bg-wallet-outgoing/10 text-wallet-outgoing",
-  },
-  deposit: {
-    label: "Deposit",
-    icon: Lock,
-    sign: "+",
-    amountClassName: "text-wallet-deposit",
-    chipClassName: "bg-wallet-deposit/10 text-wallet-deposit",
-  },
-  withdrawal: {
-    label: "Withdrawal",
-    icon: ArrowUpFromLine,
-    sign: "+",
-    amountClassName: "text-wallet-incoming",
-    chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
-  },
-  fusion: {
-    label: "Fusion",
-    icon: Combine,
-    sign: "−",
-    amountClassName: "text-muted-foreground",
-    chipClassName: "bg-secondary text-muted-foreground",
-  },
-  miner: {
-    label: "Miner",
-    icon: Pickaxe,
-    sign: "+",
-    amountClassName: "text-wallet-incoming",
-    chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",
-  },
-  message: {
-    label: "Message",
-    icon: Mail,
-    sign: "+",
-    amountClassName: "text-primary",
-    chipClassName: "bg-primary/10 text-primary",
-  },
-};
 
 export default function TransactionsPageClient() {
   const fmt = useFormatters();
@@ -135,6 +67,19 @@ export default function TransactionsPageClient() {
   const [pageSize, setPageSize] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
   const [selected, setSelected] = useState<Transaction | null>(null);
+
+  // The detail renders in the rail only when it is actually on screen: >=1200px
+  // AND not collapsed to its strip. Otherwise (narrow, or the user collapsed the
+  // rail) fall back to the detail dialog so a selection is never shown nowhere.
+  const railVisible = useMediaQuery("(min-width: 1200px)");
+  const { collapsed: railCollapsed } = useRightRailCollapse();
+  const detailInRail = railVisible && !railCollapsed;
+
+  // Register the contextual Transactions rail; re-register when `selected`
+  // changes (a discrete user action) so the rail reflects the chosen row.
+  usePageRightRail(<TransactionsRail transaction={selected} onClose={() => setSelected(null)} />, [
+    selected,
+  ]);
 
   const size = Number(pageSize);
 
@@ -308,6 +253,7 @@ export default function TransactionsPageClient() {
                     group={group}
                     groupIndex={groupIndex}
                     onSelect={setSelected}
+                    selectedId={selected?.id ?? null}
                   />
                 ))}
               </div>
@@ -330,7 +276,7 @@ export default function TransactionsPageClient() {
         />
       )}
       <TransactionDetailsDialog
-        transaction={selected}
+        transaction={detailInRail ? null : selected}
         onOpenChange={(open) => !open && setSelected(null)}
       />
     </>
@@ -514,10 +460,12 @@ function TransactionDateGroup({
   group,
   groupIndex,
   onSelect,
+  selectedId,
 }: {
   group: { label: DateGroup; transactions: Transaction[] };
   groupIndex: number;
   onSelect: (transaction: Transaction) => void;
+  selectedId: string | null;
 }) {
   return (
     <section aria-labelledby={`transactions-${group.label.replace(/\s/g, "-").toLowerCase()}`}>
@@ -537,7 +485,11 @@ function TransactionDateGroup({
             className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100"
             style={{ animationDelay: `${140 + (groupIndex * 5 + index) * 35}ms` }}
           >
-            <TransactionListRow transaction={transaction} onSelect={onSelect} />
+            <TransactionListRow
+              transaction={transaction}
+              onSelect={onSelect}
+              selected={transaction.id === selectedId}
+            />
           </li>
         ))}
       </ul>
@@ -548,9 +500,11 @@ function TransactionDateGroup({
 function TransactionListRow({
   transaction,
   onSelect,
+  selected = false,
 }: {
   transaction: Transaction;
   onSelect: (transaction: Transaction) => void;
+  selected?: boolean;
 }) {
   const fmt = useFormatters();
   const meta = transactionMeta[resolveUiTransactionType(transaction)];
@@ -561,7 +515,11 @@ function TransactionListRow({
     <button
       type="button"
       onClick={() => onSelect(transaction)}
-      className="group flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors duration-200 hover:bg-secondary/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between"
+      aria-pressed={selected}
+      className={cn(
+        "group flex w-full cursor-pointer flex-col gap-3 rounded-xl border bg-card p-3 text-left transition-colors duration-200 hover:bg-secondary/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between",
+        selected ? "border-primary ring-1 ring-primary/40" : "border-border",
+      )}
       aria-label={`${meta.label} transaction for ${formatSignedAmount(transaction, fmt)} from ${fmt.timeAgo(transaction.timestamp)}`}
     >
       <div className="flex min-w-0 items-start gap-3">
@@ -728,43 +686,6 @@ function DetailRow({
   );
 }
 
-function formatHeightWithConfirmations(
-  blockHeight: number,
-  confirmations: number,
-  fmt: Formatters,
-): string {
-  const height = blockHeight > 0 ? fmt.formatNumber(blockHeight) : "Pending";
-  // English plural wording only; full ICU pluralization is out of scope (future).
-  const confLabel = confirmations === 1 ? "confirmation" : "confirmations";
-  return `${height} (${fmt.formatNumber(confirmations)} ${confLabel})`;
-}
-
-function StatusPill({ status }: { status: TransactionStatus }) {
-  const confirmed = status === "Confirmed";
-
-  return (
-    <span
-      className={cn(
-        "inline-flex min-h-7 items-center rounded-full px-2.5 py-1 text-xs font-semibold",
-        confirmed ? "bg-wallet-incoming/10 text-wallet-incoming" : "bg-primary/10 text-primary",
-      )}
-    >
-      {status}
-    </span>
-  );
-}
-
-function getTransactionStatus(confirmations: number): TransactionStatus {
-  return confirmations >= TX_CONFIRMED_THRESHOLD ? "Confirmed" : "Pending";
-}
-
-function formatSignedAmount(transaction: Transaction, fmt: Formatters, decimals?: number) {
-  const effectiveType = resolveUiTransactionType(transaction);
-  const meta = transactionMeta[effectiveType];
-  const sign = effectiveType === "message" && isUiMessageOut(transaction) ? "−" : meta.sign;
-  return `${sign}${fmt.formatCcx(transaction.amount, decimals)}`;
-}
-
 function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
   const effectiveType = resolveUiTransactionType(transaction);
   switch (tab) {
@@ -785,10 +706,6 @@ function transactionMatchesTab(transaction: Transaction, tab: string): boolean {
     default:
       return true;
   }
-}
-
-function formatTimestamp(timestamp: string, fmt: Formatters) {
-  return fmt.formatDate(new Date(timestamp), TIMESTAMP_FORMAT);
 }
 
 function groupTransactionDate(timestamp: string): DateGroup {

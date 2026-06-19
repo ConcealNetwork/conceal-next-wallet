@@ -76,14 +76,9 @@ test("pages without a registered rail render full width", async ({ page }) => {
   // Account has a rail.
   await expect(page.getByRole("complementary", { name: "Context panel" })).toBeVisible();
 
-  // Navigate to Transactions, which registers no rail.
-  const txHeading = page.getByRole("heading", { name: "Transaction History" });
-  await expect(async () => {
-    if (!(await txHeading.isVisible())) {
-      await page.getByRole("link", { name: "Transactions", exact: true }).click({ timeout: 2000 });
-    }
-    await expect(txHeading).toBeVisible({ timeout: 2000 });
-  }).toPass({ timeout: 20_000 });
+  // Navigate to Address Book, which registers no rail (only Account + Transactions do).
+  await page.getByRole("link", { name: "Address Book", exact: true }).click();
+  await expect(page).toHaveURL(/\/wallet\/address-book\/?$/);
 
   // The context panel is gone — the rail cleared on unmount.
   await expect(page.getByRole("complementary", { name: "Context panel" })).toHaveCount(0);
@@ -101,4 +96,64 @@ test("small screens fall back to an inline summary (rail column hidden < 1200px)
   // so narrow viewports never lose it.
   await expect(page.getByRole("heading", { name: "Market" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Create a deposit" })).toBeVisible();
+});
+
+async function openTransactions(page: import("@playwright/test").Page) {
+  await openWallet(page);
+  const txHeading = page.getByRole("heading", { name: "Transaction History" });
+  await expect(async () => {
+    if (!(await txHeading.isVisible())) {
+      await page.getByRole("link", { name: "Transactions", exact: true }).click({ timeout: 2000 });
+    }
+    await expect(txHeading).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+}
+
+test("Transactions page shows a detail rail; selecting a row fills it (wide)", async ({ page }) => {
+  await openTransactions(page);
+
+  const rail = page.getByRole("complementary", { name: "Context panel" });
+  await expect(rail).toBeVisible();
+  // No selection → hint, not detail.
+  await expect(rail.getByText("No transaction selected")).toBeVisible();
+
+  // Select the first transaction row.
+  await page.getByRole("button", { name: /transaction for/ }).first().click();
+
+  // Detail appears in the rail (not a dialog), with the back affordance.
+  await expect(rail.getByText("No transaction selected")).toBeHidden();
+  await expect(rail.getByRole("button", { name: "Back to list" })).toBeVisible();
+  await expect(rail.getByText("Amount", { exact: true })).toBeVisible();
+  // The detail dialog must NOT open at wide widths (the rail replaces it).
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // Back clears the selection.
+  await rail.getByRole("button", { name: "Back to list" }).click();
+  await expect(rail.getByText("No transaction selected")).toBeVisible();
+});
+
+test("Transactions detail uses the dialog below the rail breakpoint (narrow)", async ({ page }) => {
+  // Navigate at the wide default (sidenav links visible), then shrink: below the
+  // breakpoint the rail is hidden and the transaction rows live in the page body.
+  await openTransactions(page);
+  await page.setViewportSize({ width: 860, height: 900 });
+
+  await expect(page.getByRole("complementary", { name: "Context panel" })).toBeHidden();
+  await page.getByRole("button", { name: /transaction for/ }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("Transactions detail falls back to the dialog when the rail is collapsed (wide)", async ({
+  page,
+}) => {
+  await openTransactions(page);
+  const rail = page.getByRole("complementary", { name: "Context panel" });
+  await expect(rail).toBeVisible();
+
+  // Collapse the rail to its strip — the detail can no longer render there.
+  await rail.getByRole("button", { name: "Collapse panel" }).click();
+
+  // Selecting a row now opens the dialog instead of showing nothing.
+  await page.getByRole("button", { name: /transaction for/ }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
 });
