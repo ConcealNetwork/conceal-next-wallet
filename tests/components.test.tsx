@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CopyButton, FilterTabs, StatCard } from "@/components/wallet/common";
+import { UnlockWalletProvider } from "@/components/wallet/unlock-wallet-provider";
 import { I18nProvider } from "@/lib/i18n/i18n-provider";
 import { ThemeProvider } from "@/lib/ui/theme-provider";
 
@@ -79,7 +80,10 @@ describe("wallet components", () => {
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <ThemeProvider>
-            <Sidebar />
+            {/* Sidebar's WalletSwitcher consumes the in-app unlock context (smooth switching). */}
+            <UnlockWalletProvider defaultRedirect={null} autoOpenFromNext={false}>
+              <Sidebar />
+            </UnlockWalletProvider>
           </ThemeProvider>
         </I18nProvider>
       </QueryClientProvider>,

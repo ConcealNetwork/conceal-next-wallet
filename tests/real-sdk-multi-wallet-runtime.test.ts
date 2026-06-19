@@ -67,7 +67,12 @@ describe("real-sdk runtime — multi-wallet (#95)", () => {
     expect(metas[0].address).toBe(a.address);
 
     const b = createAccount("english");
-    await runtime.adopt({ raw: rawFor(b), keys: userKeysOf(b), password: "pw-b", label: "Savings" });
+    await runtime.adopt({
+      raw: rawFor(b),
+      keys: userKeysOf(b),
+      password: "pw-b",
+      label: "Savings",
+    });
 
     metas = await runtime.listWalletMetas();
     expect(metas).toHaveLength(2);
@@ -118,7 +123,7 @@ describe("real-sdk runtime — multi-wallet (#95)", () => {
     const openedB = await runtime.unlock("pw-b");
     expect(openedB.account.address).toBe(b.address);
 
-    // Switch to A (locks), then unlock with A's password → A's account.
+    // Switch to A (NOT cached after lock), then unlock with A's password → A's account.
     const metas = await runtime.listWalletMetas();
     const aId = metas.find((m) => m.address === a.address)?.id;
     if (!aId) throw new Error("expected wallet A to be registered");
@@ -126,7 +131,10 @@ describe("real-sdk runtime — multi-wallet (#95)", () => {
     const openedA = await runtime.unlock("pw-a");
     expect(openedA.account.address).toBe(a.address);
 
-    // B's password must NOT open A's keyspace (wrong wallet) — isolation holds.
+    // B's password must NOT open A's keyspace (wrong wallet) — keyspace isolation holds.
+    // Smooth-switching caches unlocked wallets, so we must LOCK first (drop A's cached
+    // runtime); otherwise unlock returns the already-cached A instantly (by design).
+    runtime.lock();
     await runtime.switchActiveWallet(aId);
     await expect(runtime.unlock("pw-b")).rejects.toThrow();
   });

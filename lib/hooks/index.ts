@@ -62,21 +62,6 @@ export function useWallets() {
   });
 }
 
-/**
- * Switch the active wallet. The engine closes the session (keys are never kept),
- * so this clears the query cache; the caller then drives the unlock flow for the
- * target. Returns the mutation so the caller can await/observe it.
- */
-export function useSwitchWallet() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => services.wallet.switchWallet(id),
-    onSuccess: () => {
-      queryClient.clear();
-    },
-  });
-}
-
 /** Rename a wallet (label only) and refresh the list. */
 export function useRenameWallet() {
   const queryClient = useQueryClient();

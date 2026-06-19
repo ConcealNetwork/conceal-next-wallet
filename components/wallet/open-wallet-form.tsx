@@ -1,10 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
 import { clearPasskeyEnrollment } from "@/lib/auth/biometric-store";
-import { env } from "@/lib/env";
+import { useOpenWalletContext } from "@/components/wallet/unlock-wallet-provider";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQueryClient } from "@/lib/hooks/query-provider";
 import { services } from "@/lib/services";
@@ -12,10 +11,11 @@ import { useWalletSession } from "@/lib/session/wallet-session";
 import { clearAllTxNotes } from "@/lib/storage/tx-notes";
 import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
 
-// The unlock UI (password + biometric enroll/unlock) lives in
-// `OpenWalletProvider` (components/landing/landing-actions.tsx) — the dialog the
-// landing "Open your wallet" buttons actually drive. This module keeps the
-// shared session controls used across the wallet.
+// The unlock UI (password + biometric enroll/unlock + multi-wallet picker) lives in
+// the shared `UnlockWalletProvider` (components/wallet/unlock-wallet-provider.tsx),
+// mounted on the landing AND inside the wallet shell so an in-app switch can unlock a
+// not-yet-cached wallet over the current page. This module keeps the shared session
+// controls used across the wallet.
 
 /** Remove the active wallet's biometric enrollment (stale after delete / password change). */
 export function forgetBiometricEnrollment(): void {
@@ -41,35 +41,45 @@ export function useWalletDisconnect() {
 }
 
 /**
- * Switch the active wallet (#95). Real mode: the engine closes the session on
- * switch (keys are never kept), so we clear local session + cache and bounce to
- * the open-wallet screen — which auto-opens the unlock dialog for the now-active
- * wallet (via the `next` path, mirroring the landing reload flow). Mock mode keeps
- * the session open (the mock unlock takes no password), so we just refresh.
+ * Switch the active wallet — SMOOTHLY (#smooth-wallet-switch).
+ *
+ *   - If the target is ALREADY unlocked (cached in memory), `switchWallet` returns
+ *     its {@link WalletInfo}: we open the session IN PLACE (no route change, no
+ *     password) and refresh the wallet-scoped queries — instant.
+ *   - If it returns `null` (not cached), we open the shared in-app unlock dialog
+ *     targeting that wallet (passkey-first when it has an enrollment) over the
+ *     current page — NO bounce to the landing route.
+ *
+ * Mock mode always returns WalletInfo (the session never closes), so it takes the
+ * instant path.
  */
 export function useSwitchWalletFlow() {
-  const { closeSession } = useWalletSession();
+  const { openSession } = useWalletSession();
   const queryClient = useQueryClient();
-  const router = useRouter();
+  const { openWallet } = useOpenWalletContext();
 
   return function switchWallet(id: string) {
     void (async () => {
       try {
-        await services.wallet.switchWallet(id);
+        const info = await services.wallet.switchWallet(id);
         resetMessageNavBadge();
-        if (env.useMockWallet) {
-          // Mock: the session stays open (mock unlock takes no password) — refresh
-          // the wallet list + all wallet-scoped data to reflect the new active wallet.
+        if (info) {
+          // Target already unlocked (or mock) → swap the session in place, no route
+          // change (omit redirectTo so the user stays on the current page). Refresh
+          // the wallet list + all wallet-scoped data so balances, transactions,
+          // messages, etc. reflect the now-active wallet.
+          openSession(info);
+          queryClient.setQueryData(queryKeys.wallet, info);
           await queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
           await queryClient.refetchQueries({ queryKey: queryKeys.wallets });
           await queryClient.invalidateQueries();
           return;
         }
-        // Real: the engine session is closed; re-unlock the target wallet via the
-        // landing unlock dialog (auto-opened by the `next` path).
-        queryClient.clear();
-        closeSession();
-        router.replace(`/?next=${encodeURIComponent("/wallet/account")}`);
+        // Not cached → unlock the target in place via the shared dialog (passkey-first
+        // when enrolled). Clear stale cached data first so the previous wallet's
+        // balances/txs don't flash while the target unlocks.
+        queryClient.removeQueries();
+        await openWallet(id);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to switch wallet.");
       }
