@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COIN_URI_PREFIX } from "@/lib/config/config";
-import { CoinUri } from "@/lib/wallet-core/CoinUri";
+import { CoinUri } from "@/lib/ui/coin-uri";
 
 const ADDRESS = `ccx7${"a".repeat(94)}`;
 const SPEND_KEY = "b".repeat(64);

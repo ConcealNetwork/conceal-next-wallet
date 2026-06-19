@@ -20,10 +20,10 @@ import {
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import { useDeposits, useTransactions, useWalletInfo, useWalletViewOnly } from "@/lib/hooks";
+import { CoinUri } from "@/lib/ui/coin-uri";
 import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
 import { downloadQrPng, qrPngFilename, qrToPngBlob } from "@/lib/ui/qr-png";
 import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
-import { CoinUri } from "@/lib/wallet-core/CoinUri";
 
 const QR_LOGOS = [
   { id: "orange", label: "Conceal orange mark", src: "/brand/conceal-mark-orange.svg" },

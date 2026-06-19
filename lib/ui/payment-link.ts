@@ -1,7 +1,7 @@
 // CoinUri is a pure string codec (only pulls a config constant — no wallet
 // engine), so importing it here keeps mock mode engine-free. Same precedent as
 // lib/ui/parse-scanned-send-payload.ts.
-import { CoinUri } from "@/lib/wallet-core/CoinUri";
+import { CoinUri } from "@/lib/ui/coin-uri";
 
 const PAYMENT_MESSAGE_ENC_PREFIX = "b64.";
 
