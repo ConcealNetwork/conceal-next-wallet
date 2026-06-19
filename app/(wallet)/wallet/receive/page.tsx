@@ -20,18 +20,26 @@ import {
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import { useDeposits, useTransactions, useWalletInfo, useWalletViewOnly } from "@/lib/hooks";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { CoinUri } from "@/lib/ui/coin-uri";
 import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
 import { downloadQrPng, qrPngFilename, qrToPngBlob } from "@/lib/ui/qr-png";
 import { cn, formatCcx, timeAgo, truncateAddress, withBasePath } from "@/lib/utils";
 
 const QR_LOGOS = [
-  { id: "orange", label: "Conceal orange mark", src: "/brand/conceal-mark-orange.svg" },
-  { id: "steel", label: "Conceal steel mark", src: "/brand/conceal-mark.svg" },
-  { id: "coin", label: "CCX coin", src: "/brand/conceal-logo.svg" },
+  { id: "orange", src: "/brand/conceal-mark-orange.svg" },
+  { id: "steel", src: "/brand/conceal-mark.svg" },
+  { id: "coin", src: "/brand/conceal-logo.svg" },
 ] as const;
 
+const QR_LOGO_LABEL_KEYS: Record<(typeof QR_LOGOS)[number]["id"], string> = {
+  orange: "receive.qrLogoOrange",
+  steel: "receive.qrLogoSteel",
+  coin: "receive.qrLogoCoin",
+};
+
 export default function ReceivePage() {
+  const { t } = useI18n();
   const wallet = useWalletInfo();
   const viewOnly = useWalletViewOnly();
   const transactions = useTransactions();
@@ -67,6 +75,17 @@ export default function ReceivePage() {
       v1: v1Qr,
     });
   }, [address, amount, hasPaymentLink, message, paymentId, v1Qr]);
+  const qrDescription = v1Qr
+    ? hasRequest
+      ? amount
+        ? t("receive.qrV1RequestAmount", { amount })
+        : t("receive.qrV1Request")
+      : t("receive.qrV1Address")
+    : hasRequest
+      ? amount
+        ? t("receive.qrRequestAmount", { amount })
+        : t("receive.qrRequest")
+      : t("receive.qrAddress");
   const received = (transactions.data ?? [])
     .filter((transaction) => transaction.type === "receive")
     .slice(0, 5);
@@ -77,17 +96,17 @@ export default function ReceivePage() {
     try {
       const blob = await qrToPngBlob(paymentUri);
       downloadQrPng(qrPngFilename(address.slice(0, 12)), blob);
-      toast.success("QR code saved.");
+      toast.success(t("receive.qrSaved"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save QR code.");
+      toast.error(error instanceof Error ? error.message : t("receive.qrSaveError"));
     }
   }
 
   return (
     <>
       <PageHeader
-        title="Receive CCX"
-        subtitle="Share your address or QR code to receive funds"
+        title={t("receive.title")}
+        subtitle={t("receive.subtitle")}
         badge={viewOnly ? <ViewOnlyBadge /> : null}
       />
       <WalletSyncingBanner />
@@ -96,8 +115,8 @@ export default function ReceivePage() {
         <div className="space-y-6">
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
             <SectionCard
-              title="Your Wallet Address"
-              description="Share this address or QR to receive funds"
+              title={t("receive.addressCardTitle")}
+              description={t("receive.addressCardDescription")}
             >
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
                 <div className="flex-1 space-y-4">
@@ -105,28 +124,20 @@ export default function ReceivePage() {
                     {address}
                   </p>
                   <div className="flex flex-wrap items-center gap-3">
-                    <CopyButton value={address} label="Copy Address" />
+                    <CopyButton value={address} label={t("receive.copyAddress")} />
                     <div className="flex items-center gap-2">
                       <Switch
                         id="v1-qr"
                         checked={v1Qr}
                         onCheckedChange={setV1Qr}
-                        aria-label="QR encode for V1"
+                        aria-label={t("receive.v1Label")}
                       />
                       <Label htmlFor="v1-qr" className="cursor-pointer text-sm font-normal">
-                        QR encode for V1
+                        {t("receive.v1Label")}
                       </Label>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {v1Qr
-                      ? hasRequest
-                        ? `QR now encodes a payment request${amount ? ` for ${amount} CCX` : ""}, no prefix: compatible with web wallet V1.`
-                        : "QR encodes your address with no prefix — compatible with web wallet V1."
-                      : hasRequest
-                        ? `QR now encodes a payment request${amount ? ` for ${amount} CCX` : ""}.`
-                        : "Scan the QR to send CCX to this address."}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{qrDescription}</p>
                 </div>
                 <div className="mx-auto flex shrink-0 flex-col items-center gap-3">
                   <div className="rounded-2xl bg-white p-4">
@@ -138,7 +149,7 @@ export default function ReceivePage() {
                         key={logo.id}
                         type="button"
                         aria-pressed={qrLogo === logo.src}
-                        aria-label={logo.label}
+                        aria-label={t(QR_LOGO_LABEL_KEYS[logo.id])}
                         onClick={() => setQrLogo(logo.src)}
                         className={cn(
                           "grid size-10 cursor-pointer place-items-center rounded-xl border border-border bg-secondary transition-colors duration-200 hover:border-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
@@ -161,7 +172,7 @@ export default function ReceivePage() {
                     onClick={handleDownloadQrPng}
                   >
                     <Download className="size-4" aria-hidden="true" />
-                    Download PNG
+                    {t("receive.downloadPng")}
                   </Button>
                 </div>
               </div>
@@ -170,12 +181,12 @@ export default function ReceivePage() {
 
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
             <SectionCard
-              title="Request a Payment"
-              description="Optionally encode an amount, payment ID, and message"
+              title={t("receive.requestTitle")}
+              description={t("receive.requestDescription")}
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="req-amount">Amount (CCX)</Label>
+                  <Label htmlFor="req-amount">{t("receive.amountLabel")}</Label>
                   <Input
                     id="req-amount"
                     type="number"
@@ -186,36 +197,36 @@ export default function ReceivePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="req-paymentId">Payment ID</Label>
+                  <Label htmlFor="req-paymentId">{t("rail.paymentId")}</Label>
                   <Input
                     id="req-paymentId"
                     value={paymentId}
                     onChange={(event) => setPaymentId(event.target.value)}
-                    placeholder="Optional"
+                    placeholder={t("receive.optional")}
                     autoComplete="off"
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="req-message">Message</Label>
+                  <Label htmlFor="req-message">{t("rail.message")}</Label>
                   <Textarea
                     id="req-message"
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
-                    placeholder="Optional note for the sender"
+                    placeholder={t("receive.messagePlaceholder")}
                   />
                 </div>
               </div>
               {hasPaymentLink ? (
                 <div className="mt-4 space-y-3 rounded-xl bg-secondary p-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Payment link
+                    {t("receive.paymentLink")}
                   </p>
                   <p className="break-all font-mono text-sm text-foreground">{paymentPageUrl}</p>
-                  <CopyButton value={paymentPageUrl} label="Copy Payment Link" />
+                  <CopyButton value={paymentPageUrl} label={t("receive.copyPaymentLink")} />
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Enter an amount to get a shareable payment link and update the QR.
+                  {t("receive.enterAmountHint")}
                 </p>
               )}
             </SectionCard>
@@ -225,14 +236,14 @@ export default function ReceivePage() {
         <div className="space-y-6">
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
             <SectionCard
-              title="Recently Received"
-              description="Last 5 incoming"
+              title={t("receive.recentlyReceived")}
+              description={t("receive.last5Incoming")}
               footer={
                 <Link
                   className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   href="/wallet/transactions"
                 >
-                  View all transactions →
+                  {t("receive.viewAllTransactions")}
                 </Link>
               }
             >
@@ -258,13 +269,13 @@ export default function ReceivePage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No incoming transactions yet.</p>
+                <p className="text-sm text-muted-foreground">{t("receive.noIncoming")}</p>
               )}
             </SectionCard>
           </div>
 
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:210ms]">
-            <SectionCard title="Deposit History" description="Last 5 deposits">
+            <SectionCard title={t("receive.depositHistory")} description={t("receive.last5Deposits")}>
               {depositHistory.length > 0 ? (
                 <ul className="divide-y divide-border">
                   {depositHistory.map((deposit) => (
@@ -273,7 +284,7 @@ export default function ReceivePage() {
                       className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
                     >
                       <span className="text-sm text-muted-foreground">
-                        {deposit.durationMonths} months
+                        {t("receive.durationMonths", { count: deposit.durationMonths })}
                       </span>
                       <span className="font-mono text-sm font-semibold text-wallet-deposit">
                         +<CcxAmount>{formatCcx(deposit.amount)}</CcxAmount>
@@ -282,7 +293,7 @@ export default function ReceivePage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No deposits yet.</p>
+                <p className="text-sm text-muted-foreground">{t("receive.noDeposits")}</p>
               )}
             </SectionCard>
           </div>

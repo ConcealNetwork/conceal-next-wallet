@@ -16,6 +16,7 @@ import {
   useDeleteAddressEntry,
   useUpdateAddressEntry,
 } from "@/lib/hooks";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import { CONTACT_AVATARS, contactAvatarPath } from "@/lib/ui/contact-avatars";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
@@ -26,6 +27,7 @@ type View = "cards" | "table";
 const VIEW_KEY = "conceal-address-view";
 
 export default function AddressBookPage() {
+  const { t } = useI18n();
   const addressBook = useAddressBook();
   const createEntry = useCreateAddressEntry();
   const updateEntry = useUpdateAddressEntry();
@@ -88,15 +90,15 @@ export default function AddressBookPage() {
 
   function validateForm(): boolean {
     if (!label.trim()) {
-      toast.error("Label is required.");
+      toast.error(t("addressBook.errLabelRequired"));
       return false;
     }
     if (!addressIsValid(address)) {
-      toast.error("Address must start with ccx7 and be exactly 98 characters.");
+      toast.error(t("addressBook.errAddressInvalid"));
       return false;
     }
     if (!paymentIdIsValid(paymentId)) {
-      toast.error("Payment ID must be 64 or 16 hexadecimal characters.");
+      toast.error(t("addressBook.errPaymentIdInvalid"));
       return false;
     }
     return true;
@@ -117,12 +119,12 @@ export default function AddressBookPage() {
         { id: editingId, input },
         {
           onSuccess: () => {
-            toast.success("Address updated.");
+            toast.success(t("addressBook.toastUpdated"));
             setOpen(false);
             resetForm();
           },
           onError: (error) => {
-            toast.error(error instanceof Error ? error.message : "Update failed.");
+            toast.error(error instanceof Error ? error.message : t("addressBook.toastUpdateFailed"));
           },
         },
       );
@@ -131,21 +133,21 @@ export default function AddressBookPage() {
 
     createEntry.mutate(input, {
       onSuccess: () => {
-        toast.success("Address saved.");
+        toast.success(t("addressBook.toastSaved"));
         setOpen(false);
         resetForm();
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Save failed.");
+        toast.error(error instanceof Error ? error.message : t("addressBook.toastSaveFailed"));
       },
     });
   }
 
   function remove(id: string) {
     deleteEntry.mutate(id, {
-      onSuccess: () => toast.success("Address removed."),
+      onSuccess: () => toast.success(t("addressBook.toastRemoved")),
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Delete failed.");
+        toast.error(error instanceof Error ? error.message : t("addressBook.toastDeleteFailed"));
       },
     });
   }
@@ -155,12 +157,12 @@ export default function AddressBookPage() {
   return (
     <>
       <PageHeader
-        title="Address Book"
-        subtitle="Save and manage frequently used addresses"
+        title={t("addressBook.title")}
+        subtitle={t("addressBook.subtitle")}
         action={
           <Button type="button" className="gap-2" onClick={openCreate}>
             <Plus className="size-4" aria-hidden="true" />
-            Create New
+            {t("addressBook.createNew")}
           </Button>
         }
       />
@@ -169,8 +171,8 @@ export default function AddressBookPage() {
         <SectionCard>
           {(addressBook.data ?? []).length === 0 ? (
             <EmptyState
-              title="No addresses saved yet"
-              description="Add your first CCX address to get started."
+              title={t("addressBook.emptyTitle")}
+              description={t("addressBook.emptyDescription")}
               illustration="/brand/empty/address-book.png"
             />
           ) : (
@@ -184,24 +186,24 @@ export default function AddressBookPage() {
                   <Input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search addresses…"
+                    placeholder={t("addressBook.searchPlaceholder")}
                     className="pl-9"
-                    aria-label="Search addresses"
+                    aria-label={t("addressBook.searchAria")}
                   />
                 </div>
                 <fieldset className="m-0 inline-flex min-w-0 rounded-xl border border-border p-1">
-                  <legend className="sr-only">View</legend>
+                  <legend className="sr-only">{t("addressBook.view")}</legend>
                   <ViewToggle
                     active={view === "cards"}
                     onClick={() => chooseView("cards")}
-                    label="Cards"
+                    label={t("addressBook.viewCards")}
                   >
                     <LayoutGrid className="size-4" />
                   </ViewToggle>
                   <ViewToggle
                     active={view === "table"}
                     onClick={() => chooseView("table")}
-                    label="Table"
+                    label={t("addressBook.viewTable")}
                   >
                     <Table2 className="size-4" />
                   </ViewToggle>
@@ -210,7 +212,7 @@ export default function AddressBookPage() {
 
               {entries.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                  No addresses match “{query}”.
+                  {t("addressBook.noMatch", { query })}
                 </p>
               ) : view === "cards" ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -235,13 +237,13 @@ export default function AddressBookPage() {
                         {truncateAddress(entry.address, 12, 10)}
                       </p>
                       <div className="flex items-center justify-between gap-2">
-                        <CopyButton value={entry.address} label="Copy" />
+                        <CopyButton value={entry.address} label={t("action.copy")} />
                         <div className="flex gap-1.5">
                           <Button
                             type="button"
                             variant="outline"
                             size="icon"
-                            aria-label={`Edit ${entry.label}`}
+                            aria-label={t("addressBook.editAria", { label: entry.label })}
                             onClick={() => openEdit(entry)}
                           >
                             <Pencil className="size-4" />
@@ -250,7 +252,7 @@ export default function AddressBookPage() {
                             type="button"
                             variant="destructive"
                             size="icon"
-                            aria-label={`Delete ${entry.label}`}
+                            aria-label={t("addressBook.deleteAria", { label: entry.label })}
                             onClick={() => remove(entry.id)}
                           >
                             <Trash2 className="size-4" />
@@ -265,10 +267,12 @@ export default function AddressBookPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="px-4 py-3 font-medium">Label</th>
-                        <th className="px-4 py-3 font-medium">Address</th>
-                        <th className="px-4 py-3 font-medium">Payment ID</th>
-                        <th className="px-4 py-3 text-right font-medium">Actions</th>
+                        <th className="px-4 py-3 font-medium">{t("addressBook.colLabel")}</th>
+                        <th className="px-4 py-3 font-medium">{t("addressBook.colAddress")}</th>
+                        <th className="px-4 py-3 font-medium">{t("rail.paymentId")}</th>
+                        <th className="px-4 py-3 text-right font-medium">
+                          {t("addressBook.colActions")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -288,12 +292,12 @@ export default function AddressBookPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-2">
-                              <CopyButton value={entry.address} label="Copy" />
+                              <CopyButton value={entry.address} label={t("action.copy")} />
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="icon"
-                                aria-label={`Edit ${entry.label}`}
+                                aria-label={t("addressBook.editAria", { label: entry.label })}
                                 onClick={() => openEdit(entry)}
                               >
                                 <Pencil className="size-4" />
@@ -302,7 +306,7 @@ export default function AddressBookPage() {
                                 type="button"
                                 variant="destructive"
                                 size="icon"
-                                aria-label={`Delete ${entry.label}`}
+                                aria-label={t("addressBook.deleteAria", { label: entry.label })}
                                 onClick={() => remove(entry.id)}
                               >
                                 <Trash2 className="size-4" />
@@ -329,11 +333,15 @@ export default function AddressBookPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingId ? "Edit address" : "Create new address"}</DialogTitle>
+            <DialogTitle>
+              {editingId
+                ? t("addressBook.dialogEditTitle")
+                : t("addressBook.dialogCreateTitle")}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Avatar (optional)</Label>
+              <Label>{t("addressBook.avatarLabel")}</Label>
               <div className="grid grid-cols-4 gap-2">
                 {CONTACT_AVATARS.map((item) => (
                   <button
@@ -360,22 +368,22 @@ export default function AddressBookPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ab-label">Label</Label>
+              <Label htmlFor="ab-label">{t("addressBook.colLabel")}</Label>
               <Input
                 id="ab-label"
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
-                placeholder="Exchange, friend, miner"
+                placeholder={t("addressBook.labelPlaceholder")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ab-address">Address</Label>
+              <Label htmlFor="ab-address">{t("addressBook.colAddress")}</Label>
               <div className="relative">
                 <Input
                   id="ab-address"
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
-                  placeholder="ccx7 …"
+                  placeholder={t("addressBook.addressPlaceholder")}
                   autoComplete="off"
                   className="max-lg:pr-10"
                 />
@@ -387,13 +395,13 @@ export default function AddressBookPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ab-paymentId">Payment ID</Label>
+              <Label htmlFor="ab-paymentId">{t("rail.paymentId")}</Label>
               <div className="flex gap-2">
                 <Input
                   id="ab-paymentId"
                   value={paymentId}
                   onChange={(event) => setPaymentId(event.target.value)}
-                  placeholder="Optional — 64 hex characters"
+                  placeholder={t("addressBook.paymentIdPlaceholder")}
                   autoComplete="off"
                   className="flex-1"
                 />
@@ -401,7 +409,7 @@ export default function AddressBookPage() {
                   type="button"
                   variant="outline"
                   size="icon"
-                  aria-label="Generate random payment ID"
+                  aria-label={t("addressBook.generatePaymentIdAria")}
                   onClick={() => setPaymentId(generatePaymentId())}
                 >
                   <ArrowLeftRight className="size-4" />
@@ -414,7 +422,7 @@ export default function AddressBookPage() {
               onClick={submit}
               disabled={!label.trim() || !address.trim() || isSaving}
             >
-              {editingId ? "Save changes" : "Save Address"}
+              {editingId ? t("addressBook.saveChanges") : t("addressBook.saveAddress")}
             </Button>
           </div>
         </DialogContent>

@@ -10,6 +10,7 @@ import {
   ensureSparklinePoints,
   normalizeHashrateChartSeries,
 } from "@/lib/hooks/use-network-telemetry-history";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import { formatNodeVersion } from "@/lib/network/format-node-version";
 import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
@@ -20,6 +21,7 @@ const BLOCK_TARGET_SECONDS = 120;
 const TELEMETRY_SKELETON_KEYS = ["height", "hashrate", "peers", "block-time"] as const;
 
 export default function NetworkPage() {
+  const { t } = useI18n();
   const fmt = useFormatters();
   const { data, isLoading } = useNetworkStatus();
   const { history: telemetry, hashrateChart } = useNetworkTelemetry();
@@ -43,7 +45,7 @@ export default function NetworkPage() {
   if (isLoading || !data) {
     return (
       <>
-        <PageHeader title="Network" subtitle="Node connection and network status" />
+        <PageHeader title={t("network.title")} subtitle={t("network.subtitle")} />
         <div className="space-y-6">
           <Skeleton className="h-24 w-full rounded-xl" />
           <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
@@ -81,7 +83,7 @@ export default function NetworkPage() {
 
   return (
     <>
-      <PageHeader title="Network" subtitle="Node connection and network status" />
+      <PageHeader title={t("network.title")} subtitle={t("network.subtitle")} />
 
       {/* Connection identity */}
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
@@ -89,20 +91,20 @@ export default function NetworkPage() {
           <div className="flex items-center gap-4">
             <PulseDot />
             <div>
-              <p className="text-lg font-semibold">Connected &amp; synced</p>
+              <p className="text-lg font-semibold">{t("network.connectedSynced")}</p>
               <p className="font-mono text-sm text-muted-foreground">{host}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Meta label="Uptime" value={uptimeLabel} />
-            <Meta label="Version" value={formatNodeVersion(data.version)} mono />
+            <Meta label={t("network.uptime")} value={uptimeLabel} />
+            <Meta label={t("network.version")} value={formatNodeVersion(data.version)} mono />
             <span
               className={cn(
                 "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
                 data.isCustom ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground",
               )}
             >
-              {data.isCustom ? "Custom node" : "Default node"}
+              {data.isCustom ? t("network.customNode") : t("network.defaultNode")}
             </span>
           </div>
         </div>
@@ -111,7 +113,11 @@ export default function NetworkPage() {
       {/* Sync ring + peer constellation */}
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.05fr_1fr]">
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 wallet-card flex flex-col items-center justify-center gap-4 p-6 [animation-delay:70ms]">
-          <SyncRing pct={syncPct} />
+          <SyncRing
+            pct={syncPct}
+            ariaLabel={t("network.percentSynced", { pct: Math.round(syncPct) })}
+            syncedLabel={t("network.synced")}
+          />
           <div className="text-center">
             <p className="font-mono text-sm text-foreground">
               {fmt.formatNumber(data.height)}{" "}
@@ -119,7 +125,7 @@ export default function NetworkPage() {
                 / {fmt.formatNumber(data.networkHeight)}
               </span>
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">block height · network tip</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("network.blockHeightNetworkTip")}</p>
           </div>
         </div>
 
@@ -129,12 +135,16 @@ export default function NetworkPage() {
             nodes={smartNodes ?? []}
             loading={smartNodesLoading}
             failed={smartNodesError}
+            unavailableLabel={t("network.smartNodesUnavailable")}
+            connectionsTitle={t("network.peerConnections")}
+            listLabel={(names) => t("network.smartNodesList", { names })}
+            ariaUnavailableLabel={t("network.smartNodesAriaUnavailable")}
           />
           <div className="text-center">
-            <p className="text-sm text-muted-foreground">Connected Peers</p>
+            <p className="text-sm text-muted-foreground">{t("network.connectedPeers")}</p>
             <p className="mt-1 font-mono text-3xl font-bold tracking-tight">{peersLabel}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {data.peersOut} outgoing · {data.peersIn} incoming
+              {t("network.peersInOut", { out: data.peersOut, in: data.peersIn })}
             </p>
           </div>
         </div>
@@ -143,32 +153,34 @@ export default function NetworkPage() {
       {/* Telemetry */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <ChartCard
-          label="Block Height"
+          label={t("network.blockHeight")}
           value={heightLabel}
-          detail={`+1 block · ${formatRelative(data.lastBlockSecondsAgo, fmt)}`}
+          detail={t("network.blockDetail", {
+            relative: formatRelative(data.lastBlockSecondsAgo, fmt),
+          })}
           tone="amber"
           delay={210}
           chart={<BlockChainStrip blocks={heightBars} animate={animate} />}
         />
         <ChartCard
-          label="Network Hashrate"
+          label={t("network.hashrate")}
           value={formatHashrate(data.hashrate)}
-          secondaryLabel="Difficulty"
+          secondaryLabel={t("network.difficulty")}
           secondaryValue={formatDifficulty(data.difficulty, fmt)}
           delay={260}
           chart={<MiniArea values={hashrateSeries} color="hsl(var(--chart-1))" />}
         />
         <ChartCard
-          label="Connected Peers"
+          label={t("network.connectedPeers")}
           value={String(data.peers)}
-          detail={`${data.peersOut} out · ${data.peersIn} in`}
+          detail={t("network.peersShort", { out: data.peersOut, in: data.peersIn })}
           delay={310}
           chart={<MiniBars values={peersSeries} color="hsl(var(--chart-1))" />}
         />
         <ChartCard
-          label="Avg Block Time"
+          label={t("network.avgBlockTime")}
           value={`${Math.round(data.lastBlockSecondsAgo)} s`}
-          detail={`target ${BLOCK_TARGET_SECONDS} s`}
+          detail={t("network.blockTimeTarget", { seconds: BLOCK_TARGET_SECONDS })}
           tone="incoming"
           delay={360}
           chart={
@@ -220,18 +232,21 @@ function Meta({
   );
 }
 
-function SyncRing({ pct }: { pct: number }) {
+function SyncRing({
+  pct,
+  ariaLabel,
+  syncedLabel,
+}: {
+  pct: number;
+  ariaLabel: string;
+  syncedLabel: string;
+}) {
   const clamped = Math.min(Math.max(pct, 0), 100);
   const radius = 68;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - clamped / 100);
   return (
-    <svg
-      viewBox="0 0 170 170"
-      className="h-[168px] w-[168px]"
-      role="img"
-      aria-label={`${Math.round(clamped)} percent synced`}
-    >
+    <svg viewBox="0 0 170 170" className="h-[168px] w-[168px]" role="img" aria-label={ariaLabel}>
       <circle
         cx="85"
         cy="85"
@@ -261,7 +276,7 @@ function SyncRing({ pct }: { pct: number }) {
         {Math.round(clamped)}%
       </text>
       <text x="85" y="104" textAnchor="middle" className="fill-muted-foreground text-xs">
-        synced
+        {syncedLabel}
       </text>
     </svg>
   );
@@ -272,11 +287,19 @@ function SmartNodesGraph({
   nodes,
   loading,
   failed,
+  unavailableLabel,
+  connectionsTitle,
+  listLabel,
+  ariaUnavailableLabel,
 }: {
   animate: boolean;
   nodes: SmartNode[];
   loading: boolean;
   failed: boolean;
+  unavailableLabel: string;
+  connectionsTitle: string;
+  listLabel: (names: string) => string;
+  ariaUnavailableLabel: string;
 }) {
   const showLive = !loading && !failed && nodes.length > 0;
 
@@ -289,11 +312,16 @@ function SmartNodesGraph({
         )}
         aria-hidden={showLive}
       >
-        <PeerGraphPlaceholder />
+        <PeerGraphPlaceholder connectionsTitle={connectionsTitle} />
       </div>
 
       {showLive ? (
-        <PeerGraph animate={animate} nodes={nodes} />
+        <PeerGraph
+          animate={animate}
+          nodes={nodes}
+          listLabel={listLabel}
+          ariaUnavailableLabel={ariaUnavailableLabel}
+        />
       ) : (
         <div
           className={cn(
@@ -302,9 +330,7 @@ function SmartNodesGraph({
           )}
         >
           {failed ? (
-            <p className="px-3 text-center text-xs text-muted-foreground">
-              Curated smart nodes unavailable
-            </p>
+            <p className="px-3 text-center text-xs text-muted-foreground">{unavailableLabel}</p>
           ) : null}
         </div>
       )}
@@ -313,7 +339,7 @@ function SmartNodesGraph({
 }
 
 /** Decorative wireframe only — shown blurred until the curated pool API responds. */
-function PeerGraphPlaceholder() {
+function PeerGraphPlaceholder({ connectionsTitle }: { connectionsTitle: string }) {
   const cx = 100;
   const cy = 92;
   const radius = 58;
@@ -325,7 +351,7 @@ function PeerGraphPlaceholder() {
 
   return (
     <svg viewBox="0 0 200 190" className="h-44 w-full" role="img">
-      <title>Network peer connections</title>
+      <title>{connectionsTitle}</title>
       <g stroke="hsl(var(--border))" strokeWidth="1.2" opacity="0.7">
         {dots.map(([x, y]) => (
           <line key={`pl-${x}-${y}`} x1={cx} y1={cy} x2={x} y2={y} />
@@ -342,7 +368,17 @@ function PeerGraphPlaceholder() {
 }
 
 // Live graph from curated pool (SSL + fee address + reachable).
-function PeerGraph({ animate, nodes }: { animate: boolean; nodes: SmartNode[] }) {
+function PeerGraph({
+  animate,
+  nodes,
+  listLabel,
+  ariaUnavailableLabel,
+}: {
+  animate: boolean;
+  nodes: SmartNode[];
+  listLabel: (names: string) => string;
+  ariaUnavailableLabel: string;
+}) {
   const cx = 100;
   const cy = 92;
   const radius = 58;
@@ -378,8 +414,8 @@ function PeerGraph({ animate, nodes }: { animate: boolean; nodes: SmartNode[] })
       role="img"
       aria-label={
         nodes.length > 0
-          ? `Smart nodes: ${nodes.map((node) => node.name).join(", ")}`
-          : "Smart nodes unavailable"
+          ? listLabel(nodes.map((node) => node.name).join(", "))
+          : ariaUnavailableLabel
       }
     >
       <g stroke="hsl(var(--border))" strokeWidth="1.2">
