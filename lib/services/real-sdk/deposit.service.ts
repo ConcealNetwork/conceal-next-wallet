@@ -13,8 +13,9 @@ import {
 } from "conceal-wallet-sdk";
 import { COIN_UNIT_PLACES } from "@/lib/config/config";
 import { deriveApr, mapDeposit, mapDeposits } from "@/lib/services/real-sdk/mappers";
+import { addPendingRecord, pendingWithdrawnDepositKeys } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { requireRuntime } from "@/lib/services/real-sdk/runtime";
+import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
   broadcast,
   fetchDecoys,
@@ -120,6 +121,27 @@ export const realSdkDepositService: DepositService = {
 
     await broadcast(rt, built);
 
+    // Optimistic pending entry (#110): mirror the send path so the deposit's inputs are
+    // locked against re-selection until it mines (otherwise a second spend in the
+    // mempool window builds on already-spent inputs and is rejected at relay), the
+    // balance reflects the outflow immediately, and the outgoing tx shows in history
+    // (typed "deposit"). Reconciles/expires via prunePendingRecords like a send.
+    rt.raw = addPendingRecord(rt.raw, {
+      hash: built.hash,
+      type: "deposit",
+      amountAtomic: amountAtomic + DEPOSIT_TX_FEE,
+      timestampIso: new Date().toISOString(),
+      address: rt.account.address,
+      spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+    });
+    try {
+      await persist();
+    } catch {
+      // Non-fatal: the tx is already relayed (broadcast persisted state), so failing the
+      // create here would invite a retry → double-spend. Losing only the optimistic
+      // pending record is acceptable; the next sync reconciles it.
+    }
+
     const networkHeight = await rt.daemon.getHeight();
     const matched = mapDeposits(rt.state, networkHeight).find(
       (deposit) => deposit.txHash === built.hash,
@@ -157,6 +179,15 @@ export const realSdkDepositService: DepositService = {
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyDepositDisabled);
 
+    // A withdraw spends a DEPOSIT output (selected by txHash + globalIndex), which sits
+    // outside the pending-key-image lock on regular unspent outputs — so without this
+    // gate, a second withdraw of the same deposit in the mempool window would re-select
+    // it and be rejected at relay (#110, withdraw half). Lifts once the prior tx mines
+    // and its pending record prunes.
+    if (pendingWithdrawnDepositKeys(rt.raw).has(`${input.txHash}:${input.globalOutputIndex}`)) {
+      throw new Error("A withdrawal for this deposit is already pending confirmation.");
+    }
+
     const networkHeight = await rt.daemon.getHeight();
     const deposit = getUnlockedDeposits(rt.state, networkHeight).find(
       (entry) => entry.txHash === input.txHash && entry.globalIndex === input.globalOutputIndex,
@@ -181,6 +212,28 @@ export const realSdkDepositService: DepositService = {
     });
 
     await broadcast(rt, built);
+
+    // Optimistic pending entry (#110, withdraw half): mirror createDeposit so the
+    // outgoing tx shows in history immediately (typed "withdrawal", an incoming tx),
+    // and — crucially — record the deposit identity so the guard above blocks a repeat
+    // withdraw of the same deposit until this tx mines and prunes. Excluded from
+    // pendingOut (it's not an outbound balance hold) via the type filter.
+    rt.raw = addPendingRecord(rt.raw, {
+      hash: built.hash,
+      type: "withdrawal",
+      amountAtomic: built.sentAmount,
+      timestampIso: new Date().toISOString(),
+      address: rt.account.address,
+      spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+      depositRef: { txHash: input.txHash, globalIndex: input.globalOutputIndex },
+    });
+    try {
+      await persist();
+    } catch {
+      // Non-fatal: the tx is already relayed (broadcast persisted state), so failing the
+      // withdraw here would invite a retry → double-spend. Losing only the optimistic
+      // pending record is acceptable; the next sync reconciles it.
+    }
 
     return {
       id: built.hash,

@@ -4,10 +4,15 @@ import { useEffect } from "react";
 import { ensureWalletRuntimeLibs, isWalletRuntimeReady } from "@/lib/conceal/init";
 import { env } from "@/lib/env";
 
-/** Warm core crypto globals (biginteger, nacl, concealjs) while the user reads the landing page. */
+/**
+ * Warm the legacy crypto globals (biginteger, nacl, concealjs) while the user reads
+ * the landing page — but ONLY for the `wallet-core` engine. The default SDK engine
+ * imports conceal-lib-js as a module and never touches these `window` globals, so
+ * preloading them there is wasted work (and surfaced a spurious load warning).
+ */
 export function WalletRuntimePreload() {
   useEffect(() => {
-    if (env.useMockWallet || isWalletRuntimeReady()) {
+    if (env.useMockWallet || env.walletEngine !== "wallet-core" || isWalletRuntimeReady()) {
       return;
     }
 

@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
 import { StorageWarningBanner } from "@/components/wallet/storage-warning-banner";
+import { UnlockWalletProvider } from "@/components/wallet/unlock-wallet-provider";
 import { useWalletLiveSync, useWalletSettings } from "@/lib/hooks";
 import { NetworkTelemetryProvider } from "@/lib/hooks/network-telemetry-provider";
 import { useCheckInAlerts } from "@/lib/hooks/use-check-ins";
@@ -31,27 +32,33 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <NetworkTelemetryProvider>
-      <div className="text-foreground">
-        <Sidebar />
-        <main
-          className={cn(
-            "flex min-h-screen flex-col transition-[padding] duration-300 ease-in-out motion-reduce:transition-none",
-            collapsed ? "lg:pl-[64px]" : "lg:pl-[260px]",
-          )}
-        >
-          <div
+    // In-app unlock dialog for SMOOTH wallet switching: switching to a not-yet-cached
+    // wallet opens this dialog (passkey-first when enrolled) over the current page,
+    // rather than bouncing to the landing route. `defaultRedirect={null}` keeps the
+    // user on the current page after unlock; it never auto-opens from `?next=`.
+    <UnlockWalletProvider defaultRedirect={null} autoOpenFromNext={false}>
+      <NetworkTelemetryProvider>
+        <div className="text-foreground">
+          <Sidebar />
+          <main
             className={cn(
-              "mx-auto w-full flex-1 px-4 py-8 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none sm:px-6 lg:px-8",
-              collapsed ? "max-w-[1360px]" : "max-w-[1200px]",
+              "flex min-h-screen flex-col transition-[padding] duration-300 ease-in-out motion-reduce:transition-none",
+              collapsed ? "lg:pl-[64px]" : "lg:pl-[260px]",
             )}
           >
-            <StorageWarningBanner />
-            {children}
-          </div>
-          <Footer collapsed={collapsed} />
-        </main>
-      </div>
-    </NetworkTelemetryProvider>
+            <div
+              className={cn(
+                "mx-auto w-full flex-1 px-4 py-8 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none sm:px-6 lg:px-8",
+                collapsed ? "max-w-[1360px]" : "max-w-[1200px]",
+              )}
+            >
+              <StorageWarningBanner />
+              {children}
+            </div>
+            <Footer collapsed={collapsed} />
+          </main>
+        </div>
+      </NetworkTelemetryProvider>
+    </UnlockWalletProvider>
   );
 }

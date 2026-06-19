@@ -17,20 +17,27 @@ import {
 import { mapWalletInfo } from "@/lib/services/real-sdk/mappers";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
+  activeWalletId,
   adopt,
   buildDaemon,
   disconnect as disconnectRuntime,
   friendlyMessage,
   getRuntime,
   hasStoredWallet as runtimeHasStoredWallet,
+  hasUnlockedRuntime,
+  listWalletMetas,
   nodeUrlFromRaw,
   persist,
   removeStoredWallet,
+  removeWalletById,
+  renameWallet as renameWalletRuntime,
   requireRuntime,
+  switchActiveWallet,
   sync,
   unlock as unlockRuntime,
 } from "@/lib/services/real-sdk/runtime";
-import { getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
+import { decodeWalletQr } from "@/lib/services/real-sdk/wallet-qr";
+import { getActiveWalletStorage } from "@/lib/services/real-sdk/wallets-index";
 import type {
   DownloadWalletBackupInput,
   ExportWalletData,
@@ -39,7 +46,7 @@ import type {
   PreviewKeysInput,
   WalletService,
 } from "@/lib/services/wallet.service";
-import type { WalletInfo } from "@/lib/types";
+import type { WalletInfo, WalletSummary } from "@/lib/types";
 import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 
 /** In-flight create draft (between `prepareCreateWallet` and `finalizeCreateWallet`). */
@@ -63,6 +70,20 @@ function toFriendlyImportError(error: unknown): Error {
 async function syncedInfo(): Promise<WalletInfo> {
   const networkHeight = await sync();
   return mapWalletInfo(requireRuntime(), networkHeight);
+}
+
+/**
+ * Map the just-unlocked runtime's CURRENT (seeded) state immediately, WITHOUT
+ * waiting for a chain scan — so opening a wallet never blocks on sync. An existing
+ * wallet is seeded from its legacy blob, so the returned balance is already correct
+ * as of `lastHeight`; the shell's `getWalletInfo`/live-sync then closes the
+ * `lastHeight`→tip gap in the background (the `WalletSyncingBanner` reflects it).
+ * Only a single cheap `getHeight` is awaited, to mark the wallet as syncing.
+ */
+async function openedInfo(): Promise<WalletInfo> {
+  const rt = requireRuntime();
+  const networkHeight = await safeNetworkHeight();
+  return mapWalletInfo(rt, networkHeight);
 }
 
 /** A best-effort current network height for a clamp (falls back to a large bound). */
@@ -99,7 +120,8 @@ export const realSdkWalletService: WalletService = {
     }
     createdMnemonic = null;
     await unlockRuntime(input.password);
-    return syncedInfo();
+    // Open instantly from seeded state; the shell syncs the gap in the background.
+    return openedInfo();
   },
 
   async prepareCreateWallet() {
@@ -129,7 +151,7 @@ export const realSdkWalletService: WalletService = {
     const draft = pendingDraft;
     pendingDraft = null;
     createdMnemonic = draft.mnemonic ?? null;
-    await adopt({ raw: draft.raw, keys: draft.keys, password: input.password });
+    await adopt({ raw: draft.raw, keys: draft.keys, password: input.password, label: input.label });
     return syncedInfo();
   },
 
@@ -164,30 +186,86 @@ export const realSdkWalletService: WalletService = {
     createdMnemonic = null;
     if (input.method === "open") {
       await unlockRuntime(input.password);
-      return syncedInfo();
+      // Open instantly from seeded state; the shell syncs the gap in the background.
+      return openedInfo();
+    }
+
+    // Restore from an encrypted backup file: decode the envelope with the file
+    // password, then adopt the recovered wallet (its embedded creation/synced height
+    // drives the scan via buildState). Adopt registers it, so this also adds a wallet.
+    if (input.method === "file") {
+      try {
+        // Strip a UTF-8 BOM + surrounding whitespace from BOTH branches \u2014 a string
+        // read via FileReader.readAsText can carry a leading \uFEFF too.
+        const decoded =
+          typeof input.file === "string" ? input.file : new TextDecoder().decode(input.file);
+        const text = decoded.replace(/^\uFEFF/, "").trim();
+        let envelope: unknown;
+        try {
+          envelope = JSON.parse(text);
+        } catch {
+          throw new Error("The selected file is not valid JSON.");
+        }
+        const opened = openEncryptedWallet(envelope as EncryptedWalletEnvelope, input.password);
+        if (opened === null) {
+          throw new Error("Invalid wallet file or password.");
+        }
+        await adopt({
+          raw: opened.raw,
+          keys: opened.keys,
+          password: input.password,
+          label: input.label,
+        });
+        return syncedInfo();
+      } catch (error) {
+        throw toFriendlyImportError(error);
+      }
     }
 
     try {
-      const creationHeight = await importCreationHeight(input);
       let built: BuiltWallet;
       switch (input.method) {
         case "mnemonic":
           built = buildFromMnemonic(
             input.mnemonic,
-            creationHeight,
+            await importCreationHeight(input),
             input.language === "auto" ? undefined : input.language,
           );
           createdMnemonic = built.mnemonic ?? null;
           break;
         case "keys":
           built = input.viewOnly
-            ? buildViewOnly(input.address, input.privateViewKey, creationHeight)
-            : buildFromSpendKey(input.privateSpendKey, input.privateViewKey, creationHeight);
+            ? buildViewOnly(input.address, input.privateViewKey, await importCreationHeight(input))
+            : buildFromSpendKey(
+                input.privateSpendKey,
+                input.privateViewKey,
+                await importCreationHeight(input),
+              );
           break;
+        case "qr": {
+          const decoded = decodeWalletQr(input.payload);
+          const height = await clampScanHeight(decoded.height);
+          if (decoded.mnemonicSeed) {
+            built = buildFromMnemonic(decoded.mnemonicSeed, height);
+            createdMnemonic = built.mnemonic ?? null;
+          } else if (decoded.spendKey) {
+            built = buildFromSpendKey(decoded.spendKey, decoded.viewKey, height);
+          } else if (decoded.viewKey && decoded.address) {
+            built = buildViewOnly(decoded.address, decoded.viewKey, height);
+          } else {
+            throw new Error("Unsupported QR wallet payload.");
+          }
+          break;
+        }
         default:
           throw new Error("This import method is not supported by the SDK engine.");
       }
-      await adopt({ raw: built.raw, keys: built.keys, password: input.password });
+      await adopt({
+        raw: built.raw,
+        keys: built.keys,
+        password: input.password,
+        label: input.label,
+      });
       return syncedInfo();
     } catch (error) {
       throw toFriendlyImportError(error);
@@ -276,7 +354,8 @@ export const realSdkWalletService: WalletService = {
   async verifyPassword(password) {
     await ensureSdkReady();
     if (!password) return false;
-    const stored = await getSdkWalletStorage().getItem("wallet");
+    // Verify against the ACTIVE wallet's keyspace (#95).
+    const stored = await (await getActiveWalletStorage()).getItem("wallet");
     if (stored === null) return false;
     let envelope: EncryptedWalletEnvelope;
     try {
@@ -289,6 +368,49 @@ export const realSdkWalletService: WalletService = {
     } catch {
       return false;
     }
+  },
+
+  async listWallets(): Promise<WalletSummary[]> {
+    await ensureSdkReady();
+    const [metas, active] = await Promise.all([listWalletMetas(), activeWalletId()]);
+    return metas.map((meta) => ({
+      id: meta.id,
+      label: meta.label,
+      ...(meta.address ? { address: meta.address } : {}),
+      isActive: meta.id === active,
+    }));
+  },
+
+  async switchWallet(id: string): Promise<WalletInfo | null> {
+    await ensureSdkReady();
+    pendingDraft = null;
+    createdMnemonic = null;
+    // Set the active id (instant when the target is already cached). switchActiveWallet
+    // never locks/clears, so an already-unlocked target stays unlocked.
+    await switchActiveWallet(id);
+    if (!hasUnlockedRuntime(id)) {
+      // Not cached — the caller must unlock the target in place. Returning null (not
+      // throwing) lets the UI distinguish "needs unlock" from a hard failure.
+      return null;
+    }
+    // Cached → map the (already-synced) active runtime immediately. The shell's
+    // live-sync then advances any gap in the background, like a fresh open.
+    return mapWalletInfo(requireRuntime(), await safeNetworkHeight());
+  },
+
+  async renameWallet(id: string, label: string): Promise<void> {
+    await ensureSdkReady();
+    const trimmed = label.trim();
+    if (!trimmed) {
+      throw new Error("A wallet name is required.");
+    }
+    await renameWalletRuntime(id, trimmed);
+  },
+
+  async deleteWallet(id: string): Promise<void> {
+    await ensureSdkReady();
+    await removeWalletById(id);
+    createdMnemonic = null;
   },
 
   async disconnect() {
@@ -312,10 +434,8 @@ function freshOptionsRaw(): RawWalletV1 {
   };
 }
 
-/** Clamp a requested import scan height to `[0, networkHeight]`. */
-async function importCreationHeight(input: ImportWalletInput): Promise<number> {
-  const requested =
-    "scanHeight" in input && typeof input.scanHeight === "number" ? input.scanHeight : undefined;
+/** Clamp a requested scan height to `[0, networkTip]`; default to the current tip. */
+async function clampScanHeight(requested: number | undefined): Promise<number> {
   if (requested === undefined) {
     // Default to the current tip (a fresh import starts scanning from "now").
     try {
@@ -325,6 +445,12 @@ async function importCreationHeight(input: ImportWalletInput): Promise<number> {
     }
   }
   if (requested < 0) return 0;
-  const tip = await safeNetworkHeight();
-  return Math.min(requested, tip);
+  return Math.min(requested, await safeNetworkHeight());
+}
+
+/** Clamp a requested import scan height to `[0, networkHeight]`. */
+async function importCreationHeight(input: ImportWalletInput): Promise<number> {
+  const requested =
+    "scanHeight" in input && typeof input.scanHeight === "number" ? input.scanHeight : undefined;
+  return clampScanHeight(requested);
 }

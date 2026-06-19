@@ -51,12 +51,15 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const { status, isHydrated } = useWalletSession();
 
   useEffect(() => {
-    if (
-      isHydrated &&
-      status === "open" &&
-      !pathname.startsWith("/terms") &&
-      !pathname.startsWith("/privacy")
-    ) {
+    // Multi-wallet (#95): an open session may legitimately visit create/import to
+    // ADD another wallet, so don't bounce those routes. Legal pages are always
+    // reachable. Any other onboarding route returns an open session to the wallet.
+    const allowedWhileOpen =
+      pathname.startsWith("/terms") ||
+      pathname.startsWith("/privacy") ||
+      pathname.startsWith("/create") ||
+      pathname.startsWith("/import");
+    if (isHydrated && status === "open" && !allowedWhileOpen) {
       router.replace("/wallet/account");
     }
   }, [isHydrated, pathname, router, status]);

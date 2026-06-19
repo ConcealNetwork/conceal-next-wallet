@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createCoalescingThrottle } from "@/lib/hooks/coalescing-throttle";
 import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provider";
 import { env } from "@/lib/env";
@@ -17,13 +17,41 @@ import type { AddressEntryInput } from "@/lib/services/address-book.service";
 import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
 import type { SendMessageInput } from "@/lib/services/message.service";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
-import type { Message, WalletInfo, WalletSettings } from "@/lib/types";
+import type { Message, WalletInfo, WalletSettings, WalletSummary } from "@/lib/types";
 import { sortMessagesNewestFirst } from "@/lib/messages/conversations";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import { isWalletSyncing, walletSyncPercent } from "@/lib/ui/wallet-sync";
 
 export { queryKeys };
+
+// Live-refresh cadence (#112). Under the SDK engine nothing pushes a sync event to the
+// query cache and `getWalletInfo` only syncs on demand, so an open page never reflected
+// freshly-mined data (deposits, incoming tx, messages) until the user navigated,
+// refocused, mutated, or switched wallets. Fix: poll only the CHEAP wallet query (which
+// drives the on-demand sync and observes the chain tip) — fast while catching up, slow
+// once synced — and invalidate the history-derived lists only when the scanned height
+// actually advances (see `useWalletLiveSync`). Never poll the heavy lists on a blind
+// timer: deposits/messages walk the full tx history, so a 14k-tx wallet would re-map
+// every few seconds for nothing. Disabled in mock mode. `[whileSyncing, whenSynced]` ms.
+const WALLET_POLL = [2500, 20000] as const;
+
+/** Refetch cadence given the wallet's sync state: faster mid-scan, slower when synced. */
+export function syncAwareInterval(
+  info: WalletInfo | undefined,
+  intervals: readonly [number, number],
+): number {
+  return isWalletSyncing(info) ? intervals[0] : intervals[1];
+}
+
+/**
+ * Stable `refetchInterval` for the wallet query (a module-level reference, so a parent
+ * re-render can't churn the polling timer). Polls while the wallet is open; `false` in
+ * mock mode (no real chain to sync). Background polling is paused separately (#67).
+ */
+function walletPollInterval(query: { state: { data: WalletInfo | undefined } }): number | false {
+  return env.useMockWallet ? false : syncAwareInterval(query.state.data, WALLET_POLL);
+}
 
 export function useWalletInfo() {
   const { status, walletInfo } = useWalletSession();
@@ -32,6 +60,10 @@ export function useWalletInfo() {
     queryFn: () => services.wallet.getWalletInfo(),
     enabled: status === "open",
     placeholderData: walletInfo ?? undefined,
+    // Poll so balance, sync banner, and newly-mined state stay live (#112). Pause when
+    // the tab is hidden — background sync + notifications are tracked separately (#67).
+    refetchInterval: walletPollInterval,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -50,6 +82,44 @@ export function useWalletViewOnly(): boolean {
   return useWalletInfo().data?.viewOnly ?? false;
 }
 
+// --- multi-wallet (#95) ----------------------------------------------------
+
+/** The wallets registered on this device, with the active one flagged. */
+export function useWallets() {
+  const { status } = useWalletSession();
+  return useQuery({
+    queryKey: queryKeys.wallets,
+    queryFn: () => services.wallet.listWallets(),
+    enabled: status === "open",
+  });
+}
+
+/** Rename a wallet (label only) and refresh the list. */
+export function useRenameWallet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, label }: { id: string; label: string }) =>
+      services.wallet.renameWallet(id, label),
+    onSuccess: (_result, { id, label }) => {
+      queryClient.setQueryData<WalletSummary[]>(queryKeys.wallets, (current) =>
+        (current ?? []).map((wallet) => (wallet.id === id ? { ...wallet, label } : wallet)),
+      );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+    },
+  });
+}
+
+/** Delete a wallet by id (erases its keyspace) and refresh the list. */
+export function useDeleteWallet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.wallet.deleteWallet(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+    },
+  });
+}
+
 export function useRefreshWallet() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -64,6 +134,28 @@ export function useRefreshWallet() {
 /** Invalidate wallet/tx/network queries while blockchain sync updates the runtime wallet. */
 export function useWalletLiveSync() {
   const queryClient = useQueryClient();
+
+  // Engine-agnostic open-page refresh (#112): when the scanned height advances (a block
+  // scanned in), refetch the history-derived lists so a freshly-mined deposit / incoming
+  // tx / message appears without a manual refresh. Driven off the polled wallet height
+  // (useWalletInfo, WALLET_POLL) — NOT a blind list timer — so the heavy lists re-map
+  // only when something actually changed. The poll cadence (≥2.5s) self-throttles this:
+  // `liveHeight` can't change faster than the wallet query refetches, so there's no
+  // burst to coalesce and no risk of a 14k-tx re-walk storm. This is the path the SDK
+  // engine relies on (its runtime emits no sync events); the wallet-core notifier below
+  // adds finer-grained wallet/tx updates for the legacy engine.
+  const liveHeight = useWalletInfo().data?.currentHeight;
+  const lastHeightRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (liveHeight === undefined) return;
+    const previous = lastHeightRef.current;
+    lastHeightRef.current = liveHeight;
+    if (previous === undefined || liveHeight <= previous) return;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.optimizationStatus });
+  }, [liveHeight, queryClient]);
 
   useEffect(() => {
     if (env.useMockWallet) return;

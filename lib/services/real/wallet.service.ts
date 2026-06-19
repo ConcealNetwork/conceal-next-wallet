@@ -6,7 +6,10 @@ import type {
   ImportWalletInput,
   WalletService,
 } from "@/lib/services/wallet.service";
-import type { WalletInfo } from "@/lib/types";
+import type { WalletInfo, WalletSummary } from "@/lib/types";
+
+/** The legacy wallet-core engine is single-wallet — multi-wallet needs the SDK. */
+const MULTI_WALLET_UNSUPPORTED = "Multiple wallets require the SDK engine.";
 
 async function walletOps() {
   await ensureAllWalletLegacyLibs();
@@ -69,6 +72,38 @@ export const realWalletService: WalletService = {
   },
   async disconnect() {
     await disconnectWalletRuntime();
+  },
+  // Multi-wallet (#95): the legacy wallet-core engine holds a single wallet, so it
+  // reports exactly one entry (the open wallet) and rejects multi-wallet actions.
+  async listWallets(): Promise<WalletSummary[]> {
+    try {
+      const info = await (await walletOps()).getWalletInfoOperation();
+      return [{ id: "default", label: "Main wallet", address: info.address, isActive: true }];
+    } catch {
+      // No open wallet (locked / not yet created) — nothing to list.
+      return [];
+    }
+  },
+  async switchWallet(id: string): Promise<WalletInfo | null> {
+    // The legacy wallet-core engine holds a single wallet ("default"). Switching to
+    // it is a no-op that returns the open wallet's info (instant); any other id is
+    // unsupported.
+    if (id !== "default") {
+      throw new Error(MULTI_WALLET_UNSUPPORTED);
+    }
+    try {
+      return await (await walletOps()).getWalletInfoOperation();
+    } catch {
+      // No open wallet (locked) — the caller must unlock.
+      return null;
+    }
+  },
+  async renameWallet() {
+    throw new Error(MULTI_WALLET_UNSUPPORTED);
+  },
+  async deleteWallet() {
+    // The single wallet is deleted via deleteStoredWallet / panicWipe.
+    throw new Error(MULTI_WALLET_UNSUPPORTED);
   },
 };
 

@@ -1,12 +1,19 @@
 import { getBalance, isValidAddress, transactions as txns } from "conceal-wallet-sdk";
 import {
   COIN_UNIT_PLACES,
+  MAX_MESSAGE_SIZE,
   REMOTE_NODE_FEE_ATOMIC,
   WALLET_DONATION_ADDRESS,
 } from "@/lib/config/config";
 import { mapTransaction, mapTransactions } from "@/lib/services/real-sdk/mappers";
+import {
+  createSentMessageRecord,
+  readSentRecords,
+  withSentRecords,
+} from "@/lib/services/real-sdk/messages-store";
+import { addPendingRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { requireRuntime } from "@/lib/services/real-sdk/runtime";
+import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
   broadcast,
   decodeRecipient,
@@ -28,7 +35,7 @@ export const realSdkTransactionService: TransactionService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
-    return mapTransactions(rt.state, networkHeight);
+    return mapTransactions(rt.state, networkHeight, readPendingRecords(rt.raw));
   },
 
   async sendTransaction(input: SendTransactionInput): Promise<Transaction> {
@@ -44,31 +51,33 @@ export const realSdkTransactionService: TransactionService = {
       throw new Error("Invalid recipient address.");
     }
 
+    const message = input.message?.trim() ?? "";
+    const hasMessage = message.length > 0;
+    if (hasMessage) {
+      const bodyByteLength = new TextEncoder().encode(message).length;
+      if (bodyByteLength > MAX_MESSAGE_SIZE) {
+        throw new Error(`Message exceeds maximum length of ${MAX_MESSAGE_SIZE} bytes.`);
+      }
+    }
+
     const recipient = decodeRecipient(input.address);
-    const destinations: txns.Destination[] = [
-      {
-        spendPublicKey: recipient.spendPublicKey,
-        viewPublicKey: recipient.viewPublicKey,
-        amount: amountAtomic,
-      },
-    ];
 
     // Resolve the remote-node fee BEFORE the balance check so its 10000-atomic
     // destination is counted: a node fee is added when the node advertises a fee
     // address that isn't ours (bounded to the donation address when undecodable —
     // mirrors the legacy guard). Omitting it from the check would let a max-balance
-    // send pass here only to fail inside buildTransaction on insufficient inputs.
+    // send pass here only to fail inside the builder on insufficient inputs.
     const feeAddress = await safeNodeFeeAddress(rt.daemon);
-    let nodeFeeAtomic = 0;
+    let nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null = null;
     if (feeAddress && feeAddress !== rt.account.address) {
       const feeRecipient = decodeFeeRecipient(feeAddress);
-      destinations.push({
+      nodeFee = {
         spendPublicKey: feeRecipient.spendPublicKey,
         viewPublicKey: feeRecipient.viewPublicKey,
         amount: REMOTE_NODE_FEE_ATOMIC,
-      });
-      nodeFeeAtomic = REMOTE_NODE_FEE_ATOMIC;
+      };
     }
+    const nodeFeeAtomic = nodeFee ? REMOTE_NODE_FEE_ATOMIC : 0;
 
     const balance = getBalance(rt.state);
     if (amountAtomic + FEE_ATOMIC + nodeFeeAtomic > balance.spendable) {
@@ -77,17 +86,72 @@ export const realSdkTransactionService: TransactionService = {
 
     const outputs = unspentOutputs(rt);
     const decoys = await fetchDecoys(rt, outputs);
-    const built = txns.buildTransaction({
-      keys: rt.account.keys,
-      destinations,
-      changeKeys: ownKeys(rt),
-      unspentOutputs: outputs,
-      decoys,
-      fee: FEE_ATOMIC,
-      mixin: MIXIN,
-    });
+
+    // A transfer that carries a message is built as a message tx so the encrypted body
+    // rides in tx_extra (recipient surfaces it, and we keep a sender copy). The
+    // recipient still receives the full `amountAtomic` via `messageAmount`.
+    const built = hasMessage
+      ? txns.buildMessageTransaction({
+          keys: rt.account.keys,
+          recipient: {
+            spendPublicKey: recipient.spendPublicKey,
+            viewPublicKey: recipient.viewPublicKey,
+          },
+          body: message,
+          changeKeys: ownKeys(rt),
+          unspentOutputs: outputs,
+          decoys,
+          fee: FEE_ATOMIC,
+          mixin: MIXIN,
+          ttlUnixSeconds: 0,
+          nodeFee,
+          messageAmount: amountAtomic,
+        })
+      : txns.buildTransaction({
+          keys: rt.account.keys,
+          destinations: plainDestinations(recipient, amountAtomic, nodeFee),
+          changeKeys: ownKeys(rt),
+          unspentOutputs: outputs,
+          decoys,
+          fee: FEE_ATOMIC,
+          mixin: MIXIN,
+        });
 
     await broadcast(rt, built);
+
+    // Optimistic pending entry (show the outgoing tx + hold the balance until it mines,
+    // and lock its inputs against re-selection) plus, if present, the sender's message
+    // copy — mutated together and persisted once.
+    rt.raw = addPendingRecord(rt.raw, {
+      hash: built.hash,
+      amountAtomic:
+        input.address === rt.account.address
+          ? FEE_ATOMIC + nodeFeeAtomic
+          : amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
+      timestampIso: new Date().toISOString(),
+      address: input.address,
+      ...(input.paymentId?.trim() ? { paymentId: input.paymentId.trim() } : {}),
+      spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+    });
+    if (hasMessage) {
+      rt.raw = withSentRecords(rt.raw, [
+        ...readSentRecords(rt.raw),
+        createSentMessageRecord({
+          hash: built.hash,
+          recipientAddress: input.address,
+          body: message,
+          paymentId: input.paymentId?.trim() || undefined,
+          timestampIso: new Date().toISOString(),
+        }),
+      ]);
+    }
+    try {
+      await persist();
+    } catch {
+      // Non-fatal: the tx is already relayed (broadcast persisted state itself), so
+      // failing the send here would invite a retry → double-spend. Losing only the
+      // optimistic pending / message UI records is acceptable; sync reconciles them.
+    }
 
     const networkHeight = await rt.daemon.getHeight();
     const fromHistory = mapTransactions(rt.state, networkHeight).find(
@@ -113,6 +177,23 @@ export const realSdkTransactionService: TransactionService = {
     };
   },
 };
+
+/** Destinations for a plain (no-message) transfer: recipient + optional node fee. */
+function plainDestinations(
+  recipient: { spendPublicKey: string; viewPublicKey: string },
+  amountAtomic: number,
+  nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null,
+): txns.Destination[] {
+  const destinations: txns.Destination[] = [
+    {
+      spendPublicKey: recipient.spendPublicKey,
+      viewPublicKey: recipient.viewPublicKey,
+      amount: amountAtomic,
+    },
+  ];
+  if (nodeFee) destinations.push(nodeFee);
+  return destinations;
+}
 
 /** The node's advertised fee address, or `""` when it charges none / on error. */
 async function safeNodeFeeAddress(daemon: {

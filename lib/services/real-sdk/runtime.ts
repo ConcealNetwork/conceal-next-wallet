@@ -1,13 +1,34 @@
 /**
- * Module-level singleton runtime for the SDK wallet engine — the SDK analogue of
- * the legacy `window.__ccxRuntimeWallet`. It holds the unlocked wallet's account
- * (keys + address), the persisted {@link RawWalletV1} blob, the live SDK
- * {@link WalletState} (synced outputs/deposits/txs/scannedHeight), the daemon
- * client, and the password — and owns unlock / sync / persist / lock.
+ * Per-wallet runtime cache for the SDK wallet engine — the SDK analogue of the
+ * legacy `window.__ccxRuntimeWallet`, extended for SMOOTH multi-wallet switching.
+ *
+ * Instead of a single unlocked wallet, the engine keeps a `Map` of unlocked
+ * {@link SdkRuntime}s keyed by wallet id, plus the id of the currently `active`
+ * one. Switching to an ALREADY-UNLOCKED wallet is then instant — no re-open, no
+ * password — while switching to one that isn't cached unlocks it in place. Each
+ * runtime holds the wallet's account (keys + address), the persisted
+ * {@link RawWalletV1} blob, the live SDK {@link WalletState}, the daemon client,
+ * the password, AND its OWN sync/persist coordination state.
+ *
+ * CONCURRENCY INVARIANT (CRITICAL)
+ * --------------------------------
+ * A `sync()` or `persist()` is bound to ONE specific runtime when it starts and
+ * only ever reads/writes THAT runtime's state + storage. If the user switches the
+ * active wallet from A to B while A's sync is mid-flight, A's scan still folds into
+ * A's cached runtime and persists into A's keyspace — it NEVER writes A's data into
+ * B's storage (or vice-versa). To guarantee this, `syncOnce`/`runSyncChain`/
+ * `persistNow` take the owning runtime as an argument and the sync-coalescing state
+ * (`inFlightSync`, `pendingSync`, `persistChain`) lives PER runtime, not as module
+ * globals.
+ *
+ * SECURITY
+ * --------
+ * `lock()` / `disconnect()` (and the idle auto-lock that calls `disconnect()`) drop
+ * the ENTIRE map, so no decrypted wallet keys for ANY cached wallet survive a lock.
  *
  * STATE + PERSISTENCE MODEL
  * -------------------------
- * Everything lives inside the ONE encrypted `"wallet"` blob (so a single
+ * Everything lives inside the ONE encrypted `"wallet"` blob per keyspace (so a single
  * `saveStoredWallet` round-trips keys, settings, contacts, sent messages AND the
  * synced state). The live SDK {@link WalletState} is serialized into a custom
  * `raw.sdkWalletState` field (carried by `RawWalletV1`'s index signature) on every
@@ -38,13 +59,13 @@ import {
   deserializeWalletState,
   encodeAddress,
   findWithdrawnDepositIndexes,
-  hasStoredWallet as sdkHasStoredWallet,
   openStoredWallet,
   type RawDepositInput,
   type RawWalletV1,
   saveStoredWallet,
   serializeWalletState,
   transactions as txns,
+  type StorageAdapter,
   type UserKeys,
   type WalletKeys,
   type WalletState,
@@ -57,8 +78,25 @@ import {
   type SdkMessageRecord,
   withReceivedRecords,
 } from "@/lib/services/real-sdk/messages-store";
+import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
+import {
+  prunePendingRecords,
+  readPendingRecords,
+  withPendingRecords,
+} from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
+import {
+  DEFAULT_WALLET_ID,
+  getActiveWallet,
+  getActiveWalletStorage,
+  readWalletsIndex,
+  registerWallet,
+  setActiveWallet,
+  storageForWallet,
+  unregisterWallet,
+  updateWallet,
+  type WalletMeta,
+} from "@/lib/services/real-sdk/wallets-index";
 
 /**
  * The SDK's daemon-result types (`DaemonRawTransaction`, `DaemonRandomOutsForAmount`)
@@ -86,8 +124,24 @@ interface DaemonRandomOutsForAmount {
 /** Field we add to the persisted blob to carry the serialized SDK wallet state. */
 const SDK_STATE_FIELD = "sdkWalletState";
 
+/**
+ * Re-scan this many blocks below the last scanned height on every sync. A daemon can
+ * return a block range via `getWalletSyncData` BEFORE it has indexed a tx that was just
+ * mined into one of those blocks; without re-scanning, `scannedHeight` advances past it
+ * and the tx is dropped until a manual full rescan (#98). Folding is idempotent, so
+ * re-scanning recent blocks every sync is safe and also covers small chain reorgs.
+ */
+const RESCAN_LAG_BLOCKS = 10;
+
 /** A live, unlocked SDK wallet runtime. */
 export interface SdkRuntime {
+  /**
+   * Wallet-registry id this runtime belongs to (`"default"` or a namespaced UUID).
+   * Binds sync/persist to a SPECIFIC wallet's keyspace + cached state, so a switch
+   * mid-flight never crosses wallets. Optional only so `_setRuntimeForTest({...})`
+   * calls that omit it still typecheck; resolved to `"default"` when absent.
+   */
+  id?: string;
   /** Keys + address for the open wallet. */
   account: Account;
   /** The canonical v1 plaintext blob — persisted (keys, options, contacts, …). */
@@ -100,37 +154,102 @@ export interface SdkRuntime {
   password: string;
   /** True when the wallet holds no private spend key (watch-only). */
   viewOnly: boolean;
+  /**
+   * Storage scoped to this wallet's keyspace (multi-wallet, #95). OPTIONAL so
+   * `_setRuntimeForTest({...})` calls that omit it still typecheck; falls back to the
+   * active wallet's storage on persist when absent.
+   */
+  storage?: StorageAdapter;
 }
 
-let runtime: SdkRuntime | null = null;
+/**
+ * Per-runtime sync/persist coordination, kept in a side map keyed by wallet id so it
+ * is never shared between cached wallets. A sync started for wallet A coalesces only
+ * against other A syncs; A's persists chain only behind other A persists.
+ */
+interface RuntimeCoordination {
+  /** The in-flight scan promise for this wallet, or null when idle. */
+  inFlightSync: Promise<number> | null;
+  /** A follow-up scan was requested while this wallet's scan was running. */
+  pendingSync: boolean;
+  /** Serializes this wallet's encrypt+write so two persists never interleave. */
+  persistChain: Promise<void>;
+}
 
-/** The current unlocked runtime, or `null` when locked. */
+/** Cache of every UNLOCKED wallet runtime, keyed by registry id. */
+const runtimes = new Map<string, SdkRuntime>();
+/** The id of the currently active (foreground) wallet, or null when locked. */
+let activeId: string | null = null;
+/** Per-wallet sync/persist state, keyed by the same id as {@link runtimes}. */
+const coordination = new Map<string, RuntimeCoordination>();
+
+/** The registry id a runtime belongs to (defaults to `"default"` when unset). */
+function runtimeId(rt: SdkRuntime): string {
+  return rt.id ?? DEFAULT_WALLET_ID;
+}
+
+/** Get (or lazily create) the coordination state for a wallet id. */
+function coordinationFor(id: string): RuntimeCoordination {
+  let state = coordination.get(id);
+  if (!state) {
+    state = { inFlightSync: null, pendingSync: false, persistChain: Promise.resolve() };
+    coordination.set(id, state);
+  }
+  return state;
+}
+
+/** The current active unlocked runtime, or `null` when locked. */
 export function getRuntime(): SdkRuntime | null {
-  return runtime;
+  return activeId !== null ? (runtimes.get(activeId) ?? null) : null;
 }
 
-/** The current unlocked runtime, or throw a friendly "not open" error. */
+/** The current active unlocked runtime, or throw a friendly "not open" error. */
 export function requireRuntime(): SdkRuntime {
-  if (runtime === null) {
+  const rt = getRuntime();
+  if (rt === null) {
     throw new Error("Wallet is not open. Unlock the wallet and try again.");
   }
-  return runtime;
+  return rt;
 }
 
-/** True when a wallet is unlocked. */
+/** True when a wallet is unlocked and active. */
 export function isUnlocked(): boolean {
-  return runtime !== null;
+  return activeId !== null && runtimes.has(activeId);
 }
 
-/** Test-only: install a runtime directly (bypassing unlock/storage). */
+/** True when the wallet `id` already has a cached (unlocked) runtime. */
+export function hasUnlockedRuntime(id: string): boolean {
+  return runtimes.has(id);
+}
+
+/** Install or drop a runtime in the cache, keeping coordination state in sync. */
+function setRuntime(id: string, rt: SdkRuntime): void {
+  runtimes.set(id, rt);
+}
+
+/** Clear ALL cached runtimes + coordination + active id (used by lock/disconnect). */
+function clearAllRuntimes(): void {
+  runtimes.clear();
+  coordination.clear();
+  activeId = null;
+}
+
+/** Test-only: install a runtime directly (bypassing unlock/storage), or clear all. */
 export function _setRuntimeForTest(next: SdkRuntime | null): void {
-  runtime = next;
+  if (next === null) {
+    clearAllRuntimes();
+    return;
+  }
+  const id = runtimeId(next);
+  // Normalize the runtime to carry its id so sync/persist bind correctly.
+  setRuntime(id, next.id === id ? next : { ...next, id });
+  activeId = id;
 }
 
-/** Whether a stored wallet exists on this device (does not decrypt it). */
-export function hasStoredWallet(): Promise<boolean> {
-  if (typeof window === "undefined") return Promise.resolve(false);
-  return sdkHasStoredWallet(getSdkWalletStorage());
+/** Whether ANY stored wallet exists on this device (does not decrypt them). */
+export async function hasStoredWallet(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  return (await readWalletsIndex()).wallets.length > 0;
 }
 
 /** Map normalized {@link UserKeys} to the SDK {@link WalletKeys} (sec/pub pairs). */
@@ -191,20 +310,31 @@ function buildState(account: Account, raw: RawWalletV1): WalletState {
       // Corrupt serialized state — fall through to a fresh re-sync.
     }
   }
+  // An existing wallet-core blob carries its full already-scanned history
+  // (outputs/spends/deposits + `lastHeight`). Seed the live state from it so the
+  // wallet opens INSTANTLY at `lastHeight` instead of rescanning from genesis —
+  // only the small `lastHeight`→tip gap then syncs. Byte-identical to a re-sync.
+  const seeded = seedStateFromLegacyBlob(account, raw);
+  if (seeded !== null) {
+    return seeded;
+  }
+
   const fresh = createWalletState(account);
-  // Seed at `creationHeight` ONLY when present — it scopes the re-scan past
-  // pre-creation blocks. NEVER fall back to `lastHeight`: an older legacy blob
-  // that lacks `creationHeight` carries `lastHeight` = the synced TIP, and seeding
-  // there would make sync skip the wallet's entire history (0 balance, empty
-  // history). Fall back to 0 — a full re-scan is slow but correct.
+  // No scanned history (a fresh create/import): seed at `creationHeight` ONLY when
+  // present — it scopes the scan past pre-creation blocks. NEVER fall back to
+  // `lastHeight`: an older blob that lacks `creationHeight` carries `lastHeight` =
+  // the synced TIP, and seeding there would make sync skip the wallet's entire
+  // history. Fall back to 0 — a full scan is slow but correct.
   const creationHeight = Math.max(0, Number(raw.creationHeight ?? 0) || 0);
   return creationHeight > 0 ? { ...fresh, scannedHeight: creationHeight } : fresh;
 }
 
 /**
- * Unlock the stored wallet with `password`. Returns the live runtime, or throws a
- * friendly error on a wrong password / missing wallet. Does NOT sync — the caller
- * (`getWalletInfo`/`refreshWallet`) drives sync explicitly.
+ * Unlock the stored wallet with `password`, cache it, and make it the active runtime.
+ * Returns the live runtime, or throws a friendly error on a wrong password / missing
+ * wallet. If the active wallet is ALREADY cached (unlocked), returns it instantly
+ * without re-opening. Does NOT sync — the caller (`getWalletInfo`/`refreshWallet`)
+ * drives sync explicitly.
  */
 export async function unlock(password: string): Promise<SdkRuntime> {
   if (!password) {
@@ -212,7 +342,19 @@ export async function unlock(password: string): Promise<SdkRuntime> {
   }
   // Await WASM crypto init before openStoredWallet → buildAccount derive keys.
   await ensureSdkReady();
-  const storage = getSdkWalletStorage();
+  // Open the ACTIVE wallet's keyspace (multi-wallet #95); falls back to the bare
+  // default keyspace when no wallet is registered yet (legacy/first-open).
+  const meta = await getActiveWallet();
+  const id = meta?.id ?? DEFAULT_WALLET_ID;
+
+  // Already unlocked + cached → make it active and return instantly (no re-open).
+  const cached = runtimes.get(id);
+  if (cached) {
+    activeId = id;
+    return cached;
+  }
+
+  const storage = storageForWallet(meta ?? { namespace: "" });
   let opened: { raw: RawWalletV1; keys: UserKeys } | null;
   try {
     opened = await openStoredWallet(storage, password);
@@ -228,18 +370,38 @@ export async function unlock(password: string): Promise<SdkRuntime> {
   const daemon = buildDaemon(nodeUrlFromRaw(opened.raw));
   const viewOnly = !opened.keys.priv.spend;
 
-  runtime = { account, raw: opened.raw, state, daemon, password, viewOnly };
-  return runtime;
+  const rt: SdkRuntime = {
+    id,
+    account,
+    raw: opened.raw,
+    state,
+    daemon,
+    password,
+    viewOnly,
+    storage,
+  };
+  setRuntime(id, rt);
+  activeId = id;
+  // Cache the address into the registry the first time we resolve it, so the
+  // switcher can show a truncated address without unlocking each wallet.
+  if (meta && !meta.address) {
+    await updateWallet(meta.id, { address: account.address });
+  }
+  return rt;
 }
 
 /**
- * Adopt a freshly created/imported/restored wallet into the runtime and persist
- * it as a NEW stored blob. Used by create / import paths after building `raw`.
+ * Adopt a freshly created/imported/restored wallet into the runtime cache, REGISTER
+ * it in the multi-wallet index (first → bare/default, rest → namespaced + active),
+ * and persist it into that wallet's keyspace. Used by create / import paths after
+ * building `raw`. "Add wallet" is just another adopt — it never overwrites an
+ * existing wallet's blob.
  */
 export async function adopt(input: {
   raw: RawWalletV1;
   keys: UserKeys;
   password: string;
+  label?: string;
 }): Promise<SdkRuntime> {
   // Await WASM crypto init before buildAccount/buildState derive the address.
   await ensureSdkReady();
@@ -248,9 +410,27 @@ export async function adopt(input: {
   const daemon = buildDaemon(nodeUrlFromRaw(input.raw));
   const viewOnly = !input.keys.priv.spend;
 
-  runtime = { account, raw: input.raw, state, daemon, password: input.password, viewOnly };
+  // Default label: "Main wallet" for the very first wallet, else "Wallet N".
+  const existingCount = (await readWalletsIndex()).wallets.length;
+  const label =
+    input.label?.trim() || (existingCount === 0 ? "Main wallet" : `Wallet ${existingCount + 1}`);
+  const meta = await registerWallet({ label, address: account.address });
+  const storage = storageForWallet(meta);
+
+  const rt: SdkRuntime = {
+    id: meta.id,
+    account,
+    raw: input.raw,
+    state,
+    daemon,
+    password: input.password,
+    viewOnly,
+    storage,
+  };
+  setRuntime(meta.id, rt);
+  activeId = meta.id;
   await persist();
-  return runtime;
+  return rt;
 }
 
 // --- sync concurrency guard ------------------------------------------------
@@ -258,49 +438,59 @@ export async function adopt(input: {
 // running concurrently (auto-refresh + manual refresh, or a send-triggered
 // re-sync) would each capture the same starting state and the last writer would
 // clobber the other — losing txs / reverting `scannedHeight` / racing `persist`.
-// To serialize: callers chain onto a single in-flight scan. While a scan runs, a
-// later caller marks a pending re-run so its intent (catch up AFTER the current
-// finishes — e.g. to see a just-broadcast tx) is honored exactly once, rather than
-// starting a parallel scan.
-
-let inFlightSync: Promise<number> | null = null;
-let pendingSync = false;
+// To serialize: callers chain onto a single in-flight scan PER WALLET (its own
+// `coordination` entry). While a wallet's scan runs, a later caller marks a pending
+// re-run so its intent (catch up AFTER the current finishes — e.g. to see a
+// just-broadcast tx) is honored exactly once, rather than starting a parallel scan.
+// Binding to the runtime (not `activeId`) means a switch mid-flight cannot redirect
+// an in-progress scan to a different wallet's state/storage.
 
 /**
- * Advance the live state to the network tip, serialized against concurrent calls.
- * Never runs two scans at once: if a scan is in flight, the caller awaits it and
- * (because its data may predate this call) a single follow-up scan is queued.
- * Returns the network height observed by the scan the caller ultimately awaits.
+ * Advance the ACTIVE wallet's live state to the network tip, serialized against
+ * concurrent calls. Never runs two scans at once for the same wallet: if a scan is
+ * in flight, the caller awaits it and (because its data may predate this call) a
+ * single follow-up scan is queued. Returns the network height observed by the scan
+ * the caller ultimately awaits.
  */
 export async function sync(): Promise<number> {
-  // Idle → start a fresh scan.
-  if (inFlightSync === null) {
-    inFlightSync = runSyncChain();
-    return inFlightSync;
+  return syncRuntime(requireRuntime());
+}
+
+/**
+ * Sync a SPECIFIC runtime to the network tip, serialized against concurrent calls
+ * for THAT wallet. Bound to the runtime so a mid-flight active-wallet switch never
+ * redirects this scan to another wallet's state/storage.
+ */
+export function syncRuntime(rt: SdkRuntime): Promise<number> {
+  const coord = coordinationFor(runtimeId(rt));
+  // Idle → start a fresh scan chain for this wallet.
+  if (coord.inFlightSync === null) {
+    coord.inFlightSync = runSyncChain(rt, coord);
+    return coord.inFlightSync;
   }
-  // A scan is already running. Queue exactly one follow-up scan so this caller's
-  // intent to catch up AFTER the current scan is honored, then await it.
-  pendingSync = true;
-  return inFlightSync;
+  // A scan is already running for this wallet. Queue exactly one follow-up so this
+  // caller's intent to catch up AFTER the current scan is honored, then await it.
+  coord.pendingSync = true;
+  return coord.inFlightSync;
 }
 
 /** Run scans back-to-back while follow-ups are pending, clearing the guard at the end. */
-async function runSyncChain(): Promise<number> {
+async function runSyncChain(rt: SdkRuntime, coord: RuntimeCoordination): Promise<number> {
   let height = 0;
   try {
     do {
-      pendingSync = false;
-      height = await syncOnce();
-    } while (pendingSync);
+      coord.pendingSync = false;
+      height = await syncOnce(rt);
+    } while (coord.pendingSync);
   } finally {
-    inFlightSync = null;
-    pendingSync = false;
+    coord.inFlightSync = null;
+    coord.pendingSync = false;
   }
   return height;
 }
 
 /**
- * Advance the live state to the network tip via a manual sync loop
+ * Advance `rt`'s live state to the network tip via a manual sync loop
  * (`getWalletSyncData` → `scanTransactionOutputsAndDeposits` → apply), then
  * persist when the state advanced. Returns the network height.
  *
@@ -308,17 +498,21 @@ async function runSyncChain(): Promise<number> {
  * single encrypted `"wallet"` blob — `createWalletSync`'s own persistence writes a
  * separate plaintext record under a different key, which we deliberately avoid.
  *
- * Not called concurrently — {@link sync} serializes all callers onto it.
+ * Bound to `rt` (NOT `requireRuntime()`): folds + persists into THAT wallet even if
+ * the user switches the active wallet mid-scan. Not called concurrently for the same
+ * wallet — {@link syncRuntime} serializes all callers onto it.
  */
-async function syncOnce(): Promise<number> {
-  const rt = requireRuntime();
+async function syncOnce(rt: SdkRuntime): Promise<number> {
   // Await WASM crypto init before scanTransactionOutputsAndDeposits / ring math.
   await ensureSdkReady();
   const height = await rt.daemon.getHeight();
   const batchSize = 100;
   // Coinbase (miner) outputs are scanned only when the wallet opts in (solo mining).
   const includeMinerTxs = Boolean(rt.raw.options?.checkMinerTx);
-  let scanned = rt.state.scannedHeight;
+  // Resume from a re-scan window below the last scanned height (see RESCAN_LAG_BLOCKS),
+  // floored at the wallet's seed/creation height so we never scan pre-existence blocks.
+  const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
+  let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS);
   let state = rt.state;
 
   // Our own outbound message txs already live in `sentMessages`; never reclassify
@@ -357,18 +551,36 @@ async function syncOnce(): Promise<number> {
       }
     }
     scanned = endBlock;
-    state = { ...state, scannedHeight: scanned };
   }
 
-  const stateChanged = state !== rt.state;
+  // Advance the scan cursor to the highest block scanned (never backwards). Only
+  // allocate a new state object when the cursor or folded data actually changed, so an
+  // idle re-scan (nothing new in the window) does not churn the serialized persist.
+  const finalScanned = Math.max(rt.state.scannedHeight, scanned);
+  const nextState =
+    finalScanned !== state.scannedHeight ? { ...state, scannedHeight: finalScanned } : state;
+  const stateChanged = nextState !== rt.state;
   if (stateChanged) {
-    rt.state = state;
+    rt.state = nextState;
   }
   if (receivedChanged) {
     rt.raw = withReceivedRecords(rt.raw, [...received.values()]);
   }
-  if (stateChanged || receivedChanged) {
-    await persist();
+
+  // Reconcile optimistic pending sends: drop any whose tx is now scanned into state
+  // (mined), or that have expired without ever mining (#96).
+  const currentPending = readPendingRecords(rt.raw);
+  let pendingChanged = false;
+  if (currentPending.length > 0) {
+    const survivors = prunePendingRecords(rt.raw, nextState, Date.now());
+    if (survivors.length !== currentPending.length) {
+      rt.raw = withPendingRecords(rt.raw, survivors);
+      pendingChanged = true;
+    }
+  }
+
+  if (stateChanged || receivedChanged || pendingChanged) {
+    await persistRuntime(rt);
   }
   return height;
 }
@@ -537,57 +749,127 @@ export function decoysFromDaemon(outs: DaemonRandomOutsForAmount[]): txns.DecoyS
   }));
 }
 
-// Serialize writes: chain each persist after the previous one so two concurrent
-// persists (e.g. a sync-triggered save racing an address-book save) never
-// interleave their encrypt+write. Each write snapshots the LATEST `rt.raw`/state
-// at the moment it actually runs, so the freshest data wins.
-let persistChain: Promise<void> = Promise.resolve();
+// Serialize writes PER WALLET: chain each persist after the previous one for the SAME
+// wallet so two concurrent persists (e.g. a sync-triggered save racing an address-book
+// save) never interleave their encrypt+write. Each write snapshots the LATEST
+// `rt.raw`/state at the moment it actually runs, so the freshest data wins. The chain
+// lives in the wallet's `coordination` entry, so a persist bound to wallet A never
+// serializes against (or writes into) wallet B.
 
-/** Persist the runtime's current `raw` (with the latest serialized state) to storage. */
+/** Persist the ACTIVE runtime's current `raw` to its keyspace. */
 export function persist(): Promise<void> {
-  const run = persistChain.then(
-    () => persistNow(),
-    () => persistNow(),
+  return persistRuntime(requireRuntime());
+}
+
+/** Persist a SPECIFIC runtime's current `raw` (with the latest serialized state). */
+export function persistRuntime(rt: SdkRuntime): Promise<void> {
+  const coord = coordinationFor(runtimeId(rt));
+  const run = coord.persistChain.then(
+    () => persistNow(rt),
+    () => persistNow(rt),
   );
   // Keep the chain alive even if a write rejects (the next persist still runs);
   // callers still see this write's own rejection via the returned promise.
-  persistChain = run.then(
+  coord.persistChain = run.then(
     () => undefined,
     () => undefined,
   );
   return run;
 }
 
-/** Encrypt + write the runtime's current blob + serialized state (no concurrency guard). */
-async function persistNow(): Promise<void> {
-  const rt = runtime;
-  if (rt === null) return;
+/** Encrypt + write a runtime's current blob + serialized state (no concurrency guard). */
+async function persistNow(rt: SdkRuntime): Promise<void> {
   const raw: RawWalletV1 = {
     ...rt.raw,
     [SDK_STATE_FIELD]: serializeWalletState(rt.state),
     lastHeight: Math.max(Number(rt.raw.lastHeight ?? 0) || 0, rt.state.scannedHeight),
   };
   rt.raw = raw;
-  await saveStoredWallet(getSdkWalletStorage(), raw, rt.password);
+  // Persist into THIS wallet's keyspace. `rt.storage` is set on unlock/adopt; fall
+  // back to the active wallet's storage for runtimes installed without it (e.g.
+  // `_setRuntimeForTest`). Binding to `rt.storage` (not the live active wallet) is
+  // what keeps A's data out of B's keyspace after a mid-flight switch.
+  const storage = rt.storage ?? (await getActiveWalletStorage());
+  await saveStoredWallet(storage, raw, rt.password);
 }
 
-/** Lock the wallet — drop the in-memory runtime (keys are never kept in session). */
+/**
+ * Lock the wallet — drop ALL cached runtimes (keys are never kept in session).
+ * SECURITY: clears EVERY unlocked wallet's keys, not just the active one, so a lock
+ * leaves no decrypted material in memory. Resets all per-wallet sync/persist state;
+ * any in-flight scan settles on its own and then `requireRuntime()` throws.
+ */
 export function lock(): void {
-  runtime = null;
-  // Clear the sync coalescing flag; the in-flight promise (if any) settles on its
-  // own and `requireRuntime()` then throws for a locked wallet.
-  pendingSync = false;
+  clearAllRuntimes();
 }
 
-/** Lock + clear the runtime (the SDK engine runs no workers / timers to stop). */
+/** Lock + clear all runtimes (the SDK engine runs no workers / timers to stop). */
 export async function disconnect(): Promise<void> {
   lock();
   await Promise.resolve();
 }
 
-/** Remove the stored wallet record (delete / panic-wipe). */
+/**
+ * Remove the ACTIVE wallet (delete / panic-wipe): erase its keyspace and drop it
+ * from the registry, reassigning active to a survivor. With no registry yet
+ * (legacy single-wallet), fall back to erasing the bare `"wallet"` record.
+ */
 export async function removeStoredWallet(): Promise<void> {
-  await getSdkWalletStorage().removeItem("wallet");
+  const active = await getActiveWallet();
+  if (active) {
+    await unregisterWallet(active.id);
+    dropCachedRuntime(active.id);
+  } else {
+    await getActiveWalletStorage().then((storage) => storage.removeItem("wallet"));
+    dropCachedRuntime(DEFAULT_WALLET_ID);
+  }
+}
+
+/** Drop a single wallet's cached runtime + coordination (e.g. on remove). */
+function dropCachedRuntime(id: string): void {
+  runtimes.delete(id);
+  coordination.delete(id);
+  if (activeId === id) {
+    activeId = null;
+  }
+}
+
+// --- multi-wallet helpers (#95) --------------------------------------------
+// The wallet service calls these to back the switcher / management UI. They
+// operate on the registry + the runtime cache. Switching is now INSTANT when the
+// target wallet is already cached; removing the active wallet drops its keys.
+
+/** All registered wallets' metadata (for the switcher / settings list). */
+export async function listWalletMetas(): Promise<WalletMeta[]> {
+  return (await readWalletsIndex()).wallets;
+}
+
+/** The active wallet's id. */
+export async function activeWalletId(): Promise<string> {
+  return (await readWalletsIndex()).activeId;
+}
+
+/**
+ * Switch the active wallet: set the active id ONLY. Does NOT lock or clear any
+ * cached runtime — switching to an already-unlocked wallet is therefore instant.
+ * A wallet that is not yet cached is unlocked in place by the UI afterward.
+ */
+export async function switchActiveWallet(id: string): Promise<void> {
+  await setActiveWallet(id);
+  if (runtimes.has(id)) {
+    activeId = id;
+  }
+}
+
+/** Rename a wallet (label only). */
+export async function renameWallet(id: string, label: string): Promise<void> {
+  await updateWallet(id, { label });
+}
+
+/** Remove a wallet by id; drops its cached runtime (keys) before erasing it. */
+export async function removeWalletById(id: string): Promise<void> {
+  dropCachedRuntime(id);
+  await unregisterWallet(id);
 }
 
 /** A user-safe message from an unknown thrown value. */

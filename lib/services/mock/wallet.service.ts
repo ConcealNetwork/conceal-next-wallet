@@ -1,12 +1,30 @@
 import { mockExportData, mockWalletInfo } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
 import type { DownloadWalletBackupResult, WalletService } from "@/lib/services/wallet.service";
-import type { WalletInfo } from "@/lib/types";
+import type { WalletInfo, WalletSummary } from "@/lib/types";
 import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 
 // Mock services are module singletons, so the imported view-only state lives
 // here. A view-only `importWallet` flips it on; any full import/create resets it.
 let mockViewOnly = false;
+
+// --- multi-wallet mock state (#95) -----------------------------------------
+// A believable two-wallet registry, mutated immutably (spread, never in place).
+type MockWalletEntry = { id: string; label: string; address?: string };
+
+const INITIAL_MOCK_WALLETS: readonly MockWalletEntry[] = [
+  { id: "default", label: "Main wallet", address: mockWalletInfo.address },
+  { id: "mock-savings", label: "Savings", address: mockExportData.address },
+];
+
+let mockWallets: readonly MockWalletEntry[] = INITIAL_MOCK_WALLETS;
+let mockActiveId = "default";
+
+/** Test-only reset so suites that mutate the mock registry don't leak state. */
+export function _resetMockWallets(): void {
+  mockWallets = INITIAL_MOCK_WALLETS;
+  mockActiveId = "default";
+}
 
 /** Current mock view-only state — read by the mock spend-service guards. */
 export function isMockViewOnly(): boolean {
@@ -107,5 +125,40 @@ export const mockWalletService: WalletService = {
   async disconnect() {
     // no runtime in mock mode; clear view-only so the next open starts clean
     mockViewOnly = false;
+  },
+  async listWallets(): Promise<WalletSummary[]> {
+    await mockDelay();
+    return mockWallets.map((wallet) => ({
+      id: wallet.id,
+      label: wallet.label,
+      ...(wallet.address ? { address: wallet.address } : {}),
+      isActive: wallet.id === mockActiveId,
+    }));
+  },
+  async switchWallet(id: string): Promise<WalletInfo | null> {
+    await mockDelay();
+    if (mockWallets.some((wallet) => wallet.id === id)) {
+      mockActiveId = id;
+    }
+    // Mock mode keeps the session "open" (the mock unlock takes no password), so a
+    // switch is always instant — return the current wallet info, never null.
+    return currentWalletInfo();
+  },
+  async renameWallet(id: string, label: string) {
+    await mockDelay();
+    const trimmed = label.trim();
+    if (!trimmed) {
+      throw new Error("A wallet name is required.");
+    }
+    mockWallets = mockWallets.map((wallet) =>
+      wallet.id === id ? { ...wallet, label: trimmed } : wallet,
+    );
+  },
+  async deleteWallet(id: string) {
+    await mockDelay();
+    mockWallets = mockWallets.filter((wallet) => wallet.id !== id);
+    if (mockActiveId === id) {
+      mockActiveId = mockWallets[0]?.id ?? "default";
+    }
   },
 };
