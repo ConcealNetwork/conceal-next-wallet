@@ -39,28 +39,48 @@ import {
   formatSignedAmount,
   formatTimestamp,
   getTransactionStatus,
+  statusLabelKey,
   transactionMeta,
 } from "@/components/wallet/transaction-display";
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import type { Transaction } from "@/lib/types";
 import { downloadCsvFile, transactionCsvFilename } from "@/lib/ui/download-csv-file";
 import { transactionsToCsv } from "@/lib/ui/transaction-csv";
-import { walletCopy } from "@/lib/ui/wallet-copy";
 import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber, cn, truncateAddress } from "@/lib/utils";
 import { resolveUiTransactionType } from "@/lib/ui/transaction-kind";
 
+// Tab identifiers stay English — they drive `transactionMatchesTab` and remain the
+// stable selector for e2e. Display strings resolve via `TAB_LABEL_KEYS` + t().
 const tabs = ["All", "Received", "Sent", "Deposits", "Withdrawals", "Messages"];
+const TAB_LABEL_KEYS: Record<string, string> = {
+  All: "txn.tabAll",
+  Received: "txn.tabReceived",
+  Sent: "txn.tabSent",
+  Deposits: "txn.tabDeposits",
+  Withdrawals: "txn.tabWithdrawals",
+  Messages: "txn.tabMessages",
+};
 const pageSizes = ["10", "25", "50"];
 
 type DateGroup = "Today" | "Yesterday" | "This Week" | "Earlier";
 
 const dateGroups: DateGroup[] = ["Today", "Yesterday", "This Week", "Earlier"];
+// Date-group identifiers stay English (used as map keys + section ids); the
+// heading text resolves via `DATE_GROUP_LABEL_KEYS` + t() at render time.
+const DATE_GROUP_LABEL_KEYS: Record<DateGroup, string> = {
+  Today: "txn.groupToday",
+  Yesterday: "txn.groupYesterday",
+  "This Week": "txn.groupThisWeek",
+  Earlier: "txn.groupEarlier",
+};
 
 export default function TransactionsPageClient() {
   const fmt = useFormatters();
+  const { t } = useI18n();
   const { data = [] } = useTransactions();
   const [active, setActive] = useState("All");
   const [search, setSearch] = useState("");
@@ -135,9 +155,13 @@ export default function TransactionsPageClient() {
     // Export the current filtered/searched view (WYSIWYG), not just the visible page.
     try {
       downloadCsvFile(transactionCsvFilename(active), transactionsToCsv(filtered));
-      toast.success(`Exported ${filtered.length} transaction${filtered.length === 1 ? "" : "s"}.`);
+      toast.success(
+        filtered.length === 1
+          ? t("txn.exportSuccessOne")
+          : t("txn.exportSuccess", { count: fmt.formatNumber(filtered.length) }),
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export CSV.");
+      toast.error(error instanceof Error ? error.message : t("txn.exportError"));
     }
   }
 
@@ -180,8 +204,8 @@ export default function TransactionsPageClient() {
   return (
     <>
       <PageHeader
-        title="Transaction History"
-        subtitle="Complete transaction history for your wallet"
+        title={t("txn.history")}
+        subtitle={t("txn.subtitle")}
         action={
           <Button
             type="button"
@@ -189,15 +213,15 @@ export default function TransactionsPageClient() {
             className="gap-2"
             onClick={handleExportCsv}
             disabled={filtered.length === 0}
-            title={filtered.length === 0 ? walletCopy.exportCsvEmpty : undefined}
+            title={filtered.length === 0 ? t("txn.exportEmpty") : undefined}
           >
             <Download className="size-4" aria-hidden="true" />
-            {walletCopy.exportCsvButton}
+            {t("txn.exportButton")}
           </Button>
         }
       />
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
-        <SectionCard title="Summary" description="Wallet flow across all transactions">
+        <SectionCard title={t("txn.summary")} description={t("txn.summaryDescription")}>
           <TransactionSummary
             received={totals.received}
             sent={outflow}
@@ -216,19 +240,19 @@ export default function TransactionsPageClient() {
           <Input
             value={search}
             onChange={(event) => handleSearchChange(event.target.value)}
-            placeholder="Search transactions..."
+            placeholder={t("txn.searchPlaceholder")}
             className="pl-9"
-            aria-label="Search transactions"
+            aria-label={t("txn.searchAria")}
           />
         </div>
         <Select value={pageSize} onValueChange={handlePageSizeChange}>
-          <SelectTrigger className="md:w-[178px]" aria-label="Transactions per page">
+          <SelectTrigger className="md:w-[178px]" aria-label={t("txn.perPageAria")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {pageSizes.map((s) => (
               <SelectItem key={s} value={s}>
-                Show: {s} per page
+                {t("txn.perPageOption", { count: s })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -236,14 +260,24 @@ export default function TransactionsPageClient() {
       </div>
       <div className="mt-6 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:90ms]">
         <SectionCard
-          title={`${filtered.length} transactions found`}
+          title={t("txn.found", { count: fmt.formatNumber(filtered.length) })}
           description={
             filtered.length > visibleTransactions.length
-              ? `Page ${safePage} of ${totalPages} · Showing ${visibleTransactions.length} of ${filtered.length}`
-              : "Grouped by transaction date"
+              ? t("txn.pageSummary", {
+                  page: fmt.formatNumber(safePage),
+                  total: fmt.formatNumber(totalPages),
+                  shown: fmt.formatNumber(visibleTransactions.length),
+                  total_count: fmt.formatNumber(filtered.length),
+                })
+              : t("txn.groupedByDate")
           }
         >
-          <FilterTabs tabs={tabs} active={active} onChange={handleActiveChange} />
+          <FilterTabs
+            tabs={tabs}
+            active={active}
+            onChange={handleActiveChange}
+            labels={Object.fromEntries(tabs.map((tab) => [tab, t(TAB_LABEL_KEYS[tab])]))}
+          />
           <div className="mt-5">
             {groupedTransactions.length > 0 ? (
               <div className="space-y-6">
@@ -259,8 +293,8 @@ export default function TransactionsPageClient() {
               </div>
             ) : (
               <EmptyState
-                title="No transactions match"
-                description="Adjust the active filter or search query to find another transaction."
+                title={t("txn.emptyTitle")}
+                description={t("txn.emptyDescription")}
                 illustration="/brand/empty/transactions.png"
               />
             )}
@@ -272,7 +306,7 @@ export default function TransactionsPageClient() {
           currentPage={safePage}
           totalPages={totalPages}
           onPageChange={goToPage}
-          ariaLabel="Transaction pages"
+          ariaLabel={t("txn.paginationAria")}
         />
       )}
       <TransactionDetailsDialog
@@ -297,24 +331,28 @@ function TransactionSummary({
   transactionCount: number;
 }) {
   const { formatCcx, formatNumber } = useFormatters();
+  const { t } = useI18n();
   const totalFlow = received + sent + deposits;
   const flowSegments = [
     {
-      label: "In",
+      key: "in",
+      label: t("account.flowIn"),
       value: received,
       className: "bg-wallet-incoming",
       textClassName: "text-wallet-incoming",
       prefix: "+",
     },
     {
-      label: "Out",
+      key: "out",
+      label: t("account.flowOut"),
       value: sent,
       className: "bg-wallet-outgoing",
       textClassName: "text-wallet-outgoing",
       prefix: "−",
     },
     {
-      label: "Deposits",
+      key: "deposits",
+      label: t("account.flowDeposits"),
       value: deposits,
       className: "bg-wallet-deposit",
       textClassName: "text-wallet-deposit",
@@ -332,24 +370,24 @@ function TransactionSummary({
     <div className="space-y-5">
       <div className="grid auto-rows-fr gap-4 md:grid-cols-3">
         <SummaryMetricCard
-          label="Total Received"
+          label={t("txn.totalReceived")}
           value={received}
           prefix="+"
-          detail="Incoming transfers"
+          detail={t("txn.incomingTransfers")}
           tone="incoming"
         />
         <SummaryMetricCard
-          label="Total Sent"
+          label={t("txn.totalSent")}
           value={sent}
           prefix="−"
-          detail="Transfers and withdrawals"
+          detail={t("txn.transfersAndWithdrawals")}
           tone="outgoing"
         />
         <SummaryMetricCard
-          label="Total Deposits"
+          label={t("txn.totalDeposits")}
           value={deposits}
           prefix="+"
-          detail="Locked deposits"
+          detail={t("txn.lockedDeposits")}
           tone="deposit"
         />
       </div>
@@ -357,9 +395,9 @@ function TransactionSummary({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-medium text-muted-foreground">Flow Mix</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("txn.flowMix")}</p>
               <p className="font-mono text-sm text-muted-foreground">
-                {transactionCountLabel} transactions
+                {t("txn.transactionsCount", { count: transactionCountLabel })}
               </p>
             </div>
             <div
@@ -368,7 +406,7 @@ function TransactionSummary({
             >
               {flowSegments.map((segment, index) => (
                 <span
-                  key={segment.label}
+                  key={segment.key}
                   className={cn("animate-scale-x-in motion-reduce:animate-none", segment.className)}
                   style={{
                     width: `${totalFlow > 0 ? (segment.value / totalFlow) * 100 : 0}%`,
@@ -378,12 +416,15 @@ function TransactionSummary({
               ))}
             </div>
             <p className="sr-only">
-              Flow mix: {formatCcx(received)} received, {formatCcx(sent)} sent,{" "}
-              {formatCcx(deposits)} deposits.
+              {t("txn.flowMixSrOnly", {
+                received: formatCcx(received),
+                sent: formatCcx(sent),
+                deposits: formatCcx(deposits),
+              })}
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {flowSegments.map((segment) => (
-                <div key={segment.label} className="min-w-0">
+                <div key={segment.key} className="min-w-0">
                   <p className="text-xs text-muted-foreground">{segment.label}</p>
                   <p
                     className={cn(
@@ -399,7 +440,7 @@ function TransactionSummary({
             </div>
           </div>
           <div className="rounded-xl border border-border bg-card p-4 lg:min-w-[230px]">
-            <p className="text-sm text-muted-foreground">Net Flow</p>
+            <p className="text-sm text-muted-foreground">{t("txn.netFlow")}</p>
             <p
               className={cn(
                 "mt-2 wrap-break-word font-mono text-2xl font-bold",
@@ -467,6 +508,7 @@ function TransactionDateGroup({
   onSelect: (transaction: Transaction) => void;
   selectedId: string | null;
 }) {
+  const { t } = useI18n();
   return (
     <section aria-labelledby={`transactions-${group.label.replace(/\s/g, "-").toLowerCase()}`}>
       <div className="mb-2 flex items-center gap-3">
@@ -474,7 +516,7 @@ function TransactionDateGroup({
           id={`transactions-${group.label.replace(/\s/g, "-").toLowerCase()}`}
           className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
         >
-          {group.label}
+          {t(DATE_GROUP_LABEL_KEYS[group.label])}
         </h2>
         <div className="h-px flex-1 bg-border" />
       </div>
@@ -507,7 +549,9 @@ function TransactionListRow({
   selected?: boolean;
 }) {
   const fmt = useFormatters();
+  const { t } = useI18n();
   const meta = transactionMeta[resolveUiTransactionType(transaction)];
+  const label = t(meta.labelKey);
   const status = getTransactionStatus(transaction.confirmations);
   const Icon = meta.icon;
 
@@ -520,7 +564,11 @@ function TransactionListRow({
         "group flex w-full cursor-pointer flex-col gap-3 rounded-xl border bg-card p-3 text-left transition-colors duration-200 hover:bg-secondary/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:flex-row sm:items-center sm:justify-between",
         selected ? "border-primary ring-1 ring-primary/40" : "border-border",
       )}
-      aria-label={`${meta.label} transaction for ${formatSignedAmount(transaction, fmt)} from ${fmt.timeAgo(transaction.timestamp)}`}
+      aria-label={t("txn.rowAria", {
+        label,
+        amount: formatSignedAmount(transaction, fmt),
+        time: fmt.timeAgo(transaction.timestamp),
+      })}
     >
       <div className="flex min-w-0 items-start gap-3">
         <span
@@ -537,18 +585,22 @@ function TransactionListRow({
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span>{fmt.timeAgo(transaction.timestamp)}</span>
             <span aria-hidden="true">•</span>
-            <span>{transaction.confirmations} confirmations</span>
+            <span>
+              {t("txn.confirmationsCount", {
+                count: fmt.formatNumber(transaction.confirmations),
+              })}
+            </span>
           </div>
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
         <Badge variant="secondary" className="sm:hidden">
-          {meta.label}
+          {label}
         </Badge>
         <span className={cn("font-mono text-base font-semibold", meta.amountClassName)}>
           <CcxAmount>{formatSignedAmount(transaction, fmt)}</CcxAmount>
         </span>
-        <span className="hidden text-xs text-muted-foreground sm:block">{meta.label}</span>
+        <span className="hidden text-xs text-muted-foreground sm:block">{label}</span>
       </div>
     </button>
   );
@@ -562,12 +614,15 @@ function TransactionDetailsDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const fmt = useFormatters();
+  const { t } = useI18n();
   if (!transaction) {
     return null;
   }
 
   const meta = transactionMeta[resolveUiTransactionType(transaction)];
+  const label = t(meta.labelKey);
   const status = getTransactionStatus(transaction.confirmations);
+  const statusLabel = t(statusLabelKey(status));
   const Icon = meta.icon;
 
   return (
@@ -585,10 +640,12 @@ function TransactionDetailsDialog({
               <Icon className="size-5" />
             </span>
             <div>
-              <DialogTitle>{meta.label} Transaction</DialogTitle>
+              <DialogTitle>{t("txn.titleTransaction", { label })}</DialogTitle>
               <DialogDescription>
-                {formatTimestamp(transaction.timestamp, fmt)} · {transaction.confirmations}{" "}
-                confirmations
+                {formatTimestamp(transaction.timestamp, fmt)} ·{" "}
+                {t("txn.confirmationsCount", {
+                  count: fmt.formatNumber(transaction.confirmations),
+                })}
               </DialogDescription>
             </div>
           </div>
@@ -596,7 +653,7 @@ function TransactionDetailsDialog({
 
         <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
           <div>
-            <p className="text-sm text-muted-foreground">Signed Amount</p>
+            <p className="text-sm text-muted-foreground">{t("txn.signedAmount")}</p>
             <p className={cn("mt-1 font-mono text-3xl font-bold", meta.amountClassName)}>
               <CcxAmount>
                 {formatSignedAmount(transaction, fmt, CCX_PRECISION_DECIMAL_DISPLAY)}
@@ -607,25 +664,29 @@ function TransactionDetailsDialog({
         </div>
 
         <dl className="grid gap-3">
-          <DetailRow label="Type" value={meta.label} />
+          <DetailRow label={t("txn.detailType")} value={label} />
           <DetailRow
-            label="Timestamp"
+            label={t("txn.detailTimestamp")}
             value={formatTimestamp(transaction.timestamp, fmt)}
             icon={CalendarClock}
           />
           <DetailRow
-            label="Height"
+            label={t("txn.detailHeight")}
             value={formatHeightWithConfirmations(
               transaction.blockHeight,
               transaction.confirmations,
               fmt,
+              t,
             )}
           />
-          <DetailRow label="Status" value={status} />
-          <DetailRow label="Payment ID" value={transaction.paymentId ?? "Not provided"} />
-          <DetailRow label="Message" value={transaction.message ?? "Not provided"} />
+          <DetailRow label={t("txn.detailStatus")} value={statusLabel} />
           <DetailRow
-            label="Transaction Hash"
+            label={t("rail.paymentId")}
+            value={transaction.paymentId ?? t("txn.notProvided")}
+          />
+          <DetailRow label={t("rail.message")} value={transaction.message ?? t("txn.notProvided")} />
+          <DetailRow
+            label={t("txn.detailHash")}
             value={transaction.hash}
             icon={Hash}
             mono
@@ -636,12 +697,12 @@ function TransactionDetailsDialog({
         <div className="rounded-xl border border-border bg-secondary/60 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <p className="text-sm text-muted-foreground">Full Address</p>
+              <p className="text-sm text-muted-foreground">{t("txn.fullAddress")}</p>
               <p className="mt-2 break-all font-mono text-sm text-foreground">
                 {transaction.address}
               </p>
             </div>
-            <CopyButton value={transaction.address} label="Copy address" iconOnly />
+            <CopyButton value={transaction.address} label={t("txn.copyAddress")} iconOnly />
           </div>
         </div>
 
@@ -664,6 +725,7 @@ function DetailRow({
   mono?: boolean;
   copyValue?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="grid gap-1 rounded-xl border border-border bg-secondary/60 p-3 sm:grid-cols-[140px_1fr] sm:gap-4">
       <dt className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -679,7 +741,7 @@ function DetailRow({
       >
         <span className="min-w-0 wrap-break-word">{value}</span>
         {copyValue ? (
-          <CopyButton value={copyValue} label={`Copy ${label.toLowerCase()}`} iconOnly />
+          <CopyButton value={copyValue} label={t("action.copyField", { label })} iconOnly />
         ) : null}
       </dd>
     </div>

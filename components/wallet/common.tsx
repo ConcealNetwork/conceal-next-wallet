@@ -208,11 +208,15 @@ export function FilterTabs({
   active,
   onChange,
   badges,
+  labels,
 }: {
   tabs: string[];
   active: string;
   onChange: (tab: string) => void;
   badges?: Partial<Record<string, React.ReactNode>>;
+  // Optional display labels keyed by tab id (for i18n). When absent, the tab id
+  // is shown verbatim — preserving the original behaviour for all callers.
+  labels?: Partial<Record<string, string>>;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -228,7 +232,7 @@ export function FilterTabs({
           )}
         >
           <span className="inline-flex items-center gap-2">
-            {tab}
+            {labels?.[tab] ?? tab}
             {badges?.[tab] ? (
               <span
                 className={cn(
