@@ -126,7 +126,7 @@ describe("sync concurrency guard (review #2)", () => {
   });
 });
 
-describe("inbound message 100-atomic marker gate (review #6)", () => {
+describe("inbound message classification by decryptability (review #6 / #97)", () => {
   it("treats a message tx (owned 100-atomic output) as inbound", async () => {
     const { reconstructReceivedMessage } = await import("@/lib/services/real-sdk/messages-store");
     const alice = createAccount("english");
@@ -166,21 +166,22 @@ describe("inbound message 100-atomic marker gate (review #6)", () => {
     expect(inbound?.body).toBe("ping");
   });
 
-  it("does NOT surface a message when the owned output isn't the 100-atomic marker", async () => {
+  it("surfaces a message attached to a real-amount payment, not only the 100-atomic marker (#97)", async () => {
     const { reconstructReceivedMessage } = await import("@/lib/services/real-sdk/messages-store");
     const alice = createAccount("english");
     const bob = createAccount("english");
     const bobDecoded = decodeAddress(bob.address);
 
-    // Build a real message tx, then rewrite the owned (recipient) output amount to a
-    // non-marker value (50000) — simulating a normal payment carrying a stray tag.
+    // A genuine message to B that rides on a real 50000-atomic payment (NOT the
+    // 100-atomic marker). It decrypts with B's spend key, so it IS B's message —
+    // the old exact-100 gate wrongly dropped it (the #97 bug).
     const built = txns.buildMessageTransaction({
       keys: alice.keys,
       recipient: {
         spendPublicKey: bobDecoded.spendPublicKey,
         viewPublicKey: bobDecoded.viewPublicKey,
       },
-      body: "not-a-message",
+      body: "paid-message",
       changeKeys: { spendPublicKey: alice.keys.spend.pub, viewPublicKey: alice.keys.view.pub },
       unspentOutputs: [fundOwnedOutput(alice, 5_000_000)],
       decoys: [fakeDecoys(5_000_000, 6)],
@@ -188,7 +189,49 @@ describe("inbound message 100-atomic marker gate (review #6)", () => {
       mixin: 5,
       ttlUnixSeconds: 0,
       nodeFee: null,
-      messageAmount: 50_000, // NOT the 100-atomic marker
+      messageAmount: 50_000, // a real payment amount, not the marker
+    });
+
+    const scanTx: txns.RawTransaction = {
+      extra: built.extra,
+      vout: built.outputs.map((out) => ({
+        amount: out.amount,
+        target: { type: "02", data: { key: out.publicKey } },
+      })),
+      outputIndexes: built.outputs.map((_, i) => 5000 + i),
+      hash: built.hash,
+      height: 10,
+    };
+
+    const inbound = reconstructReceivedMessage(scanTx, bob.keys, { sentHashes: new Set() });
+    expect(inbound).not.toBeNull();
+    expect(inbound?.body).toBe("paid-message");
+  });
+
+  it("does NOT surface a message that decrypts for someone else (not addressed to us)", async () => {
+    const { reconstructReceivedMessage } = await import("@/lib/services/real-sdk/messages-store");
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const carol = createAccount("english");
+    const carolDecoded = decodeAddress(carol.address);
+
+    // Alice messages CAROL. Bob scans the same tx: he owns nothing in it and the
+    // 0x04 record does not decrypt with his spend key, so it is not his message.
+    const built = txns.buildMessageTransaction({
+      keys: alice.keys,
+      recipient: {
+        spendPublicKey: carolDecoded.spendPublicKey,
+        viewPublicKey: carolDecoded.viewPublicKey,
+      },
+      body: "for-carol",
+      changeKeys: { spendPublicKey: alice.keys.spend.pub, viewPublicKey: alice.keys.view.pub },
+      unspentOutputs: [fundOwnedOutput(alice, 5_000_000)],
+      decoys: [fakeDecoys(5_000_000, 6)],
+      fee: 1000,
+      mixin: 5,
+      ttlUnixSeconds: 0,
+      nodeFee: null,
+      messageAmount: 100,
     });
 
     const scanTx: txns.RawTransaction = {

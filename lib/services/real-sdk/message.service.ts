@@ -5,12 +5,11 @@ import {
   REMOTE_NODE_FEE_ATOMIC,
   WALLET_DONATION_ADDRESS,
 } from "@/lib/config/config";
-import { threadKeyFor } from "@/lib/services/real-sdk/mappers";
 import {
+  createSentMessageRecord,
   readReceivedRecords,
   readSentRecords,
   type SdkMessageRecord,
-  shortName,
   toMessage,
   withReceivedRecords,
   withSentRecords,
@@ -104,22 +103,14 @@ export const realSdkMessageService: MessageService = {
     });
 
     const paymentId = input.paymentId?.trim() || undefined;
-    const record: SdkMessageRecord = {
-      id: built.hash,
-      direction: "sent",
-      counterpartyAddress: destinationAddress,
-      counterpartyName: shortName(destinationAddress),
+    const record: SdkMessageRecord = createSentMessageRecord({
+      hash: built.hash,
+      recipientAddress: destinationAddress,
       body,
-      hasBody: true,
-      sentTo: destinationAddress,
-      paymentIdFrom: null,
-      paymentIdTo: paymentId ?? null,
-      timestamp: new Date().toISOString(),
-      unread: false,
-      blockHeight: 0,
-      threadKey: threadKeyFor(destinationAddress, paymentId),
+      paymentId,
+      timestampIso: new Date().toISOString(),
       ...(hasTtl ? { ttlExpiresAt: ttlUnixSeconds } : {}),
-    };
+    });
 
     // Broadcast FIRST; only record the sent copy AFTER the relay succeeds so a
     // broadcast failure can't leave a phantom sent message persisted in the blob.

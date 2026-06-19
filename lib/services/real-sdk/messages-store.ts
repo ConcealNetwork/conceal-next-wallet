@@ -14,7 +14,7 @@
  * surface without a circular import.
  */
 import { type RawWalletV1, transactions as txns, type WalletKeys } from "conceal-wallet-sdk";
-import { MESSAGE_TX_AMOUNT_ATOMIC } from "@/lib/config/config";
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { Message } from "@/lib/types";
 
 /** One persisted message (sent or received) in the blob. */
@@ -73,6 +73,37 @@ export function shortName(address: string): string {
   return address.length > 16 ? `${address.slice(0, 8)}…${address.slice(-6)}` : address;
 }
 
+/**
+ * Build a SENT message record from a just-broadcast tx. Shared by the dedicated
+ * message flow (`message.service`) and a transfer that carries a message
+ * (`transaction.service`) so both persist an identical sender copy.
+ */
+export function createSentMessageRecord(input: {
+  hash: string;
+  recipientAddress: string;
+  body: string;
+  paymentId?: string;
+  timestampIso: string;
+  ttlExpiresAt?: number;
+}): SdkMessageRecord {
+  return {
+    id: input.hash,
+    direction: "sent",
+    counterpartyAddress: input.recipientAddress,
+    counterpartyName: shortName(input.recipientAddress),
+    body: input.body,
+    hasBody: true,
+    sentTo: input.recipientAddress,
+    paymentIdFrom: null,
+    paymentIdTo: input.paymentId ?? null,
+    timestamp: input.timestampIso,
+    unread: false,
+    blockHeight: 0,
+    threadKey: buildMessageThreadKey(input.recipientAddress, input.paymentId),
+    ...(input.ttlExpiresAt && input.ttlExpiresAt > 0 ? { ttlExpiresAt: input.ttlExpiresAt } : {}),
+  };
+}
+
 /** Map a persisted record to the UI {@link Message}. */
 export function toMessage(record: SdkMessageRecord): Message {
   return {
@@ -97,14 +128,17 @@ export function toMessage(record: SdkMessageRecord): Message {
  * Reconstruct an INBOUND message record from a scanned transaction, or `null` when
  * the tx carries no message we can read as a received message.
  *
- * Classification (matching the legacy mapper): the tx must carry a `0x04` message
- * record decryptable with our spend secret (`readMessageFromTransaction.body !==
- * null`) AND we must own the message-marker output — an output of EXACTLY
- * `MESSAGE_TX_AMOUNT_ATOMIC` (100), the tiny self-output the sender pays us to mark
- * the tx as a message (matching the legacy mapper). A normal payment that happens to
- * carry a stray `0x04` tag is therefore NOT surfaced as a message. Our OWN outbound
- * message txs are excluded by the caller via `sentHashes` (their hash is already in
- * `raw.sentMessages`), so a self-send isn't double-counted.
+ * Classification: the tx must carry a `0x04` message record that DECRYPTS with our
+ * spend secret (`readMessageFromTransaction.body !== null`) AND we must own at least
+ * one output in it. Decryption succeeds only when the sender encrypted to our spend
+ * key (ECDH), so a successful `body` already proves the message is addressed to us —
+ * this surfaces messages on BOTH a dedicated message tx (the 100-atomic marker) AND a
+ * regular transfer that carries a message (legacy `Transaction.hasMessage` was
+ * amount-agnostic; gating on an exact 100-atomic marker was stricter than legacy and
+ * dropped messages attached to real payments). A normal payment with no `0x04` record,
+ * or a `0x04` meant for someone else, never decrypts, so it is not surfaced. Our OWN
+ * outbound message txs are excluded by the caller via `sentHashes` (their hash is
+ * already in `raw.sentMessages`), so a self-send isn't double-counted.
  */
 export function reconstructReceivedMessage(
   scanTx: txns.RawTransaction,
@@ -119,12 +153,11 @@ export function reconstructReceivedMessage(
 
   const result = txns.readMessageFromTransaction(scanTx, keys);
   if (result === null) return null;
-  // Inbound only when the body decrypts AND we own the 100-atomic message marker
-  // output (legacy classification) — a normal payment with a stray tag is excluded.
-  const ownsMessageMarker = result.owned.some(
-    (output) => output.amount === MESSAGE_TX_AMOUNT_ATOMIC,
-  );
-  if (!ownsMessageMarker || result.body === null) return null;
+  // Inbound when the message decrypts for us (ECDH proves we are the recipient) AND we
+  // own an output in the tx — covers a dedicated message (100-atomic marker) and a
+  // regular transfer carrying a message alike. Decryption failure (body === null) means
+  // it isn't ours; no owned output means we received nothing in it.
+  if (result.body === null || result.owned.length === 0) return null;
 
   const blockHeight = typeof scanTx.height === "number" ? scanTx.height : 0;
   const timestampMs =
