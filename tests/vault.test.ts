@@ -23,7 +23,12 @@ describe("vault-crypto", () => {
 
   it("rejects a tampered ciphertext", async () => {
     const encrypted = await encryptVault("secret", "pw");
-    const tampered = { ...encrypted, ciphertext: `${encrypted.ciphertext.slice(0, -2)}AA` };
+    // Flip the FIRST base64url char (always a significant byte) to a guaranteed-different
+    // value. Tampering the LAST chars was flaky: when they were already "AA", or when
+    // their low bits are base64 padding (decode to the same bytes), the AEAD still
+    // verified and the test resolved instead of rejecting (~1/4096 CI flake).
+    const head = encrypted.ciphertext;
+    const tampered = { ...encrypted, ciphertext: (head[0] === "a" ? "b" : "a") + head.slice(1) };
     await expect(decryptVault(tampered, "pw")).rejects.toThrow();
   });
 
