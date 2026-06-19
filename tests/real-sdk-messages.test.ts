@@ -312,7 +312,8 @@ describe("real-sdk sendTransaction with a message (#97)", () => {
 
     const rt = runtimeMod.getRuntime();
     expect(rt).not.toBeNull();
-    const sent = readSentRecords(rt?.raw ?? aliceRaw);
+    if (rt === null) throw new Error("runtime should be installed after sendTransaction");
+    const sent = readSentRecords(rt.raw);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.body).toBe("hi bob");
     expect(sent[0]?.direction).toBe("sent");

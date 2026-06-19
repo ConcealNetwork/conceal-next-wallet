@@ -130,7 +130,13 @@ export const realSdkTransactionService: TransactionService = {
           timestampIso: new Date().toISOString(),
         }),
       ]);
-      await persist();
+      try {
+        await persist();
+      } catch {
+        // Non-fatal: the tx is already relayed (broadcast persisted state itself), so
+        // failing the send here would invite a retry → double-spend. Losing only the
+        // sender's UI copy of the message is acceptable; the next persist reconciles it.
+      }
     }
 
     const networkHeight = await rt.daemon.getHeight();
