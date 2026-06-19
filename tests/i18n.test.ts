@@ -10,11 +10,11 @@ describe("resolveLocale", () => {
 
   it("falls back to the first supported browser language (by base)", () => {
     expect(resolveLocale(null, ["es-419", "en"])).toBe("es");
-    expect(resolveLocale(null, ["fr-FR", "en-GB"])).toBe("en");
+    expect(resolveLocale(null, ["hi-IN", "en-GB"])).toBe("en");
   });
 
   it("defaults to English for unknown stored/browser values", () => {
-    expect(resolveLocale("klingon", ["fr", "de"])).toBe("en");
+    expect(resolveLocale("klingon", ["hi", "ar"])).toBe("en");
     expect(resolveLocale(null, [])).toBe("en");
   });
 });
@@ -45,15 +45,18 @@ describe("translate", () => {
 });
 
 describe("dictionaries", () => {
-  it("es covers every en key (no missing translations in the foundation set)", () => {
+  it("every locale covers exactly the en key set (no missing or extra keys)", () => {
     const enKeys = Object.keys(DICTIONARIES.en).sort();
-    const esKeys = Object.keys(DICTIONARIES.es).sort();
-    expect(esKeys).toEqual(enKeys);
+    for (const code of Object.keys(DICTIONARIES)) {
+      const keys = Object.keys(DICTIONARIES[code as Locale]).sort();
+      expect(keys, `locale "${code}" must match en keys`).toEqual(enKeys);
+    }
   });
 
   it("isLocale guards the supported set", () => {
-    expect(isLocale("en")).toBe(true);
-    expect(isLocale("es")).toBe(true);
+    for (const code of Object.keys(DICTIONARIES)) {
+      expect(isLocale(code)).toBe(true);
+    }
     expect(isLocale("xx" as Locale)).toBe(false);
     expect(isLocale(null)).toBe(false);
   });

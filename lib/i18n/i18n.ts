@@ -5,11 +5,19 @@
  * common actions) is translated to start; more strings and locales are drop-in.
  */
 
-export type Locale = "en" | "es";
+export type Locale = "en" | "es" | "fr" | "de" | "it" | "pt" | "ru" | "zh" | "ja" | "ko";
 
 export const LOCALES: readonly { code: Locale; label: string }[] = [
   { code: "en", label: "English" },
   { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
+  { code: "it", label: "Italiano" },
+  { code: "pt", label: "Português" },
+  { code: "ru", label: "Русский" },
+  { code: "zh", label: "中文" },
+  { code: "ja", label: "日本語" },
+  { code: "ko", label: "한국어" },
 ];
 
 export const DEFAULT_LOCALE: Locale = "en";
@@ -17,8 +25,10 @@ export const LOCALE_STORAGE_KEY = "ccx-locale";
 
 export type Dictionary = Record<string, string>;
 
+const LOCALE_CODES: ReadonlySet<Locale> = new Set(LOCALES.map((l) => l.code));
+
 export function isLocale(value: unknown): value is Locale {
-  return value === "en" || value === "es";
+  return typeof value === "string" && LOCALE_CODES.has(value as Locale);
 }
 
 /**
