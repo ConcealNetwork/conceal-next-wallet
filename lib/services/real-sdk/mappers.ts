@@ -161,13 +161,18 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
   // locked, not leaving — so it counts toward `lockedDeposits`, not `pending`; showing
   // it as a pending outflow would alarmingly read as money leaving the wallet. (The
   // record's amount includes the tx fee, a negligible over-count that self-corrects to
-  // the exact locked principal once the deposit mines and the record prunes.)
+  // the exact locked principal once the deposit mines and the record prunes.) A pending
+  // WITHDRAWAL (#110, withdraw half) is likewise not an outflow — it's an incoming tx
+  // that unlocks a deposit — so it's excluded from `pending` too.
   const minedHashes = new Set(state.transactions.map((tx) => tx.hash));
   const livePending = readPendingRecords(runtime.raw).filter(
     (record) => !minedHashes.has(record.hash),
   );
   const pendingOut = livePending.reduce(
-    (sum, record) => (record.type === "deposit" ? sum : sum + Math.max(0, record.amountAtomic)),
+    (sum, record) =>
+      record.type === "deposit" || record.type === "withdrawal"
+        ? sum
+        : sum + Math.max(0, record.amountAtomic),
     0,
   );
   const pendingLocked = livePending.reduce(

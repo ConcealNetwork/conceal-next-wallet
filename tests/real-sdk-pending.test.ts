@@ -6,6 +6,7 @@ import {
   type PendingTxRecord,
   pendingOutAtomic,
   pendingSpentKeyImages,
+  pendingWithdrawnDepositKeys,
   prunePendingRecords,
   readPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
@@ -90,5 +91,43 @@ describe("pending-store (#96)", () => {
     // Both reads are non-empty + unchanged; just assert stability of length.
     expect(a).toHaveLength(1);
     expect(b).toHaveLength(1);
+  });
+
+  // #110 withdraw half: a withdraw spends a DEPOSIT output (not a regular unspent
+  // output), so it's locked by deposit identity, not by key image.
+  it("locks a deposit by identity while its withdrawal is pending (no re-withdraw)", () => {
+    const raw = addPendingRecord(
+      baseRaw(),
+      record({
+        hash: "wd-1",
+        type: "withdrawal",
+        amountAtomic: 100_500,
+        spentKeyImages: ["dep-ki"],
+        depositRef: { txHash: "dep-tx", globalIndex: 7 },
+      }),
+    );
+    expect(pendingWithdrawnDepositKeys(raw)).toEqual(new Set(["dep-tx:7"]));
+  });
+
+  it("ignores non-withdrawal records and withdrawals without a depositRef", () => {
+    let raw = addPendingRecord(baseRaw(), record()); // a plain send (no type)
+    raw = addPendingRecord(raw, record({ hash: "wd-noref", type: "withdrawal" })); // no depositRef
+    expect(pendingWithdrawnDepositKeys(raw)).toEqual(new Set());
+  });
+
+  it("counts ONLY outbound records in the balance hold (deposit/withdrawal excluded)", () => {
+    let raw = addPendingRecord(baseRaw(), record({ hash: "send", amountAtomic: 500 })); // undefined → counts
+    raw = addPendingRecord(raw, record({ hash: "fus", type: "fusion", amountAtomic: 300 })); // counts
+    raw = addPendingRecord(raw, record({ hash: "dep", type: "deposit", amountAtomic: 1_000_000 })); // excluded
+    raw = addPendingRecord(
+      raw,
+      record({
+        hash: "wd",
+        type: "withdrawal",
+        amountAtomic: 999_999,
+        depositRef: { txHash: "d", globalIndex: 1 },
+      }),
+    ); // excluded
+    expect(pendingOutAtomic(raw)).toBe(500 + 300);
   });
 });

@@ -34,6 +34,14 @@ export interface PendingTxRecord {
   paymentId?: string;
   /** Key images the tx spent — excluded from input selection until it mines. */
   spentKeyImages: string[];
+  /**
+   * The deposit a withdrawal spends (identity = txHash + globalIndex), when this record
+   * is a withdrawal (#110). Unlike a normal send, a withdraw consumes a deposit output,
+   * which isn't covered by {@link pendingSpentKeyImages} (the deposit isn't in the
+   * unspent set) — so we hold the deposit identity here to block a second withdraw of
+   * the same deposit in the mempool window (see {@link pendingWithdrawnDepositKeys}).
+   */
+  depositRef?: { txHash: string; globalIndex: number };
 }
 
 const PENDING_FIELD = "pendingTransactions";
@@ -82,9 +90,36 @@ export function pendingSpentKeyImages(raw: RawWalletV1): Set<string> {
   return images;
 }
 
-/** Total atomic amount held pending-outbound (for the balance hold). */
+/**
+ * Deposit identity keys (`"${txHash}:${globalIndex}"`) currently held pending as
+ * withdrawals — each blocks re-selection of the same deposit until its withdraw tx mines
+ * and prunes. A withdraw spends a deposit output, which sits outside the
+ * {@link pendingSpentKeyImages} lock on regular unspent outputs, so it needs its own
+ * gate (#110).
+ */
+export function pendingWithdrawnDepositKeys(raw: RawWalletV1): Set<string> {
+  const keys = new Set<string>();
+  for (const record of readPendingRecords(raw)) {
+    if (record.type === "withdrawal" && record.depositRef) {
+      keys.add(`${record.depositRef.txHash}:${record.depositRef.globalIndex}`);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Total atomic amount held pending-outbound (for the balance hold). Counts ONLY
+ * outbound records — `undefined` (legacy/plain send), `"send"`, or `"fusion"`. A
+ * pending deposit (#110) is becoming locked, not leaving (handled as locked elsewhere),
+ * and a pending withdrawal is incoming, so both are excluded.
+ */
 export function pendingOutAtomic(raw: RawWalletV1): number {
-  return readPendingRecords(raw).reduce((sum, record) => sum + Math.max(0, record.amountAtomic), 0);
+  return readPendingRecords(raw)
+    .filter(
+      (record) =>
+        record.type === undefined || record.type === "send" || record.type === "fusion",
+    )
+    .reduce((sum, record) => sum + Math.max(0, record.amountAtomic), 0);
 }
 
 /**
