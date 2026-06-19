@@ -64,8 +64,12 @@ export function useRightRailContent() {
   return { content, collapsed, setCollapsed };
 }
 
-/** Rail header: toggle the column's collapse state. */
-function useRightRailCollapse() {
+/**
+ * Read/toggle the rail's collapse state. Used by the rail header's pin and by
+ * pages that need to know whether the rail is currently showing — e.g. the
+ * Transactions page falls back to the detail dialog when the rail is collapsed.
+ */
+export function useRightRailCollapse() {
   const { collapsed, setCollapsed } = useRightRailContext();
   return { collapsed, setCollapsed };
 }
@@ -74,18 +78,25 @@ function useRightRailCollapse() {
  * Register a page-owned rail content node. Call once at the top level of a
  * wallet page: `usePageRightRail(<AccountRail />)`. The node is registered on
  * mount and cleared on unmount so navigating away collapses the column back to
- * the full-width main. The rail element should be a stable-structure component
- * (its children read their own hooks to stay live) — re-renders of the page do
- * NOT re-register a newer node, by design.
+ * the full-width main.
+ *
+ * By default a fresh JSX element on each page render does NOT re-register (a ref
+ * holds the latest node; the rail's children read their own hooks to stay live).
+ * Pass `deps` to re-register when DISCRETE state changes — e.g. row selection on
+ * the Transactions page, where the rail node carries the selected item as a prop.
+ * Keep `deps` to user-driven values (not per-render identities) so this stays a
+ * controlled swap, never a render loop.
  */
-export function usePageRightRail(node: React.ReactNode) {
+export function usePageRightRail(node: React.ReactNode, deps: React.DependencyList = []) {
   const { setContent } = useRightRailContext();
   const nodeRef = useRef<React.ReactNode>(node);
   nodeRef.current = node;
+  // Re-register only on the caller's explicit deps (e.g. selection); nodeRef
+  // always holds the latest node, so per-render JSX identity never re-registers.
   useEffect(() => {
     setContent(nodeRef.current);
     return () => setContent(null);
-  }, [setContent]);
+  }, [setContent, ...deps]);
 }
 
 /** Shared panel header: title + collapse pin (matches the mockup's Run-settings head). */

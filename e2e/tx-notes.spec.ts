@@ -2,6 +2,12 @@ import { expect, test } from "@playwright/test";
 
 type Page = import("@playwright/test").Page;
 
+// Transaction detail (and its note editor) renders in the contextual rail at
+// >=1200px (#122 stage 3) and in a dialog below that. This spec exercises the
+// dialog path, so it runs at a width where the sidenav is still visible (>=1024)
+// but the rail is not (< 1200).
+test.use({ viewport: { width: 1100, height: 800 } });
+
 async function openTransactions(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Open your wallet" }).click();
