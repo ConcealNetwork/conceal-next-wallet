@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Download, Plus } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, Download, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useSwitchWalletFlow } from "@/components/wallet/open-wallet-form";
@@ -30,7 +30,7 @@ function accentFor(id: string): string {
   return AVATAR_ACCENTS[hash % AVATAR_ACCENTS.length];
 }
 
-function WalletAvatar({ wallet, className }: { wallet: WalletSummary; className?: string }) {
+export function WalletAvatar({ wallet, className }: { wallet: WalletSummary; className?: string }) {
   return (
     <span
       aria-hidden="true"
@@ -45,12 +45,29 @@ function WalletAvatar({ wallet, className }: { wallet: WalletSummary; className?
   );
 }
 
+type WalletSwitcherVariant = "sidebar" | "header";
+
 /**
- * Sidebar-header wallet switcher (#95, design Option A). Shows the active wallet
- * under the brand; click → a dropdown panel listing every wallet (active gets a
- * check) plus "Add wallet". Hidden when collapsed (the brand label is too).
+ * Wallet switcher (#95, design Option A). Shows the active wallet; click → a
+ * dropdown panel listing every wallet (active gets a check) plus "Add wallet".
+ *
+ * Two trigger variants share one dropdown:
+ *  - `sidebar` (default): full-width card under the brand; hidden when the
+ *    sidebar is collapsed (the brand label is too).
+ *  - `header`: a compact rounded pill (avatar + name + truncated address +
+ *    chevrons-up-down) for the global header. Ignores `collapsed`.
+ *
+ * The trigger's accessible name is always `wallets.switcherLabel` ("Switch
+ * wallet") — the multi-wallet e2e clicks `getByRole("button", { name:
+ * "Switch wallet" })` — and the dropdown menu shares that name.
  */
-export function WalletSwitcher({ collapsed = false }: { collapsed?: boolean }) {
+export function WalletSwitcher({
+  collapsed = false,
+  variant = "sidebar",
+}: {
+  collapsed?: boolean;
+  variant?: WalletSwitcherVariant;
+}) {
   const { t } = useI18n();
   const router = useRouter();
   const { data: wallets } = useWallets();
@@ -80,13 +97,12 @@ export function WalletSwitcher({ collapsed = false }: { collapsed?: boolean }) {
     };
   }, [open, close]);
 
-  // Collapse hides the brand label; keep the switcher out of the way too.
-  if (collapsed) return null;
-
   const list = wallets ?? [];
   const active = list.find((wallet) => wallet.isActive) ?? list[0];
   // Nothing to switch when there's at most one wallet — but still surface "Add".
   if (!active) return null;
+  // Only the sidebar variant hides itself when the rail collapses.
+  if (variant === "sidebar" && collapsed) return null;
 
   function handleSwitch(id: string) {
     close();
@@ -99,14 +115,39 @@ export function WalletSwitcher({ collapsed = false }: { collapsed?: boolean }) {
     router.push(path);
   }
 
-  return (
-    <div ref={containerRef} className="relative px-3">
+  const switcherLabel = t("wallets.switcherLabel");
+
+  const trigger =
+    variant === "header" ? (
       <button
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        aria-label={t("wallets.switcherLabel")}
+        aria-label={switcherLabel}
+        onClick={() => setOpen((value) => !value)}
+        className="flex max-w-[260px] cursor-pointer items-center gap-2 rounded-full border border-border bg-background/60 py-1 pr-2 pl-1.5 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <WalletAvatar wallet={active} className="size-6 text-[11px]" />
+        <span className="hidden min-w-0 sm:block">
+          <span className="block truncate text-[13px] font-semibold leading-tight text-foreground">
+            {active.label}
+          </span>
+          {active.address ? (
+            <span className="block truncate font-mono text-[10.5px] leading-tight text-muted-foreground">
+              {truncateAddress(active.address, 6, 4)}
+            </span>
+          ) : null}
+        </span>
+        <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </button>
+    ) : (
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        aria-label={switcherLabel}
         onClick={() => setOpen((value) => !value)}
         className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-card/60 px-2.5 py-2 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       >
@@ -129,13 +170,21 @@ export function WalletSwitcher({ collapsed = false }: { collapsed?: boolean }) {
           aria-hidden="true"
         />
       </button>
+    );
 
+  return (
+    <div ref={containerRef} className={variant === "sidebar" ? "relative px-3" : "relative"}>
+      {trigger}
       {open ? (
         <div
           id={menuId}
           role="menu"
-          aria-label={t("wallets.switcherLabel")}
-          className="absolute left-3 right-3 z-50 mt-1.5 rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
+          aria-label={switcherLabel}
+          className={
+            variant === "header"
+              ? "absolute left-0 top-full z-50 mt-1.5 w-[260px] rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
+              : "absolute right-3 left-3 z-50 mt-1.5 rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
+          }
         >
           {list.map((wallet) => (
             <button

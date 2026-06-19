@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en" data-route="account">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conceal Wallet — Dual-sidebar shell (#122) · POLISH</title>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* ── Aurora palette ───────────────────────────────────────────────────────── */
+  :root {
+    --bg: #171513;            /* warm near-black */
+    --surface: #1f1b17;       /* cards / rails */
+    --surface-2: #262019;     /* hover / inset */
+    --border: #34302a;        /* hsl(34 9% 21%) */
+    --border-soft: #2a2521;
+    --text: #f5f2ee;
+    --muted: #a89e92;
+    --muted-2: #766d62;
+    --amber: #f5a623;         /* wallet-amber */
+    --incoming: #10b981;      /* wallet-incoming */
+    --outgoing: #ef4444;      /* wallet-outgoing */
+    --locked: #60a5fa;        /* deposits/locked accent */
+    --radius: 12px;
+    --rail-l: 256px;
+    --rail-r: 320px;
+    --focus: rgba(245, 166, 35, 0.4);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button:focus-visible, a:focus-visible, div[tabindex]:focus-visible { 
+    outline: 2px solid var(--focus); outline-offset: 2px; 
+  }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+  /* ── Review chrome ────────────────────────────────────────────────────────── */
+  .review-bar {
+    position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 16px;
+    padding: 10px 20px; background: #0f0d0b; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .review-bar b { color: var(--amber); letter-spacing: .02em; }
+  .review-bar .seg {
+    margin-left: auto; display: flex; gap: 2px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 3px;
+  }
+  .seg button {
+    all: unset; cursor: pointer; padding: 6px 14px; border-radius: 6px; font-size: 12.5px;
+    color: var(--muted); font-weight: 600; transition: all 0.15s;
+  }
+  .seg button[aria-pressed="true"] { background: var(--amber); color: #1a1207; }
+  .seg button:hover:not([aria-pressed="true"]) { color: var(--text); }
+  .review-note { color: var(--muted-2); font-size: 12px; }
+
+  /* ── App shell ────────────────────────────────────────────────────────────── */
+  .shell {
+    display: grid; grid-template-columns: var(--rail-l) minmax(0, 1fr) var(--rail-r);
+    height: calc(100vh - 41px);
+  }
+  .shell[data-collapsed-l="true"] { --rail-l: 76px; }
+  .shell[data-rail-r="false"] { grid-template-columns: var(--rail-l) minmax(0, 1fr); }
+
+  /* ── LEFT sidenav ─────────────────────────────────────────────────────────── */
+  .nav {
+    background: var(--surface); border-right: 1px solid var(--border-soft); display: flex;
+    flex-direction: column; min-height: 0; transition: width 0.2s ease;
+  }
+  .nav-top {
+    display: flex; align-items: center; gap: 10px; padding: 20px 16px 16px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px;
+    letter-spacing: -0.01em; color: var(--text);
+  }
+  .brand .logo {
+    width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, var(--amber), #d88a14);
+    display: grid; place-items: center; color: #1a1207; flex: none;
+  }
+  .collapse {
+    all: unset; cursor: pointer; margin-left: auto; color: var(--muted-2); padding: 4px; border-radius: 6px;
+    transition: all 0.15s; display: grid; place-items: center;
+  }
+  .collapse:hover { color: var(--text); background: var(--surface-2); }
+  
+  [data-collapsed-l="true"] .brand span, [data-collapsed-l="true"] .switcher .meta,
+  [data-collapsed-l="true"] .group-label, [data-collapsed-l="true"] .nav-item span,
+  [data-collapsed-l="true"] .nav-item .count, [data-collapsed-l="true"] .nav-item .plus,
+  [data-collapsed-l="true"] .acct .meta, [data-collapsed-l="true"] .switcher .chev,
+  [data-collapsed-l="true"] .gear { display: none; }
+  
+  [data-collapsed-l="true"] .nav-top { padding-left: 20px; padding-right: 20px; }
+  [data-collapsed-l="true"] .collapse { margin-left: 0; margin-top: 20px; }
+  [data-collapsed-l="true"] .nav-item { justify-content: center; padding: 10px; }
+  
+  /* switcher */
+  .switcher {
+    margin: 0 12px 16px; display: flex; align-items: center; gap: 12px; padding: 8px 10px;
+    border-radius: 10px; cursor: pointer; transition: background 0.15s; border: 1px solid transparent;
+  }
+  .switcher:hover { background: var(--surface-2); }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center;
+    font-weight: 700; font-size: 12px; color: #06281d; background: var(--incoming);
+  }
+  .switcher .meta { min-width: 0; flex: 1; }
+  .switcher .meta .name { font-size: 13.5px; font-weight: 600; line-height: 1.2; color: var(--text); }
+  .switcher .meta .addr { font-size: 11px; color: var(--muted-2); margin-top: 2px; }
+  .switcher .chev { color: var(--muted-2); flex: none; }
+
+  .nav-scroll { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+  
+  /* Group labels muted & generous rhythm */
+  .group-label {
+    font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2);
+    font-weight: 600; opacity: 0.7; padding: 24px 10px 8px;
+  }
+  .group-label:first-child { padding-top: 4px; }
+  
+  /* Active item pill */
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 8px;
+    color: var(--muted); font-size: 13.5px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s ease; margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .nav-item svg { width: 17px; height: 17px; flex: none; stroke-width: 2.2px; }
+  .nav-item.active { background: rgba(245, 166, 35, 0.12); color: var(--amber); }
+  
+  .nav-item .count {
+    margin-left: auto; font-size: 11px; background: var(--surface-2); color: var(--muted);
+    padding: 2px 7px; border-radius: 999px; font-weight: 600;
+  }
+  .nav-item .plus {
+    margin-left: auto; color: inherit; opacity: 0; width: 16px; height: 16px; transition: opacity 0.15s;
+  }
+  .nav-item.active .plus { opacity: 1; color: var(--amber); }
+  .nav-item:hover .plus { opacity: 1; }
+  
+  .recents .nav-item { font-size: 12.5px; color: var(--muted); padding: 7px 10px; }
+  .recents .ric { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+
+  /* Footer */
+  .nav-foot {
+    border-top: 1px solid var(--border-soft); padding: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .acct {
+    display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 6px;
+    border-radius: 8px; cursor: pointer; transition: background 0.15s;
+  }
+  .acct:hover { background: var(--surface-2); }
+  .acct .meta { min-width: 0; }
+  .acct .meta .n { font-size: 13.5px; font-weight: 600; line-height: 1.2; }
+  .acct .meta .s { font-size: 11px; color: var(--muted-2); margin-top: 2px; }
+  .gear {
+    all: unset; cursor: pointer; color: var(--muted-2); padding: 8px; border-radius: 8px;
+    transition: all 0.15s; display: grid; place-items: center;
+  }
+  .gear:hover { color: var(--text); background: var(--surface-2); }
+
+  /* ── MAIN ─────────────────────────────────────────────────────────────────── */
+  .main { overflow-y: auto; min-width: 0; background: var(--bg); }
+  .main-pad { padding: 40px 48px 60px; max-width: 960px; margin: 0 auto; }
+  .h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: 14px; margin-top: 6px; line-height: 1.5; }
+  
+  /* Notifications Card */
+  .notif {
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
+    padding: 16px 20px; display: flex; align-items: flex-start; gap: 16px; margin-bottom: 36px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .notif .icon { color: var(--locked); padding-top: 2px; }
+  .notif-text { flex: 1; }
+  .notif-text .nt { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .notif-text .nd { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .notif-acts { display: flex; gap: 10px; margin-top: 14px; }
+  .btn {
+    all: unset; cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 6px 14px;
+    border-radius: 6px; transition: all 0.15s; background: var(--surface-2); border: 1px solid var(--border-soft);
+  }
+  .btn:hover { background: var(--border); border-color: var(--border); }
+  .btn.primary { background: rgba(245,166,35,0.15); color: var(--amber); border-color: transparent; }
+  .btn.primary:hover { background: rgba(245,166,35,0.25); }
+  .notif-close { all: unset; cursor: pointer; color: var(--muted-2); padding: 4px; border-radius: 6px; transition: all 0.15s; }
+  .notif-close:hover { color: var(--text); background: var(--surface-2); }
+
+  /* Hero Balance */
+  .hero-amt {
+    font-size: 46px; font-weight: 600; letter-spacing: -0.03em; margin-top: 8px; display: flex; align-items: baseline; gap: 12px;
+  }
+  .hero-amt .ccx { font-size: 18px; color: var(--amber); font-weight: 600; }
+  
+  /* Stat row */
+  .stat-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 36px; margin-bottom: 36px;
+  }
+  .stat {
+    background: transparent; border: 1px solid var(--border-soft); padding: 20px 24px;
+    border-radius: var(--radius); transition: border-color 0.15s; cursor: default;
+  }
+  .stat:hover { border-color: var(--border); }
+  .stat .k { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .stat .k .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .stat .v { font-size: 24px; font-weight: 600; margin-top: 12px; letter-spacing: -0.01em; }
+  .stat .v small { font-size: 12.5px; color: var(--muted-2); font-weight: 500; margin-left: 6px; }
+
+  /* Transactions list */
+  .filterbar { display: flex; gap: 10px; margin-top: 24px; margin-bottom: 28px; flex-wrap: wrap; }
+  .chip {
+    font-size: 13px; padding: 7px 16px; border-radius: 999px; border: 1px solid var(--border-soft);
+    color: var(--muted); cursor: pointer; font-weight: 500; transition: all 0.15s; background: transparent;
+  }
+  .chip:hover { border-color: var(--border); color: var(--text); background: var(--surface-2); }
+  .chip.on { background: var(--amber); color: #1a1207; border-color: var(--amber); font-weight: 600; }
+
+  .txlist { display: flex; flex-direction: column; gap: 6px; }
+  .txrow {
+    display: flex; align-items: center; gap: 16px; padding: 14px 20px; border: 1px solid transparent;
+    border-radius: 12px; cursor: pointer; background: transparent; transition: all 0.15s;
+  }
+  .txrow:hover { background: var(--surface); border-color: var(--border-soft); }
+  .txrow.sel { background: var(--surface); border-color: var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  
+  .txico { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center; }
+  .txico svg { width: 20px; height: 20px; }
+  .txrow .grow { flex: 1; min-width: 0; }
+  .txrow .t1 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .txrow .t2 { font-size: 12px; color: var(--muted-2); }
+  .txamt { font-weight: 600; font-size: 15px; }
+
+  /* ── RIGHT CONTEXTUAL RAIL ────────────────────────────────────────────────── */
+  .rail {
+    background: var(--surface); border-left: 1px solid var(--border-soft); overflow-y: auto; min-width: 0;
+  }
+  .rail-pad { padding: 32px 28px 48px; }
+  .rail-h {
+    font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2);
+    font-weight: 600; margin: 32px 4px 14px; display: flex; align-items: center; gap: 8px; opacity: 0.8;
+  }
+  .rail-h:first-child { margin-top: 0; }
+  /* Run-settings-style panel header (from the Unsloth right-sidebar reference) */
+  .rail-head { display:flex; align-items:center; gap:8px; padding:0 2px 14px;
+    border-bottom:1px solid var(--border-soft); margin-bottom:6px; }
+  .rail-head .title { font-size:13px; font-weight:600; letter-spacing:.01em; }
+  .rail-head .pin { margin-left:auto; color:var(--muted-2); padding:5px; border-radius:7px;
+    cursor:pointer; background:transparent; border:0; }
+  .rail-head .pin:hover { color:var(--text); background:var(--surface-2); }
+  .rail-head .pin svg { width:16px; height:16px; }
+  .rail-h .chev { margin-left:auto; width:14px; height:14px; opacity:.55; }
+  .mini {
+    background: transparent; border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 18px 20px;
+  }
+  .price { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; }
+  .price .p { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+  .price .chg { font-size: 13px; font-weight: 600; color: var(--incoming); }
+  .spark { height: 52px; margin-top: 16px; width: 100%; }
+  
+  .hold { display: flex; align-items: center; gap: 14px; padding: 12px 0; }
+  .hold + .hold { border-top: 1px solid var(--border-soft); }
+  .hold .bar { width: 4px; height: 36px; border-radius: 4px; flex: none; }
+  .hold .l { flex: 1; }
+  .hold .l .k { font-size: 13.5px; font-weight: 500; }
+  .hold .l .s { font-size: 12px; color: var(--muted-2); margin-top: 3px; }
+  .hold .amt { font-weight: 600; font-size: 14.5px; }
+  
+  .qa { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .qa button {
+    all: unset; cursor: pointer; text-align: center; padding: 16px; border-radius: 12px;
+    border: 1px solid var(--border-soft); background: transparent; font-size: 13px; font-weight: 600;
+    color: var(--text); display: flex; flex-direction: column; align-items: center; gap: 10px;
+    transition: all 0.15s;
+  }
+  .qa button:hover { border-color: var(--border); background: var(--surface-2); transform: translateY(-1px); }
+  .qa button svg { width: 18px; height: 18px; color: var(--muted); transition: color 0.15s; }
+  .qa button:hover svg { color: var(--amber); }
+  
+  .kv { display: flex; justify-content: space-between; padding: 10px 0; font-size: 13.5px; }
+  .kv + .kv { border-top: 1px solid var(--border-soft); }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-weight: 500; }
+  .kv .v.mono { font-size: 12px; }
+  .railclose { display: none; }
+
+  .hide { display: none !important; }
+
+  /* ── Responsive ─── */
+  @media(max-width:1100px) {
+    .shell { grid-template-columns: var(--rail-l) minmax(0,1fr) !important; }
+    .rail {
+      position: fixed; right: 0; top: 41px; bottom: 0; width: min(380px,86vw); z-index: 40;
+      box-shadow: -24px 0 60px rgba(0,0,0,.5); transform: translateX(100%); transition: transform .22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .shell[data-rail-r="true"] .rail { transform: none; }
+    .railclose { display: inline-grid; margin-bottom: 24px; float: right; background: transparent; border: 1px solid var(--border-soft); }
+    .railclose:hover { background: var(--surface-2); }
+  }
+  @media(max-width:720px) {
+    .shell { grid-template-columns: 1fr !important; }
+    .nav {
+      position: fixed; left: 0; top: 41px; bottom: 0; width: 256px; z-index: 45;
+      transform: translateX(-100%); transition: transform .22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .shell[data-collapsed-l="false"] .nav { transform: none; box-shadow: 24px 0 60px rgba(0,0,0,.5); }
+  }
+</style>
+</head>
+<body>
+
+<div class="review-bar">
+  <b>#122 · Dual-sidebar shell</b>
+  <span class="review-note">hi-fi mockup · polished with calm density · pick a route to see the right rail change</span>
+  <div class="seg" role="group" aria-label="Route">
+    <button data-go="account" aria-pressed="true">Account</button>
+    <button data-go="transactions" aria-pressed="false">Transactions</button>
+  </div>
+  <div class="seg" role="group" aria-label="Toggles" style="margin-left:10px">
+    <button data-toggle="collapse" aria-pressed="false">⟨ Collapse left</button>
+    <button data-toggle="rail" aria-pressed="true">Right rail</button>
+  </div>
+</div>
+
+<div class="shell" data-collapsed-l="false" data-rail-r="true">
+
+  <!-- ───────── LEFT SIDENAV ───────── -->
+  <aside class="nav">
+    <div class="nav-top">
+      <div class="brand"><span class="logo"><i data-lucide="wallet" style="width:14px;height:14px"></i></span><span>Conceal</span></div>
+      <button class="collapse" data-toggle="collapse" title="Collapse"><i data-lucide="panel-left-close" style="width:18px;height:18px"></i></button>
+    </div>
+
+    <!-- wallet switcher -->
+    <div class="switcher" tabindex="0" title="Switch wallet">
+      <span class="avatar">S</span>
+      <span class="meta"><div class="name">Savings</div><div class="addr mono">ccx7QU…JMxR</div></span>
+      <i class="chev" data-lucide="chevrons-up-down" style="width:16px;height:16px"></i>
+    </div>
+
+    <div class="nav-scroll">
+      <div class="group-label">Wallet</div>
+      <div class="nav-item active" tabindex="0" data-nav="account"><i data-lucide="home"></i><span>Account</span><i class="plus" data-lucide="plus"></i></div>
+      <div class="nav-item" tabindex="0" data-nav="transactions"><i data-lucide="arrow-left-right"></i><span>Transactions</span><i class="plus" data-lucide="plus"></i></div>
+      <div class="nav-item" tabindex="0"><i data-lucide="send"></i><span>Send</span><i class="plus" data-lucide="plus"></i></div>
+      <div class="nav-item" tabindex="0"><i data-lucide="qr-code"></i><span>Receive</span><i class="plus" data-lucide="plus"></i></div>
+      <div class="nav-item" tabindex="0"><i data-lucide="mail"></i><span>Messages</span><span class="count">3</span><i class="plus" data-lucide="plus"></i></div>
+      <div class="nav-item" tabindex="0"><i data-lucide="line-chart"></i><span>Market</span><i class="plus" data-lucide="plus"></i></div>
+
+      <div class="group-label">Banking</div>
+      <div class="nav-item" tabindex="0"><i data-lucide="piggy-bank"></i><span>Deposits</span><i class="plus" data-lucide="plus"></i></div>
+      <div class="nav-item" tabindex="0"><i data-lucide="calendar-clock"></i><span>Scheduled</span><i class="plus" data-lucide="plus"></i></div>
+      <div class="nav-item" tabindex="0"><i data-lucide="heart-pulse"></i><span>Check-ins</span><i class="plus" data-lucide="plus"></i></div>
+      <div class="nav-item" tabindex="0"><i data-lucide="sparkles"></i><span>Insights</span><i class="plus" data-lucide="plus"></i></div>
+
+      <div class="group-label">Recents</div>
+      <div class="recents">
+        <div class="nav-item" tabindex="0"><span class="ric" style="background:var(--incoming)"></span><span>+1.25 from ccx7P…w9k</span></div>
+        <div class="nav-item" tabindex="0"><span class="ric" style="background:var(--outgoing)"></span><span>−0.51 to Exchange</span></div>
+        <div class="nav-item" tabindex="0"><span class="ric" style="background:var(--locked)"></span><span>Deposit · 1 CCX locked</span></div>
+      </div>
+    </div>
+
+    <div class="nav-foot">
+      <div class="acct" tabindex="0">
+        <span class="avatar" style="background:var(--amber);color:#1a1207">F</span>
+        <span class="meta"><div class="n">Funding</div><div class="s">2 wallets</div></span>
+      </div>
+      <button class="gear" title="Settings"><i data-lucide="settings" style="width:18px;height:18px"></i></button>
+    </div>
+  </aside>
+
+  <!-- ───────── MAIN ───────── -->
+  <main class="main">
+    <!-- Account view -->
+    <div class="main-pad route route-account">
+      
+      <!-- Notification Card -->
+      <div class="notif" id="n1">
+        <div class="icon"><i data-lucide="info" style="width:20px;height:20px"></i></div>
+        <div class="notif-text">
+          <div class="nt">Deposit Locked</div>
+          <div class="nd">Your latest deposit of 1.00 CCX has successfully locked for 31 days. You'll automatically earn yielding rewards on this amount.</div>
+          <div class="notif-acts">
+            <button class="btn primary">View deposit</button>
+            <button class="btn" onclick="document.getElementById('n1').style.display='none'">Dismiss</button>
+          </div>
+        </div>
+        <button class="notif-close" aria-label="Close" onclick="document.getElementById('n1').style.display='none'"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      </div>
+
+      <div class="h1">Account Overview</div>
+      <div class="sub">Manage your CCX holdings and view transaction summary</div>
+      
+      <div style="margin-top:48px;">
+        <div style="font-size:13.5px;color:var(--muted);font-weight:500">Available · ready to spend</div>
+        <div class="hero-amt">188.25 <span class="ccx">CCX</span></div>
+        <div style="font-size:13.5px;color:var(--muted-2);margin-top:8px;font-weight:500">of 188.25 CCX total · ≈ $1.38 USD</div>
+      </div>
+      
+      <div class="stat-row">
+        <div class="stat"><div class="k"><span class="dot" style="background:var(--amber)"></span>Available</div><div class="v">188.25</div></div>
+        <div class="stat"><div class="k"><span class="dot" style="background:var(--outgoing)"></span>Pending</div><div class="v">0.00</div></div>
+        <div class="stat"><div class="k"><span class="dot" style="background:var(--locked)"></span>Locked</div><div class="v">1.00 <small>· 31d</small></div></div>
+        <div class="stat"><div class="k"><span class="dot" style="background:var(--incoming)"></span>Withdrawable</div><div class="v">0.00</div></div>
+      </div>
+      
+      <div style="margin-top:40px; font-weight:600; font-size:16px;">Recent Activity</div>
+      <div class="sub" style="margin-bottom:24px;">14,070 transactions · last activity 1h ago</div>
+      <div class="txlist">
+        <div class="txrow" data-tx="1" tabindex="0">
+          <span class="txico" style="background:rgba(239,68,68,.12);color:var(--outgoing)"><i data-lucide="arrow-up-right"></i></span>
+          <span class="grow"><div class="t1">Sent</div><div class="t2">32m ago · 20 confirmations</div></span>
+          <span class="txamt" style="color:var(--outgoing)">−0.51 CCX</span>
+        </div>
+        <div class="txrow" data-tx="2" tabindex="0">
+          <span class="txico" style="background:rgba(16,185,129,.12);color:var(--incoming)"><i data-lucide="arrow-down-left"></i></span>
+          <span class="grow"><div class="t1">Received</div><div class="t2">8d ago · 6,317 confirmations</div></span>
+          <span class="txamt" style="color:var(--incoming)">+1.25 CCX</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions view -->
+    <div class="main-pad route route-transactions hide">
+      <div class="h1">Transaction History</div>
+      <div class="sub">Click a transaction to see its details in the side panel →</div>
+      <div class="filterbar">
+        <span class="chip on" tabindex="0">All</span>
+        <span class="chip" tabindex="0">Received</span>
+        <span class="chip" tabindex="0">Sent</span>
+        <span class="chip" tabindex="0">Deposits</span>
+        <span class="chip" tabindex="0">Messages</span>
+      </div>
+      <div class="txlist">
+        <div class="txrow sel" data-tx="1" tabindex="0">
+          <span class="txico" style="background:rgba(239,68,68,.12);color:var(--outgoing)"><i data-lucide="arrow-up-right"></i></span>
+          <span class="grow"><div class="t1">Sent</div><div class="t2">32m ago · 20 confirmations</div></span>
+          <span class="txamt" style="color:var(--outgoing)">−0.51 CCX</span>
+        </div>
+        <div class="txrow" data-tx="2" tabindex="0">
+          <span class="txico" style="background:rgba(16,185,129,.12);color:var(--incoming)"><i data-lucide="arrow-down-left"></i></span>
+          <span class="grow"><div class="t1">Received</div><div class="t2">8d ago · 6,317 confirmations</div></span>
+          <span class="txamt" style="color:var(--incoming)">+1.25 CCX</span>
+        </div>
+        <div class="txrow" data-tx="3" tabindex="0">
+          <span class="txico" style="background:rgba(96,165,250,.12);color:var(--locked)"><i data-lucide="piggy-bank"></i></span>
+          <span class="grow"><div class="t1">Deposit</div><div class="t2">today · unlocks in 31d</div></span>
+          <span class="txamt" style="color:var(--locked)">1.00 CCX</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ───────── RIGHT CONTEXTUAL RAIL ───────── -->
+  <aside class="rail">
+    <div class="rail-pad">
+      <div class="rail-head">
+        <span class="title" id="railTitle">Account</span>
+        <button class="pin" data-toggle="rail" title="Collapse panel"><i data-lucide="panel-right-close"></i></button>
+      </div>
+
+      <!-- Account context: market + holdings + quick actions -->
+      <div class="route route-account">
+        <div class="rail-h"><i data-lucide="line-chart" style="width:14px;height:14px"></i>Market</div>
+        <div class="mini">
+          <div style="font-size:11.5px;color:var(--muted-2);font-weight:500">CCX / USD</div>
+          <div class="price"><span class="p">$0.0073</span><span class="chg">▲ 2.34%</span></div>
+          <svg class="spark" viewBox="0 0 300 42" preserveAspectRatio="none">
+            <path d="M0,32 L30,30 L60,33 L90,24 L120,26 L150,18 L180,20 L210,12 L240,15 L270,8 L300,10" 
+                  fill="none" stroke="var(--incoming)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        
+        <div class="rail-h">Holdings</div>
+        <div class="mini" style="padding: 4px 20px;">
+          <div class="hold"><span class="bar" style="background:var(--amber)"></span><span class="l"><div class="k">Available</div><div class="s">ready to spend</div></span><span class="amt">188.25</span></div>
+          <div class="hold"><span class="bar" style="background:var(--locked)"></span><span class="l"><div class="k">Locked</div><div class="s">unlocks in 31 days</div></span><span class="amt">1.00</span></div>
+          <div class="hold"><span class="bar" style="background:var(--outgoing)"></span><span class="l"><div class="k">Pending</div><div class="s">awaiting confirmation</div></span><span class="amt">0.00</span></div>
+        </div>
+        
+        <div class="rail-h">Quick actions</div>
+        <div class="qa">
+          <button><i data-lucide="send"></i>Send</button>
+          <button><i data-lucide="qr-code"></i>Receive</button>
+          <button><i data-lucide="piggy-bank"></i>Deposit</button>
+          <button><i data-lucide="repeat"></i>Optimize</button>
+        </div>
+      </div>
+
+      <!-- Transactions context: selected tx detail + filters -->
+      <div class="route route-transactions hide">
+        <div class="rail-h"><i data-lucide="receipt" style="width:14px;height:14px"></i>Transaction detail</div>
+        <div class="mini">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="txico" style="background:rgba(239,68,68,.12);color:var(--outgoing)"><i data-lucide="arrow-up-right"></i></span>
+            <div><div style="font-weight:700;font-size:14.5px">Sent · 0.51 CCX</div><div style="font-size:12px;color:var(--muted-2);margin-top:2px">32m ago</div></div>
+          </div>
+          <div style="margin-top:20px">
+            <div class="kv"><span class="k">Status</span><span class="v" style="color:var(--incoming)">Confirmed · 20</span></div>
+            <div class="kv"><span class="k">Amount</span><span class="v">−0.51 CCX</span></div>
+            <div class="kv"><span class="k">Fee</span><span class="v">0.0010 CCX</span></div>
+            <div class="kv"><span class="k">To</span><span class="v mono">ccx7Ab…X29q</span></div>
+            <div class="kv"><span class="k">Tx hash</span><span class="v mono">9f3c…d1e4</span></div>
+            <div class="kv"><span class="k">Block</span><span class="v mono">2,098,244</span></div>
+          </div>
+          <div class="qa" style="margin-top:20px">
+            <button><i data-lucide="copy"></i>Copy hash</button>
+            <button><i data-lucide="sticky-note"></i>Add note</button>
+          </div>
+        </div>
+        <div class="rail-h">Filters</div>
+        <div class="mini">
+          <div class="kv"><span class="k">Date range</span><span class="v">All time</span></div>
+          <div class="kv"><span class="k">Type</span><span class="v">All</span></div>
+          <div class="kv"><span class="k">Min amount</span><span class="v">—</span></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const shell = document.querySelector('.shell');
+  const html = document.documentElement;
+  
+  // Route toggle logic
+  function setRoute(r){
+    html.dataset.route = r;
+    document.querySelectorAll('.route').forEach(el => el.classList.toggle('hide', !el.classList.contains('route-'+r)));
+    document.querySelectorAll('.nav-item[data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav===r));
+    document.querySelectorAll('.seg [data-go]').forEach(b => b.setAttribute('aria-pressed', b.dataset.go===r));
+    const rt = document.getElementById('railTitle');
+    if (rt) rt.textContent = r === 'transactions' ? 'Transaction' : 'Account';
+  }
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => setRoute(b.dataset.go));
+  document.querySelectorAll('.nav-item[data-nav]').forEach(b => {
+    b.onclick = () => setRoute(b.dataset.nav);
+    b.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') setRoute(b.dataset.nav); });
+  });
+
+  // Left collapse
+  function toggleCollapse() {
+    const c = shell.dataset.collapsedL === 'true'; 
+    shell.dataset.collapsedL = !c;
+    document.querySelector('.seg [data-toggle="collapse"]').setAttribute('aria-pressed', !c);
+  }
+  document.querySelectorAll('[data-toggle="collapse"]').forEach(b => b.onclick = toggleCollapse);
+
+  // Right rail toggle
+  function toggleRail() {
+    const on = shell.dataset.railR === 'true'; 
+    shell.dataset.railR = !on;
+    document.querySelector('.seg [data-toggle="rail"]').setAttribute('aria-pressed', !on);
+  }
+  document.querySelectorAll('[data-toggle="rail"]').forEach(b => b.onclick = toggleRail);
+
+  // Transaction row select
+  document.querySelectorAll('.txrow').forEach(r => {
+    const selectRow = () => {
+      document.querySelectorAll('.txrow').forEach(x => x.classList.remove('sel')); 
+      r.classList.add('sel');
+    };
+    r.onclick = selectRow;
+    r.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRow(); }});
+  });
+
+  lucide.createIcons();
+</script>
+</body>
+</html>

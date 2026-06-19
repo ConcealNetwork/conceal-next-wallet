@@ -2,6 +2,7 @@
 
 import { toast } from "sonner";
 import { Footer } from "@/components/layout/footer";
+import { GlobalHeader } from "@/components/layout/global-header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
@@ -38,11 +39,12 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
     // user on the current page after unlock; it never auto-opens from `?next=`.
     <UnlockWalletProvider defaultRedirect={null} autoOpenFromNext={false}>
       <NetworkTelemetryProvider>
-        <div className="text-foreground">
+        <div className="flex min-h-screen flex-col text-foreground">
+          <GlobalHeader />
           <Sidebar />
           <main
             className={cn(
-              "flex min-h-screen flex-col transition-[padding] duration-300 ease-in-out motion-reduce:transition-none",
+              "flex min-h-0 flex-1 flex-col transition-[padding] duration-300 ease-in-out motion-reduce:transition-none",
               collapsed ? "lg:pl-[64px]" : "lg:pl-[260px]",
             )}
           >
