@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useInstallPrompt } from "@/lib/hooks/use-install-prompt";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQueryClient } from "@/lib/hooks/query-provider";
 import { requestPersistentStorage, useStorageHealth } from "@/lib/hooks/use-storage-health";
@@ -38,13 +39,20 @@ function readDismissed(): boolean {
  * durable storage from a user gesture (`navigator.storage.persist()`) — the gesture
  * gives the best chance of a grant (Chrome decides on engagement heuristics; Firefox
  * prompts). On a grant the re-probe flips storage to healthy and the banner hides.
+ *
+ * Installing the PWA is the most reliable engagement heuristic Chrome uses to grant
+ * `persist()`, so the not-persisted case also offers "Install app" via
+ * `useInstallPrompt` when the browser is ready (and a manual Add-to-Home-Screen hint
+ * on iOS, which has no install prompt). Hidden once standalone (already installed).
  */
 export function StorageWarningBanner() {
   const { data } = useStorageHealth();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const { canInstall, isStandalone, isIOS, promptInstall } = useInstallPrompt();
   const [dismissed, setDismissed] = useState(readDismissed);
   const [requesting, setRequesting] = useState(false);
+  const [installing, setInstalling] = useState(false);
 
   if (!data || data === "none" || dismissed || pathname === "/wallet/export") {
     return null;
@@ -77,6 +85,20 @@ export function StorageWarningBanner() {
     }
   }
 
+  async function installApp() {
+    setInstalling(true);
+    try {
+      const ok = await promptInstall();
+      if (ok) {
+        // Installing earns persistence — re-probe so the banner reflects it (hides on a grant).
+        await queryClient.invalidateQueries({ queryKey: queryKeys.storageHealth });
+        toast.success("Installed — your browser will keep the wallet.");
+      }
+    } finally {
+      setInstalling(false);
+    }
+  }
+
   return (
     <div
       className="mb-4 flex items-start gap-3 rounded-xl border border-wallet-amber/30 bg-wallet-amber/10 px-4 py-3 text-sm text-foreground"
@@ -98,6 +120,26 @@ export function StorageWarningBanner() {
               {requesting ? "Requesting…" : "Keep on this device"}
             </button>
           ) : null}
+          {data === "not-persisted" && !isStandalone
+            ? canInstall
+              ? (
+                <button
+                  type="button"
+                  onClick={() => void installApp()}
+                  disabled={installing}
+                  className="cursor-pointer font-semibold text-wallet-amber underline-offset-4 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {installing ? "Installing…" : "Install app"}
+                </button>
+              )
+              : isIOS
+                ? (
+                  <span className="text-muted-foreground">
+                    On iOS: Share → Add to Home Screen to keep your wallet.
+                  </span>
+                )
+                : null
+            : null}
           <Link
             href="/wallet/export"
             className="inline-block font-semibold text-wallet-amber underline-offset-4 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
