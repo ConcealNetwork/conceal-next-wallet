@@ -142,7 +142,7 @@ function NotificationsSetting() {
     if (!checked) {
       setOptedIn(false);
       setOptedInState(false);
-      toast.success("Notifications disabled.");
+      toast.success(t("settings.toastNotificationsDisabled"));
       return;
     }
     const result = await requestNotificationPermission();
@@ -150,15 +150,15 @@ function NotificationsSetting() {
     if (result === "granted") {
       setOptedIn(true);
       setOptedInState(true);
-      toast.success("Notifications enabled.");
+      toast.success(t("settings.toastNotificationsEnabled"));
     } else {
       // Keep opt-in off when permission isn't granted — never alert silently.
       setOptedIn(false);
       setOptedInState(false);
       toast.error(
         result === "denied"
-          ? "Notifications are blocked in your browser settings."
-          : "Notification permission was not granted.",
+          ? t("settings.toastNotificationsBlocked")
+          : t("settings.toastNotificationsNotGranted"),
       );
     }
   }
@@ -224,14 +224,16 @@ export default function SettingsPage() {
   }, [current, nodeUrlDirty, creationHeightDirty]);
 
   function settingsSavedMessage() {
-    return isMock ? "Mock settings updated." : "Settings updated.";
+    return isMock ? t("settings.toastMockSettingsUpdated") : t("settings.toastSettingsUpdated");
   }
 
   function update(input: Partial<WalletSettings>, message = settingsSavedMessage()) {
     updateSettings.mutate(input, {
       onSuccess: () => toast.success(message),
       onError: (error: unknown) =>
-        toast.error(error instanceof Error ? error.message : "Settings update failed."),
+        toast.error(
+          error instanceof Error ? error.message : t("settings.toastSettingsUpdateFailed"),
+        ),
     });
   }
 
@@ -251,7 +253,7 @@ export default function SettingsPage() {
             .then((lag) => {
               if (lag?.isLagging) {
                 toast.warning(
-                  `This node is ${lag.lagBlocks.toLocaleString()} blocks behind the network — it may show outdated balances. Consider switching nodes.`,
+                  t("settings.toastNodeLagWarning", { blocks: lag.lagBlocks.toLocaleString() }),
                 );
               }
             })
@@ -261,7 +263,7 @@ export default function SettingsPage() {
         }
       },
       onError: (error: unknown) =>
-        toast.error(error instanceof Error ? error.message : "Node update failed."),
+        toast.error(error instanceof Error ? error.message : t("settings.toastNodeUpdateFailed")),
     });
   }
 
@@ -271,14 +273,14 @@ export default function SettingsPage() {
     if (checked) {
       applyNodeConnection(
         { useCustomNode: true, nodeUrl },
-        isMock ? "Mock custom node enabled." : "Custom node connected.",
+        isMock ? t("settings.toastMockCustomNodeEnabled") : t("settings.toastCustomNodeConnected"),
       );
       return;
     }
 
     applyNodeConnection(
       { useCustomNode: false, nodeUrl: current?.nodeUrl ?? nodeUrl },
-      isMock ? "Mock public nodes enabled." : "Using public nodes.",
+      isMock ? t("settings.toastMockPublicNodesEnabled") : t("settings.toastUsingPublicNodes"),
     );
   }
 
@@ -288,14 +290,14 @@ export default function SettingsPage() {
 
     applyNodeConnection(
       { useCustomNode: true, nodeUrl },
-      isMock ? "Mock custom node updated." : "Custom node updated.",
+      isMock ? t("settings.toastMockCustomNodeUpdated") : t("settings.toastCustomNodeUpdated"),
     );
   }
 
   function applyHeights() {
     const parsedCreation = parseInt(creationHeight, 10);
     if (Number.isNaN(parsedCreation)) {
-      toast.error("Enter a valid creation height.");
+      toast.error(t("settings.toastInvalidCreationHeight"));
       return;
     }
     updateSettings.mutate(
@@ -306,12 +308,14 @@ export default function SettingsPage() {
           setCreationHeightDirty(false);
           toast.success(
             isMock
-              ? "Mock wallet updated."
-              : "Creation height updated — rescanning from that block.",
+              ? t("settings.toastMockWalletUpdated")
+              : t("settings.toastCreationHeightUpdated"),
           );
         },
         onError: (error: unknown) =>
-          toast.error(error instanceof Error ? error.message : "Settings update failed."),
+          toast.error(
+            error instanceof Error ? error.message : t("settings.toastSettingsUpdateFailed"),
+          ),
       },
     );
   }
@@ -321,11 +325,11 @@ export default function SettingsPage() {
       resetAndRescan.mutate(undefined, {
         onSuccess: () => {
           toast.success(
-            isMock ? "Mock rescan started." : "Wallet reset — rescanning from creation height.",
+            isMock ? t("settings.toastMockRescanStarted") : t("settings.toastResetRescan"),
           );
         },
         onError: (error: unknown) =>
-          toast.error(error instanceof Error ? error.message : "Rescan failed."),
+          toast.error(error instanceof Error ? error.message : t("settings.toastRescanFailed")),
       });
     };
 
@@ -336,7 +340,7 @@ export default function SettingsPage() {
 
     const parsedCreation = parseInt(creationHeight, 10);
     if (Number.isNaN(parsedCreation)) {
-      toast.error("Enter a valid creation height.");
+      toast.error(t("settings.toastInvalidCreationHeight"));
       return;
     }
 
@@ -349,7 +353,9 @@ export default function SettingsPage() {
           runReset();
         },
         onError: (error: unknown) =>
-          toast.error(error instanceof Error ? error.message : "Settings update failed."),
+          toast.error(
+            error instanceof Error ? error.message : t("settings.toastSettingsUpdateFailed"),
+          ),
       },
     );
   }
@@ -365,13 +371,17 @@ export default function SettingsPage() {
     optimizeWallet.mutate(undefined, {
       onSuccess: (result) => {
         if (result.optimized) {
-          toast.success(isMock ? "Mock optimization complete." : "Wallet optimization complete.");
+          toast.success(
+            isMock ? t("settings.toastMockOptimizeComplete") : t("settings.toastOptimizeComplete"),
+          );
           return;
         }
-        toast.info(isMock ? "Mock wallet does not need optimization." : "Nothing to optimize.");
+        toast.info(
+          isMock ? t("settings.toastMockNothingToOptimize") : t("settings.toastNothingToOptimize"),
+        );
       },
       onError: (error: unknown) =>
-        toast.error(error instanceof Error ? error.message : "Optimization failed."),
+        toast.error(error instanceof Error ? error.message : t("settings.toastOptimizeFailed")),
     });
   }
 
@@ -415,7 +425,11 @@ export default function SettingsPage() {
                   onChange={(event) => {
                     const useShort = event.target.value === "short";
                     void ticker.setUseShortTicker(useShort).then(() => {
-                      toast.success(isMock ? "Mock ticker updated." : "Ticker updated.");
+                      toast.success(
+                        isMock
+                          ? t("settings.toastMockTickerUpdated")
+                          : t("settings.toastTickerUpdated"),
+                      );
                     });
                   }}
                 >

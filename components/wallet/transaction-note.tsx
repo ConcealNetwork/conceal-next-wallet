@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTxNote } from "@/lib/hooks/use-tx-note";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { MAX_TX_NOTE_LENGTH } from "@/lib/storage/tx-note-format";
 
 /**
@@ -16,6 +17,7 @@ import { MAX_TX_NOTE_LENGTH } from "@/lib/storage/tx-note-format";
  */
 export function TransactionNote({ hash }: { hash: string }) {
   const { note, isLoading, save, isSaving } = useTxNote(hash);
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const fieldId = useId();
@@ -29,9 +31,9 @@ export function TransactionNote({ hash }: { hash: string }) {
     try {
       await save(draft);
       setEditing(false);
-      toast.success(draft.trim() ? "Note saved." : "Note removed.");
+      toast.success(draft.trim() ? t("toast.noteSaved") : t("toast.noteRemoved"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save note.");
+      toast.error(error instanceof Error ? error.message : t("toast.noteSaveFailed"));
     }
   }
 
