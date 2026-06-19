@@ -9,14 +9,14 @@ import type { TransactionType } from "@/lib/types";
 import { deriveInsights, type MonthlyFlow } from "@/lib/ui/wallet-insights";
 import { ccxToNumber, formatCcx, usdSubline } from "@/lib/utils";
 
-const TYPE_LABELS: Record<TransactionType, string> = {
-  receive: "Received",
-  send: "Sent",
-  deposit: "Deposits",
-  withdrawal: "Withdrawals",
-  fusion: "Optimizations",
-  miner: "Mined",
-  message: "Messages",
+const TYPE_LABEL_KEYS: Record<TransactionType, string> = {
+  receive: "insights.typeReceive",
+  send: "insights.typeSend",
+  deposit: "insights.typeDeposit",
+  withdrawal: "insights.typeWithdrawal",
+  fusion: "insights.typeFusion",
+  miner: "insights.typeMiner",
+  message: "insights.typeMessage",
 };
 
 export default function InsightsPage() {
@@ -38,46 +38,40 @@ export default function InsightsPage() {
 
   return (
     <>
-      <PageHeader
-        title={t("nav.insights")}
-        subtitle="Your activity, computed privately on this device"
-      />
+      <PageHeader title={t("nav.insights")} subtitle={t("insights.subtitle")} />
 
       {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-muted-foreground">{t("insights.loading")}</p>
       ) : insights.txCount === 0 ? (
-        <SectionCard title="No activity yet">
-          <p className="text-muted-foreground">
-            Once you send or receive CCX, this page summarizes your activity — entirely on this
-            device. Nothing is ever sent to a server.
-          </p>
+        <SectionCard title={t("insights.noActivityTitle")}>
+          <p className="text-muted-foreground">{t("insights.noActivityBody")}</p>
         </SectionCard>
       ) : (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="Total received"
+              label={t("insights.totalReceived")}
               value={ccx(insights.totalReceivedAtomic)}
               detail={sub(insights.totalReceivedAtomic)}
               icon={<ArrowDownLeft />}
               tone="incoming"
             />
             <StatCard
-              label="Total sent"
+              label={t("insights.totalSent")}
               value={ccx(insights.totalSentAtomic)}
               detail={sub(insights.totalSentAtomic)}
               icon={<ArrowUpRight />}
               tone="outgoing"
             />
             <StatCard
-              label="Net flow"
+              label={t("insights.netFlow")}
               value={ccx(insights.netFlowAtomic)}
-              detail="Received − sent"
+              detail={t("insights.netFlowDetail")}
               icon={<TrendingUp />}
               tone={insights.netFlowAtomic >= 0 ? "incoming" : "outgoing"}
             />
             <StatCard
-              label="Interest earned"
+              label={t("insights.interestEarned")}
               value={ccx(insights.interestEarnedAtomic)}
               detail={sub(insights.interestEarnedAtomic)}
               icon={<PiggyBank />}
@@ -86,29 +80,29 @@ export default function InsightsPage() {
           </div>
 
           <SectionCard
-            title="Monthly flow"
-            description="Received vs sent per month — derived from your transaction history"
+            title={t("insights.monthlyFlow")}
+            description={t("insights.monthlyFlowDescription")}
           >
             <MonthlyFlowChart months={insights.monthly} />
           </SectionCard>
 
-          <SectionCard title="Activity breakdown" description="Transactions by type">
+          <SectionCard
+            title={t("insights.activityBreakdown")}
+            description={t("insights.activityBreakdownDescription")}
+          >
             <ul className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
-              {(Object.keys(TYPE_LABELS) as TransactionType[])
+              {(Object.keys(TYPE_LABEL_KEYS) as TransactionType[])
                 .filter((type) => insights.countByType[type] > 0)
                 .map((type) => (
                   <li key={type} className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{TYPE_LABELS[type]}</span>
+                    <span className="text-muted-foreground">{t(TYPE_LABEL_KEYS[type])}</span>
                     <span className="font-semibold tabular-nums">{insights.countByType[type]}</span>
                   </li>
                 ))}
             </ul>
           </SectionCard>
 
-          <p className="text-xs text-muted-foreground">
-            These figures are computed on your device from your local wallet history. No analytics
-            or tracking — nothing here leaves your browser.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("insights.privacyNote")}</p>
         </div>
       )}
     </>
@@ -117,8 +111,9 @@ export default function InsightsPage() {
 
 /** Dependency-free SVG bar chart: paired in/out bars per month. */
 function MonthlyFlowChart({ months }: { months: MonthlyFlow[] }) {
+  const { t } = useI18n();
   if (months.length === 0) {
-    return <p className="text-sm text-muted-foreground">Not enough history yet.</p>;
+    return <p className="text-sm text-muted-foreground">{t("insights.notEnoughHistory")}</p>;
   }
   const max = Math.max(1, ...months.map((m) => Math.max(m.inAtomic, m.outAtomic)));
   return (

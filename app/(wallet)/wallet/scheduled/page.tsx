@@ -18,7 +18,6 @@ import {
   CADENCES,
   type Cadence,
   computeNextDue,
-  formatCadence,
   isDue,
   type ScheduledPayment,
 } from "@/lib/ui/scheduled-payments";
@@ -32,6 +31,13 @@ const EMPTY_FORM = {
   anchorDate: "",
 };
 
+const CADENCE_LABEL_KEYS: Record<Cadence, string> = {
+  weekly: "scheduled.cadenceWeekly",
+  monthly: "scheduled.cadenceMonthly",
+  quarterly: "scheduled.cadenceQuarterly",
+  yearly: "scheduled.cadenceYearly",
+};
+
 export default function ScheduledPage() {
   const { t } = useI18n();
   const router = useRouter();
@@ -40,10 +46,10 @@ export default function ScheduledPage() {
   const nowISO = useMemo(() => new Date().toISOString(), []);
 
   function add() {
-    if (!form.label.trim()) return toast.error("Give the reminder a name.");
-    if (!addressIsValid(form.address.trim())) return toast.error("Enter a valid CCX address.");
-    if (!(Number(form.amount) > 0)) return toast.error("Enter an amount greater than zero.");
-    if (!form.anchorDate) return toast.error("Pick a start date.");
+    if (!form.label.trim()) return toast.error(t("scheduled.errNameRequired"));
+    if (!addressIsValid(form.address.trim())) return toast.error(t("scheduled.errAddressInvalid"));
+    if (!(Number(form.amount) > 0)) return toast.error(t("scheduled.errAmountInvalid"));
+    if (!form.anchorDate) return toast.error(t("scheduled.errDateRequired"));
 
     const schedule: ScheduledPayment = {
       id: crypto.randomUUID(),
@@ -57,9 +63,9 @@ export default function ScheduledPage() {
     try {
       setSchedules(saveSchedule(schedule));
       setForm(EMPTY_FORM);
-      toast.success("Reminder added.");
+      toast.success(t("scheduled.added"));
     } catch {
-      toast.error("Couldn't save the reminder — device storage may be full or unavailable.");
+      toast.error(t("scheduled.errSaveFailed"));
     }
   }
 
@@ -72,9 +78,9 @@ export default function ScheduledPage() {
   function markPaid(id: string) {
     try {
       setSchedules(markSchedulePaid(id, new Date().toISOString()));
-      toast.success("Marked as paid — next reminder scheduled.");
+      toast.success(t("scheduled.markedPaid"));
     } catch {
-      toast.error("Couldn't update the reminder — device storage may be unavailable.");
+      toast.error(t("scheduled.errUpdateFailed"));
     }
   }
 
@@ -82,7 +88,7 @@ export default function ScheduledPage() {
     try {
       setSchedules(removeSchedule(id));
     } catch {
-      toast.error("Couldn't remove the reminder — device storage may be unavailable.");
+      toast.error(t("scheduled.errRemoveFailed"));
     }
   }
 
@@ -90,46 +96,46 @@ export default function ScheduledPage() {
 
   return (
     <>
-      <PageHeader title={t("nav.scheduled")} subtitle="Reminders for recurring payments" />
+      <PageHeader title={t("nav.scheduled")} subtitle={t("scheduled.subtitle")} />
 
       <div className="space-y-6">
         <SectionCard
-          title="Add a reminder"
-          description="A reminder only — your keys never auto-send. When one is due, you'll be prompted to review and confirm."
+          title={t("scheduled.addTitle")}
+          description={t("scheduled.addDescription")}
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="sched-label">Name</Label>
+              <Label htmlFor="sched-label">{t("scheduled.nameLabel")}</Label>
               <Input
                 id="sched-label"
-                placeholder="Rent"
+                placeholder={t("scheduled.namePlaceholder")}
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sched-amount">Amount (CCX)</Label>
+              <Label htmlFor="sched-amount">{t("scheduled.amountLabel")}</Label>
               <Input
                 id="sched-amount"
                 type="number"
                 inputMode="decimal"
-                placeholder="100"
+                placeholder={t("scheduled.amountPlaceholder")}
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="sched-address">Recipient address</Label>
+              <Label htmlFor="sched-address">{t("scheduled.addressLabel")}</Label>
               <Input
                 id="sched-address"
-                placeholder="ccx7 …"
+                placeholder={t("addressBook.addressPlaceholder")}
                 autoComplete="off"
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sched-cadence">Repeats</Label>
+              <Label htmlFor="sched-cadence">{t("scheduled.repeatsLabel")}</Label>
               <select
                 id="sched-cadence"
                 className="h-10 w-full cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground"
@@ -138,13 +144,13 @@ export default function ScheduledPage() {
               >
                 {CADENCES.map((c) => (
                   <option key={c} value={c}>
-                    {formatCadence(c)}
+                    {t(CADENCE_LABEL_KEYS[c])}
                   </option>
                 ))}
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sched-date">First due date</Label>
+              <Label htmlFor="sched-date">{t("scheduled.firstDueLabel")}</Label>
               <Input
                 id="sched-date"
                 type="date"
@@ -155,14 +161,14 @@ export default function ScheduledPage() {
           </div>
           <div className="mt-4">
             <Button type="button" onClick={add}>
-              Add reminder
+              {t("scheduled.addReminder")}
             </Button>
           </div>
         </SectionCard>
 
-        <SectionCard title="Your reminders" description="Sorted by next due date">
+        <SectionCard title={t("scheduled.listTitle")} description={t("scheduled.listDescription")}>
           {sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No reminders yet.</p>
+            <p className="text-sm text-muted-foreground">{t("scheduled.empty")}</p>
           ) : (
             <ul className="divide-y divide-border">
               {sorted.map((s) => {
@@ -175,17 +181,21 @@ export default function ScheduledPage() {
                         <span className="font-semibold">{s.label}</span>
                         {due && (
                           <span className="rounded-full bg-wallet-amber/15 px-2 py-0.5 text-xs font-semibold text-wallet-amber">
-                            Due
+                            {t("scheduled.due")}
                           </span>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {s.amount} CCX · {formatCadence(s.cadence)} · next {next}
+                        {t("scheduled.itemDetail", {
+                          amount: s.amount,
+                          cadence: t(CADENCE_LABEL_KEYS[s.cadence]),
+                          next,
+                        })}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" size="sm" onClick={() => sendNow(s)}>
-                        Send now
+                        {t("scheduled.sendNow")}
                       </Button>
                       <Button
                         type="button"
@@ -193,17 +203,17 @@ export default function ScheduledPage() {
                         variant="outline"
                         onClick={() => markPaid(s.id)}
                       >
-                        Mark paid
+                        {t("scheduled.markPaid")}
                       </Button>
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
                         className="text-muted-foreground hover:text-destructive"
-                        aria-label={`Delete reminder ${s.label}`}
+                        aria-label={t("scheduled.deleteAria", { label: s.label })}
                         onClick={() => remove(s.id)}
                       >
-                        Delete
+                        {t("scheduled.delete")}
                       </Button>
                     </div>
                   </li>

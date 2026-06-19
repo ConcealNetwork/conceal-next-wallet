@@ -34,6 +34,7 @@ import {
   useWalletSyncStatus,
   useWalletViewOnly,
 } from "@/lib/hooks";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import {
   buildConversationFromMessage,
@@ -64,6 +65,7 @@ type PendingOutgoing = {
 };
 
 export default function MessagesPage() {
+  const { t } = useI18n();
   const messages = useMessages();
   const addressBook = useAddressBook();
   const send = useSendMessage();
@@ -189,7 +191,7 @@ export default function MessagesPage() {
   }
 
   function messageSendError(error: unknown) {
-    toast.error(error instanceof Error ? error.message : "Failed to send message.");
+    toast.error(error instanceof Error ? error.message : t("messages.errSendFailed"));
   }
 
   function sendReply() {
@@ -199,7 +201,7 @@ export default function MessagesPage() {
       return;
     }
     if (!canReplyToConversation(active)) {
-      toast.error("Add this contact to the address book with a CCX address to reply.");
+      toast.error(t("messages.errReplyNeedsContact"));
       return;
     }
     const body = draft.trim();
@@ -230,15 +232,15 @@ export default function MessagesPage() {
       return;
     }
     if (!recipient.trim() || !composeBody.trim()) {
-      toast.error("Recipient and message are required.");
+      toast.error(t("messages.errRecipientAndMessageRequired"));
       return;
     }
     if (!addressIsValid(recipient.trim())) {
-      toast.error("Invalid recipient CCX address.");
+      toast.error(t("messages.errInvalidRecipient"));
       return;
     }
     if (!paymentIdIsValid(composePaymentId)) {
-      toast.error("Payment ID must be 16 or 64 hex characters.");
+      toast.error(t("messages.errPaymentIdInvalid"));
       return;
     }
     if (composeByteLength > MAX_MESSAGE_SIZE) {
@@ -275,8 +277,8 @@ export default function MessagesPage() {
   return (
     <>
       <PageHeader
-        title="Messages"
-        subtitle="Private wallet messages and sent memos"
+        title={t("nav.messages")}
+        subtitle={t("messages.subtitle")}
         badge={viewOnly ? <ViewOnlyBadge /> : null}
         action={
           <Button
@@ -287,7 +289,7 @@ export default function MessagesPage() {
             title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
           >
             <Plus className="size-4" aria-hidden="true" />
-            New Message
+            {t("messages.newMessage")}
           </Button>
         }
       />
@@ -308,16 +310,16 @@ export default function MessagesPage() {
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search messages…"
+                  placeholder={t("messages.searchPlaceholder")}
                   className="pl-9"
-                  aria-label="Search messages"
+                  aria-label={t("messages.searchAria")}
                 />
               </div>
             </div>
             <ul className="min-h-0 flex-1 overflow-y-auto">
               {filteredMessages.length === 0 ? (
                 <li className="p-6 text-center text-sm text-muted-foreground">
-                  No messages found.
+                  {t("messages.empty")}
                 </li>
               ) : (
                 filteredMessages.map((message) => (
@@ -355,15 +357,15 @@ export default function MessagesPage() {
                   onChange={(event) => setDraft(event.target.value)}
                   placeholder={
                     viewOnly
-                      ? "View-only wallet — replies need the spend key"
+                      ? t("messages.viewOnlyReplyHint")
                       : replyEnabled
-                        ? `Message ${active.name}…`
-                        : "Add contact to address book to reply…"
+                        ? t("messages.replyTo", { name: active.name })
+                        : t("messages.addContactToReply")
                   }
                   rows={1}
                   disabled={!replyEnabled || viewOnly}
                   className="max-h-28 min-h-10 resize-none"
-                  aria-label={`Reply to ${active.name}`}
+                  aria-label={t("messages.replyAria", { name: active.name })}
                 />
                 <Button
                   type="button"
@@ -373,18 +375,15 @@ export default function MessagesPage() {
                   className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
                 >
                   <Send className="size-4" aria-hidden="true" />
-                  Send
+                  {t("nav.send")}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="hidden min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center md:flex">
               <MailOpen className="size-10 text-muted-foreground" aria-hidden="true" />
-              <p className="font-semibold">No conversations yet</p>
-              <p className="text-sm text-muted-foreground">
-                Select a message on the left to view the conversation, or start one with &ldquo;New
-                Message&rdquo;.
-              </p>
+              <p className="font-semibold">{t("messages.noConversationsTitle")}</p>
+              <p className="text-sm text-muted-foreground">{t("messages.noConversationsHint")}</p>
             </div>
           )}
         </div>
@@ -393,12 +392,12 @@ export default function MessagesPage() {
       <Dialog open={compose} onOpenChange={handleComposeOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New message</DialogTitle>
-            <DialogDescription>Send a private message to a CCX address.</DialogDescription>
+            <DialogTitle>{t("messages.dialogTitle")}</DialogTitle>
+            <DialogDescription>{t("messages.dialogDescription")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="recipient">Recipient address</Label>
+              <Label htmlFor="recipient">{t("messages.recipientLabel")}</Label>
               <AddressBookContactPicker
                 contacts={addressBook.data ?? []}
                 selectedId={selectedContactId}
@@ -420,12 +419,12 @@ export default function MessagesPage() {
                 />
               </div>
               {composeToSelf ? (
-                <p className="text-sm text-wallet-amber">This is your own wallet address</p>
+                <p className="text-sm text-wallet-amber">{t("messages.ownAddress")}</p>
               ) : null}
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="compose-pid">Payment ID (optional)</Label>
+                <Label htmlFor="compose-pid">{t("messages.paymentIdLabel")}</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -434,21 +433,21 @@ export default function MessagesPage() {
                   onClick={() => setComposePaymentId(generatePaymentId())}
                 >
                   <RefreshCw className="size-3.5" aria-hidden="true" />
-                  Generate
+                  {t("messages.generate")}
                 </Button>
               </div>
               <Input
                 id="compose-pid"
                 value={composePaymentId}
                 onChange={(event) => setComposePaymentId(event.target.value)}
-                placeholder="64-char hex (optional)"
+                placeholder={t("messages.paymentIdPlaceholder")}
                 autoComplete="off"
                 className="font-mono text-xs"
               />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="compose-body">Message</Label>
+                <Label htmlFor="compose-body">{t("messages.messageLabel")}</Label>
                 <MessageMdToggleButton
                   active={composeViewMd}
                   onToggle={() => setComposeViewMd((on) => !on)}
@@ -458,7 +457,7 @@ export default function MessagesPage() {
                 id="compose-body"
                 value={composeBody}
                 onChange={(event) => setComposeBody(event.target.value)}
-                placeholder="Write your message…"
+                placeholder={t("messages.bodyPlaceholder")}
                 maxLength={MAX_MESSAGE_SIZE}
               />
               {composeByteLength > MAX_MESSAGE_SIZE ? (
@@ -466,7 +465,9 @@ export default function MessagesPage() {
               ) : null}
               {showMdPreview ? (
                 <div className="space-y-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Preview</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {t("messages.preview")}
+                  </span>
                   <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm leading-relaxed [&_i]:italic [&_s]:line-through">
                     <FormattedMessageText text={composeBody} />
                   </div>
@@ -475,7 +476,9 @@ export default function MessagesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="compose-ttl">
-                Time To Live (TTL): {formatTtlMinutes(ttlMinutes ?? 0)}
+                {t("messages.ttlLabel", {
+                  value: formatTtlMinutes(ttlMinutes ?? 0, t("messages.ttlNone")),
+                })}
               </Label>
               <input
                 id="compose-ttl"
@@ -491,14 +494,14 @@ export default function MessagesPage() {
                 aria-valuenow={ttlMinutes ?? 0}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>00:00 (no TTL)</span>
-                <span>{formatTtlMinutes(MAX_TTL_MINUTES)}</span>
+                <span>{t("messages.ttlNone")}</span>
+                <span>{formatTtlMinutes(MAX_TTL_MINUTES, t("messages.ttlNone"))}</span>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleComposeOpenChange(false)}>
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button
               type="button"
@@ -506,7 +509,7 @@ export default function MessagesPage() {
               disabled={send.isPending || composeByteLength > MAX_MESSAGE_SIZE || viewOnly}
               title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
             >
-              {send.isPending ? "Sending…" : "Send"}
+              {send.isPending ? t("messages.sending") : t("nav.send")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -526,17 +529,18 @@ function MessageListItem({
   isActive: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useI18n();
   const { timeAgo } = useFormatters();
   const entry = buildMessageListContactEntry(message, addressBook);
 
   const preview = message.hasBody
     ? parseCheckIn(message.body)
-      ? "💚 Check-in"
+      ? t("messages.listCheckIn")
       : isKnownSmartMessage(message.body)
-        ? "Smart message"
+        ? t("messages.listSmartMessage")
         : message.body
     : message.direction === "sent"
-      ? "Sent message (body not saved locally)"
+      ? t("messages.listSentNoBody")
       : "";
 
   return (
@@ -577,12 +581,12 @@ function MessageListItem({
                 message.hasBody ? "text-muted-foreground" : "italic text-muted-foreground/80",
               )}
             >
-              {message.direction === "sent" ? "You: " : ""}
+              {message.direction === "sent" ? t("messages.youPrefix") : ""}
               {preview}
             </span>
             {message.unread && message.direction === "received" && (
               <span className="size-2 shrink-0 rounded-full bg-primary" role="status">
-                <span className="sr-only">Unread</span>
+                <span className="sr-only">{t("messages.unread")}</span>
               </span>
             )}
           </span>
@@ -601,6 +605,7 @@ function ThreadHeader({
   threadViewMd: boolean;
   onToggleMd: () => void;
 }) {
+  const { t } = useI18n();
   const entry: AddressEntry = {
     id: conversation.threadKey,
     label: conversation.name,
@@ -636,7 +641,7 @@ function ThreadHeader({
       <div className="ml-auto flex items-center gap-2">
         <MessageMdToggleButton active={threadViewMd} onToggle={onToggleMd} />
         {addressIsValid(conversation.address) ? (
-          <CopyButton value={conversation.address} label="Copy" />
+          <CopyButton value={conversation.address} label={t("action.copy")} />
         ) : null}
       </div>
     </div>
@@ -644,11 +649,12 @@ function ThreadHeader({
 }
 
 function PendingSendBubble() {
+  const { t } = useI18n();
   return (
     <div className="ml-auto w-fit">
       <div
         className="rounded-2xl rounded-br-md bg-primary/90 px-2.5 py-2 text-primary-foreground"
-        aria-label="Sending message"
+        aria-label={t("messages.sendingAria")}
         role="status"
       >
         <span className="inline-flex items-end gap-0.5 text-base leading-none tracking-tight">
@@ -666,6 +672,7 @@ function PendingSendBubble() {
 }
 
 function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewMd: boolean }) {
+  const { t } = useI18n();
   const { timeAgo } = useFormatters();
   return (
     <div className={cn("max-w-[75%]", message.direction === "sent" && "ml-auto")}>
@@ -687,13 +694,13 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
           parseCheckIn(message.body) ? (
             <span className="inline-flex items-center gap-1.5 font-medium">
               <Heart className="size-3.5 fill-current" aria-hidden="true" />
-              Check-in
+              {t("messages.checkIn")}
             </span>
           ) : isKnownSmartMessage(message.body) ? (
             // Other structured commands (2FA, vault, …) — show a chip, not the raw token.
             <span className="inline-flex items-center gap-1.5 font-medium italic opacity-90">
               <Cog className="size-3.5" aria-hidden="true" />
-              Smart message
+              {t("messages.smartMessage")}
             </span>
           ) : threadViewMd ? (
             <div className="[&_i]:italic [&_s]:line-through">
@@ -707,7 +714,7 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
           )
         ) : (
           <p className="whitespace-pre-wrap break-words italic opacity-80">
-            Message body unavailable (sent before local save or after rescan).
+            {t("messages.bodyUnavailable")}
           </p>
         )}
         <p
@@ -716,7 +723,9 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
             message.direction === "sent" ? "text-primary-foreground/70" : "text-muted-foreground",
           )}
         >
-          {message.blockHeight > 0 ? `Block ${message.blockHeight} · ` : "Pending · "}
+          {message.blockHeight > 0
+            ? t("messages.blockPrefix", { height: message.blockHeight })
+            : t("messages.pendingPrefix")}
           {timeAgo(message.timestamp)}
         </p>
       </div>
@@ -725,6 +734,7 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
 }
 
 function MessageMdToggleButton({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  const { t } = useI18n();
   return (
     <Button
       type="button"
@@ -737,7 +747,7 @@ function MessageMdToggleButton({ active, onToggle }: { active: boolean; onToggle
           : "border-border bg-transparent text-muted-foreground hover:bg-secondary/80",
       )}
       aria-pressed={active}
-      aria-label={active ? "Show plain text" : "Show formatted messages"}
+      aria-label={active ? t("messages.mdShowPlain") : t("messages.mdShowFormatted")}
       onClick={onToggle}
     >
       MD
@@ -750,8 +760,8 @@ function shouldShowMessagePreview(text: string): boolean {
 }
 
 /** v1 messages.ts formatTTL — slider stores minutes, label shows HH:MM. */
-function formatTtlMinutes(minutes: number): string {
-  if (minutes === 0) return "00:00 (no TTL)";
+function formatTtlMinutes(minutes: number, noneLabel: string): string {
+  if (minutes === 0) return noneLabel;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
@@ -772,11 +782,14 @@ const TTL_EXPIRES_FORMAT: Intl.DateTimeFormatOptions = {
 };
 
 function MessageTtlExpiryLabel({ expiresAt }: { expiresAt: number }) {
+  const { t } = useI18n();
   const { formatDate } = useFormatters();
   // v1 ttl is unix seconds → local date + time in the active locale.
   return (
     <span className="shrink-0 font-medium text-wallet-amber">
-      expires at {formatDate(new Date(expiresAt * 1000), TTL_EXPIRES_FORMAT)}
+      {t("messages.ttlExpiresAt", {
+        date: formatDate(new Date(expiresAt * 1000), TTL_EXPIRES_FORMAT),
+      })}
     </span>
   );
 }
