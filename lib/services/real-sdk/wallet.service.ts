@@ -24,6 +24,7 @@ import {
   friendlyMessage,
   getRuntime,
   hasStoredWallet as runtimeHasStoredWallet,
+  hasUnlockedRuntime,
   listWalletMetas,
   nodeUrlFromRaw,
   persist,
@@ -380,11 +381,21 @@ export const realSdkWalletService: WalletService = {
     }));
   },
 
-  async switchWallet(id: string): Promise<void> {
+  async switchWallet(id: string): Promise<WalletInfo | null> {
     await ensureSdkReady();
     pendingDraft = null;
     createdMnemonic = null;
+    // Set the active id (instant when the target is already cached). switchActiveWallet
+    // never locks/clears, so an already-unlocked target stays unlocked.
     await switchActiveWallet(id);
+    if (!hasUnlockedRuntime(id)) {
+      // Not cached — the caller must unlock the target in place. Returning null (not
+      // throwing) lets the UI distinguish "needs unlock" from a hard failure.
+      return null;
+    }
+    // Cached → map the (already-synced) active runtime immediately. The shell's
+    // live-sync then advances any gap in the background, like a fresh open.
+    return mapWalletInfo(requireRuntime(), await safeNetworkHeight());
   },
 
   async renameWallet(id: string, label: string): Promise<void> {

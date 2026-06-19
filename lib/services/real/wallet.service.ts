@@ -84,8 +84,19 @@ export const realWalletService: WalletService = {
       return [];
     }
   },
-  async switchWallet() {
-    throw new Error(MULTI_WALLET_UNSUPPORTED);
+  async switchWallet(id: string): Promise<WalletInfo | null> {
+    // The legacy wallet-core engine holds a single wallet ("default"). Switching to
+    // it is a no-op that returns the open wallet's info (instant); any other id is
+    // unsupported.
+    if (id !== "default") {
+      throw new Error(MULTI_WALLET_UNSUPPORTED);
+    }
+    try {
+      return await (await walletOps()).getWalletInfoOperation();
+    } catch {
+      // No open wallet (locked) — the caller must unlock.
+      return null;
+    }
   },
   async renameWallet() {
     throw new Error(MULTI_WALLET_UNSUPPORTED);

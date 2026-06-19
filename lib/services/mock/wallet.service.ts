@@ -135,11 +135,14 @@ export const mockWalletService: WalletService = {
       isActive: wallet.id === mockActiveId,
     }));
   },
-  async switchWallet(id: string) {
+  async switchWallet(id: string): Promise<WalletInfo | null> {
     await mockDelay();
     if (mockWallets.some((wallet) => wallet.id === id)) {
       mockActiveId = id;
     }
+    // Mock mode keeps the session "open" (the mock unlock takes no password), so a
+    // switch is always instant — return the current wallet info, never null.
+    return currentWalletInfo();
   },
   async renameWallet(id: string, label: string) {
     await mockDelay();

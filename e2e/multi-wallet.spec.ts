@@ -43,16 +43,55 @@ test("switches the active wallet via the sidebar-header dropdown", async ({ page
   await expect(trigger).toContainText("Savings");
 });
 
+test("switching stays on the current page — no landing bounce (smooth switching)", async ({
+  page,
+}) => {
+  await openWallet(page);
+
+  // Navigate to a non-account page (Transactions), retrying the nav until hydrated.
+  const txHeading = page.getByRole("heading", { name: "Transaction History" });
+  await expect(async () => {
+    if (!(await txHeading.isVisible())) {
+      await page.getByRole("link", { name: "Transactions", exact: true }).click({ timeout: 2000 });
+    }
+    await expect(txHeading).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+  await expect(page).toHaveURL(/\/wallet\/transactions\/?$/);
+
+  // Switch wallets from here. The switch must be INSTANT and keep us on this page —
+  // no bounce to the landing route (`/`) and no re-unlock prompt. Retry the dropdown
+  // interaction until the label flips (covers post-nav hydration on a cold runner).
+  const trigger = page.getByRole("button", { name: "Switch wallet" });
+  await expect(async () => {
+    await trigger.click({ timeout: 2000 });
+    const menu = page.getByRole("menu", { name: "Switch wallet" });
+    await menu.getByRole("menuitemradio", { name: /Switch to Savings/ }).click({ timeout: 2000 });
+    await expect(trigger).toContainText("Savings", { timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+
+  // Still on Transactions — the switch did not route us away.
+  await expect(page).toHaveURL(/\/wallet\/transactions\/?$/);
+  await expect(txHeading).toBeVisible();
+});
+
 test("the switcher offers both Create new and Import existing", async ({ page }) => {
   await openWallet(page);
-  await page.getByRole("button", { name: "Switch wallet" }).click();
-  await page.getByRole("menuitem", { name: "Create new" }).click();
-  await expect(page).toHaveURL(/\/create\/?$/);
 
+  // Open the dropdown → Create new. Retry until the dropdown is hydrated + navigates.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Switch wallet" }).click({ timeout: 2000 });
+    await page.getByRole("menuitem", { name: "Create new" }).click({ timeout: 2000 });
+    await expect(page).toHaveURL(/\/create\/?$/, { timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+
+  // Back to the wallet, then open the dropdown → Import existing. The post-goBack page
+  // must re-hydrate before the dropdown works, so retry the whole interaction.
   await page.goBack();
-  await page.getByRole("button", { name: "Switch wallet" }).click();
-  await page.getByRole("menuitem", { name: "Import existing" }).click();
-  await expect(page).toHaveURL(/\/import\/?$/);
+  await expect(async () => {
+    await page.getByRole("button", { name: "Switch wallet" }).click({ timeout: 2000 });
+    await page.getByRole("menuitem", { name: "Import existing" }).click({ timeout: 2000 });
+    await expect(page).toHaveURL(/\/import\/?$/, { timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
 });
 
 test("Settings lists wallets and renames one", async ({ page }) => {

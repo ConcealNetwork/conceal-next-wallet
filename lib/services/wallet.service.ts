@@ -107,10 +107,13 @@ export interface WalletService {
   /** All wallets registered on this device, with the active one flagged. */
   listWallets(): Promise<WalletSummary[]>;
   /**
-   * Make `id` the active wallet. The in-memory session is closed (keys are never
-   * kept), so the UI must drive an unlock for the target afterward.
+   * Make `id` the active wallet (smooth switching). When the target wallet is
+   * ALREADY unlocked (cached in memory), the switch is instant and the mapped
+   * {@link WalletInfo} is returned so the UI can update without a route change or a
+   * password prompt. When it is NOT cached, returns `null` — the caller must then
+   * drive an in-place unlock for the target (no decrypted keys are created here).
    */
-  switchWallet(id: string): Promise<void>;
+  switchWallet(id: string): Promise<WalletInfo | null>;
   /** Rename a wallet (label only). */
   renameWallet(id: string, label: string): Promise<void>;
   /** Delete a wallet by id (erases its keyspace + drops it from the registry). */
