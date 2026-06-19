@@ -19,6 +19,14 @@ import {
 const LOCALE_TO_BCP47: Record<Locale, string> = {
   en: "en-US",
   es: "es-ES",
+  fr: "fr-FR",
+  de: "de-DE",
+  it: "it-IT",
+  pt: "pt-PT",
+  ru: "ru-RU",
+  zh: "zh-CN",
+  ja: "ja-JP",
+  ko: "ko-KR",
 };
 
 export function localeToBcp47(locale: Locale): string {
