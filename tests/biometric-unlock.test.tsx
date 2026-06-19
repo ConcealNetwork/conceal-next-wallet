@@ -17,12 +17,14 @@ vi.mock("@/lib/session/wallet-session", () => ({
   useWalletSession: () => ({ openSession }),
 }));
 
-const { hasStoredWallet, openWallet } = vi.hoisted(() => ({
+const { hasStoredWallet, openWallet, listWallets, switchWallet } = vi.hoisted(() => ({
   hasStoredWallet: vi.fn().mockResolvedValue(true),
   openWallet: vi.fn().mockResolvedValue({ address: "ccx7test" }),
+  listWallets: vi.fn().mockResolvedValue([{ id: "default", label: "Main wallet", isActive: true }]),
+  switchWallet: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/services", () => ({
-  services: { wallet: { hasStoredWallet, openWallet } },
+  services: { wallet: { hasStoredWallet, openWallet, listWallets, switchWallet } },
 }));
 
 const { getPasskeyEnrollment, hasPasskeyEnrollment } = vi.hoisted(() => ({

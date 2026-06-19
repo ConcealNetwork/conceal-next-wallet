@@ -1,10 +1,9 @@
 "use client";
 
-import { Fingerprint } from "lucide-react";
+import { Check, Fingerprint } from "lucide-react";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,7 +31,9 @@ import {
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import type { WalletSummary } from "@/lib/types";
 import { getSafeNextPath } from "@/lib/ui/payment-link";
+import { truncateAddress } from "@/lib/utils";
 
 type OpenWalletContextValue = {
   openWallet: () => Promise<void>;
@@ -61,13 +62,25 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
   const [passkeyAvailable, setPasskeyAvailable] = useState(false);
   const [enrolled, setEnrolled] = useState(false);
   const [enablePasskey, setEnablePasskey] = useState(false);
-  // Active wallet id for per-wallet passkey keying (#95). Resolved when the unlock
-  // dialog opens; defaults to the default wallet id until then.
+  // Active wallet id for per-wallet passkey keying (#95). Tracks the SELECTED wallet
+  // the dialog will open; defaults to the default wallet id until loaded.
   const walletIdRef = useRef<string>("default");
+  // Multi-wallet (#95): the wallets on this device + which one the unlock dialog will
+  // open, so the user always knows which password to use (and can pick another).
+  const [wallets, setWallets] = useState<WalletSummary[]>([]);
+  const [selectedId, setSelectedId] = useState<string>("default");
 
   async function unlock(passwordValue?: string) {
     setLoading(true);
     try {
+      // Open the SELECTED wallet: make it active first if the user picked another.
+      if (!env.useMockWallet && selectedId) {
+        const activeId = wallets.find((wallet) => wallet.isActive)?.id;
+        if (activeId && selectedId !== activeId) {
+          await services.wallet.switchWallet(selectedId);
+        }
+        walletIdRef.current = selectedId;
+      }
       const wallet = await services.wallet.openWallet(
         env.useMockWallet ? {} : { password: passwordValue },
       );
@@ -132,21 +145,34 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
     }
   }
 
-  // Reflect passkey availability/enrollment whenever the unlock dialog opens.
-  // Resolve the active wallet id first so enrollment is read for the right wallet.
+  // Load the wallets on this device when the dialog opens, defaulting the selection to
+  // the active one — so the dialog shows which wallet a password will open.
   useEffect(() => {
-    if (!passkeyEnabled || !unlockDialogOpen) return;
-    setPasskeyAvailable(isPasskeyUnlockAvailable());
+    if (!unlockDialogOpen) return;
     let cancelled = false;
-    void getActiveWalletId().then((walletId) => {
-      if (cancelled) return;
-      walletIdRef.current = walletId;
-      setEnrolled(hasPasskeyEnrollment(walletId));
-    });
+    void services.wallet
+      .listWallets()
+      .then((list) => {
+        if (cancelled) return;
+        setWallets(list);
+        const active = list.find((wallet) => wallet.isActive) ?? list[0];
+        if (active) setSelectedId(active.id);
+      })
+      .catch(() => {
+        // Listing can fail before the engine loads; the single-wallet unlock still works.
+      });
     return () => {
       cancelled = true;
     };
-  }, [passkeyEnabled, unlockDialogOpen]);
+  }, [unlockDialogOpen]);
+
+  // Reflect passkey availability/enrollment for the SELECTED wallet (per-wallet keyed).
+  useEffect(() => {
+    if (!passkeyEnabled || !unlockDialogOpen) return;
+    setPasskeyAvailable(isPasskeyUnlockAvailable());
+    walletIdRef.current = selectedId;
+    setEnrolled(hasPasskeyEnrollment(selectedId));
+  }, [passkeyEnabled, unlockDialogOpen, selectedId]);
 
   useEffect(() => {
     if (!getSafeNextPath()) return;
@@ -184,7 +210,9 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
           <DialogHeader>
             <DialogTitle>Open wallet</DialogTitle>
             <DialogDescription>
-              Enter your encryption password to unlock the wallet on this device.
+              {wallets.length > 1
+                ? "Choose a wallet, then enter its encryption password."
+                : "Enter your encryption password to unlock the wallet on this device."}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -194,6 +222,39 @@ export function OpenWalletProvider({ children }: { children: React.ReactNode }) 
               void unlock(password);
             }}
           >
+            {wallets.length > 1 ? (
+              <div className="space-y-1.5">
+                <Label>Wallet</Label>
+                <div className="space-y-1">
+                  {wallets.map((wallet) => (
+                    <button
+                      key={wallet.id}
+                      type="button"
+                      onClick={() => setSelectedId(wallet.id)}
+                      className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${
+                        wallet.id === selectedId
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:bg-secondary"
+                      }`}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {wallet.label}
+                        </span>
+                        {wallet.address ? (
+                          <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                            {truncateAddress(wallet.address, 6, 4)}
+                          </span>
+                        ) : null}
+                      </span>
+                      {wallet.id === selectedId ? (
+                        <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {passkeyEnabled && enrolled && passkeyAvailable ? (
               <Button
                 type="button"
