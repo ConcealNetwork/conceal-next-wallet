@@ -57,6 +57,7 @@ import {
   type SdkMessageRecord,
   withReceivedRecords,
 } from "@/lib/services/real-sdk/messages-store";
+import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
 
@@ -191,12 +192,21 @@ function buildState(account: Account, raw: RawWalletV1): WalletState {
       // Corrupt serialized state — fall through to a fresh re-sync.
     }
   }
+  // An existing wallet-core blob carries its full already-scanned history
+  // (outputs/spends/deposits + `lastHeight`). Seed the live state from it so the
+  // wallet opens INSTANTLY at `lastHeight` instead of rescanning from genesis —
+  // only the small `lastHeight`→tip gap then syncs. Byte-identical to a re-sync.
+  const seeded = seedStateFromLegacyBlob(account, raw);
+  if (seeded !== null) {
+    return seeded;
+  }
+
   const fresh = createWalletState(account);
-  // Seed at `creationHeight` ONLY when present — it scopes the re-scan past
-  // pre-creation blocks. NEVER fall back to `lastHeight`: an older legacy blob
-  // that lacks `creationHeight` carries `lastHeight` = the synced TIP, and seeding
-  // there would make sync skip the wallet's entire history (0 balance, empty
-  // history). Fall back to 0 — a full re-scan is slow but correct.
+  // No scanned history (a fresh create/import): seed at `creationHeight` ONLY when
+  // present — it scopes the scan past pre-creation blocks. NEVER fall back to
+  // `lastHeight`: an older blob that lacks `creationHeight` carries `lastHeight` =
+  // the synced TIP, and seeding there would make sync skip the wallet's entire
+  // history. Fall back to 0 — a full scan is slow but correct.
   const creationHeight = Math.max(0, Number(raw.creationHeight ?? 0) || 0);
   return creationHeight > 0 ? { ...fresh, scannedHeight: creationHeight } : fresh;
 }
