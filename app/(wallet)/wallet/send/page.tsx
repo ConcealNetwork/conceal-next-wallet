@@ -34,7 +34,7 @@ import {
 import { SendReviewWarnings } from "@/components/wallet/send-review-warnings";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
-import { walletNetworkScalars } from "@/lib/config/config";
+import { MAX_MESSAGE_SIZE, walletNetworkScalars } from "@/lib/config/config";
 import {
   useAddressBook,
   useMarketData,
@@ -76,7 +76,13 @@ const sendSchema = z.object({
     .regex(/^[0-9a-fA-F]*$/, "Payment ID must be hexadecimal")
     .max(64, "Max 64 characters")
     .optional(),
-  message: z.string().max(255, "Max 255 characters").optional(),
+  message: z
+    .string()
+    .refine(
+      (value) => new TextEncoder().encode(value).length <= MAX_MESSAGE_SIZE,
+      `Message exceeds ${MAX_MESSAGE_SIZE} bytes`,
+    )
+    .optional(),
 });
 
 type SendForm = z.infer<typeof sendSchema>;
@@ -107,6 +113,7 @@ export default function SendPage() {
 
   const amount = useWatch({ control: form.control, name: "amount" }) || 0;
   const message = useWatch({ control: form.control, name: "message" }) || "";
+  const messageBytes = new TextEncoder().encode(message).length;
   const address = useWatch({ control: form.control, name: "address" }) || "";
   const sendToSelf = isSendToSelf(address, wallet.data?.address ?? "");
   const recentSent = (transactions.data ?? [])
@@ -334,7 +341,7 @@ export default function SendPage() {
                   {...form.register("message")}
                 />
                 <p id="message-count" className="text-right text-xs text-muted-foreground">
-                  {message.length}/255
+                  {messageBytes}/{MAX_MESSAGE_SIZE}
                 </p>
                 {form.formState.errors.message && (
                   <p id="message-error" className="text-sm text-wallet-outgoing">

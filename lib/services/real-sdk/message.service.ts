@@ -14,6 +14,7 @@ import {
   withReceivedRecords,
   withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
+import { addPendingRecord } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime, type SdkRuntime, sync } from "@/lib/services/real-sdk/runtime";
 import {
@@ -118,6 +119,14 @@ export const realSdkMessageService: MessageService = {
     // the RECIPIENT's spend key, so it never decrypts as ours during scan, and its
     // hash joins `sentMessages` before it mines as a backstop.)
     await broadcast(rt, built);
+    rt.raw = addPendingRecord(rt.raw, {
+      hash: built.hash,
+      amountAtomic: built.sentAmount + built.fee,
+      timestampIso: new Date().toISOString(),
+      address: destinationAddress,
+      ...(paymentId ? { paymentId } : {}),
+      spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+    });
     rt.raw = withSentRecords(rt.raw, [...readSentRecords(rt.raw), record]);
     try {
       await persist();
