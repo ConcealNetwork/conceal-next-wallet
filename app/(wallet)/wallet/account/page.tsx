@@ -1,9 +1,9 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { AccountRail } from "@/components/layout/rails/account-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BalanceHero, BalanceHeroSkeleton } from "@/components/wallet/balance-hero";
@@ -19,21 +19,16 @@ import {
   useWalletInfo,
   useWalletViewOnly,
 } from "@/lib/hooks";
-import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import { useFormatters } from "@/lib/i18n/use-formatters";
-import type { MarketData, Transaction, TransactionType, WalletInfo } from "@/lib/types";
-import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
-import { ccxToNumber, cn, stripTickerSuffix, truncateAddress, walletBalanceUsd } from "@/lib/utils";
-
-const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false });
-const AreaChart = dynamic(() => import("recharts").then((mod) => mod.AreaChart), { ssr: false });
-const ResponsiveContainer = dynamic(
-  () => import("recharts").then((mod) => mod.ResponsiveContainer),
-  { ssr: false },
-);
-const Tooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), { ssr: false });
+import type { Transaction, TransactionType } from "@/lib/types";
+import { ccxToNumber, cn, truncateAddress } from "@/lib/utils";
 
 export default function AccountPage() {
+  // Register the Account rail (Market + Holdings + Quick actions) in the
+  // contextual right column. The rail element is registered once on mount; its
+  // sections read their own hooks to stay live.
+  usePageRightRail(<AccountRail />);
+
   const wallet = useWalletInfo();
   const viewOnly = useWalletViewOnly();
   const transactions = useTransactions();
@@ -101,84 +96,49 @@ export default function AccountPage() {
           <BalanceHeroSkeleton />
         )}
       </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-        <div className="h-full animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
-          <SectionCard
-            title="Transaction Summary"
-            description="Net flow this period"
-            fill
-            footer={
-              <Link
-                className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
-                href="/wallet/transactions"
-              >
-                View All Transactions →
-              </Link>
-            }
-          >
-            {transactions.isLoading ? (
-              <div className="space-y-5">
-                <Skeleton className="h-3 w-full rounded-full" />
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Skeleton className="h-12" />
-                  <Skeleton className="h-12" />
-                  <Skeleton className="h-12" />
-                </div>
-                <Skeleton className="h-4 w-48" />
+      <div className="mt-6 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
+        <SectionCard
+          title="Transaction Summary"
+          description="Net flow this period"
+          fill
+          footer={
+            <Link
+              className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
+              href="/wallet/transactions"
+            >
+              View All Transactions →
+            </Link>
+          }
+        >
+          {transactions.isLoading ? (
+            <div className="space-y-5">
+              <Skeleton className="h-3 w-full rounded-full" />
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
               </div>
-            ) : (
-              <TransactionFlowSummary
-                received={totals.received}
-                sent={totals.sent}
-                deposits={totals.deposits}
-                transactionCount={transactions.data?.length ?? 0}
-                lastActivityAt={transactions.data?.[0]?.timestamp}
-              />
-            )}
-            {transactions.data && transactions.data.length > 0 ? (
-              <RecentActivityList transactions={transactions.data.slice(0, 5)} />
-            ) : null}
-          </SectionCard>
-        </div>
-        <div className="h-full animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
-          <SectionCard
-            title="Market Summary"
-            description="Live CCX price and your holdings"
-            fill
-            footer={
-              <Link
-                className="inline-flex cursor-pointer rounded-sm text-sm font-semibold text-primary transition-[color,transform] duration-200 hover:text-primary/80 active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none"
-                href="/wallet/market"
-              >
-                View Full Market →
-              </Link>
-            }
-          >
-            {info && market.data ? (
-              <MarketSummaryHybrid market={market.data} walletInfo={info} />
-            ) : (
-              <div className="space-y-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-10 w-36" />
-                  </div>
-                  <Skeleton className="h-7 w-20 rounded-full" />
-                </div>
-                <Skeleton className="h-[60px] w-full" />
-                <Skeleton className="h-px w-full" />
-                <div className="flex gap-5">
-                  <Skeleton className="size-[120px] rounded-full" />
-                  <div className="flex-1 space-y-3">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </SectionCard>
-        </div>
+              <Skeleton className="h-4 w-48" />
+            </div>
+          ) : (
+            <TransactionFlowSummary
+              received={totals.received}
+              sent={totals.sent}
+              deposits={totals.deposits}
+              transactionCount={transactions.data?.length ?? 0}
+              lastActivityAt={transactions.data?.[0]?.timestamp}
+            />
+          )}
+          {transactions.data && transactions.data.length > 0 ? (
+            <RecentActivityList transactions={transactions.data.slice(0, 5)} />
+          ) : null}
+        </SectionCard>
+      </div>
+      {/* Small-screen fallback: the contextual rail column is hidden < 1200px,
+          so surface its Market + Holdings + Quick-actions summary inline here.
+          Above the rail breakpoint this is CSS-hidden and the rail shows it. */}
+      <div className="mt-6 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms] min-[1200px]:hidden">
+        <AccountRail embedded />
       </div>
     </>
   );
@@ -313,174 +273,6 @@ function RecentActivityList({ transactions }: { transactions: Transaction[] }) {
           );
         })}
       </ul>
-    </div>
-  );
-}
-
-function MarketSummaryHybrid({
-  market,
-  walletInfo,
-}: {
-  market: MarketData;
-  walletInfo: WalletInfo;
-}) {
-  const { formatCcx, formatUsd } = useFormatters();
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const available = ccxToNumber(walletInfo.available);
-  const locked = ccxToNumber(walletInfo.lockedDeposits);
-  const holdingsTotal = available + locked;
-  const portfolioUsd = walletBalanceUsd(walletInfo.balanceTotal, market.price.value);
-  const marketPriceLabel = useCountUp(market.price.value, {
-    formatter: (value) => formatUsd(value, 3),
-  });
-  const segments = [
-    {
-      label: "Available",
-      value: available,
-      className: "text-primary",
-      stroke: "hsl(var(--primary))",
-      dotClassName: "bg-primary",
-    },
-    {
-      label: "Locked",
-      value: locked,
-      className: "text-wallet-deposit",
-      stroke: "hsl(var(--chart-1))",
-      dotClassName: "bg-wallet-deposit",
-    },
-  ];
-  let offset = 25;
-
-  return (
-    <div>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs text-muted-foreground">CCX / USD</p>
-          <p className="mt-1 font-mono text-4xl font-bold leading-none tracking-tight text-primary">
-            {marketPriceLabel}
-          </p>
-        </div>
-        <span
-          role="status"
-          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-wallet-incoming/10 px-2.5 py-1 text-xs font-semibold text-wallet-incoming"
-          aria-label={`CCX price up ${market.change24hPct.toFixed(2)} percent`}
-        >
-          <span aria-hidden="true">▲</span>
-          {market.change24hPct.toFixed(2)}%
-        </span>
-      </div>
-      <div className="mt-3 h-[60px]">
-        <ResponsiveContainer width="100%" height={60}>
-          <AreaChart data={market.history} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id="accountMarketFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
-                <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <Tooltip
-              cursor={{ stroke: "hsl(var(--border))" }}
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 12,
-                color: "hsl(var(--foreground))",
-              }}
-              formatter={(value) => [formatUsd(Number(value), 3), "Price"]}
-            />
-            <Area
-              type="monotone"
-              dataKey="price"
-              stroke="hsl(var(--chart-1))"
-              strokeWidth={2}
-              fill="url(#accountMarketFill)"
-              isAnimationActive={!prefersReducedMotion}
-              animationDuration={700}
-              animationEasing="ease-out"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="my-5 h-px bg-border" />
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-        <div className="relative size-[120px] shrink-0">
-          <svg className="size-[120px]" viewBox="0 0 42 42" aria-hidden="true">
-            <circle
-              cx="21"
-              cy="21"
-              r="15.9"
-              fill="none"
-              stroke="hsl(var(--secondary))"
-              strokeWidth="4.5"
-            />
-            {segments.map((segment, index) => {
-              const pct = holdingsTotal > 0 ? (segment.value / holdingsTotal) * 100 : 0;
-              const dashOffset = offset;
-              offset -= pct;
-              return (
-                <circle
-                  key={segment.label}
-                  cx="21"
-                  cy="21"
-                  r="15.9"
-                  fill="none"
-                  stroke={segment.stroke}
-                  strokeWidth="4.5"
-                  strokeDasharray={`${pct} ${100 - pct}`}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="butt"
-                  transform="rotate(-90 21 21)"
-                  className="animate-donut-sweep motion-reduce:animate-none"
-                  style={
-                    {
-                      "--donut-offset": dashOffset,
-                      "--donut-pct": pct,
-                      animationDelay: `${index * 80}ms`,
-                    } as CSSProperties
-                  }
-                />
-              );
-            })}
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Holdings</p>
-            <p className="font-mono text-sm font-semibold leading-tight">
-              {stripTickerSuffix(formatCcx(holdingsTotal))}
-            </p>
-            <TickerBadge className="text-[10px] text-primary" />
-          </div>
-        </div>
-        <div className="flex-1 space-y-2.5">
-          {segments.map((segment) => {
-            const pct = holdingsTotal > 0 ? (segment.value / holdingsTotal) * 100 : 0;
-            return (
-              <div key={segment.label} className="flex items-center gap-2 text-sm">
-                <span
-                  className={cn("size-2.5 shrink-0 rounded-[3px]", segment.dotClassName)}
-                  aria-hidden="true"
-                />
-                <span>{segment.label}</span>
-                <span className="ml-auto font-mono text-muted-foreground">
-                  {stripTickerSuffix(formatCcx(segment.value))}
-                </span>
-                <span className="w-10 text-right font-mono text-muted-foreground">
-                  {Math.round(pct)}%
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
-        <div>
-          <p className="text-xs text-muted-foreground">Portfolio Value</p>
-          <p className="mt-1 font-mono text-base font-semibold">{formatUsd(portfolioUsd)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">24h Volume</p>
-          <p className="mt-1 font-mono text-base font-semibold">{formatUsd(market.volume24h, 0)}</p>
-        </div>
-      </div>
     </div>
   );
 }
