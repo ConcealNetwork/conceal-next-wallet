@@ -319,7 +319,7 @@ describe("real-sdk pending tx + balance hold (#96)", () => {
     const info = mapWalletInfo(rt, networkHeight);
     expect(info.pending.atomic).toBe(pending[0]?.amountAtomic);
     expect(info.balanceTotal.atomic).toBe(5_000_000);
-    expect(info.available.atomic).toBe(5_000_000 - info.pending.atomic);
+    expect(info.available.atomic).toBe(0);
 
     // The spent input is locked against re-selection until the tx mines.
     expect(unspentOutputs(rt)).toHaveLength(0);

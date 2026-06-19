@@ -10,14 +10,15 @@ import {
   getLockedDeposits,
   getTransactions,
   getUnlockedDeposits,
+  getUnspentOutputs,
   type OwnedDeposit,
   type WalletState,
   type WalletTransaction,
 } from "conceal-wallet-sdk";
 import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
 import {
-  pendingOutAtomic,
   type PendingTxRecord,
+  readPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
@@ -151,17 +152,28 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
   const lockedTotal = locked.reduce((sum, d) => sum + d.amount, 0);
   const withdrawable = unlocked.reduce((sum, d) => sum + d.amount + d.interest, 0);
 
-  // Hold the balance for broadcast-but-not-yet-mined sends: the spent outputs still
-  // count as unspent in `getBalance` until the tx mines, so move that amount out of
-  // `available` into `pending` for immediate feedback (#96). `balanceTotal` is left as
-  // the on-chain total, so total = available + pending (+ locked).
-  const pendingOut = Math.min(balance.spendable, pendingOutAtomic(runtime.raw));
+  // Hold the balance for broadcast-but-not-yet-mined sends (#96). Count ONLY pending
+  // records not yet scanned into state — a record mined just before its (synchronous)
+  // prune must not be double-counted against the on-chain balance. `available` is the
+  // unspent set minus the inputs those live-pending sends locked (so it matches what a
+  // new send can actually select); `pending` is their outflow; `balanceTotal` stays the
+  // on-chain total.
+  const minedHashes = new Set(state.transactions.map((tx) => tx.hash));
+  const livePending = readPendingRecords(runtime.raw).filter(
+    (record) => !minedHashes.has(record.hash),
+  );
+  const pendingOut = livePending.reduce((sum, record) => sum + Math.max(0, record.amountAtomic), 0);
+  const pendingSpent = new Set(livePending.flatMap((record) => record.spentKeyImages));
+  const availableAtomic = getUnspentOutputs(state).reduce(
+    (sum, out) => sum + (pendingSpent.has(out.keyImage) ? 0 : out.amount),
+    0,
+  );
 
   return {
     address: state.address,
     viewOnly: runtime.viewOnly,
     balanceTotal: atomic(balance.total),
-    available: atomic(balance.spendable - pendingOut),
+    available: atomic(availableAtomic),
     dust: atomic(0),
     pending: atomic(pendingOut),
     lockedDeposits: atomic(lockedTotal),

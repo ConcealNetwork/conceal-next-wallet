@@ -11,6 +11,7 @@
  * Pure read/write helpers over `raw.pendingTransactions`; no runtime/network imports.
  */
 import type { RawWalletV1, WalletState } from "conceal-wallet-sdk";
+import { walletNetworkScalars } from "@/lib/config/config";
 
 /** An optimistic outbound tx awaiting its first confirmation. */
 export interface PendingTxRecord {
@@ -30,8 +31,14 @@ export interface PendingTxRecord {
 
 const PENDING_FIELD = "pendingTransactions";
 
-/** A broadcast tx not mined within this window is treated as dropped and pruned. */
-export const PENDING_TTL_MS = 60 * 60 * 1000; // 1 hour
+/**
+ * A broadcast tx not mined within this window is treated as dropped and pruned (which
+ * releases its input lock). It MUST be ≥ the network mempool tx lifetime: until that
+ * elapses the tx can still be mined, so pruning earlier would unlock its inputs while
+ * it's live and let a follow-up send double-spend them (daemon-rejected). Tied to the
+ * `cryptonoteMemPoolTxLifetimeSeconds` scalar (12h) so it tracks the network.
+ */
+export const PENDING_TTL_MS = walletNetworkScalars.cryptonoteMemPoolTxLifetimeSeconds * 1000;
 
 function isPendingRecord(value: unknown): value is PendingTxRecord {
   return (

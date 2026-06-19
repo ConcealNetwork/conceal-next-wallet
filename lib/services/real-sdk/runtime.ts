@@ -344,7 +344,7 @@ async function syncOnce(): Promise<number> {
   const includeMinerTxs = Boolean(rt.raw.options?.checkMinerTx);
   // Resume from a re-scan window below the last scanned height (see RESCAN_LAG_BLOCKS),
   // floored at the wallet's seed/creation height so we never scan pre-existence blocks.
-  const seedFloor = Math.max(0, Number(rt.raw.creationHeight ?? 0) || 0);
+  const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
   let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS);
   let state = rt.state;
 

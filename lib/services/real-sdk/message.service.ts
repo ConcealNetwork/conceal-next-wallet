@@ -121,7 +121,8 @@ export const realSdkMessageService: MessageService = {
     await broadcast(rt, built);
     rt.raw = addPendingRecord(rt.raw, {
       hash: built.hash,
-      amountAtomic: built.sentAmount + built.fee,
+      amountAtomic:
+        destinationAddress === rt.account.address ? built.fee : built.sentAmount + built.fee,
       timestampIso: new Date().toISOString(),
       address: destinationAddress,
       ...(paymentId ? { paymentId } : {}),

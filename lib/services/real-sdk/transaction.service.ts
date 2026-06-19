@@ -124,7 +124,10 @@ export const realSdkTransactionService: TransactionService = {
     // copy — mutated together and persisted once.
     rt.raw = addPendingRecord(rt.raw, {
       hash: built.hash,
-      amountAtomic: amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
+      amountAtomic:
+        input.address === rt.account.address
+          ? FEE_ATOMIC + nodeFeeAtomic
+          : amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
       timestampIso: new Date().toISOString(),
       address: input.address,
       ...(input.paymentId?.trim() ? { paymentId: input.paymentId.trim() } : {}),
