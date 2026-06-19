@@ -145,7 +145,7 @@ export async function downloadWalletExportPdf(data: ExportWalletData): Promise<s
   await ensureWalletExtendedLibs();
   await ensureJsPdf();
 
-  const { CoinUri } = await import("@/lib/wallet-core/CoinUri");
+  const { CoinUri } = await import("@/lib/ui/coin-uri");
   const importUri = CoinUri.encodeWalletKeys(
     data.address,
     data.spendKey,

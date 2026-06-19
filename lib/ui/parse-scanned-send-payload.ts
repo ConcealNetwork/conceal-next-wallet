@@ -1,4 +1,4 @@
-import { CoinUri } from "@/lib/wallet-core/CoinUri";
+import { CoinUri } from "@/lib/ui/coin-uri";
 
 export type ScannedSendDraft = {
   address: string;
