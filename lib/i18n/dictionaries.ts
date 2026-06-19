@@ -44,6 +44,28 @@ const en: Dictionary = {
   "settings.language": "Language",
   "settings.languageDescription": "Display language for the wallet interface",
   "settings.languageAriaLabel": "Language",
+  // Multi-wallet (#95)
+  "wallets.switcherLabel": "Switch wallet",
+  "wallets.active": "Active",
+  "wallets.addWallet": "Add wallet",
+  "wallets.create": "Create new",
+  "wallets.import": "Import existing",
+  "wallets.title": "Wallets",
+  "wallets.description": "Switch between, rename, or remove the wallets stored on this device",
+  "wallets.rename": "Rename",
+  "wallets.delete": "Delete",
+  "wallets.save": "Save",
+  "wallets.cancel": "Cancel",
+  "wallets.nameLabel": "Wallet name",
+  "wallets.switchTo": "Switch to {name}",
+  "wallets.deleteTitle": "Delete wallet?",
+  "wallets.deleteConfirm":
+    "This permanently removes “{name}” and its data from this browser. Make sure you have a backup of its keys.",
+  "wallets.deleteAction": "Delete wallet",
+  "wallets.switched": "Switched wallet — unlock to continue.",
+  "wallets.renamed": "Wallet renamed.",
+  "wallets.deleted": "Wallet deleted.",
+  "wallets.empty": "No other wallets yet.",
 };
 
 const es: Dictionary = {
@@ -80,6 +102,28 @@ const es: Dictionary = {
   "settings.language": "Idioma",
   "settings.languageDescription": "Idioma de la interfaz de la billetera",
   "settings.languageAriaLabel": "Idioma",
+  "wallets.switcherLabel": "Cambiar billetera",
+  "wallets.active": "Activa",
+  "wallets.addWallet": "Añadir billetera",
+  "wallets.create": "Crear nueva",
+  "wallets.import": "Importar existente",
+  "wallets.title": "Billeteras",
+  "wallets.description":
+    "Cambia, renombra o elimina las billeteras almacenadas en este dispositivo",
+  "wallets.rename": "Renombrar",
+  "wallets.delete": "Eliminar",
+  "wallets.save": "Guardar",
+  "wallets.cancel": "Cancelar",
+  "wallets.nameLabel": "Nombre de la billetera",
+  "wallets.switchTo": "Cambiar a {name}",
+  "wallets.deleteTitle": "¿Eliminar billetera?",
+  "wallets.deleteConfirm":
+    "Esto elimina permanentemente «{name}» y sus datos de este navegador. Asegúrate de tener una copia de seguridad de sus claves.",
+  "wallets.deleteAction": "Eliminar billetera",
+  "wallets.switched": "Billetera cambiada — desbloquea para continuar.",
+  "wallets.renamed": "Billetera renombrada.",
+  "wallets.deleted": "Billetera eliminada.",
+  "wallets.empty": "Aún no hay otras billeteras.",
 };
 
 export const DICTIONARIES: Record<Locale, Dictionary> = { en, es };

@@ -38,13 +38,13 @@ import {
   deserializeWalletState,
   encodeAddress,
   findWithdrawnDepositIndexes,
-  hasStoredWallet as sdkHasStoredWallet,
   openStoredWallet,
   type RawDepositInput,
   type RawWalletV1,
   saveStoredWallet,
   serializeWalletState,
   transactions as txns,
+  type StorageAdapter,
   type UserKeys,
   type WalletKeys,
   type WalletState,
@@ -64,7 +64,17 @@ import {
   withPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
+import {
+  getActiveWallet,
+  getActiveWalletStorage,
+  readWalletsIndex,
+  registerWallet,
+  setActiveWallet,
+  storageForWallet,
+  unregisterWallet,
+  updateWallet,
+  type WalletMeta,
+} from "@/lib/services/real-sdk/wallets-index";
 
 /**
  * The SDK's daemon-result types (`DaemonRawTransaction`, `DaemonRandomOutsForAmount`)
@@ -115,6 +125,12 @@ export interface SdkRuntime {
   password: string;
   /** True when the wallet holds no private spend key (watch-only). */
   viewOnly: boolean;
+  /**
+   * Storage scoped to the active wallet's keyspace (multi-wallet, #95). OPTIONAL so
+   * `_setRuntimeForTest({...})` calls that omit it still typecheck; falls back to the
+   * active wallet's storage on persist when absent.
+   */
+  storage?: StorageAdapter;
 }
 
 let runtime: SdkRuntime | null = null;
@@ -142,10 +158,10 @@ export function _setRuntimeForTest(next: SdkRuntime | null): void {
   runtime = next;
 }
 
-/** Whether a stored wallet exists on this device (does not decrypt it). */
-export function hasStoredWallet(): Promise<boolean> {
-  if (typeof window === "undefined") return Promise.resolve(false);
-  return sdkHasStoredWallet(getSdkWalletStorage());
+/** Whether ANY stored wallet exists on this device (does not decrypt them). */
+export async function hasStoredWallet(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  return (await readWalletsIndex()).wallets.length > 0;
 }
 
 /** Map normalized {@link UserKeys} to the SDK {@link WalletKeys} (sec/pub pairs). */
@@ -236,7 +252,10 @@ export async function unlock(password: string): Promise<SdkRuntime> {
   }
   // Await WASM crypto init before openStoredWallet → buildAccount derive keys.
   await ensureSdkReady();
-  const storage = getSdkWalletStorage();
+  // Open the ACTIVE wallet's keyspace (multi-wallet #95); falls back to the bare
+  // default keyspace when no wallet is registered yet (legacy/first-open).
+  const meta = await getActiveWallet();
+  const storage = storageForWallet(meta ?? { namespace: "" });
   let opened: { raw: RawWalletV1; keys: UserKeys } | null;
   try {
     opened = await openStoredWallet(storage, password);
@@ -252,18 +271,27 @@ export async function unlock(password: string): Promise<SdkRuntime> {
   const daemon = buildDaemon(nodeUrlFromRaw(opened.raw));
   const viewOnly = !opened.keys.priv.spend;
 
-  runtime = { account, raw: opened.raw, state, daemon, password, viewOnly };
+  runtime = { account, raw: opened.raw, state, daemon, password, viewOnly, storage };
+  // Cache the address into the registry the first time we resolve it, so the
+  // switcher can show a truncated address without unlocking each wallet.
+  if (meta && !meta.address) {
+    await updateWallet(meta.id, { address: account.address });
+  }
   return runtime;
 }
 
 /**
- * Adopt a freshly created/imported/restored wallet into the runtime and persist
- * it as a NEW stored blob. Used by create / import paths after building `raw`.
+ * Adopt a freshly created/imported/restored wallet into the runtime, REGISTER it
+ * in the multi-wallet index (first → bare/default, rest → namespaced + active),
+ * and persist it into that wallet's keyspace. Used by create / import paths after
+ * building `raw`. "Add wallet" is just another adopt — it never overwrites an
+ * existing wallet's blob.
  */
 export async function adopt(input: {
   raw: RawWalletV1;
   keys: UserKeys;
   password: string;
+  label?: string;
 }): Promise<SdkRuntime> {
   // Await WASM crypto init before buildAccount/buildState derive the address.
   await ensureSdkReady();
@@ -272,7 +300,14 @@ export async function adopt(input: {
   const daemon = buildDaemon(nodeUrlFromRaw(input.raw));
   const viewOnly = !input.keys.priv.spend;
 
-  runtime = { account, raw: input.raw, state, daemon, password: input.password, viewOnly };
+  // Default label: "Main wallet" for the very first wallet, else "Wallet N".
+  const existingCount = (await readWalletsIndex()).wallets.length;
+  const label =
+    input.label?.trim() || (existingCount === 0 ? "Main wallet" : `Wallet ${existingCount + 1}`);
+  const meta = await registerWallet({ label, address: account.address });
+  const storage = storageForWallet(meta);
+
+  runtime = { account, raw: input.raw, state, daemon, password: input.password, viewOnly, storage };
   await persist();
   return runtime;
 }
@@ -613,7 +648,11 @@ async function persistNow(): Promise<void> {
     lastHeight: Math.max(Number(rt.raw.lastHeight ?? 0) || 0, rt.state.scannedHeight),
   };
   rt.raw = raw;
-  await saveStoredWallet(getSdkWalletStorage(), raw, rt.password);
+  // Persist into the active wallet's keyspace. `rt.storage` is set on unlock/adopt;
+  // fall back to the active wallet's storage for runtimes installed without it
+  // (e.g. `_setRuntimeForTest`).
+  const storage = rt.storage ?? (await getActiveWalletStorage());
+  await saveStoredWallet(storage, raw, rt.password);
 }
 
 /** Lock the wallet — drop the in-memory runtime (keys are never kept in session). */
@@ -630,9 +669,52 @@ export async function disconnect(): Promise<void> {
   await Promise.resolve();
 }
 
-/** Remove the stored wallet record (delete / panic-wipe). */
+/**
+ * Remove the ACTIVE wallet (delete / panic-wipe): erase its keyspace and drop it
+ * from the registry, reassigning active to a survivor. With no registry yet
+ * (legacy single-wallet), fall back to erasing the bare `"wallet"` record.
+ */
 export async function removeStoredWallet(): Promise<void> {
-  await getSdkWalletStorage().removeItem("wallet");
+  const active = await getActiveWallet();
+  if (active) {
+    await unregisterWallet(active.id);
+  } else {
+    await getActiveWalletStorage().then((storage) => storage.removeItem("wallet"));
+  }
+}
+
+// --- multi-wallet helpers (#95) --------------------------------------------
+// The wallet service calls these to back the switcher / management UI. They
+// operate purely on the registry; switching/removing the active wallet first
+// `lock()`s the in-memory runtime (the user re-unlocks the target).
+
+/** All registered wallets' metadata (for the switcher / settings list). */
+export async function listWalletMetas(): Promise<WalletMeta[]> {
+  return (await readWalletsIndex()).wallets;
+}
+
+/** The active wallet's id. */
+export async function activeWalletId(): Promise<string> {
+  return (await readWalletsIndex()).activeId;
+}
+
+/** Switch the active wallet: lock the current runtime, then set the new active id. */
+export async function switchActiveWallet(id: string): Promise<void> {
+  lock();
+  await setActiveWallet(id);
+}
+
+/** Rename a wallet (label only). */
+export async function renameWallet(id: string, label: string): Promise<void> {
+  await updateWallet(id, { label });
+}
+
+/** Remove a wallet by id; locks the runtime first when removing the active one. */
+export async function removeWalletById(id: string): Promise<void> {
+  if ((await activeWalletId()) === id) {
+    lock();
+  }
+  await unregisterWallet(id);
 }
 
 /** A user-safe message from an unknown thrown value. */

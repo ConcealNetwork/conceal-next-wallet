@@ -35,6 +35,16 @@ export type WalletStatTrend = {
   changePct: number;
 };
 
+/** One wallet in the multi-wallet switcher / management list (#95). */
+export type WalletSummary = {
+  id: string;
+  label: string;
+  /** ccx7… address, cached after the first successful open. */
+  address?: string;
+  /** True for the currently-active wallet. */
+  isActive: boolean;
+};
+
 export type TransactionType =
   | "receive"
   | "send"

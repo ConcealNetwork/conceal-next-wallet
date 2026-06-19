@@ -1,5 +1,7 @@
 export const queryKeys = {
   wallet: ["wallet"] as const,
+  /** Multi-wallet registry list (#95). */
+  wallets: ["wallets"] as const,
   transactions: ["transactions"] as const,
   market: ["market"] as const,
   messages: ["messages"] as const,

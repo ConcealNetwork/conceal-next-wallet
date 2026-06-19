@@ -17,20 +17,25 @@ import {
 import { mapWalletInfo } from "@/lib/services/real-sdk/mappers";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
+  activeWalletId,
   adopt,
   buildDaemon,
   disconnect as disconnectRuntime,
   friendlyMessage,
   getRuntime,
   hasStoredWallet as runtimeHasStoredWallet,
+  listWalletMetas,
   nodeUrlFromRaw,
   persist,
   removeStoredWallet,
+  removeWalletById,
+  renameWallet as renameWalletRuntime,
   requireRuntime,
+  switchActiveWallet,
   sync,
   unlock as unlockRuntime,
 } from "@/lib/services/real-sdk/runtime";
-import { getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
+import { getActiveWalletStorage } from "@/lib/services/real-sdk/wallets-index";
 import type {
   DownloadWalletBackupInput,
   ExportWalletData,
@@ -39,7 +44,7 @@ import type {
   PreviewKeysInput,
   WalletService,
 } from "@/lib/services/wallet.service";
-import type { WalletInfo } from "@/lib/types";
+import type { WalletInfo, WalletSummary } from "@/lib/types";
 import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 
 /** In-flight create draft (between `prepareCreateWallet` and `finalizeCreateWallet`). */
@@ -144,7 +149,7 @@ export const realSdkWalletService: WalletService = {
     const draft = pendingDraft;
     pendingDraft = null;
     createdMnemonic = draft.mnemonic ?? null;
-    await adopt({ raw: draft.raw, keys: draft.keys, password: input.password });
+    await adopt({ raw: draft.raw, keys: draft.keys, password: input.password, label: input.label });
     return syncedInfo();
   },
 
@@ -203,7 +208,12 @@ export const realSdkWalletService: WalletService = {
         default:
           throw new Error("This import method is not supported by the SDK engine.");
       }
-      await adopt({ raw: built.raw, keys: built.keys, password: input.password });
+      await adopt({
+        raw: built.raw,
+        keys: built.keys,
+        password: input.password,
+        label: input.label,
+      });
       return syncedInfo();
     } catch (error) {
       throw toFriendlyImportError(error);
@@ -292,7 +302,8 @@ export const realSdkWalletService: WalletService = {
   async verifyPassword(password) {
     await ensureSdkReady();
     if (!password) return false;
-    const stored = await getSdkWalletStorage().getItem("wallet");
+    // Verify against the ACTIVE wallet's keyspace (#95).
+    const stored = await (await getActiveWalletStorage()).getItem("wallet");
     if (stored === null) return false;
     let envelope: EncryptedWalletEnvelope;
     try {
@@ -305,6 +316,39 @@ export const realSdkWalletService: WalletService = {
     } catch {
       return false;
     }
+  },
+
+  async listWallets(): Promise<WalletSummary[]> {
+    await ensureSdkReady();
+    const [metas, active] = await Promise.all([listWalletMetas(), activeWalletId()]);
+    return metas.map((meta) => ({
+      id: meta.id,
+      label: meta.label,
+      ...(meta.address ? { address: meta.address } : {}),
+      isActive: meta.id === active,
+    }));
+  },
+
+  async switchWallet(id: string): Promise<void> {
+    await ensureSdkReady();
+    pendingDraft = null;
+    createdMnemonic = null;
+    await switchActiveWallet(id);
+  },
+
+  async renameWallet(id: string, label: string): Promise<void> {
+    await ensureSdkReady();
+    const trimmed = label.trim();
+    if (!trimmed) {
+      throw new Error("A wallet name is required.");
+    }
+    await renameWalletRuntime(id, trimmed);
+  },
+
+  async deleteWallet(id: string): Promise<void> {
+    await ensureSdkReady();
+    await removeWalletById(id);
+    createdMnemonic = null;
   },
 
   async disconnect() {
