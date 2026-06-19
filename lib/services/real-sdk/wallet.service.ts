@@ -194,10 +194,11 @@ export const realSdkWalletService: WalletService = {
     // drives the scan via buildState). Adopt registers it, so this also adds a wallet.
     if (input.method === "file") {
       try {
-        const text =
-          typeof input.file === "string"
-            ? input.file
-            : new TextDecoder().decode(input.file).replace(/^\uFEFF/, "").trim();
+        // Strip a UTF-8 BOM + surrounding whitespace from BOTH branches \u2014 a string
+        // read via FileReader.readAsText can carry a leading \uFEFF too.
+        const decoded =
+          typeof input.file === "string" ? input.file : new TextDecoder().decode(input.file);
+        const text = decoded.replace(/^\uFEFF/, "").trim();
         let envelope: unknown;
         try {
           envelope = JSON.parse(text);
