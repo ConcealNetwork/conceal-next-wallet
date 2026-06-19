@@ -41,7 +41,17 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               <WalletServiceWorkerRegister />
               <TooltipProvider>
                 {children}
-                <Toaster richColors position="top-right" style={TOAST_STYLE} />
+                {/* Standardized notifications: richColors + the wallet-palette
+                    TOAST_STYLE theme every variant; `closeButton` makes them dismissible
+                    (#120); 5s gives time to read while the close button allows early
+                    dismissal. Per-call `duration` still overrides (e.g. sticky errors). */}
+                <Toaster
+                  richColors
+                  closeButton
+                  duration={5000}
+                  position="top-right"
+                  style={TOAST_STYLE}
+                />
               </TooltipProvider>
             </TickerPreferenceProvider>
           </WalletSessionProvider>
