@@ -43,11 +43,16 @@ test("switches the active wallet via the sidebar-header dropdown", async ({ page
   await expect(trigger).toContainText("Savings");
 });
 
-test('"Add wallet" navigates to the create flow', async ({ page }) => {
+test("the switcher offers both Create new and Import existing", async ({ page }) => {
   await openWallet(page);
   await page.getByRole("button", { name: "Switch wallet" }).click();
-  await page.getByRole("menuitem", { name: "Add wallet" }).click();
+  await page.getByRole("menuitem", { name: "Create new" }).click();
   await expect(page).toHaveURL(/\/create\/?$/);
+
+  await page.goBack();
+  await page.getByRole("button", { name: "Switch wallet" }).click();
+  await page.getByRole("menuitem", { name: "Import existing" }).click();
+  await expect(page).toHaveURL(/\/import\/?$/);
 });
 
 test("Settings lists wallets and renames one", async ({ page }) => {

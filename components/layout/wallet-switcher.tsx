@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Check, ChevronDown, Download, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useSwitchWalletFlow } from "@/components/wallet/open-wallet-form";
@@ -94,9 +94,9 @@ export function WalletSwitcher({ collapsed = false }: { collapsed?: boolean }) {
     switchWallet(id);
   }
 
-  function handleAdd() {
+  function goTo(path: string) {
     close();
-    router.push("/create");
+    router.push(path);
   }
 
   return (
@@ -167,11 +167,20 @@ export function WalletSwitcher({ collapsed = false }: { collapsed?: boolean }) {
           <button
             type="button"
             role="menuitem"
-            onClick={handleAdd}
+            onClick={() => goTo("/create")}
             className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-primary transition-colors duration-200 hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Plus className="size-4 shrink-0" aria-hidden="true" />
-            {t("wallets.addWallet")}
+            {t("wallets.create")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => goTo("/import")}
+            className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-primary transition-colors duration-200 hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Download className="size-4 shrink-0" aria-hidden="true" />
+            {t("wallets.import")}
           </button>
         </div>
       ) : null}
