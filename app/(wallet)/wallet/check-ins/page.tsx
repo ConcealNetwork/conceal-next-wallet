@@ -22,12 +22,28 @@ import {
 } from "@/lib/ui/check-ins";
 import { cn } from "@/lib/utils";
 
-const STATUS_META: Record<CheckInStatus, { label: string; dot: string; text: string }> = {
-  ok: { label: "OK", dot: "bg-wallet-incoming", text: "text-muted-foreground" },
-  "due-soon": { label: "Due soon", dot: "bg-wallet-amber", text: "text-wallet-amber" },
-  overdue: { label: "Overdue", dot: "bg-wallet-outgoing", text: "text-wallet-outgoing" },
-  waiting: { label: "Waiting", dot: "bg-muted-foreground", text: "text-muted-foreground" },
-  paused: { label: "Paused", dot: "bg-muted-foreground/50", text: "text-muted-foreground" },
+const STATUS_META: Record<CheckInStatus, { labelKey: string; dot: string; text: string }> = {
+  ok: { labelKey: "checkIns.statusOk", dot: "bg-wallet-incoming", text: "text-muted-foreground" },
+  "due-soon": {
+    labelKey: "checkIns.statusDueSoon",
+    dot: "bg-wallet-amber",
+    text: "text-wallet-amber",
+  },
+  overdue: {
+    labelKey: "checkIns.statusOverdue",
+    dot: "bg-wallet-outgoing",
+    text: "text-wallet-outgoing",
+  },
+  waiting: {
+    labelKey: "checkIns.statusWaiting",
+    dot: "bg-muted-foreground",
+    text: "text-muted-foreground",
+  },
+  paused: {
+    labelKey: "checkIns.statusPaused",
+    dot: "bg-muted-foreground/50",
+    text: "text-muted-foreground",
+  },
 };
 
 const SNOOZE_DAYS = 7;
@@ -54,14 +70,14 @@ export default function CheckInsPage() {
     // it's only used to match incoming messages.
     const contact = contacts.find((c) => c.id === contactId);
     if (!contact) {
-      return toast.error("Pick a contact from your address book first.");
+      return toast.error(t("checkIns.errPickContact"));
     }
     const intervalDays = Number(interval);
     const graceDays = Number(grace);
-    if (!(intervalDays > 0)) return toast.error("Interval must be at least 1 day.");
-    if (!(graceDays >= 0)) return toast.error("Grace days can't be negative.");
+    if (!(intervalDays > 0)) return toast.error(t("checkIns.errIntervalMin"));
+    if (!(graceDays >= 0)) return toast.error(t("checkIns.errGraceNegative"));
     if (watchers.some((w) => w.address === contact.address)) {
-      return toast.error("You're already watching that contact.");
+      return toast.error(t("checkIns.errAlreadyWatching"));
     }
     try {
       setWatchers(
@@ -75,9 +91,9 @@ export default function CheckInsPage() {
         }),
       );
       setContactId("");
-      toast.success(`Watching ${contact.label} for check-ins.`);
+      toast.success(t("checkIns.watching", { label: contact.label }));
     } catch {
-      toast.error("Couldn't save — device storage may be unavailable.");
+      toast.error(t("checkIns.errSaveFailed"));
     }
   }
 
@@ -86,7 +102,7 @@ export default function CheckInsPage() {
       setWatchers(updateWatcher(id, p));
       if (msg) toast.success(msg);
     } catch {
-      toast.error("Couldn't update — device storage may be unavailable.");
+      toast.error(t("checkIns.errUpdateFailed"));
     }
   }
 
@@ -95,9 +111,9 @@ export default function CheckInsPage() {
     sendMessage.mutate(
       { recipientAddress: w.address, body: formatCheckIn("alive"), paymentId: w.paymentId },
       {
-        onSuccess: () => toast.success(`Check-in sent to ${w.label}.`),
+        onSuccess: () => toast.success(t("checkIns.sentTo", { label: w.label })),
         onError: (error: unknown) =>
-          toast.error(error instanceof Error ? error.message : "Couldn't send check-in."),
+          toast.error(error instanceof Error ? error.message : t("checkIns.errSendFailed")),
       },
     );
   }
@@ -116,7 +132,7 @@ export default function CheckInsPage() {
 
   return (
     <>
-      <PageHeader title={t("nav.checkIns")} subtitle="Notice when someone you watch goes quiet" />
+      <PageHeader title={t("nav.checkIns")} subtitle={t("checkIns.subtitle")} />
 
       <div className="space-y-6">
         {overdue.length > 0 && (
@@ -124,25 +140,27 @@ export default function CheckInsPage() {
             role="alert"
             className="rounded-xl border border-wallet-outgoing/40 bg-wallet-outgoing/10 px-4 py-3 text-sm text-wallet-outgoing"
           >
-            {overdue.length} overdue: {overdue.map((e) => e.w.label).join(", ")}. They may just be
-            busy — consider reaching out.
+            {t("checkIns.overdueAlert", {
+              count: overdue.length,
+              names: overdue.map((e) => e.w.label).join(", "),
+            })}
           </div>
         )}
 
         <SectionCard
-          title="Watch a contact"
-          description="A reminder to reconnect — not proof of anything. A check-in is a courtesy ping, not authenticated (anyone could in principle send a fake one), so don't rely on it for safety-critical decisions. People miss check-ins for ordinary reasons (lost wallet, no fees, travel). Alerts only appear while the wallet is open and synced."
+          title={t("checkIns.watchTitle")}
+          description={t("checkIns.watchDescription")}
         >
           <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
             <div className="space-y-2">
-              <Label htmlFor="ci-contact">Contact</Label>
+              <Label htmlFor="ci-contact">{t("checkIns.contactLabel")}</Label>
               <select
                 id="ci-contact"
                 className="h-10 w-full cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground"
                 value={contactId}
                 onChange={(e) => setContactId(e.target.value)}
               >
-                <option value="">Select…</option>
+                <option value="">{t("checkIns.selectPlaceholder")}</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
@@ -151,7 +169,7 @@ export default function CheckInsPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ci-interval">Every (days)</Label>
+              <Label htmlFor="ci-interval">{t("checkIns.everyLabel")}</Label>
               <Input
                 id="ci-interval"
                 type="number"
@@ -161,7 +179,7 @@ export default function CheckInsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ci-grace">Grace (days)</Label>
+              <Label htmlFor="ci-grace">{t("checkIns.graceLabel")}</Label>
               <Input
                 id="ci-grace"
                 type="number"
@@ -171,32 +189,36 @@ export default function CheckInsPage() {
               />
             </div>
             <Button type="button" onClick={add}>
-              Watch
+              {t("checkIns.watch")}
             </Button>
           </div>
           {contacts.length === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Add someone to your address book first, then watch them here.
-            </p>
+            <p className="mt-3 text-sm text-muted-foreground">{t("checkIns.emptyContacts")}</p>
           )}
         </SectionCard>
 
-        <SectionCard title="Watching" description="People you expect to hear from">
+        <SectionCard
+          title={t("checkIns.watchingTitle")}
+          description={t("checkIns.watchingDescription")}
+        >
           {!synced && watchers.length > 0 && (
-            <p className="mb-3 text-sm text-muted-foreground">Syncing — statuses update once caught up.</p>
+            <p className="mb-3 text-sm text-muted-foreground">{t("checkIns.syncing")}</p>
           )}
           {watchers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Not watching anyone yet.</p>
+            <p className="text-sm text-muted-foreground">{t("checkIns.notWatching")}</p>
           ) : (
             <ul className="divide-y divide-border">
               {evaluated.map(({ w, lastHeard, status, checkedIn }) => {
                 const meta = STATUS_META[status];
                 const detail =
                   status === "waiting"
-                    ? `No message seen yet · every ${w.intervalDays}d`
+                    ? t("checkIns.detailWaiting", { interval: w.intervalDays })
                     : lastHeard
-                      ? `Last heard ${daysSince(lastHeard, nowISO)}d ago · every ${w.intervalDays}d`
-                      : `Every ${w.intervalDays}d`;
+                      ? t("checkIns.detailLastHeard", {
+                          days: daysSince(lastHeard, nowISO),
+                          interval: w.intervalDays,
+                        })
+                      : t("checkIns.detailEvery", { interval: w.intervalDays });
                 return (
                   <li key={w.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -214,8 +236,10 @@ export default function CheckInsPage() {
                       <div className="min-w-0">
                         <span className="font-semibold">{w.label}</span>
                         <p className={cn("text-sm", meta.text)}>
-                          {checkedIn ? <span className="sr-only">Checked in. </span> : null}
-                          {meta.label} · {detail}
+                          {checkedIn ? (
+                            <span className="sr-only">{t("checkIns.checkedInSr")}</span>
+                          ) : null}
+                          {t(meta.labelKey)} · {detail}
                         </p>
                       </div>
                     </div>
@@ -225,10 +249,10 @@ export default function CheckInsPage() {
                         size="sm"
                         variant="outline"
                         disabled={viewOnly || sendMessage.isPending}
-                        title="Sends an on-chain check-in message (~0.0011 CCX net, 0.0111 reserved)"
+                        title={t("checkIns.sendCheckInTitle")}
                         onClick={() => sendCheckIn(w)}
                       >
-                        Send check-in
+                        {t("checkIns.sendCheckIn")}
                       </Button>
                       {w.paused || (w.snoozedUntil && new Date(nowISO) < new Date(w.snoozedUntil)) ? (
                         <Button
@@ -236,10 +260,14 @@ export default function CheckInsPage() {
                           size="sm"
                           variant="outline"
                           onClick={() =>
-                            patch(w.id, { paused: false, snoozedUntil: undefined }, `Resumed ${w.label}.`)
+                            patch(
+                              w.id,
+                              { paused: false, snoozedUntil: undefined },
+                              t("checkIns.resumed", { label: w.label }),
+                            )
                           }
                         >
-                          Resume
+                          {t("checkIns.resume")}
                         </Button>
                       ) : (
                         <>
@@ -251,19 +279,21 @@ export default function CheckInsPage() {
                               patch(
                                 w.id,
                                 { snoozedUntil: new Date(Date.now() + SNOOZE_DAYS * 86_400_000).toISOString() },
-                                `Snoozed ${w.label} ${SNOOZE_DAYS} days.`,
+                                t("checkIns.snoozed", { label: w.label, days: SNOOZE_DAYS }),
                               )
                             }
                           >
-                            Snooze
+                            {t("checkIns.snooze")}
                           </Button>
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => patch(w.id, { paused: true }, `Paused ${w.label}.`)}
+                            onClick={() =>
+                              patch(w.id, { paused: true }, t("checkIns.paused", { label: w.label }))
+                            }
                           >
-                            Pause
+                            {t("checkIns.pause")}
                           </Button>
                         </>
                       )}
@@ -272,16 +302,16 @@ export default function CheckInsPage() {
                         size="sm"
                         variant="ghost"
                         className="text-muted-foreground hover:text-destructive"
-                        aria-label={`Stop watching ${w.label}`}
+                        aria-label={t("checkIns.stopWatching", { label: w.label })}
                         onClick={() => {
                           try {
                             setWatchers(removeWatcher(w.id));
                           } catch {
-                            toast.error("Couldn't update — device storage may be unavailable.");
+                            toast.error(t("checkIns.errUpdateFailed"));
                           }
                         }}
                       >
-                        Remove
+                        {t("checkIns.remove")}
                       </Button>
                     </div>
                   </li>

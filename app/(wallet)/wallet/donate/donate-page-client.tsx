@@ -8,75 +8,103 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
   DONATION_CRYPTO_ADDRESSES,
-  DONATION_METHOD_LABELS,
-  getDonationMethodsDescription,
   type DonationConfig,
   type DonationMethodKey,
 } from "@/lib/donation-config";
 import { cn } from "@/lib/utils";
 
 const PRESETS = [5, 15, 50, 100];
-const FREQUENCIES = ["Monthly", "Quarterly", "Yearly"];
 
-type DonationMethodLabel = (typeof DONATION_METHOD_LABELS)[DonationMethodKey];
+/** Stable frequency tokens; the display label is resolved via i18n at render. */
+const FREQUENCIES = ["monthly", "quarterly", "yearly"] as const;
+type Frequency = (typeof FREQUENCIES)[number];
+
+const FREQUENCY_LABEL_KEYS: Record<Frequency, string> = {
+  monthly: "donate.freqMonthly",
+  quarterly: "donate.freqQuarterly",
+  yearly: "donate.freqYearly",
+};
+
+const METHOD_LABEL_KEYS: Record<DonationMethodKey, string> = {
+  crypto: "donate.methodCrypto",
+  visa: "donate.methodVisa",
+  paypal: "donate.methodPaypal",
+  apple: "donate.methodApple",
+};
+
+const METHOD_DESCRIPTION_KEYS: Record<DonationMethodKey, string> = {
+  crypto: "donate.descCrypto",
+  visa: "donate.descVisa",
+  paypal: "donate.descPaypal",
+  apple: "donate.descApple",
+};
 
 export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig) {
+  const { t } = useI18n();
   const visibleMethods = enabledMethods.map((key) => ({
     key,
-    label: DONATION_METHOD_LABELS[key],
+    label: t(METHOD_LABEL_KEYS[key]),
   }));
-  const defaultMethod = visibleMethods[0]?.label ?? DONATION_METHOD_LABELS.crypto;
+  const defaultMethod: DonationMethodKey = visibleMethods[0]?.key ?? "crypto";
   const multipleMethods = visibleMethods.length > 1;
-  const methodsDescription = getDonationMethodsDescription(enabledMethods);
+  const methodsDescription =
+    enabledMethods.length === 1
+      ? t(METHOD_DESCRIPTION_KEYS[enabledMethods[0]])
+      : t("donate.descMultiple");
 
   const [preset, setPreset] = useState<number | null>(50);
   const [custom, setCustom] = useState("");
   const [recurring, setRecurring] = useState(false);
-  const [frequency, setFrequency] = useState("Monthly");
-  const [method, setMethod] = useState<DonationMethodLabel>(defaultMethod);
+  const [frequency, setFrequency] = useState<Frequency>("monthly");
+  const [method, setMethod] = useState<DonationMethodKey>(defaultMethod);
 
   const amount = custom ? Number(custom) || 0 : (preset ?? 0);
-  const cadence = recurring ? `${frequency} donation` : "One-time donation";
+  const cadence = recurring
+    ? t("donate.recurringCadence", { frequency: t(FREQUENCY_LABEL_KEYS[frequency]) })
+    : t("donate.oneTimeCadence");
 
   function donate() {
     if (amount <= 0) {
-      toast.error("Choose an amount first.");
+      toast.error(t("donate.errChooseAmount"));
       return;
     }
     toast.success(
-      `Mock ${cadence.toLowerCase()} of $${amount} via ${method}. No payment was processed.`,
+      t("donate.mockToast", {
+        // Use the localized cadence phrase as-is — lowercasing translated text
+        // corrupts casing in other locales (German nouns, Turkish I/i, …).
+        cadence,
+        amount: `$${amount}`,
+        method: t(METHOD_LABEL_KEYS[method]),
+      }),
     );
   }
 
   return (
     <>
-      <PageHeader
-        title="Support Conceal"
-        subtitle="Your donation powers privacy-first finance. Thank you!"
-      />
+      <PageHeader title={t("donate.title")} subtitle={t("donate.subtitle")} />
 
       <div className="space-y-6">
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
           <div className="wallet-card overflow-hidden bg-linear-to-br from-primary/10 to-transparent p-6">
             <div className="flex items-center gap-2">
               <Sparkles className="size-5 text-primary" aria-hidden="true" />
-              <h2 className="text-lg font-semibold">Why your support matters</h2>
+              <h2 className="text-lg font-semibold">{t("donate.whyTitle")}</h2>
             </div>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Conceal is community-run, open-source privacy infrastructure. Your gift funds node
-              hosting, audits, and development — no VCs, no token sale.
-            </p>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("donate.whyBody")}</p>
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-2">
-                <Lock className="size-4 text-primary" aria-hidden="true" /> Secure payments
+                <Lock className="size-4 text-primary" aria-hidden="true" /> {t("donate.securePayments")}
               </span>
               <span className="inline-flex items-center gap-2">
-                <ShieldCheck className="size-4 text-primary" aria-hidden="true" /> Privacy-first
+                <ShieldCheck className="size-4 text-primary" aria-hidden="true" />{" "}
+                {t("donate.privacyFirst")}
               </span>
               <span className="inline-flex items-center gap-2">
-                <CreditCard className="size-4 text-primary" aria-hidden="true" /> Transparent fees
+                <CreditCard className="size-4 text-primary" aria-hidden="true" />{" "}
+                {t("donate.transparentFees")}
               </span>
             </div>
           </div>
@@ -85,8 +113,8 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
         {fiatEnabled ? (
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
             <SectionCard
-              title="Choose your donation"
-              description="Pick an amount, choose a method, and you're set"
+              title={t("donate.chooseTitle")}
+              description={t("donate.chooseDescription")}
             >
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {PRESETS.map((value) => {
@@ -114,7 +142,7 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="custom">Custom amount (USD)</Label>
+                  <Label htmlFor="custom">{t("donate.customLabel")}</Label>
                   <Input
                     id="custom"
                     type="number"
@@ -122,27 +150,29 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
                     step="1"
                     value={custom}
                     onChange={(event) => setCustom(event.target.value)}
-                    placeholder="Enter amount"
+                    placeholder={t("donate.customPlaceholder")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="frequency">Frequency</Label>
+                  <Label htmlFor="frequency">{t("donate.frequencyLabel")}</Label>
                   <div className="flex items-center gap-3">
                     <Switch
                       checked={recurring}
                       onCheckedChange={setRecurring}
-                      aria-label="Make it recurring"
+                      aria-label={t("donate.recurringToggleAria")}
                     />
-                    <span className="text-sm text-muted-foreground">Recurring</span>
+                    <span className="text-sm text-muted-foreground">{t("donate.recurring")}</span>
                     <select
                       id="frequency"
                       value={frequency}
-                      onChange={(event) => setFrequency(event.target.value)}
+                      onChange={(event) => setFrequency(event.target.value as Frequency)}
                       disabled={!recurring}
                       className="ml-auto h-10 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {FREQUENCIES.map((freq) => (
-                        <option key={freq}>{freq}</option>
+                        <option key={freq} value={freq}>
+                          {t(FREQUENCY_LABEL_KEYS[freq])}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -156,7 +186,7 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
                   className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
                 >
                   <Heart className="size-4" aria-hidden="true" />
-                  Donate
+                  {t("donate.donate")}
                 </Button>
                 <span className="text-sm text-muted-foreground">
                   {cadence} — <span className="font-semibold text-foreground">${amount || 0}</span>
@@ -167,17 +197,17 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
         ) : null}
 
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
-          <SectionCard title="Payment methods" description={methodsDescription}>
+          <SectionCard title={t("donate.paymentMethods")} description={methodsDescription}>
             {multipleMethods ? (
               <div className="flex flex-wrap gap-2">
                 {visibleMethods.map(({ key, label }) => {
-                  const active = method === label;
+                  const active = method === key;
 
                   return (
                     <button
                       key={key}
                       type="button"
-                      onClick={() => setMethod(label)}
+                      onClick={() => setMethod(key)}
                       aria-pressed={active}
                       className={cn(
                         "min-h-10 cursor-pointer rounded-xl border px-4 text-sm transition-[border-color,color,background-color] duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
@@ -193,7 +223,7 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
               </div>
             ) : null}
 
-            {method === DONATION_METHOD_LABELS.crypto ? (
+            {method === "crypto" ? (
               <div
                 className={cn(
                   "grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start",
@@ -211,7 +241,7 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
                         {coin.address}
                       </p>
                       <div className="mt-3">
-                        <CopyButton value={coin.address} label="Copy Address" />
+                        <CopyButton value={coin.address} label={t("donate.copyAddress")} />
                       </div>
                     </div>
                   ))}
@@ -227,7 +257,7 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
                   multipleMethods && "mt-5",
                 )}
               >
-                {method} is a mock option — this demo wallet does not process real payments.
+                {t("donate.mockMethodNote", { method: t(METHOD_LABEL_KEYS[method]) })}
               </p>
             )}
           </SectionCard>
