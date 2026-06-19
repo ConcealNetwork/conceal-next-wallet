@@ -69,6 +69,7 @@ function HeaderThemeToggle() {
 
 function SyncStatusPill() {
   const { isSyncing, syncPct } = useWalletSyncStatus();
+  const { t } = useI18n();
   if (isSyncing) {
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-wallet-amber/12 px-3 py-1 text-xs font-semibold text-wallet-amber sm:flex">
@@ -76,53 +77,53 @@ function SyncStatusPill() {
           className="size-1.5 animate-pulse rounded-full bg-wallet-amber"
           aria-hidden="true"
         />
-        Syncing… {syncPct}%
+        {t("header.syncing", { pct: syncPct })}
       </span>
     );
   }
   return (
     <span className="hidden items-center gap-1.5 rounded-full bg-wallet-incoming/12 px-3 py-1 text-xs font-semibold text-wallet-incoming sm:flex">
       <span className="size-1.5 rounded-full bg-wallet-incoming" aria-hidden="true" />
-      Synced
+      {t("header.synced")}
     </span>
   );
 }
 
-type NotifMeta = { title: (amount: string) => string; icon: LucideIcon; chip: string };
+type NotifMeta = { titleKey: string; icon: LucideIcon; chip: string };
 
 const NOTIF_META: Record<TransactionType, NotifMeta> = {
   receive: {
-    title: (amt) => `Received ${amt}`,
+    titleKey: "header.notifReceived",
     icon: ArrowDownLeft,
     chip: "bg-wallet-incoming/14 text-wallet-incoming",
   },
   send: {
-    title: (amt) => `Sent ${amt}`,
+    titleKey: "header.notifSent",
     icon: ArrowUpRight,
     chip: "bg-wallet-outgoing/14 text-wallet-outgoing",
   },
   deposit: {
-    title: (amt) => `Deposited ${amt}`,
+    titleKey: "header.notifDeposited",
     icon: Lock,
     chip: "bg-wallet-deposit/14 text-wallet-deposit",
   },
   withdrawal: {
-    title: (amt) => `Withdrew ${amt}`,
+    titleKey: "header.notifWithdrew",
     icon: ArrowUpFromLine,
     chip: "bg-wallet-incoming/14 text-wallet-incoming",
   },
   fusion: {
-    title: (amt) => `Fused ${amt}`,
+    titleKey: "header.notifFused",
     icon: Combine,
     chip: "bg-secondary text-muted-foreground",
   },
   miner: {
-    title: (amt) => `Mined ${amt}`,
+    titleKey: "header.notifMined",
     icon: Pickaxe,
     chip: "bg-wallet-incoming/14 text-wallet-incoming",
   },
   message: {
-    title: () => "New message",
+    titleKey: "header.notifNewMessage",
     icon: Mail,
     chip: "bg-primary/14 text-primary",
   },
@@ -131,6 +132,7 @@ const NOTIF_META: Record<TransactionType, NotifMeta> = {
 function NotificationsButton() {
   const { data: txs = [] } = useTransactions();
   const fmt = useFormatters();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   // In-memory "viewed" flag — the badge shows until the user opens the panel,
   // then stays cleared for the rest of the session. Real but simple.
@@ -186,7 +188,7 @@ function NotificationsButton() {
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={open ? "Close notifications" : "Open notifications"}
+            aria-label={open ? t("header.closeNotifications") : t("header.openNotifications")}
             aria-expanded={open}
             aria-controls={open ? menuId : undefined}
             onClick={toggle}
@@ -201,31 +203,31 @@ function NotificationsButton() {
             ) : null}
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Notifications</TooltipContent>
+        <TooltipContent side="bottom">{t("header.notifications")}</TooltipContent>
       </Tooltip>
 
       {open ? (
         <div
           id={menuId}
           role="menu"
-          aria-label="Notifications"
+          aria-label={t("header.notifications")}
           className="absolute right-0 top-full z-50 mt-1.5 w-[320px] overflow-hidden rounded-xl border border-border bg-card shadow-[0_20px_50px_rgba(0,0,0,.5)]"
         >
           <div className="flex items-center border-b border-border/70 px-3.5 py-3 text-xs font-semibold">
-            Notifications
+            {t("header.notifications")}
             {recent.length > 0 ? (
               <button
                 type="button"
                 onClick={markAllRead}
                 className="ml-auto cursor-pointer text-[11.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Mark all read
+                {t("header.markAllRead")}
               </button>
             ) : null}
           </div>
           {recent.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              No recent activity
+              {t("header.noRecentActivity")}
             </div>
           ) : (
             recent.map((tx) => {
@@ -248,7 +250,7 @@ function NotificationsButton() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[12.5px] font-semibold text-foreground">
-                      {meta.title(fmt.formatCcx(tx.amount))}
+                      {t(meta.titleKey, { amt: fmt.formatCcx(tx.amount) })}
                     </p>
                     <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">
                       {truncateAddress(tx.address, 6, 4)} · {fmt.timeAgo(tx.timestamp)}
