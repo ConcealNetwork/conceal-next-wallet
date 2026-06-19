@@ -107,6 +107,35 @@ const en: Dictionary = {
   "settings.password": "Password",
   "settings.passwordDescription": "Change the local wallet password",
   "settings.changePassword": "Change Password",
+  "settings.toastNotificationsDisabled": "Notifications disabled.",
+  "settings.toastNotificationsEnabled": "Notifications enabled.",
+  "settings.toastNotificationsBlocked": "Notifications are blocked in your browser settings.",
+  "settings.toastNotificationsNotGranted": "Notification permission was not granted.",
+  "settings.toastSettingsUpdated": "Settings updated.",
+  "settings.toastMockSettingsUpdated": "Mock settings updated.",
+  "settings.toastSettingsUpdateFailed": "Settings update failed.",
+  "settings.toastCustomNodeConnected": "Custom node connected.",
+  "settings.toastMockCustomNodeEnabled": "Mock custom node enabled.",
+  "settings.toastUsingPublicNodes": "Using public nodes.",
+  "settings.toastMockPublicNodesEnabled": "Mock public nodes enabled.",
+  "settings.toastCustomNodeUpdated": "Custom node updated.",
+  "settings.toastMockCustomNodeUpdated": "Mock custom node updated.",
+  "settings.toastNodeUpdateFailed": "Node update failed.",
+  "settings.toastNodeLagWarning":
+    "This node is {blocks} blocks behind the network — it may show outdated balances. Consider switching nodes.",
+  "settings.toastInvalidCreationHeight": "Enter a valid creation height.",
+  "settings.toastCreationHeightUpdated": "Creation height updated — rescanning from that block.",
+  "settings.toastMockWalletUpdated": "Mock wallet updated.",
+  "settings.toastResetRescan": "Wallet reset — rescanning from creation height.",
+  "settings.toastMockRescanStarted": "Mock rescan started.",
+  "settings.toastRescanFailed": "Rescan failed.",
+  "settings.toastOptimizeComplete": "Wallet optimization complete.",
+  "settings.toastMockOptimizeComplete": "Mock optimization complete.",
+  "settings.toastNothingToOptimize": "Nothing to optimize.",
+  "settings.toastMockNothingToOptimize": "Mock wallet does not need optimization.",
+  "settings.toastOptimizeFailed": "Optimization failed.",
+  "settings.toastTickerUpdated": "Ticker updated.",
+  "settings.toastMockTickerUpdated": "Mock ticker updated.",
   // Multi-wallet (#95)
   "wallets.switcherLabel": "Switch wallet",
   "wallets.active": "Active",
@@ -286,6 +315,9 @@ const en: Dictionary = {
   "txn.exportSuccess": "Exported {count} transactions.",
   "txn.exportSuccessOne": "Exported 1 transaction.",
   "txn.exportError": "Failed to export CSV.",
+  "toast.noteSaved": "Note saved.",
+  "toast.noteRemoved": "Note removed.",
+  "toast.noteSaveFailed": "Could not save note.",
   "txn.rowAria": "{label} transaction for {amount} from {time}",
   "txn.confirmationsCount": "{count} confirmations",
   "txn.typeWithdrawal": "Withdrawal",
@@ -433,15 +465,15 @@ const en: Dictionary = {
   "messages.listSentNoBody": "Sent message (body not saved locally)",
   "messages.youPrefix": "You: ",
   "messages.unread": "Unread",
-  "messages.bodyUnavailable":
-    "Message body unavailable (sent before local save or after rescan).",
+  "messages.bodyUnavailable": "Message body unavailable (sent before local save or after rescan).",
   "messages.blockPrefix": "Block {height} · ",
   "messages.pendingPrefix": "Pending · ",
   "messages.ttlExpiresAt": "expires at {date}",
   "messages.mdShowPlain": "Show plain text",
   "messages.mdShowFormatted": "Show formatted messages",
   "messages.errSendFailed": "Failed to send message.",
-  "messages.errReplyNeedsContact": "Add this contact to the address book with a CCX address to reply.",
+  "messages.errReplyNeedsContact":
+    "Add this contact to the address book with a CCX address to reply.",
   "messages.errRecipientAndMessageRequired": "Recipient and message are required.",
   "messages.errInvalidRecipient": "Invalid recipient CCX address.",
   "messages.errPaymentIdInvalid": "Payment ID must be 16 or 64 hex characters.",
@@ -754,15 +786,13 @@ const es: Dictionary = {
   "settings.optimizeNow": "Optimizar ahora",
   "settings.optimizing": "Optimizando…",
   "settings.optimizeWaitForSync": "Espera a que termine la sincronización antes de optimizar.",
-  "settings.optimizeAvailable":
-    "Se puede intentar la optimización: {count} UTXO sin gastar",
+  "settings.optimizeAvailable": "Se puede intentar la optimización: {count} UTXO sin gastar",
   "settings.node": "Nodo",
   "settings.useCustomNode": "Usar nodo personalizado",
   "settings.useCustomNodeDescription":
     "Fija la URL de abajo en lugar de rotar entre nodos públicos",
   "settings.nodeUrl": "URL del nodo",
-  "settings.nodeUrlDescriptionCustom":
-    "Daemon personalizado: edita y pulsa Enter para reconectar",
+  "settings.nodeUrlDescriptionCustom": "Daemon personalizado: edita y pulsa Enter para reconectar",
   "settings.nodeUrlDescriptionPublic":
     "Daemon conectado actualmente: edítalo antes de activar el nodo personalizado",
   "settings.testingNodeConnection": "Probando la conexión con el nodo…",
@@ -797,6 +827,37 @@ const es: Dictionary = {
   "settings.password": "Contraseña",
   "settings.passwordDescription": "Cambia la contraseña local de la billetera",
   "settings.changePassword": "Cambiar contraseña",
+  "settings.toastNotificationsDisabled": "Notificaciones desactivadas.",
+  "settings.toastNotificationsEnabled": "Notificaciones activadas.",
+  "settings.toastNotificationsBlocked":
+    "Las notificaciones están bloqueadas en la configuración de tu navegador.",
+  "settings.toastNotificationsNotGranted": "No se concedió el permiso de notificaciones.",
+  "settings.toastSettingsUpdated": "Configuración actualizada.",
+  "settings.toastMockSettingsUpdated": "Configuración simulada actualizada.",
+  "settings.toastSettingsUpdateFailed": "No se pudo actualizar la configuración.",
+  "settings.toastCustomNodeConnected": "Nodo personalizado conectado.",
+  "settings.toastMockCustomNodeEnabled": "Nodo personalizado simulado activado.",
+  "settings.toastUsingPublicNodes": "Usando nodos públicos.",
+  "settings.toastMockPublicNodesEnabled": "Nodos públicos simulados activados.",
+  "settings.toastCustomNodeUpdated": "Nodo personalizado actualizado.",
+  "settings.toastMockCustomNodeUpdated": "Nodo personalizado simulado actualizado.",
+  "settings.toastNodeUpdateFailed": "No se pudo actualizar el nodo.",
+  "settings.toastNodeLagWarning":
+    "Este nodo está {blocks} bloques por detrás de la red; puede mostrar saldos desactualizados. Considera cambiar de nodo.",
+  "settings.toastInvalidCreationHeight": "Introduce una altura de creación válida.",
+  "settings.toastCreationHeightUpdated":
+    "Altura de creación actualizada: reescaneando desde ese bloque.",
+  "settings.toastMockWalletUpdated": "Billetera simulada actualizada.",
+  "settings.toastResetRescan": "Billetera restablecida: reescaneando desde la altura de creación.",
+  "settings.toastMockRescanStarted": "Reescaneo simulado iniciado.",
+  "settings.toastRescanFailed": "El reescaneo falló.",
+  "settings.toastOptimizeComplete": "Optimización de la billetera completada.",
+  "settings.toastMockOptimizeComplete": "Optimización simulada completada.",
+  "settings.toastNothingToOptimize": "No hay nada que optimizar.",
+  "settings.toastMockNothingToOptimize": "La billetera simulada no necesita optimización.",
+  "settings.toastOptimizeFailed": "La optimización falló.",
+  "settings.toastTickerUpdated": "Símbolo actualizado.",
+  "settings.toastMockTickerUpdated": "Símbolo simulado actualizado.",
   "wallets.switcherLabel": "Cambiar billetera",
   "wallets.active": "Activa",
   "wallets.addWallet": "Añadir billetera",
@@ -947,7 +1008,8 @@ const es: Dictionary = {
   "txn.transfersAndWithdrawals": "Transferencias y retiros",
   "txn.lockedDeposits": "Depósitos bloqueados",
   "txn.flowMix": "Distribución del flujo",
-  "txn.flowMixSrOnly": "Distribución del flujo: {received} recibido, {sent} enviado, {deposits} en depósitos.",
+  "txn.flowMixSrOnly":
+    "Distribución del flujo: {received} recibido, {sent} enviado, {deposits} en depósitos.",
   "txn.transactionsCount": "{count} transacciones",
   "txn.netFlow": "Flujo neto",
   "txn.tabAll": "Todas",
@@ -973,6 +1035,9 @@ const es: Dictionary = {
   "txn.exportSuccess": "Se exportaron {count} transacciones.",
   "txn.exportSuccessOne": "Se exportó 1 transacción.",
   "txn.exportError": "No se pudo exportar el CSV.",
+  "toast.noteSaved": "Nota guardada.",
+  "toast.noteRemoved": "Nota eliminada.",
+  "toast.noteSaveFailed": "No se pudo guardar la nota.",
   "txn.rowAria": "Transacción de {label} por {amount} de {time}",
   "txn.confirmationsCount": "{count} confirmaciones",
   "txn.typeWithdrawal": "Retiro",
@@ -1094,7 +1159,8 @@ const es: Dictionary = {
   "messages.searchPlaceholder": "Buscar mensajes…",
   "messages.searchAria": "Buscar mensajes",
   "messages.empty": "No se encontraron mensajes.",
-  "messages.viewOnlyReplyHint": "Cartera de solo lectura — para responder se necesita la clave de gasto",
+  "messages.viewOnlyReplyHint":
+    "Cartera de solo lectura — para responder se necesita la clave de gasto",
   "messages.replyTo": "Mensaje para {name}…",
   "messages.addContactToReply": "Añade el contacto a la libreta de direcciones para responder…",
   "messages.replyAria": "Responder a {name}",
@@ -1130,7 +1196,8 @@ const es: Dictionary = {
   "messages.mdShowPlain": "Mostrar texto sin formato",
   "messages.mdShowFormatted": "Mostrar mensajes con formato",
   "messages.errSendFailed": "No se pudo enviar el mensaje.",
-  "messages.errReplyNeedsContact": "Añade este contacto a la libreta de direcciones con una dirección CCX para responder.",
+  "messages.errReplyNeedsContact":
+    "Añade este contacto a la libreta de direcciones con una dirección CCX para responder.",
   "messages.errRecipientAndMessageRequired": "El destinatario y el mensaje son obligatorios.",
   "messages.errInvalidRecipient": "Dirección CCX de destinatario no válida.",
   "messages.errPaymentIdInvalid": "El ID de pago debe tener 16 o 64 caracteres hexadecimales.",
@@ -1170,8 +1237,10 @@ const es: Dictionary = {
   "checkIns.errGraceNegative": "Los días de gracia no pueden ser negativos.",
   "checkIns.errAlreadyWatching": "Ya estás siguiendo a ese contacto.",
   "checkIns.watching": "Siguiendo a {label} para check-ins.",
-  "checkIns.errSaveFailed": "No se pudo guardar — el almacenamiento del dispositivo puede no estar disponible.",
-  "checkIns.errUpdateFailed": "No se pudo actualizar — el almacenamiento del dispositivo puede no estar disponible.",
+  "checkIns.errSaveFailed":
+    "No se pudo guardar — el almacenamiento del dispositivo puede no estar disponible.",
+  "checkIns.errUpdateFailed":
+    "No se pudo actualizar — el almacenamiento del dispositivo puede no estar disponible.",
   "checkIns.sentTo": "Check-in enviado a {label}.",
   "checkIns.errSendFailed": "No se pudo enviar el check-in.",
   "checkIns.overdueAlert":
@@ -1184,7 +1253,8 @@ const es: Dictionary = {
   "checkIns.everyLabel": "Cada (días)",
   "checkIns.graceLabel": "Gracia (días)",
   "checkIns.watch": "Seguir",
-  "checkIns.emptyContacts": "Primero añade a alguien a tu libreta de direcciones y luego síguelo aquí.",
+  "checkIns.emptyContacts":
+    "Primero añade a alguien a tu libreta de direcciones y luego síguelo aquí.",
   "checkIns.watchingTitle": "Siguiendo",
   "checkIns.watchingDescription": "Personas de las que esperas tener noticias",
   "checkIns.syncing": "Sincronizando — los estados se actualizan al ponerse al día.",
@@ -1217,8 +1287,10 @@ const es: Dictionary = {
   "scheduled.errSaveFailed":
     "No se pudo guardar el recordatorio — el almacenamiento del dispositivo puede estar lleno o no disponible.",
   "scheduled.markedPaid": "Marcado como pagado — próximo recordatorio programado.",
-  "scheduled.errUpdateFailed": "No se pudo actualizar el recordatorio — el almacenamiento del dispositivo puede no estar disponible.",
-  "scheduled.errRemoveFailed": "No se pudo eliminar el recordatorio — el almacenamiento del dispositivo puede no estar disponible.",
+  "scheduled.errUpdateFailed":
+    "No se pudo actualizar el recordatorio — el almacenamiento del dispositivo puede no estar disponible.",
+  "scheduled.errRemoveFailed":
+    "No se pudo eliminar el recordatorio — el almacenamiento del dispositivo puede no estar disponible.",
   "scheduled.addTitle": "Añadir un recordatorio",
   "scheduled.addDescription":
     "Solo un recordatorio — tus claves nunca envían automáticamente. Cuando uno venza, se te pedirá revisar y confirmar.",
@@ -1242,7 +1314,8 @@ const es: Dictionary = {
   "donate.title": "Apoya a Conceal",
   "donate.subtitle": "Tu donación impulsa las finanzas con la privacidad primero. ¡Gracias!",
   "donate.errChooseAmount": "Elige primero un importe.",
-  "donate.mockToast": "Simulación de {cadence} de {amount} mediante {method}. No se procesó ningún pago.",
+  "donate.mockToast":
+    "Simulación de {cadence} de {amount} mediante {method}. No se procesó ningún pago.",
   "donate.recurringCadence": "Donación {frequency}",
   "donate.oneTimeCadence": "Donación única",
   "donate.whyTitle": "Por qué importa tu apoyo",
@@ -1276,10 +1349,12 @@ const es: Dictionary = {
   "donate.descApple": "Dona con Apple Pay",
   "donate.descMultiple": "Varias formas de mostrar tu apoyo",
   // Deposits page
-  "deposits.pageSubtitle": "Crea depósitos con bloqueo temporal y sigue los rendimientos proyectados",
+  "deposits.pageSubtitle":
+    "Crea depósitos con bloqueo temporal y sigue los rendimientos proyectados",
   "deposits.createNew": "Crear nuevo depósito",
   "deposits.syncingHint": "crear y retirar están deshabilitados hasta que la cadena se sincronice",
-  "deposits.pendingMempool": "Una transacción de depósito está pendiente de confirmación en el mempool.",
+  "deposits.pendingMempool":
+    "Una transacción de depósito está pendiente de confirmación en el mempool.",
   "deposits.summaryDescription": "CCX bloqueado, vencimiento y TAE combinada",
   "deposits.openCalculator": "Abrir la calculadora de intereses de depósitos",
   "deposits.allHeading": "Todos los depósitos",
@@ -1355,8 +1430,10 @@ const es: Dictionary = {
   "deposits.emptyTitle": "Aún no hay depósitos",
   "deposits.emptyDescription":
     "Crea un depósito con bloqueo temporal para ver la TAE, la fecha de vencimiento y el interés proyectado.",
-  "deposits.createDescriptionOne": "Bloquea CCX durante {count} mes y gana intereses al vencimiento.",
-  "deposits.createDescriptionOther": "Bloquea CCX durante {count} meses y gana intereses al vencimiento.",
+  "deposits.createDescriptionOne":
+    "Bloquea CCX durante {count} mes y gana intereses al vencimiento.",
+  "deposits.createDescriptionOther":
+    "Bloquea CCX durante {count} meses y gana intereses al vencimiento.",
   "deposits.amountCcx": "Importe (CCX)",
   "deposits.errorWholeAmount": "Introduce un importe entero de CCX de al menos 1.",
   "deposits.errorMaxAmount": "El depósito máximo es {max} CCX.",
@@ -1438,10 +1515,8 @@ const fr: Dictionary = {
     "Compacte les sorties de transactions pour réduire la taille du portefeuille",
   "settings.optimizeNow": "Optimiser maintenant",
   "settings.optimizing": "Optimisation…",
-  "settings.optimizeWaitForSync":
-    "Attendez la fin de la synchronisation avant d'optimiser.",
-  "settings.optimizeAvailable":
-    "L'optimisation peut être tentée — {count} UTXO non dépensés",
+  "settings.optimizeWaitForSync": "Attendez la fin de la synchronisation avant d'optimiser.",
+  "settings.optimizeAvailable": "L'optimisation peut être tentée — {count} UTXO non dépensés",
   "settings.node": "Nœud",
   "settings.useCustomNode": "Utiliser un nœud personnalisé",
   "settings.useCustomNodeDescription":
@@ -1483,6 +1558,38 @@ const fr: Dictionary = {
   "settings.password": "Mot de passe",
   "settings.passwordDescription": "Modifiez le mot de passe local du portefeuille",
   "settings.changePassword": "Changer le mot de passe",
+  "settings.toastNotificationsDisabled": "Notifications désactivées.",
+  "settings.toastNotificationsEnabled": "Notifications activées.",
+  "settings.toastNotificationsBlocked":
+    "Les notifications sont bloquées dans les paramètres de votre navigateur.",
+  "settings.toastNotificationsNotGranted": "L’autorisation de notification n’a pas été accordée.",
+  "settings.toastSettingsUpdated": "Paramètres mis à jour.",
+  "settings.toastMockSettingsUpdated": "Paramètres fictifs mis à jour.",
+  "settings.toastSettingsUpdateFailed": "Échec de la mise à jour des paramètres.",
+  "settings.toastCustomNodeConnected": "Nœud personnalisé connecté.",
+  "settings.toastMockCustomNodeEnabled": "Nœud personnalisé fictif activé.",
+  "settings.toastUsingPublicNodes": "Utilisation des nœuds publics.",
+  "settings.toastMockPublicNodesEnabled": "Nœuds publics fictifs activés.",
+  "settings.toastCustomNodeUpdated": "Nœud personnalisé mis à jour.",
+  "settings.toastMockCustomNodeUpdated": "Nœud personnalisé fictif mis à jour.",
+  "settings.toastNodeUpdateFailed": "Échec de la mise à jour du nœud.",
+  "settings.toastNodeLagWarning":
+    "Ce nœud a {blocks} blocs de retard sur le réseau ; il peut afficher des soldes obsolètes. Envisagez de changer de nœud.",
+  "settings.toastInvalidCreationHeight": "Saisissez une hauteur de création valide.",
+  "settings.toastCreationHeightUpdated":
+    "Hauteur de création mise à jour — réanalyse à partir de ce bloc.",
+  "settings.toastMockWalletUpdated": "Portefeuille fictif mis à jour.",
+  "settings.toastResetRescan":
+    "Portefeuille réinitialisé — réanalyse à partir de la hauteur de création.",
+  "settings.toastMockRescanStarted": "Réanalyse fictive lancée.",
+  "settings.toastRescanFailed": "Échec de la réanalyse.",
+  "settings.toastOptimizeComplete": "Optimisation du portefeuille terminée.",
+  "settings.toastMockOptimizeComplete": "Optimisation fictive terminée.",
+  "settings.toastNothingToOptimize": "Rien à optimiser.",
+  "settings.toastMockNothingToOptimize": "Le portefeuille fictif n’a pas besoin d’optimisation.",
+  "settings.toastOptimizeFailed": "Échec de l’optimisation.",
+  "settings.toastTickerUpdated": "Symbole mis à jour.",
+  "settings.toastMockTickerUpdated": "Symbole fictif mis à jour.",
   "wallets.switcherLabel": "Changer de portefeuille",
   "wallets.active": "Actif",
   "wallets.addWallet": "Ajouter un portefeuille",
@@ -1633,7 +1740,8 @@ const fr: Dictionary = {
   "txn.transfersAndWithdrawals": "Transferts et retraits",
   "txn.lockedDeposits": "Dépôts verrouillés",
   "txn.flowMix": "Répartition des flux",
-  "txn.flowMixSrOnly": "Répartition des flux : {received} reçu, {sent} envoyé, {deposits} en dépôts.",
+  "txn.flowMixSrOnly":
+    "Répartition des flux : {received} reçu, {sent} envoyé, {deposits} en dépôts.",
   "txn.transactionsCount": "{count} transactions",
   "txn.netFlow": "Flux net",
   "txn.tabAll": "Toutes",
@@ -1654,11 +1762,15 @@ const fr: Dictionary = {
   "txn.pageSummary": "Page {page} sur {total} · Affichage de {shown} sur {total_count}",
   "txn.groupedByDate": "Regroupées par date de transaction",
   "txn.emptyTitle": "Aucune transaction correspondante",
-  "txn.emptyDescription": "Ajustez le filtre actif ou la recherche pour trouver une autre transaction.",
+  "txn.emptyDescription":
+    "Ajustez le filtre actif ou la recherche pour trouver une autre transaction.",
   "txn.paginationAria": "Pages de transactions",
   "txn.exportSuccess": "{count} transactions exportées.",
   "txn.exportSuccessOne": "1 transaction exportée.",
   "txn.exportError": "Échec de l’export CSV.",
+  "toast.noteSaved": "Note enregistrée.",
+  "toast.noteRemoved": "Note supprimée.",
+  "toast.noteSaveFailed": "Impossible d’enregistrer la note.",
   "txn.rowAria": "Transaction {label} de {amount} datant de {time}",
   "txn.confirmationsCount": "{count} confirmations",
   "txn.typeWithdrawal": "Retrait",
@@ -1781,7 +1893,8 @@ const fr: Dictionary = {
   "messages.searchPlaceholder": "Rechercher des messages…",
   "messages.searchAria": "Rechercher des messages",
   "messages.empty": "Aucun message trouvé.",
-  "messages.viewOnlyReplyHint": "Portefeuille en lecture seule — répondre nécessite la clé de dépense",
+  "messages.viewOnlyReplyHint":
+    "Portefeuille en lecture seule — répondre nécessite la clé de dépense",
   "messages.replyTo": "Message à {name}…",
   "messages.addContactToReply": "Ajoutez le contact au carnet d’adresses pour répondre…",
   "messages.replyAria": "Répondre à {name}",
@@ -1817,10 +1930,12 @@ const fr: Dictionary = {
   "messages.mdShowPlain": "Afficher le texte brut",
   "messages.mdShowFormatted": "Afficher les messages formatés",
   "messages.errSendFailed": "Échec de l’envoi du message.",
-  "messages.errReplyNeedsContact": "Ajoutez ce contact au carnet d’adresses avec une adresse CCX pour répondre.",
+  "messages.errReplyNeedsContact":
+    "Ajoutez ce contact au carnet d’adresses avec une adresse CCX pour répondre.",
   "messages.errRecipientAndMessageRequired": "Le destinataire et le message sont obligatoires.",
   "messages.errInvalidRecipient": "Adresse CCX du destinataire invalide.",
-  "messages.errPaymentIdInvalid": "L’ID de paiement doit comporter 16 ou 64 caractères hexadécimaux.",
+  "messages.errPaymentIdInvalid":
+    "L’ID de paiement doit comporter 16 ou 64 caractères hexadécimaux.",
   "insights.subtitle": "Votre activité, calculée en privé sur cet appareil",
   "insights.loading": "Chargement…",
   "insights.noActivityTitle": "Aucune activité pour le moment",
@@ -1846,7 +1961,8 @@ const fr: Dictionary = {
   "insights.typeFusion": "Optimisations",
   "insights.typeMiner": "Miné",
   "insights.typeMessage": "Messages",
-  "checkIns.subtitle": "Soyez prévenu quand une personne que vous suivez ne donne plus signe de vie",
+  "checkIns.subtitle":
+    "Soyez prévenu quand une personne que vous suivez ne donne plus signe de vie",
   "checkIns.statusOk": "OK",
   "checkIns.statusDueSoon": "Bientôt dû",
   "checkIns.statusOverdue": "En retard",
@@ -1857,8 +1973,10 @@ const fr: Dictionary = {
   "checkIns.errGraceNegative": "Les jours de grâce ne peuvent pas être négatifs.",
   "checkIns.errAlreadyWatching": "Vous suivez déjà ce contact.",
   "checkIns.watching": "Suivi de {label} pour les check-ins.",
-  "checkIns.errSaveFailed": "Enregistrement impossible — le stockage de l’appareil est peut-être indisponible.",
-  "checkIns.errUpdateFailed": "Mise à jour impossible — le stockage de l’appareil est peut-être indisponible.",
+  "checkIns.errSaveFailed":
+    "Enregistrement impossible — le stockage de l’appareil est peut-être indisponible.",
+  "checkIns.errUpdateFailed":
+    "Mise à jour impossible — le stockage de l’appareil est peut-être indisponible.",
   "checkIns.sentTo": "Check-in envoyé à {label}.",
   "checkIns.errSendFailed": "Impossible d’envoyer le check-in.",
   "checkIns.overdueAlert":
@@ -1871,7 +1989,8 @@ const fr: Dictionary = {
   "checkIns.everyLabel": "Tous les (jours)",
   "checkIns.graceLabel": "Grâce (jours)",
   "checkIns.watch": "Suivre",
-  "checkIns.emptyContacts": "Ajoutez d’abord quelqu’un à votre carnet d’adresses, puis suivez-le ici.",
+  "checkIns.emptyContacts":
+    "Ajoutez d’abord quelqu’un à votre carnet d’adresses, puis suivez-le ici.",
   "checkIns.watchingTitle": "Suivis",
   "checkIns.watchingDescription": "Personnes dont vous attendez des nouvelles",
   "checkIns.syncing": "Synchronisation — les statuts se mettent à jour une fois à jour.",
@@ -1904,8 +2023,10 @@ const fr: Dictionary = {
   "scheduled.errSaveFailed":
     "Impossible d’enregistrer le rappel — le stockage de l’appareil est peut-être plein ou indisponible.",
   "scheduled.markedPaid": "Marqué comme payé — prochain rappel programmé.",
-  "scheduled.errUpdateFailed": "Impossible de mettre à jour le rappel — le stockage de l’appareil est peut-être indisponible.",
-  "scheduled.errRemoveFailed": "Impossible de supprimer le rappel — le stockage de l’appareil est peut-être indisponible.",
+  "scheduled.errUpdateFailed":
+    "Impossible de mettre à jour le rappel — le stockage de l’appareil est peut-être indisponible.",
+  "scheduled.errRemoveFailed":
+    "Impossible de supprimer le rappel — le stockage de l’appareil est peut-être indisponible.",
   "scheduled.addTitle": "Ajouter un rappel",
   "scheduled.addDescription":
     "Un simple rappel — vos clés n’envoient jamais automatiquement. À l’échéance, vous serez invité à vérifier et confirmer.",
@@ -1927,9 +2048,11 @@ const fr: Dictionary = {
   "scheduled.delete": "Supprimer",
   "scheduled.deleteAria": "Supprimer le rappel {label}",
   "donate.title": "Soutenir Conceal",
-  "donate.subtitle": "Votre don alimente une finance qui place la confidentialité en premier. Merci !",
+  "donate.subtitle":
+    "Votre don alimente une finance qui place la confidentialité en premier. Merci !",
   "donate.errChooseAmount": "Choisissez d’abord un montant.",
-  "donate.mockToast": "Simulation de {cadence} de {amount} via {method}. Aucun paiement n’a été traité.",
+  "donate.mockToast":
+    "Simulation de {cadence} de {amount} via {method}. Aucun paiement n’a été traité.",
   "donate.recurringCadence": "Don {frequency}",
   "donate.oneTimeCadence": "Don unique",
   "donate.whyTitle": "Pourquoi votre soutien compte",
@@ -1965,8 +2088,10 @@ const fr: Dictionary = {
   // Deposits page
   "deposits.pageSubtitle": "Créez des dépôts à blocage temporel et suivez les rendements projetés",
   "deposits.createNew": "Créer un nouveau dépôt",
-  "deposits.syncingHint": "la création et le retrait sont désactivés jusqu’à la synchronisation de la chaîne",
-  "deposits.pendingMempool": "Une transaction de dépôt est en attente de confirmation dans le mempool.",
+  "deposits.syncingHint":
+    "la création et le retrait sont désactivés jusqu’à la synchronisation de la chaîne",
+  "deposits.pendingMempool":
+    "Une transaction de dépôt est en attente de confirmation dans le mempool.",
   "deposits.summaryDescription": "CCX bloqués, échéance et TAEG mixte",
   "deposits.openCalculator": "Ouvrir la calculatrice d’intérêts des dépôts",
   "deposits.allHeading": "Tous les dépôts",
@@ -2042,8 +2167,10 @@ const fr: Dictionary = {
   "deposits.emptyTitle": "Aucun dépôt pour l’instant",
   "deposits.emptyDescription":
     "Créez un dépôt à blocage temporel pour afficher le TAEG, la date d’échéance et les intérêts projetés.",
-  "deposits.createDescriptionOne": "Bloquez des CCX pendant {count} mois et gagnez des intérêts à terme.",
-  "deposits.createDescriptionOther": "Bloquez des CCX pendant {count} mois et gagnez des intérêts à terme.",
+  "deposits.createDescriptionOne":
+    "Bloquez des CCX pendant {count} mois et gagnez des intérêts à terme.",
+  "deposits.createDescriptionOther":
+    "Bloquez des CCX pendant {count} mois et gagnez des intérêts à terme.",
   "deposits.amountCcx": "Montant (CCX)",
   "deposits.errorWholeAmount": "Saisissez un montant entier de CCX d’au moins 1.",
   "deposits.errorMaxAmount": "Le dépôt maximum est de {max} CCX.",
@@ -2170,6 +2297,36 @@ const de: Dictionary = {
   "settings.password": "Passwort",
   "settings.passwordDescription": "Ändere das lokale Wallet-Passwort",
   "settings.changePassword": "Passwort ändern",
+  "settings.toastNotificationsDisabled": "Benachrichtigungen deaktiviert.",
+  "settings.toastNotificationsEnabled": "Benachrichtigungen aktiviert.",
+  "settings.toastNotificationsBlocked":
+    "Benachrichtigungen sind in den Browsereinstellungen blockiert.",
+  "settings.toastNotificationsNotGranted": "Die Benachrichtigungsberechtigung wurde nicht erteilt.",
+  "settings.toastSettingsUpdated": "Einstellungen aktualisiert.",
+  "settings.toastMockSettingsUpdated": "Mock-Einstellungen aktualisiert.",
+  "settings.toastSettingsUpdateFailed": "Aktualisierung der Einstellungen fehlgeschlagen.",
+  "settings.toastCustomNodeConnected": "Benutzerdefinierter Node verbunden.",
+  "settings.toastMockCustomNodeEnabled": "Mock-Custom-Node aktiviert.",
+  "settings.toastUsingPublicNodes": "Öffentliche Nodes werden verwendet.",
+  "settings.toastMockPublicNodesEnabled": "Öffentliche Mock-Nodes aktiviert.",
+  "settings.toastCustomNodeUpdated": "Benutzerdefinierter Node aktualisiert.",
+  "settings.toastMockCustomNodeUpdated": "Mock-Custom-Node aktualisiert.",
+  "settings.toastNodeUpdateFailed": "Node-Aktualisierung fehlgeschlagen.",
+  "settings.toastNodeLagWarning":
+    "Dieser Node liegt {blocks} Blöcke hinter dem Netzwerk — er zeigt möglicherweise veraltete Guthaben an. Erwäge, den Node zu wechseln.",
+  "settings.toastInvalidCreationHeight": "Gib eine gültige Erstellungshöhe ein.",
+  "settings.toastCreationHeightUpdated": "Erstellungshöhe aktualisiert — Neuscan ab diesem Block.",
+  "settings.toastMockWalletUpdated": "Mock-Wallet aktualisiert.",
+  "settings.toastResetRescan": "Wallet zurückgesetzt — Neuscan ab der Erstellungshöhe.",
+  "settings.toastMockRescanStarted": "Mock-Neuscan gestartet.",
+  "settings.toastRescanFailed": "Neuscan fehlgeschlagen.",
+  "settings.toastOptimizeComplete": "Wallet-Optimierung abgeschlossen.",
+  "settings.toastMockOptimizeComplete": "Mock-Optimierung abgeschlossen.",
+  "settings.toastNothingToOptimize": "Nichts zu optimieren.",
+  "settings.toastMockNothingToOptimize": "Das Mock-Wallet benötigt keine Optimierung.",
+  "settings.toastOptimizeFailed": "Optimierung fehlgeschlagen.",
+  "settings.toastTickerUpdated": "Tickersymbol aktualisiert.",
+  "settings.toastMockTickerUpdated": "Mock-Tickersymbol aktualisiert.",
   "wallets.switcherLabel": "Wallet wechseln",
   "wallets.active": "Aktiv",
   "wallets.addWallet": "Wallet hinzufügen",
@@ -2320,7 +2477,8 @@ const de: Dictionary = {
   "txn.transfersAndWithdrawals": "Überweisungen und Abhebungen",
   "txn.lockedDeposits": "Gesperrte Einzahlungen",
   "txn.flowMix": "Flussverteilung",
-  "txn.flowMixSrOnly": "Flussverteilung: {received} empfangen, {sent} gesendet, {deposits} in Einzahlungen.",
+  "txn.flowMixSrOnly":
+    "Flussverteilung: {received} empfangen, {sent} gesendet, {deposits} in Einzahlungen.",
   "txn.transactionsCount": "{count} Transaktionen",
   "txn.netFlow": "Nettofluss",
   "txn.tabAll": "Alle",
@@ -2341,11 +2499,15 @@ const de: Dictionary = {
   "txn.pageSummary": "Seite {page} von {total} · Zeige {shown} von {total_count}",
   "txn.groupedByDate": "Nach Transaktionsdatum gruppiert",
   "txn.emptyTitle": "Keine passenden Transaktionen",
-  "txn.emptyDescription": "Passe den aktiven Filter oder die Suche an, um eine andere Transaktion zu finden.",
+  "txn.emptyDescription":
+    "Passe den aktiven Filter oder die Suche an, um eine andere Transaktion zu finden.",
   "txn.paginationAria": "Transaktionsseiten",
   "txn.exportSuccess": "{count} Transaktionen exportiert.",
   "txn.exportSuccessOne": "1 Transaktion exportiert.",
   "txn.exportError": "CSV-Export fehlgeschlagen.",
+  "toast.noteSaved": "Notiz gespeichert.",
+  "toast.noteRemoved": "Notiz entfernt.",
+  "toast.noteSaveFailed": "Notiz konnte nicht gespeichert werden.",
   "txn.rowAria": "{label}-Transaktion über {amount} von {time}",
   "txn.confirmationsCount": "{count} Bestätigungen",
   "txn.typeWithdrawal": "Abhebung",
@@ -2379,7 +2541,8 @@ const de: Dictionary = {
     "Der QR-Code kodiert jetzt eine Zahlungsanforderung, ohne Präfix: kompatibel mit Web-Wallet V1.",
   "receive.qrV1Address":
     "Der QR-Code kodiert deine Adresse ohne Präfix — kompatibel mit Web-Wallet V1.",
-  "receive.qrRequestAmount": "Der QR-Code kodiert jetzt eine Zahlungsanforderung über {amount} CCX.",
+  "receive.qrRequestAmount":
+    "Der QR-Code kodiert jetzt eine Zahlungsanforderung über {amount} CCX.",
   "receive.qrRequest": "Der QR-Code kodiert jetzt eine Zahlungsanforderung.",
   "receive.qrAddress": "Scanne den QR-Code, um CCX an diese Adresse zu senden.",
   "receive.downloadPng": "PNG herunterladen",
@@ -2455,7 +2618,8 @@ const de: Dictionary = {
   "addressBook.errLabelRequired": "Die Bezeichnung ist erforderlich.",
   "addressBook.errAddressInvalid":
     "Die Adresse muss mit ccx7 beginnen und genau 98 Zeichen lang sein.",
-  "addressBook.errPaymentIdInvalid": "Die Zahlungs-ID muss 64 oder 16 Hexadezimalzeichen lang sein.",
+  "addressBook.errPaymentIdInvalid":
+    "Die Zahlungs-ID muss 64 oder 16 Hexadezimalzeichen lang sein.",
   "addressBook.toastUpdated": "Adresse aktualisiert.",
   "addressBook.toastUpdateFailed": "Aktualisierung fehlgeschlagen.",
   "addressBook.toastSaved": "Adresse gespeichert.",
@@ -2467,7 +2631,8 @@ const de: Dictionary = {
   "messages.searchPlaceholder": "Nachrichten suchen…",
   "messages.searchAria": "Nachrichten suchen",
   "messages.empty": "Keine Nachrichten gefunden.",
-  "messages.viewOnlyReplyHint": "Nur-Lese-Wallet — zum Antworten wird der Ausgabeschlüssel benötigt",
+  "messages.viewOnlyReplyHint":
+    "Nur-Lese-Wallet — zum Antworten wird der Ausgabeschlüssel benötigt",
   "messages.replyTo": "Nachricht an {name}…",
   "messages.addContactToReply": "Füge den Kontakt zum Adressbuch hinzu, um zu antworten…",
   "messages.replyAria": "An {name} antworten",
@@ -2503,7 +2668,8 @@ const de: Dictionary = {
   "messages.mdShowPlain": "Klartext anzeigen",
   "messages.mdShowFormatted": "Formatierte Nachrichten anzeigen",
   "messages.errSendFailed": "Nachricht konnte nicht gesendet werden.",
-  "messages.errReplyNeedsContact": "Füge diesen Kontakt mit einer CCX-Adresse zum Adressbuch hinzu, um zu antworten.",
+  "messages.errReplyNeedsContact":
+    "Füge diesen Kontakt mit einer CCX-Adresse zum Adressbuch hinzu, um zu antworten.",
   "messages.errRecipientAndMessageRequired": "Empfänger und Nachricht sind erforderlich.",
   "messages.errInvalidRecipient": "Ungültige CCX-Empfängeradresse.",
   "messages.errPaymentIdInvalid": "Die Zahlungs-ID muss 16 oder 64 Hex-Zeichen lang sein.",
@@ -2543,8 +2709,10 @@ const de: Dictionary = {
   "checkIns.errGraceNegative": "Karenztage dürfen nicht negativ sein.",
   "checkIns.errAlreadyWatching": "Du beobachtest diesen Kontakt bereits.",
   "checkIns.watching": "{label} wird auf Check-ins beobachtet.",
-  "checkIns.errSaveFailed": "Speichern fehlgeschlagen — der Gerätespeicher ist möglicherweise nicht verfügbar.",
-  "checkIns.errUpdateFailed": "Aktualisieren fehlgeschlagen — der Gerätespeicher ist möglicherweise nicht verfügbar.",
+  "checkIns.errSaveFailed":
+    "Speichern fehlgeschlagen — der Gerätespeicher ist möglicherweise nicht verfügbar.",
+  "checkIns.errUpdateFailed":
+    "Aktualisieren fehlgeschlagen — der Gerätespeicher ist möglicherweise nicht verfügbar.",
   "checkIns.sentTo": "Check-in an {label} gesendet.",
   "checkIns.errSendFailed": "Check-in konnte nicht gesendet werden.",
   "checkIns.overdueAlert":
@@ -2557,7 +2725,8 @@ const de: Dictionary = {
   "checkIns.everyLabel": "Alle (Tage)",
   "checkIns.graceLabel": "Karenz (Tage)",
   "checkIns.watch": "Beobachten",
-  "checkIns.emptyContacts": "Füge zuerst jemanden zu deinem Adressbuch hinzu und beobachte ihn dann hier.",
+  "checkIns.emptyContacts":
+    "Füge zuerst jemanden zu deinem Adressbuch hinzu und beobachte ihn dann hier.",
   "checkIns.watchingTitle": "Beobachtet",
   "checkIns.watchingDescription": "Personen, von denen du Nachrichten erwartest",
   "checkIns.syncing": "Synchronisierung — Status wird aktualisiert, sobald aufgeholt.",
@@ -2590,8 +2759,10 @@ const de: Dictionary = {
   "scheduled.errSaveFailed":
     "Erinnerung konnte nicht gespeichert werden — der Gerätespeicher ist möglicherweise voll oder nicht verfügbar.",
   "scheduled.markedPaid": "Als bezahlt markiert — nächste Erinnerung geplant.",
-  "scheduled.errUpdateFailed": "Erinnerung konnte nicht aktualisiert werden — der Gerätespeicher ist möglicherweise nicht verfügbar.",
-  "scheduled.errRemoveFailed": "Erinnerung konnte nicht entfernt werden — der Gerätespeicher ist möglicherweise nicht verfügbar.",
+  "scheduled.errUpdateFailed":
+    "Erinnerung konnte nicht aktualisiert werden — der Gerätespeicher ist möglicherweise nicht verfügbar.",
+  "scheduled.errRemoveFailed":
+    "Erinnerung konnte nicht entfernt werden — der Gerätespeicher ist möglicherweise nicht verfügbar.",
   "scheduled.addTitle": "Erinnerung hinzufügen",
   "scheduled.addDescription":
     "Nur eine Erinnerung — deine Schlüssel senden niemals automatisch. Wenn eine fällig ist, wirst du zur Überprüfung und Bestätigung aufgefordert.",
@@ -2615,7 +2786,8 @@ const de: Dictionary = {
   "donate.title": "Conceal unterstützen",
   "donate.subtitle": "Deine Spende treibt Privatsphäre-orientierte Finanzen an. Danke!",
   "donate.errChooseAmount": "Wähle zuerst einen Betrag.",
-  "donate.mockToast": "Simulierte {cadence} über {amount} via {method}. Es wurde keine Zahlung verarbeitet.",
+  "donate.mockToast":
+    "Simulierte {cadence} über {amount} via {method}. Es wurde keine Zahlung verarbeitet.",
   "donate.recurringCadence": "{frequency} Spende",
   "donate.oneTimeCadence": "Einmalige Spende",
   "donate.whyTitle": "Warum deine Unterstützung wichtig ist",
@@ -2651,7 +2823,8 @@ const de: Dictionary = {
   // Deposits page
   "deposits.pageSubtitle": "Zeitgebundene Einlagen erstellen und prognostizierte Erträge verfolgen",
   "deposits.createNew": "Neue Einlage erstellen",
-  "deposits.syncingHint": "Erstellen und Abheben sind deaktiviert, bis die Chain synchronisiert ist",
+  "deposits.syncingHint":
+    "Erstellen und Abheben sind deaktiviert, bis die Chain synchronisiert ist",
   "deposits.pendingMempool": "Eine Einlagentransaktion wartet im Mempool auf Bestätigung.",
   "deposits.summaryDescription": "Gebundene CCX, Fälligkeit und gemischter effektiver Jahreszins",
   "deposits.openCalculator": "Zinsrechner für Einlagen öffnen",
@@ -2728,8 +2901,10 @@ const de: Dictionary = {
   "deposits.emptyTitle": "Noch keine Einlagen",
   "deposits.emptyDescription":
     "Erstelle eine zeitgebundene Einlage, um eff. Jahreszins, Fälligkeitsdatum und prognostizierte Zinsen zu sehen.",
-  "deposits.createDescriptionOne": "Binde CCX für {count} Monat und erhalte Zinsen zum Laufzeitende.",
-  "deposits.createDescriptionOther": "Binde CCX für {count} Monate und erhalte Zinsen zum Laufzeitende.",
+  "deposits.createDescriptionOne":
+    "Binde CCX für {count} Monat und erhalte Zinsen zum Laufzeitende.",
+  "deposits.createDescriptionOther":
+    "Binde CCX für {count} Monate und erhalte Zinsen zum Laufzeitende.",
   "deposits.amountCcx": "Betrag (CCX)",
   "deposits.errorWholeAmount": "Gib einen ganzzahligen CCX-Betrag von mindestens 1 ein.",
   "deposits.errorMaxAmount": "Die maximale Einlage beträgt {max} CCX.",
@@ -2813,12 +2988,10 @@ const it: Dictionary = {
   "settings.optimizing": "Ottimizzazione…",
   "settings.optimizeWaitForSync":
     "Attendi il completamento della sincronizzazione prima di ottimizzare.",
-  "settings.optimizeAvailable":
-    "È possibile tentare l'ottimizzazione: {count} UTXO non spesi",
+  "settings.optimizeAvailable": "È possibile tentare l'ottimizzazione: {count} UTXO non spesi",
   "settings.node": "Nodo",
   "settings.useCustomNode": "Usa un nodo personalizzato",
-  "settings.useCustomNodeDescription":
-    "Fissa l'URL qui sotto invece di alternare i nodi pubblici",
+  "settings.useCustomNodeDescription": "Fissa l'URL qui sotto invece di alternare i nodi pubblici",
   "settings.nodeUrl": "URL del nodo",
   "settings.nodeUrlDescriptionCustom":
     "Daemon personalizzato: modifica e premi Invio per riconnetterti",
@@ -2856,6 +3029,37 @@ const it: Dictionary = {
   "settings.password": "Password",
   "settings.passwordDescription": "Modifica la password locale del wallet",
   "settings.changePassword": "Cambia password",
+  "settings.toastNotificationsDisabled": "Notifiche disattivate.",
+  "settings.toastNotificationsEnabled": "Notifiche attivate.",
+  "settings.toastNotificationsBlocked":
+    "Le notifiche sono bloccate nelle impostazioni del browser.",
+  "settings.toastNotificationsNotGranted": "L’autorizzazione alle notifiche non è stata concessa.",
+  "settings.toastSettingsUpdated": "Impostazioni aggiornate.",
+  "settings.toastMockSettingsUpdated": "Impostazioni simulate aggiornate.",
+  "settings.toastSettingsUpdateFailed": "Aggiornamento delle impostazioni non riuscito.",
+  "settings.toastCustomNodeConnected": "Nodo personalizzato connesso.",
+  "settings.toastMockCustomNodeEnabled": "Nodo personalizzato simulato attivato.",
+  "settings.toastUsingPublicNodes": "Utilizzo dei nodi pubblici.",
+  "settings.toastMockPublicNodesEnabled": "Nodi pubblici simulati attivati.",
+  "settings.toastCustomNodeUpdated": "Nodo personalizzato aggiornato.",
+  "settings.toastMockCustomNodeUpdated": "Nodo personalizzato simulato aggiornato.",
+  "settings.toastNodeUpdateFailed": "Aggiornamento del nodo non riuscito.",
+  "settings.toastNodeLagWarning":
+    "Questo nodo è indietro di {blocks} blocchi rispetto alla rete: potrebbe mostrare saldi non aggiornati. Valuta di cambiare nodo.",
+  "settings.toastInvalidCreationHeight": "Inserisci un’altezza di creazione valida.",
+  "settings.toastCreationHeightUpdated":
+    "Altezza di creazione aggiornata: nuova scansione da quel blocco.",
+  "settings.toastMockWalletUpdated": "Wallet simulato aggiornato.",
+  "settings.toastResetRescan": "Wallet reimpostato: nuova scansione dall’altezza di creazione.",
+  "settings.toastMockRescanStarted": "Nuova scansione simulata avviata.",
+  "settings.toastRescanFailed": "Nuova scansione non riuscita.",
+  "settings.toastOptimizeComplete": "Ottimizzazione del wallet completata.",
+  "settings.toastMockOptimizeComplete": "Ottimizzazione simulata completata.",
+  "settings.toastNothingToOptimize": "Niente da ottimizzare.",
+  "settings.toastMockNothingToOptimize": "Il wallet simulato non necessita di ottimizzazione.",
+  "settings.toastOptimizeFailed": "Ottimizzazione non riuscita.",
+  "settings.toastTickerUpdated": "Simbolo aggiornato.",
+  "settings.toastMockTickerUpdated": "Simbolo simulato aggiornato.",
   "wallets.switcherLabel": "Cambia wallet",
   "wallets.active": "Attivo",
   "wallets.addWallet": "Aggiungi wallet",
@@ -3005,7 +3209,8 @@ const it: Dictionary = {
   "txn.transfersAndWithdrawals": "Trasferimenti e prelievi",
   "txn.lockedDeposits": "Depositi bloccati",
   "txn.flowMix": "Distribuzione del flusso",
-  "txn.flowMixSrOnly": "Distribuzione del flusso: {received} ricevuti, {sent} inviati, {deposits} in depositi.",
+  "txn.flowMixSrOnly":
+    "Distribuzione del flusso: {received} ricevuti, {sent} inviati, {deposits} in depositi.",
   "txn.transactionsCount": "{count} transazioni",
   "txn.netFlow": "Flusso netto",
   "txn.tabAll": "Tutte",
@@ -3026,11 +3231,15 @@ const it: Dictionary = {
   "txn.pageSummary": "Pagina {page} di {total} · Mostrate {shown} di {total_count}",
   "txn.groupedByDate": "Raggruppate per data della transazione",
   "txn.emptyTitle": "Nessuna transazione corrispondente",
-  "txn.emptyDescription": "Modifica il filtro attivo o la ricerca per trovare un’altra transazione.",
+  "txn.emptyDescription":
+    "Modifica il filtro attivo o la ricerca per trovare un’altra transazione.",
   "txn.paginationAria": "Pagine delle transazioni",
   "txn.exportSuccess": "Esportate {count} transazioni.",
   "txn.exportSuccessOne": "Esportata 1 transazione.",
   "txn.exportError": "Esportazione CSV non riuscita.",
+  "toast.noteSaved": "Nota salvata.",
+  "toast.noteRemoved": "Nota rimossa.",
+  "toast.noteSaveFailed": "Impossibile salvare la nota.",
   "txn.rowAria": "Transazione {label} di {amount} del {time}",
   "txn.confirmationsCount": "{count} conferme",
   "txn.typeWithdrawal": "Prelievo",
@@ -3069,7 +3278,8 @@ const it: Dictionary = {
   "receive.qrAddress": "Scansiona il QR per inviare CCX a questo indirizzo.",
   "receive.downloadPng": "Scarica PNG",
   "receive.requestTitle": "Richiedi un pagamento",
-  "receive.requestDescription": "Codifica facoltativamente un importo, un ID pagamento e un messaggio",
+  "receive.requestDescription":
+    "Codifica facoltativamente un importo, un ID pagamento e un messaggio",
   "receive.amountLabel": "Importo (CCX)",
   "receive.optional": "Facoltativo",
   "receive.messagePlaceholder": "Nota facoltativa per il mittente",
@@ -3152,7 +3362,8 @@ const it: Dictionary = {
   "messages.searchPlaceholder": "Cerca messaggi…",
   "messages.searchAria": "Cerca messaggi",
   "messages.empty": "Nessun messaggio trovato.",
-  "messages.viewOnlyReplyHint": "Portafoglio di sola lettura — per rispondere serve la chiave di spesa",
+  "messages.viewOnlyReplyHint":
+    "Portafoglio di sola lettura — per rispondere serve la chiave di spesa",
   "messages.replyTo": "Messaggio a {name}…",
   "messages.addContactToReply": "Aggiungi il contatto alla rubrica per rispondere…",
   "messages.replyAria": "Rispondi a {name}",
@@ -3188,7 +3399,8 @@ const it: Dictionary = {
   "messages.mdShowPlain": "Mostra testo semplice",
   "messages.mdShowFormatted": "Mostra messaggi formattati",
   "messages.errSendFailed": "Invio del messaggio non riuscito.",
-  "messages.errReplyNeedsContact": "Aggiungi questo contatto alla rubrica con un indirizzo CCX per rispondere.",
+  "messages.errReplyNeedsContact":
+    "Aggiungi questo contatto alla rubrica con un indirizzo CCX per rispondere.",
   "messages.errRecipientAndMessageRequired": "Destinatario e messaggio sono obbligatori.",
   "messages.errInvalidRecipient": "Indirizzo CCX del destinatario non valido.",
   "messages.errPaymentIdInvalid": "L’ID di pagamento deve avere 16 o 64 caratteri esadecimali.",
@@ -3228,8 +3440,10 @@ const it: Dictionary = {
   "checkIns.errGraceNegative": "I giorni di tolleranza non possono essere negativi.",
   "checkIns.errAlreadyWatching": "Stai già seguendo quel contatto.",
   "checkIns.watching": "Stai seguendo {label} per i check-in.",
-  "checkIns.errSaveFailed": "Impossibile salvare — l’archiviazione del dispositivo potrebbe non essere disponibile.",
-  "checkIns.errUpdateFailed": "Impossibile aggiornare — l’archiviazione del dispositivo potrebbe non essere disponibile.",
+  "checkIns.errSaveFailed":
+    "Impossibile salvare — l’archiviazione del dispositivo potrebbe non essere disponibile.",
+  "checkIns.errUpdateFailed":
+    "Impossibile aggiornare — l’archiviazione del dispositivo potrebbe non essere disponibile.",
   "checkIns.sentTo": "Check-in inviato a {label}.",
   "checkIns.errSendFailed": "Impossibile inviare il check-in.",
   "checkIns.overdueAlert":
@@ -3275,8 +3489,10 @@ const it: Dictionary = {
   "scheduled.errSaveFailed":
     "Impossibile salvare il promemoria — l’archiviazione del dispositivo potrebbe essere piena o non disponibile.",
   "scheduled.markedPaid": "Contrassegnato come pagato — prossimo promemoria programmato.",
-  "scheduled.errUpdateFailed": "Impossibile aggiornare il promemoria — l’archiviazione del dispositivo potrebbe non essere disponibile.",
-  "scheduled.errRemoveFailed": "Impossibile rimuovere il promemoria — l’archiviazione del dispositivo potrebbe non essere disponibile.",
+  "scheduled.errUpdateFailed":
+    "Impossibile aggiornare il promemoria — l’archiviazione del dispositivo potrebbe non essere disponibile.",
+  "scheduled.errRemoveFailed":
+    "Impossibile rimuovere il promemoria — l’archiviazione del dispositivo potrebbe non essere disponibile.",
   "scheduled.addTitle": "Aggiungi un promemoria",
   "scheduled.addDescription":
     "Solo un promemoria — le tue chiavi non inviano mai automaticamente. Quando uno è in scadenza, ti verrà chiesto di rivedere e confermare.",
@@ -3298,9 +3514,11 @@ const it: Dictionary = {
   "scheduled.delete": "Elimina",
   "scheduled.deleteAria": "Elimina promemoria {label}",
   "donate.title": "Sostieni Conceal",
-  "donate.subtitle": "La tua donazione alimenta una finanza che mette al primo posto la privacy. Grazie!",
+  "donate.subtitle":
+    "La tua donazione alimenta una finanza che mette al primo posto la privacy. Grazie!",
   "donate.errChooseAmount": "Scegli prima un importo.",
-  "donate.mockToast": "Simulazione di {cadence} di {amount} tramite {method}. Nessun pagamento è stato elaborato.",
+  "donate.mockToast":
+    "Simulazione di {cadence} di {amount} tramite {method}. Nessun pagamento è stato elaborato.",
   "donate.recurringCadence": "Donazione {frequency}",
   "donate.oneTimeCadence": "Donazione una tantum",
   "donate.whyTitle": "Perché il tuo sostegno conta",
@@ -3336,7 +3554,8 @@ const it: Dictionary = {
   // Deposits page
   "deposits.pageSubtitle": "Crea depositi a tempo bloccato e monitora i rendimenti previsti",
   "deposits.createNew": "Crea nuovo deposito",
-  "deposits.syncingHint": "creazione e prelievo sono disabilitati finché la catena non è sincronizzata",
+  "deposits.syncingHint":
+    "creazione e prelievo sono disabilitati finché la catena non è sincronizzata",
   "deposits.pendingMempool": "Una transazione di deposito è in attesa di conferma nel mempool.",
   "deposits.summaryDescription": "CCX bloccati, scadenza e TAEG combinato",
   "deposits.openCalculator": "Apri il calcolatore degli interessi sui depositi",
@@ -3413,8 +3632,10 @@ const it: Dictionary = {
   "deposits.emptyTitle": "Ancora nessun deposito",
   "deposits.emptyDescription":
     "Crea un deposito a tempo bloccato per visualizzare TAEG, data di scadenza e interessi previsti.",
-  "deposits.createDescriptionOne": "Blocca CCX per {count} mese e guadagna interessi alla scadenza.",
-  "deposits.createDescriptionOther": "Blocca CCX per {count} mesi e guadagna interessi alla scadenza.",
+  "deposits.createDescriptionOne":
+    "Blocca CCX per {count} mese e guadagna interessi alla scadenza.",
+  "deposits.createDescriptionOther":
+    "Blocca CCX per {count} mesi e guadagna interessi alla scadenza.",
   "deposits.amountCcx": "Importo (CCX)",
   "deposits.errorWholeAmount": "Inserisci un importo intero di CCX di almeno 1.",
   "deposits.errorMaxAmount": "Il deposito massimo è {max} CCX.",
@@ -3496,14 +3717,11 @@ const pt: Dictionary = {
     "Compacta as saídas de transações para reduzir o tamanho da carteira",
   "settings.optimizeNow": "Otimizar agora",
   "settings.optimizing": "Otimizando…",
-  "settings.optimizeWaitForSync":
-    "Aguarde o fim da sincronização antes de otimizar.",
-  "settings.optimizeAvailable":
-    "A otimização pode ser tentada — {count} UTXOs não gastos",
+  "settings.optimizeWaitForSync": "Aguarde o fim da sincronização antes de otimizar.",
+  "settings.optimizeAvailable": "A otimização pode ser tentada — {count} UTXOs não gastos",
   "settings.node": "Nó",
   "settings.useCustomNode": "Usar nó personalizado",
-  "settings.useCustomNodeDescription":
-    "Fixe a URL abaixo em vez de alternar entre nós públicos",
+  "settings.useCustomNodeDescription": "Fixe a URL abaixo em vez de alternar entre nós públicos",
   "settings.nodeUrl": "URL do nó",
   "settings.nodeUrlDescriptionCustom":
     "Daemon personalizado — edite e pressione Enter para reconectar",
@@ -3541,6 +3759,37 @@ const pt: Dictionary = {
   "settings.password": "Senha",
   "settings.passwordDescription": "Altere a senha local da carteira",
   "settings.changePassword": "Alterar senha",
+  "settings.toastNotificationsDisabled": "Notificações desativadas.",
+  "settings.toastNotificationsEnabled": "Notificações ativadas.",
+  "settings.toastNotificationsBlocked":
+    "As notificações estão bloqueadas nas configurações do seu navegador.",
+  "settings.toastNotificationsNotGranted": "A permissão de notificações não foi concedida.",
+  "settings.toastSettingsUpdated": "Configurações atualizadas.",
+  "settings.toastMockSettingsUpdated": "Configurações fictícias atualizadas.",
+  "settings.toastSettingsUpdateFailed": "Falha ao atualizar as configurações.",
+  "settings.toastCustomNodeConnected": "Nó personalizado conectado.",
+  "settings.toastMockCustomNodeEnabled": "Nó personalizado fictício ativado.",
+  "settings.toastUsingPublicNodes": "Usando nós públicos.",
+  "settings.toastMockPublicNodesEnabled": "Nós públicos fictícios ativados.",
+  "settings.toastCustomNodeUpdated": "Nó personalizado atualizado.",
+  "settings.toastMockCustomNodeUpdated": "Nó personalizado fictício atualizado.",
+  "settings.toastNodeUpdateFailed": "Falha ao atualizar o nó.",
+  "settings.toastNodeLagWarning":
+    "Este nó está {blocks} blocos atrás da rede — pode mostrar saldos desatualizados. Considere trocar de nó.",
+  "settings.toastInvalidCreationHeight": "Insira uma altura de criação válida.",
+  "settings.toastCreationHeightUpdated":
+    "Altura de criação atualizada — reanalisando a partir desse bloco.",
+  "settings.toastMockWalletUpdated": "Carteira fictícia atualizada.",
+  "settings.toastResetRescan": "Carteira redefinida — reanalisando a partir da altura de criação.",
+  "settings.toastMockRescanStarted": "Reanálise fictícia iniciada.",
+  "settings.toastRescanFailed": "Falha na reanálise.",
+  "settings.toastOptimizeComplete": "Otimização da carteira concluída.",
+  "settings.toastMockOptimizeComplete": "Otimização fictícia concluída.",
+  "settings.toastNothingToOptimize": "Nada para otimizar.",
+  "settings.toastMockNothingToOptimize": "A carteira fictícia não precisa de otimização.",
+  "settings.toastOptimizeFailed": "Falha na otimização.",
+  "settings.toastTickerUpdated": "Símbolo atualizado.",
+  "settings.toastMockTickerUpdated": "Símbolo fictício atualizado.",
   "wallets.switcherLabel": "Trocar carteira",
   "wallets.active": "Ativa",
   "wallets.addWallet": "Adicionar carteira",
@@ -3689,7 +3938,8 @@ const pt: Dictionary = {
   "txn.transfersAndWithdrawals": "Transferências e saques",
   "txn.lockedDeposits": "Depósitos bloqueados",
   "txn.flowMix": "Distribuição do fluxo",
-  "txn.flowMixSrOnly": "Distribuição do fluxo: {received} recebido, {sent} enviado, {deposits} em depósitos.",
+  "txn.flowMixSrOnly":
+    "Distribuição do fluxo: {received} recebido, {sent} enviado, {deposits} em depósitos.",
   "txn.transactionsCount": "{count} transações",
   "txn.netFlow": "Fluxo líquido",
   "txn.tabAll": "Todas",
@@ -3715,6 +3965,9 @@ const pt: Dictionary = {
   "txn.exportSuccess": "{count} transações exportadas.",
   "txn.exportSuccessOne": "1 transação exportada.",
   "txn.exportError": "Falha ao exportar CSV.",
+  "toast.noteSaved": "Nota salva.",
+  "toast.noteRemoved": "Nota removida.",
+  "toast.noteSaveFailed": "Não foi possível salvar a nota.",
   "txn.rowAria": "Transação de {label} de {amount} de {time}",
   "txn.confirmationsCount": "{count} confirmações",
   "txn.typeWithdrawal": "Saque",
@@ -3872,7 +4125,8 @@ const pt: Dictionary = {
   "messages.mdShowPlain": "Mostrar texto simples",
   "messages.mdShowFormatted": "Mostrar mensagens formatadas",
   "messages.errSendFailed": "Falha ao enviar a mensagem.",
-  "messages.errReplyNeedsContact": "Adicione este contato à agenda de endereços com um endereço CCX para responder.",
+  "messages.errReplyNeedsContact":
+    "Adicione este contato à agenda de endereços com um endereço CCX para responder.",
   "messages.errRecipientAndMessageRequired": "Destinatário e mensagem são obrigatórios.",
   "messages.errInvalidRecipient": "Endereço CCX do destinatário inválido.",
   "messages.errPaymentIdInvalid": "O ID de pagamento deve ter 16 ou 64 caracteres hexadecimais.",
@@ -3912,8 +4166,10 @@ const pt: Dictionary = {
   "checkIns.errGraceNegative": "Os dias de tolerância não podem ser negativos.",
   "checkIns.errAlreadyWatching": "Você já está acompanhando esse contato.",
   "checkIns.watching": "Acompanhando {label} para check-ins.",
-  "checkIns.errSaveFailed": "Não foi possível salvar — o armazenamento do dispositivo pode estar indisponível.",
-  "checkIns.errUpdateFailed": "Não foi possível atualizar — o armazenamento do dispositivo pode estar indisponível.",
+  "checkIns.errSaveFailed":
+    "Não foi possível salvar — o armazenamento do dispositivo pode estar indisponível.",
+  "checkIns.errUpdateFailed":
+    "Não foi possível atualizar — o armazenamento do dispositivo pode estar indisponível.",
   "checkIns.sentTo": "Check-in enviado para {label}.",
   "checkIns.errSendFailed": "Não foi possível enviar o check-in.",
   "checkIns.overdueAlert":
@@ -3926,7 +4182,8 @@ const pt: Dictionary = {
   "checkIns.everyLabel": "A cada (dias)",
   "checkIns.graceLabel": "Tolerância (dias)",
   "checkIns.watch": "Acompanhar",
-  "checkIns.emptyContacts": "Adicione alguém à sua agenda de endereços primeiro e depois acompanhe-o aqui.",
+  "checkIns.emptyContacts":
+    "Adicione alguém à sua agenda de endereços primeiro e depois acompanhe-o aqui.",
   "checkIns.watchingTitle": "Acompanhando",
   "checkIns.watchingDescription": "Pessoas de quem você espera notícias",
   "checkIns.syncing": "Sincronizando — os status são atualizados quando estiver em dia.",
@@ -3959,8 +4216,10 @@ const pt: Dictionary = {
   "scheduled.errSaveFailed":
     "Não foi possível salvar o lembrete — o armazenamento do dispositivo pode estar cheio ou indisponível.",
   "scheduled.markedPaid": "Marcado como pago — próximo lembrete agendado.",
-  "scheduled.errUpdateFailed": "Não foi possível atualizar o lembrete — o armazenamento do dispositivo pode estar indisponível.",
-  "scheduled.errRemoveFailed": "Não foi possível remover o lembrete — o armazenamento do dispositivo pode estar indisponível.",
+  "scheduled.errUpdateFailed":
+    "Não foi possível atualizar o lembrete — o armazenamento do dispositivo pode estar indisponível.",
+  "scheduled.errRemoveFailed":
+    "Não foi possível remover o lembrete — o armazenamento do dispositivo pode estar indisponível.",
   "scheduled.addTitle": "Adicionar um lembrete",
   "scheduled.addDescription":
     "Apenas um lembrete — suas chaves nunca enviam automaticamente. Quando um vencer, você será solicitado a revisar e confirmar.",
@@ -3984,7 +4243,8 @@ const pt: Dictionary = {
   "donate.title": "Apoie a Conceal",
   "donate.subtitle": "Sua doação impulsiona finanças que priorizam a privacidade. Obrigado!",
   "donate.errChooseAmount": "Escolha um valor primeiro.",
-  "donate.mockToast": "Simulação de {cadence} de {amount} via {method}. Nenhum pagamento foi processado.",
+  "donate.mockToast":
+    "Simulação de {cadence} de {amount} via {method}. Nenhum pagamento foi processado.",
   "donate.recurringCadence": "Doação {frequency}",
   "donate.oneTimeCadence": "Doação única",
   "donate.whyTitle": "Por que seu apoio importa",
@@ -4018,7 +4278,8 @@ const pt: Dictionary = {
   "donate.descApple": "Doar via Apple Pay",
   "donate.descMultiple": "Várias maneiras de mostrar seu apoio",
   // Deposits page
-  "deposits.pageSubtitle": "Crie depósitos com bloqueio temporal e acompanhe os retornos projetados",
+  "deposits.pageSubtitle":
+    "Crie depósitos com bloqueio temporal e acompanhe os retornos projetados",
   "deposits.createNew": "Criar novo depósito",
   "deposits.syncingHint": "criar e sacar estão desativados até a cadeia ser sincronizada",
   "deposits.pendingMempool": "Uma transação de depósito está aguardando confirmação no mempool.",
@@ -4098,7 +4359,8 @@ const pt: Dictionary = {
   "deposits.emptyDescription":
     "Crie um depósito com bloqueio temporal para ver a TAEG, a data de vencimento e os juros projetados.",
   "deposits.createDescriptionOne": "Bloqueie CCX por {count} mês e ganhe juros no fim do prazo.",
-  "deposits.createDescriptionOther": "Bloqueie CCX por {count} meses e ganhe juros no fim do prazo.",
+  "deposits.createDescriptionOther":
+    "Bloqueie CCX por {count} meses e ganhe juros no fim do prazo.",
   "deposits.amountCcx": "Valor (CCX)",
   "deposits.errorWholeAmount": "Insira um valor inteiro de CCX de pelo menos 1.",
   "deposits.errorMaxAmount": "O depósito máximo é {max} CCX.",
@@ -4180,17 +4442,13 @@ const ru: Dictionary = {
     "Объединяет выходы транзакций, чтобы уменьшить размер кошелька",
   "settings.optimizeNow": "Оптимизировать сейчас",
   "settings.optimizing": "Оптимизация…",
-  "settings.optimizeWaitForSync":
-    "Дождитесь завершения синхронизации перед оптимизацией.",
-  "settings.optimizeAvailable":
-    "Можно попробовать оптимизацию — {count} непотраченных UTXO",
+  "settings.optimizeWaitForSync": "Дождитесь завершения синхронизации перед оптимизацией.",
+  "settings.optimizeAvailable": "Можно попробовать оптимизацию — {count} непотраченных UTXO",
   "settings.node": "Узел",
   "settings.useCustomNode": "Использовать свой узел",
-  "settings.useCustomNodeDescription":
-    "Закрепить URL ниже вместо чередования публичных узлов",
+  "settings.useCustomNodeDescription": "Закрепить URL ниже вместо чередования публичных узлов",
   "settings.nodeUrl": "URL узла",
-  "settings.nodeUrlDescriptionCustom":
-    "Свой демон — измените и нажмите Enter для переподключения",
+  "settings.nodeUrlDescriptionCustom": "Свой демон — измените и нажмите Enter для переподключения",
   "settings.nodeUrlDescriptionPublic":
     "Текущий подключённый демон — измените перед включением своего узла",
   "settings.testingNodeConnection": "Проверка подключения к узлу…",
@@ -4225,6 +4483,36 @@ const ru: Dictionary = {
   "settings.password": "Пароль",
   "settings.passwordDescription": "Измените локальный пароль кошелька",
   "settings.changePassword": "Изменить пароль",
+  "settings.toastNotificationsDisabled": "Уведомления отключены.",
+  "settings.toastNotificationsEnabled": "Уведомления включены.",
+  "settings.toastNotificationsBlocked": "Уведомления заблокированы в настройках браузера.",
+  "settings.toastNotificationsNotGranted": "Разрешение на уведомления не предоставлено.",
+  "settings.toastSettingsUpdated": "Настройки обновлены.",
+  "settings.toastMockSettingsUpdated": "Тестовые настройки обновлены.",
+  "settings.toastSettingsUpdateFailed": "Не удалось обновить настройки.",
+  "settings.toastCustomNodeConnected": "Пользовательский узел подключён.",
+  "settings.toastMockCustomNodeEnabled": "Тестовый пользовательский узел включён.",
+  "settings.toastUsingPublicNodes": "Используются публичные узлы.",
+  "settings.toastMockPublicNodesEnabled": "Тестовые публичные узлы включены.",
+  "settings.toastCustomNodeUpdated": "Пользовательский узел обновлён.",
+  "settings.toastMockCustomNodeUpdated": "Тестовый пользовательский узел обновлён.",
+  "settings.toastNodeUpdateFailed": "Не удалось обновить узел.",
+  "settings.toastNodeLagWarning":
+    "Этот узел отстаёт от сети на {blocks} блоков — он может показывать устаревшие балансы. Рассмотрите смену узла.",
+  "settings.toastInvalidCreationHeight": "Введите корректную высоту создания.",
+  "settings.toastCreationHeightUpdated":
+    "Высота создания обновлена — повторное сканирование с этого блока.",
+  "settings.toastMockWalletUpdated": "Тестовый кошелёк обновлён.",
+  "settings.toastResetRescan": "Кошелёк сброшен — повторное сканирование с высоты создания.",
+  "settings.toastMockRescanStarted": "Тестовое повторное сканирование запущено.",
+  "settings.toastRescanFailed": "Повторное сканирование не удалось.",
+  "settings.toastOptimizeComplete": "Оптимизация кошелька завершена.",
+  "settings.toastMockOptimizeComplete": "Тестовая оптимизация завершена.",
+  "settings.toastNothingToOptimize": "Нечего оптимизировать.",
+  "settings.toastMockNothingToOptimize": "Тестовому кошельку оптимизация не нужна.",
+  "settings.toastOptimizeFailed": "Оптимизация не удалась.",
+  "settings.toastTickerUpdated": "Тикер обновлён.",
+  "settings.toastMockTickerUpdated": "Тестовый тикер обновлён.",
   "wallets.switcherLabel": "Сменить кошелёк",
   "wallets.active": "Активен",
   "wallets.addWallet": "Добавить кошелёк",
@@ -4374,7 +4662,8 @@ const ru: Dictionary = {
   "txn.transfersAndWithdrawals": "Переводы и выводы",
   "txn.lockedDeposits": "Заблокированные депозиты",
   "txn.flowMix": "Структура потока",
-  "txn.flowMixSrOnly": "Структура потока: {received} получено, {sent} отправлено, {deposits} в депозитах.",
+  "txn.flowMixSrOnly":
+    "Структура потока: {received} получено, {sent} отправлено, {deposits} в депозитах.",
   "txn.transactionsCount": "{count} транзакций",
   "txn.netFlow": "Чистый поток",
   "txn.tabAll": "Все",
@@ -4395,11 +4684,15 @@ const ru: Dictionary = {
   "txn.pageSummary": "Страница {page} из {total} · Показано {shown} из {total_count}",
   "txn.groupedByDate": "Сгруппировано по дате транзакции",
   "txn.emptyTitle": "Нет подходящих транзакций",
-  "txn.emptyDescription": "Измените активный фильтр или поисковый запрос, чтобы найти другую транзакцию.",
+  "txn.emptyDescription":
+    "Измените активный фильтр или поисковый запрос, чтобы найти другую транзакцию.",
   "txn.paginationAria": "Страницы транзакций",
   "txn.exportSuccess": "Экспортировано транзакций: {count}.",
   "txn.exportSuccessOne": "Экспортирована 1 транзакция.",
   "txn.exportError": "Не удалось экспортировать CSV.",
+  "toast.noteSaved": "Заметка сохранена.",
+  "toast.noteRemoved": "Заметка удалена.",
+  "toast.noteSaveFailed": "Не удалось сохранить заметку.",
   "txn.rowAria": "Транзакция «{label}» на {amount} от {time}",
   "txn.confirmationsCount": "{count} подтверждений",
   "txn.typeWithdrawal": "Вывод",
@@ -4431,8 +4724,7 @@ const ru: Dictionary = {
     "QR-код теперь кодирует запрос на оплату {amount} CCX, без префикса: совместимо с веб-кошельком V1.",
   "receive.qrV1Request":
     "QR-код теперь кодирует запрос на оплату, без префикса: совместимо с веб-кошельком V1.",
-  "receive.qrV1Address":
-    "QR-код кодирует ваш адрес без префикса — совместимо с веб-кошельком V1.",
+  "receive.qrV1Address": "QR-код кодирует ваш адрес без префикса — совместимо с веб-кошельком V1.",
   "receive.qrRequestAmount": "QR-код теперь кодирует запрос на оплату {amount} CCX.",
   "receive.qrRequest": "QR-код теперь кодирует запрос на оплату.",
   "receive.qrAddress": "Отсканируйте QR-код, чтобы отправить CCX на этот адрес.",
@@ -4444,8 +4736,7 @@ const ru: Dictionary = {
   "receive.messagePlaceholder": "Необязательная заметка для отправителя",
   "receive.paymentLink": "Ссылка для оплаты",
   "receive.copyPaymentLink": "Копировать ссылку для оплаты",
-  "receive.enterAmountHint":
-    "Введите сумму, чтобы получить ссылку для оплаты и обновить QR-код.",
+  "receive.enterAmountHint": "Введите сумму, чтобы получить ссылку для оплаты и обновить QR-код.",
   "receive.recentlyReceived": "Недавно полученные",
   "receive.last5Incoming": "Последние 5 поступлений",
   "receive.viewAllTransactions": "Посмотреть все транзакции →",
@@ -4507,8 +4798,7 @@ const ru: Dictionary = {
   "addressBook.saveChanges": "Сохранить изменения",
   "addressBook.saveAddress": "Сохранить адрес",
   "addressBook.errLabelRequired": "Метка обязательна.",
-  "addressBook.errAddressInvalid":
-    "Адрес должен начинаться с ccx7 и содержать ровно 98 символов.",
+  "addressBook.errAddressInvalid": "Адрес должен начинаться с ccx7 и содержать ровно 98 символов.",
   "addressBook.errPaymentIdInvalid":
     "ID платежа должен содержать 64 или 16 шестнадцатеричных символов.",
   "addressBook.toastUpdated": "Адрес обновлён.",
@@ -4558,7 +4848,8 @@ const ru: Dictionary = {
   "messages.mdShowPlain": "Показать обычный текст",
   "messages.mdShowFormatted": "Показать форматированные сообщения",
   "messages.errSendFailed": "Не удалось отправить сообщение.",
-  "messages.errReplyNeedsContact": "Добавьте этот контакт в адресную книгу с адресом CCX, чтобы ответить.",
+  "messages.errReplyNeedsContact":
+    "Добавьте этот контакт в адресную книгу с адресом CCX, чтобы ответить.",
   "messages.errRecipientAndMessageRequired": "Получатель и сообщение обязательны.",
   "messages.errInvalidRecipient": "Неверный адрес CCX получателя.",
   "messages.errPaymentIdInvalid": "ID платежа должен содержать 16 или 64 hex-символа.",
@@ -4612,7 +4903,8 @@ const ru: Dictionary = {
   "checkIns.everyLabel": "Каждые (дни)",
   "checkIns.graceLabel": "Льгота (дни)",
   "checkIns.watch": "Следить",
-  "checkIns.emptyContacts": "Сначала добавьте кого-нибудь в адресную книгу, затем следите за ним здесь.",
+  "checkIns.emptyContacts":
+    "Сначала добавьте кого-нибудь в адресную книгу, затем следите за ним здесь.",
   "checkIns.watchingTitle": "Отслеживаемые",
   "checkIns.watchingDescription": "Люди, от которых вы ожидаете вестей",
   "checkIns.syncing": "Синхронизация — статусы обновятся после завершения.",
@@ -4645,8 +4937,10 @@ const ru: Dictionary = {
   "scheduled.errSaveFailed":
     "Не удалось сохранить напоминание — хранилище устройства может быть заполнено или недоступно.",
   "scheduled.markedPaid": "Отмечено как оплаченное — следующее напоминание запланировано.",
-  "scheduled.errUpdateFailed": "Не удалось обновить напоминание — хранилище устройства может быть недоступно.",
-  "scheduled.errRemoveFailed": "Не удалось удалить напоминание — хранилище устройства может быть недоступно.",
+  "scheduled.errUpdateFailed":
+    "Не удалось обновить напоминание — хранилище устройства может быть недоступно.",
+  "scheduled.errRemoveFailed":
+    "Не удалось удалить напоминание — хранилище устройства может быть недоступно.",
   "scheduled.addTitle": "Добавить напоминание",
   "scheduled.addDescription":
     "Только напоминание — ваши ключи никогда не отправляют автоматически. Когда наступит срок, вам предложат проверить и подтвердить.",
@@ -4668,7 +4962,8 @@ const ru: Dictionary = {
   "scheduled.delete": "Удалить",
   "scheduled.deleteAria": "Удалить напоминание {label}",
   "donate.title": "Поддержать Conceal",
-  "donate.subtitle": "Ваше пожертвование питает финансы, ставящие приватность на первое место. Спасибо!",
+  "donate.subtitle":
+    "Ваше пожертвование питает финансы, ставящие приватность на первое место. Спасибо!",
   "donate.errChooseAmount": "Сначала выберите сумму.",
   "donate.mockToast": "Демо {cadence} на {amount} через {method}. Платёж не был обработан.",
   "donate.recurringCadence": "{frequency} пожертвование",
@@ -4704,7 +4999,8 @@ const ru: Dictionary = {
   "donate.descApple": "Пожертвовать через Apple Pay",
   "donate.descMultiple": "Несколько способов проявить поддержку",
   // Deposits page
-  "deposits.pageSubtitle": "Создавайте депозиты с блокировкой по времени и отслеживайте прогнозируемую доходность",
+  "deposits.pageSubtitle":
+    "Создавайте депозиты с блокировкой по времени и отслеживайте прогнозируемую доходность",
   "deposits.createNew": "Создать новый депозит",
   "deposits.syncingHint": "создание и вывод недоступны, пока цепочка не синхронизируется",
   "deposits.pendingMempool": "Транзакция депозита ожидает подтверждения в мемпуле.",
@@ -4783,8 +5079,10 @@ const ru: Dictionary = {
   "deposits.emptyTitle": "Пока нет депозитов",
   "deposits.emptyDescription":
     "Создайте депозит с блокировкой по времени, чтобы увидеть годовую ставку, дату погашения и прогнозируемый процент.",
-  "deposits.createDescriptionOne": "Заблокируйте CCX на {count} месяц и получите проценты в конце срока.",
-  "deposits.createDescriptionOther": "Заблокируйте CCX на {count} мес. и получите проценты в конце срока.",
+  "deposits.createDescriptionOne":
+    "Заблокируйте CCX на {count} месяц и получите проценты в конце срока.",
+  "deposits.createDescriptionOther":
+    "Заблокируйте CCX на {count} мес. и получите проценты в конце срока.",
   "deposits.amountCcx": "Сумма (CCX)",
   "deposits.errorWholeAmount": "Введите целую сумму CCX не менее 1.",
   "deposits.errorMaxAmount": "Максимальный депозит — {max} CCX.",
@@ -4901,6 +5199,35 @@ const zh: Dictionary = {
   "settings.password": "密码",
   "settings.passwordDescription": "更改本地钱包密码",
   "settings.changePassword": "更改密码",
+  "settings.toastNotificationsDisabled": "已关闭通知。",
+  "settings.toastNotificationsEnabled": "已开启通知。",
+  "settings.toastNotificationsBlocked": "通知在浏览器设置中已被阻止。",
+  "settings.toastNotificationsNotGranted": "未授予通知权限。",
+  "settings.toastSettingsUpdated": "设置已更新。",
+  "settings.toastMockSettingsUpdated": "模拟设置已更新。",
+  "settings.toastSettingsUpdateFailed": "设置更新失败。",
+  "settings.toastCustomNodeConnected": "已连接自定义节点。",
+  "settings.toastMockCustomNodeEnabled": "已启用模拟自定义节点。",
+  "settings.toastUsingPublicNodes": "正在使用公共节点。",
+  "settings.toastMockPublicNodesEnabled": "已启用模拟公共节点。",
+  "settings.toastCustomNodeUpdated": "自定义节点已更新。",
+  "settings.toastMockCustomNodeUpdated": "模拟自定义节点已更新。",
+  "settings.toastNodeUpdateFailed": "节点更新失败。",
+  "settings.toastNodeLagWarning":
+    "该节点落后网络 {blocks} 个区块，可能显示过时的余额。请考虑切换节点。",
+  "settings.toastInvalidCreationHeight": "请输入有效的创建高度。",
+  "settings.toastCreationHeightUpdated": "创建高度已更新，正在从该区块重新扫描。",
+  "settings.toastMockWalletUpdated": "模拟钱包已更新。",
+  "settings.toastResetRescan": "钱包已重置，正在从创建高度重新扫描。",
+  "settings.toastMockRescanStarted": "已开始模拟重新扫描。",
+  "settings.toastRescanFailed": "重新扫描失败。",
+  "settings.toastOptimizeComplete": "钱包优化完成。",
+  "settings.toastMockOptimizeComplete": "模拟优化完成。",
+  "settings.toastNothingToOptimize": "无需优化。",
+  "settings.toastMockNothingToOptimize": "模拟钱包无需优化。",
+  "settings.toastOptimizeFailed": "优化失败。",
+  "settings.toastTickerUpdated": "代号已更新。",
+  "settings.toastMockTickerUpdated": "模拟代号已更新。",
   "wallets.switcherLabel": "切换钱包",
   "wallets.active": "使用中",
   "wallets.addWallet": "添加钱包",
@@ -5073,6 +5400,9 @@ const zh: Dictionary = {
   "txn.exportSuccess": "已导出 {count} 笔交易。",
   "txn.exportSuccessOne": "已导出 1 笔交易。",
   "txn.exportError": "导出 CSV 失败。",
+  "toast.noteSaved": "备注已保存。",
+  "toast.noteRemoved": "备注已删除。",
+  "toast.noteSaveFailed": "无法保存备注。",
   "txn.rowAria": "{label}交易，金额 {amount}，时间 {time}",
   "txn.confirmationsCount": "{count} 次确认",
   "txn.typeWithdrawal": "提现",
@@ -5196,8 +5526,7 @@ const zh: Dictionary = {
   "messages.replyAria": "回复 {name}",
   "messages.sendingAria": "正在发送消息",
   "messages.noConversationsTitle": "暂无对话",
-  "messages.noConversationsHint":
-    "在左侧选择一条消息以查看对话，或通过“新建消息”开始一个对话。",
+  "messages.noConversationsHint": "在左侧选择一条消息以查看对话，或通过“新建消息”开始一个对话。",
   "messages.dialogTitle": "新建消息",
   "messages.dialogDescription": "向 CCX 地址发送私密消息。",
   "messages.recipientLabel": "收件人地址",
@@ -5218,8 +5547,7 @@ const zh: Dictionary = {
   "messages.listSentNoBody": "已发送消息（正文未在本地保存）",
   "messages.youPrefix": "你：",
   "messages.unread": "未读",
-  "messages.bodyUnavailable":
-    "消息正文不可用（在本地保存前发送，或重新扫描后）。",
+  "messages.bodyUnavailable": "消息正文不可用（在本地保存前发送，或重新扫描后）。",
   "messages.blockPrefix": "区块 {height} · ",
   "messages.pendingPrefix": "待确认 · ",
   "messages.ttlExpiresAt": "于 {date} 过期",
@@ -5241,8 +5569,7 @@ const zh: Dictionary = {
   "insights.netFlowDetail": "接收 − 发送",
   "insights.interestEarned": "已赚利息",
   "insights.monthlyFlow": "月度流量",
-  "insights.monthlyFlowDescription":
-    "按月对比接收与发送 — 源自你的交易记录",
+  "insights.monthlyFlowDescription": "按月对比接收与发送 — 源自你的交易记录",
   "insights.activityBreakdown": "活动明细",
   "insights.activityBreakdownDescription": "按类型划分的交易",
   "insights.privacyNote":
@@ -5270,8 +5597,7 @@ const zh: Dictionary = {
   "checkIns.errUpdateFailed": "无法更新 — 设备存储可能不可用。",
   "checkIns.sentTo": "已向 {label} 发送签到。",
   "checkIns.errSendFailed": "无法发送签到。",
-  "checkIns.overdueAlert":
-    "{count} 项逾期：{names}。他们可能只是忙 — 不妨主动联系一下。",
+  "checkIns.overdueAlert": "{count} 项逾期：{names}。他们可能只是忙 — 不妨主动联系一下。",
   "checkIns.watchTitle": "关注一个联系人",
   "checkIns.watchDescription":
     "这只是重新联系的提醒 — 并不能证明任何事情。签到是一种礼节性的问候，未经认证（原则上任何人都可能发送伪造的签到），因此请勿将其用于关乎安全的关键决策。人们会因为普通原因错过签到（钱包丢失、没有手续费、出行）。提醒仅在钱包打开并同步时出现。",
@@ -5290,8 +5616,7 @@ const zh: Dictionary = {
   "checkIns.detailEvery": "每 {interval} 天",
   "checkIns.checkedInSr": "已签到。",
   "checkIns.sendCheckIn": "发送签到",
-  "checkIns.sendCheckInTitle":
-    "发送一条链上签到消息（约 0.0011 CCX 净额，预留 0.0111）",
+  "checkIns.sendCheckInTitle": "发送一条链上签到消息（约 0.0011 CCX 净额，预留 0.0111）",
   "checkIns.resume": "恢复",
   "checkIns.resumed": "已恢复 {label}。",
   "checkIns.snooze": "稍后提醒",
@@ -5310,14 +5635,12 @@ const zh: Dictionary = {
   "scheduled.errAmountInvalid": "请输入大于零的金额。",
   "scheduled.errDateRequired": "请选择开始日期。",
   "scheduled.added": "已添加提醒。",
-  "scheduled.errSaveFailed":
-    "无法保存提醒 — 设备存储可能已满或不可用。",
+  "scheduled.errSaveFailed": "无法保存提醒 — 设备存储可能已满或不可用。",
   "scheduled.markedPaid": "已标记为已付 — 已安排下一次提醒。",
   "scheduled.errUpdateFailed": "无法更新提醒 — 设备存储可能不可用。",
   "scheduled.errRemoveFailed": "无法移除提醒 — 设备存储可能不可用。",
   "scheduled.addTitle": "添加提醒",
-  "scheduled.addDescription":
-    "仅为提醒 — 你的密钥绝不会自动发送。到期时，将提示你审核并确认。",
+  "scheduled.addDescription": "仅为提醒 — 你的密钥绝不会自动发送。到期时，将提示你审核并确认。",
   "scheduled.nameLabel": "名称",
   "scheduled.namePlaceholder": "房租",
   "scheduled.amountLabel": "金额（CCX）",
@@ -5360,8 +5683,7 @@ const zh: Dictionary = {
   "donate.donate": "捐赠",
   "donate.paymentMethods": "支付方式",
   "donate.copyAddress": "复制地址",
-  "donate.mockMethodNote":
-    "{method} 为模拟选项 — 此演示钱包不处理真实付款。",
+  "donate.mockMethodNote": "{method} 为模拟选项 — 此演示钱包不处理真实付款。",
   "donate.methodCrypto": "加密货币",
   "donate.methodVisa": "信用卡/借记卡",
   "donate.methodPaypal": "PayPal",
@@ -5449,8 +5771,7 @@ const zh: Dictionary = {
   "deposits.pillActive": "活跃",
   "deposits.pillWithdrawing": "提取中",
   "deposits.emptyTitle": "暂无存款",
-  "deposits.emptyDescription":
-    "创建定时锁定存款，预览年化利率、到期日期和预计利息。",
+  "deposits.emptyDescription": "创建定时锁定存款，预览年化利率、到期日期和预计利息。",
   "deposits.createDescriptionOne": "锁定 CCX {count} 个月，到期获得利息。",
   "deposits.createDescriptionOther": "锁定 CCX {count} 个月，到期获得利息。",
   "deposits.amountCcx": "金额 (CCX)",
@@ -5539,8 +5860,7 @@ const ja: Dictionary = {
   "settings.useCustomNode": "カスタムノードを使用",
   "settings.useCustomNodeDescription": "パブリックノードを切り替える代わりに下の URL を固定します",
   "settings.nodeUrl": "ノード URL",
-  "settings.nodeUrlDescriptionCustom":
-    "カスタムデーモン — 編集して Enter キーで再接続します",
+  "settings.nodeUrlDescriptionCustom": "カスタムデーモン — 編集して Enter キーで再接続します",
   "settings.nodeUrlDescriptionPublic":
     "現在接続中のデーモン — カスタムノードを有効にする前に編集してください",
   "settings.testingNodeConnection": "ノード接続をテスト中…",
@@ -5550,8 +5870,7 @@ const ja: Dictionary = {
     "速度を上げるほど、ブロックのスキャン時に CPU とネットワークの使用量が増えます",
   "settings.syncSpeedLegend": "ウォレットの同期速度",
   "settings.readMinerTx": "マイナー取引を読み取る",
-  "settings.readMinerTxDescription":
-    "同期時に coinbase 出力を含めます — ソロマイニングに必要です",
+  "settings.readMinerTxDescription": "同期時に coinbase 出力を含めます — ソロマイニングに必要です",
   "settings.blockHeights": "ブロック高",
   "settings.blockHeightsDescription": "作成高（同期中に編集可能）/ 現在の同期済み高",
   "settings.creationHeightAriaLabel": "作成高",
@@ -5574,6 +5893,36 @@ const ja: Dictionary = {
   "settings.password": "パスワード",
   "settings.passwordDescription": "ローカルのウォレットパスワードを変更します",
   "settings.changePassword": "パスワードを変更",
+  "settings.toastNotificationsDisabled": "通知をオフにしました。",
+  "settings.toastNotificationsEnabled": "通知をオンにしました。",
+  "settings.toastNotificationsBlocked": "通知はブラウザの設定でブロックされています。",
+  "settings.toastNotificationsNotGranted": "通知の許可が得られませんでした。",
+  "settings.toastSettingsUpdated": "設定を更新しました。",
+  "settings.toastMockSettingsUpdated": "モック設定を更新しました。",
+  "settings.toastSettingsUpdateFailed": "設定の更新に失敗しました。",
+  "settings.toastCustomNodeConnected": "カスタムノードに接続しました。",
+  "settings.toastMockCustomNodeEnabled": "モックのカスタムノードを有効にしました。",
+  "settings.toastUsingPublicNodes": "パブリックノードを使用しています。",
+  "settings.toastMockPublicNodesEnabled": "モックのパブリックノードを有効にしました。",
+  "settings.toastCustomNodeUpdated": "カスタムノードを更新しました。",
+  "settings.toastMockCustomNodeUpdated": "モックのカスタムノードを更新しました。",
+  "settings.toastNodeUpdateFailed": "ノードの更新に失敗しました。",
+  "settings.toastNodeLagWarning":
+    "このノードはネットワークより {blocks} ブロック遅れています。残高が古い可能性があります。ノードの切り替えを検討してください。",
+  "settings.toastInvalidCreationHeight": "有効な作成ブロック高を入力してください。",
+  "settings.toastCreationHeightUpdated":
+    "作成ブロック高を更新しました。そのブロックから再スキャンします。",
+  "settings.toastMockWalletUpdated": "モックウォレットを更新しました。",
+  "settings.toastResetRescan": "ウォレットをリセットしました。作成ブロック高から再スキャンします。",
+  "settings.toastMockRescanStarted": "モックの再スキャンを開始しました。",
+  "settings.toastRescanFailed": "再スキャンに失敗しました。",
+  "settings.toastOptimizeComplete": "ウォレットの最適化が完了しました。",
+  "settings.toastMockOptimizeComplete": "モックの最適化が完了しました。",
+  "settings.toastNothingToOptimize": "最適化するものはありません。",
+  "settings.toastMockNothingToOptimize": "モックウォレットは最適化の必要はありません。",
+  "settings.toastOptimizeFailed": "最適化に失敗しました。",
+  "settings.toastTickerUpdated": "ティッカーを更新しました。",
+  "settings.toastMockTickerUpdated": "モックのティッカーを更新しました。",
   "wallets.switcherLabel": "ウォレットを切り替え",
   "wallets.active": "使用中",
   "wallets.addWallet": "ウォレットを追加",
@@ -5742,11 +6091,15 @@ const ja: Dictionary = {
   "txn.pageSummary": "{total} ページ中 {page} ページ · {total_count} 件中 {shown} 件を表示",
   "txn.groupedByDate": "取引日でグループ化",
   "txn.emptyTitle": "一致する取引がありません",
-  "txn.emptyDescription": "別の取引を見つけるには、有効なフィルターまたは検索条件を調整してください。",
+  "txn.emptyDescription":
+    "別の取引を見つけるには、有効なフィルターまたは検索条件を調整してください。",
   "txn.paginationAria": "取引ページ",
   "txn.exportSuccess": "{count} 件の取引をエクスポートしました。",
   "txn.exportSuccessOne": "1 件の取引をエクスポートしました。",
   "txn.exportError": "CSV のエクスポートに失敗しました。",
+  "toast.noteSaved": "メモを保存しました。",
+  "toast.noteRemoved": "メモを削除しました。",
+  "toast.noteSaveFailed": "メモを保存できませんでした。",
   "txn.rowAria": "{time} の {amount} の{label}取引",
   "txn.confirmationsCount": "{count} 件の確認",
   "txn.typeWithdrawal": "引き出し",
@@ -5791,7 +6144,8 @@ const ja: Dictionary = {
   "receive.messagePlaceholder": "送信者への任意のメモ",
   "receive.paymentLink": "支払いリンク",
   "receive.copyPaymentLink": "支払いリンクをコピー",
-  "receive.enterAmountHint": "金額を入力すると共有可能な支払いリンクが生成され、QR が更新されます。",
+  "receive.enterAmountHint":
+    "金額を入力すると共有可能な支払いリンクが生成され、QR が更新されます。",
   "receive.recentlyReceived": "最近の受け取り",
   "receive.last5Incoming": "直近 5 件の入金",
   "receive.viewAllTransactions": "すべての取引を表示 →",
@@ -5854,7 +6208,8 @@ const ja: Dictionary = {
   "addressBook.saveAddress": "アドレスを保存",
   "addressBook.errLabelRequired": "ラベルは必須です。",
   "addressBook.errAddressInvalid": "アドレスは ccx7 で始まり、正確に 98 文字である必要があります。",
-  "addressBook.errPaymentIdInvalid": "支払い ID は 16 進数で 64 文字または 16 文字である必要があります。",
+  "addressBook.errPaymentIdInvalid":
+    "支払い ID は 16 進数で 64 文字または 16 文字である必要があります。",
   "addressBook.toastUpdated": "アドレスを更新しました。",
   "addressBook.toastUpdateFailed": "更新に失敗しました。",
   "addressBook.toastSaved": "アドレスを保存しました。",
@@ -5902,7 +6257,8 @@ const ja: Dictionary = {
   "messages.mdShowPlain": "プレーンテキストを表示",
   "messages.mdShowFormatted": "書式付きメッセージを表示",
   "messages.errSendFailed": "メッセージの送信に失敗しました。",
-  "messages.errReplyNeedsContact": "返信するには、この連絡先を CCX アドレスとともにアドレス帳に追加してください。",
+  "messages.errReplyNeedsContact":
+    "返信するには、この連絡先を CCX アドレスとともにアドレス帳に追加してください。",
   "messages.errRecipientAndMessageRequired": "受信者とメッセージは必須です。",
   "messages.errInvalidRecipient": "無効な CCX 受信者アドレスです。",
   "messages.errPaymentIdInvalid": "支払い ID は 16 桁または 64 桁の 16 進数である必要があります。",
@@ -5917,8 +6273,7 @@ const ja: Dictionary = {
   "insights.netFlowDetail": "受信 − 送信",
   "insights.interestEarned": "獲得利息",
   "insights.monthlyFlow": "月次フロー",
-  "insights.monthlyFlowDescription":
-    "月ごとの受信と送信の比較 — あなたの取引履歴から算出",
+  "insights.monthlyFlowDescription": "月ごとの受信と送信の比較 — あなたの取引履歴から算出",
   "insights.activityBreakdown": "アクティビティの内訳",
   "insights.activityBreakdownDescription": "種類別の取引",
   "insights.privacyNote":
@@ -5942,8 +6297,10 @@ const ja: Dictionary = {
   "checkIns.errGraceNegative": "猶予日数を負の値にすることはできません。",
   "checkIns.errAlreadyWatching": "その連絡先はすでに見守っています。",
   "checkIns.watching": "チェックインのため {label} を見守っています。",
-  "checkIns.errSaveFailed": "保存できませんでした — デバイスのストレージが利用できない可能性があります。",
-  "checkIns.errUpdateFailed": "更新できませんでした — デバイスのストレージが利用できない可能性があります。",
+  "checkIns.errSaveFailed":
+    "保存できませんでした — デバイスのストレージが利用できない可能性があります。",
+  "checkIns.errUpdateFailed":
+    "更新できませんでした — デバイスのストレージが利用できない可能性があります。",
   "checkIns.sentTo": "{label} にチェックインを送信しました。",
   "checkIns.errSendFailed": "チェックインを送信できませんでした。",
   "checkIns.overdueAlert":
@@ -5989,8 +6346,10 @@ const ja: Dictionary = {
   "scheduled.errSaveFailed":
     "リマインダーを保存できませんでした — デバイスのストレージが満杯または利用できない可能性があります。",
   "scheduled.markedPaid": "支払い済みとしてマークしました — 次のリマインダーを予定しました。",
-  "scheduled.errUpdateFailed": "リマインダーを更新できませんでした — デバイスのストレージが利用できない可能性があります。",
-  "scheduled.errRemoveFailed": "リマインダーを削除できませんでした — デバイスのストレージが利用できない可能性があります。",
+  "scheduled.errUpdateFailed":
+    "リマインダーを更新できませんでした — デバイスのストレージが利用できない可能性があります。",
+  "scheduled.errRemoveFailed":
+    "リマインダーを削除できませんでした — デバイスのストレージが利用できない可能性があります。",
   "scheduled.addTitle": "リマインダーを追加",
   "scheduled.addDescription":
     "リマインダーのみ — あなたのキーが自動送信することは決してありません。期限が来ると、確認と承認を求められます。",
@@ -6014,7 +6373,8 @@ const ja: Dictionary = {
   "donate.title": "Conceal を支援",
   "donate.subtitle": "あなたの寄付がプライバシー優先の金融を支えます。ありがとうございます！",
   "donate.errChooseAmount": "まず金額を選択してください。",
-  "donate.mockToast": "{method} による {amount} の{cadence}（モック）。実際の支払いは処理されていません。",
+  "donate.mockToast":
+    "{method} による {amount} の{cadence}（モック）。実際の支払いは処理されていません。",
   "donate.recurringCadence": "{frequency}の寄付",
   "donate.oneTimeCadence": "一回限りの寄付",
   "donate.whyTitle": "あなたの支援が大切な理由",
@@ -6224,13 +6584,15 @@ const ko: Dictionary = {
     "속도가 높을수록 블록을 스캔할 때 CPU와 네트워크 자원을 더 많이 사용합니다",
   "settings.syncSpeedLegend": "지갑 동기화 속도",
   "settings.readMinerTx": "채굴자 거래 읽기",
-  "settings.readMinerTxDescription": "동기화 시 코인베이스 출력을 포함합니다 — 솔로 채굴에 필요합니다",
+  "settings.readMinerTxDescription":
+    "동기화 시 코인베이스 출력을 포함합니다 — 솔로 채굴에 필요합니다",
   "settings.blockHeights": "블록 높이",
   "settings.blockHeightsDescription": "생성 높이(동기화 중 편집 가능) / 현재 동기화된 높이",
   "settings.creationHeightAriaLabel": "생성 높이",
   "settings.currentSyncedHeightAriaLabel": "현재 동기화된 높이",
   "settings.maintenance": "유지 관리",
-  "settings.maintenanceDescription": "업데이트하면 생성 높이가 적용되고 해당 블록부터 스캔을 다시 시작합니다",
+  "settings.maintenanceDescription":
+    "업데이트하면 생성 높이가 적용되고 해당 블록부터 스캔을 다시 시작합니다",
   "settings.update": "업데이트",
   "settings.rescanning": "다시 스캔하는 중…",
   "settings.resetAndRescan": "재설정 후 다시 스캔",
@@ -6246,6 +6608,36 @@ const ko: Dictionary = {
   "settings.password": "비밀번호",
   "settings.passwordDescription": "로컬 지갑 비밀번호를 변경합니다",
   "settings.changePassword": "비밀번호 변경",
+  "settings.toastNotificationsDisabled": "알림을 껐습니다.",
+  "settings.toastNotificationsEnabled": "알림을 켰습니다.",
+  "settings.toastNotificationsBlocked": "브라우저 설정에서 알림이 차단되어 있습니다.",
+  "settings.toastNotificationsNotGranted": "알림 권한이 허용되지 않았습니다.",
+  "settings.toastSettingsUpdated": "설정이 업데이트되었습니다.",
+  "settings.toastMockSettingsUpdated": "모의 설정이 업데이트되었습니다.",
+  "settings.toastSettingsUpdateFailed": "설정 업데이트에 실패했습니다.",
+  "settings.toastCustomNodeConnected": "사용자 지정 노드에 연결되었습니다.",
+  "settings.toastMockCustomNodeEnabled": "모의 사용자 지정 노드를 활성화했습니다.",
+  "settings.toastUsingPublicNodes": "공개 노드를 사용 중입니다.",
+  "settings.toastMockPublicNodesEnabled": "모의 공개 노드를 활성화했습니다.",
+  "settings.toastCustomNodeUpdated": "사용자 지정 노드가 업데이트되었습니다.",
+  "settings.toastMockCustomNodeUpdated": "모의 사용자 지정 노드가 업데이트되었습니다.",
+  "settings.toastNodeUpdateFailed": "노드 업데이트에 실패했습니다.",
+  "settings.toastNodeLagWarning":
+    "이 노드는 네트워크보다 {blocks}블록 뒤처져 있어 잔액이 오래된 것으로 표시될 수 있습니다. 노드 변경을 고려하세요.",
+  "settings.toastInvalidCreationHeight": "유효한 생성 높이를 입력하세요.",
+  "settings.toastCreationHeightUpdated":
+    "생성 높이가 업데이트되었습니다 — 해당 블록부터 다시 스캔합니다.",
+  "settings.toastMockWalletUpdated": "모의 지갑이 업데이트되었습니다.",
+  "settings.toastResetRescan": "지갑을 초기화했습니다 — 생성 높이부터 다시 스캔합니다.",
+  "settings.toastMockRescanStarted": "모의 재스캔을 시작했습니다.",
+  "settings.toastRescanFailed": "재스캔에 실패했습니다.",
+  "settings.toastOptimizeComplete": "지갑 최적화가 완료되었습니다.",
+  "settings.toastMockOptimizeComplete": "모의 최적화가 완료되었습니다.",
+  "settings.toastNothingToOptimize": "최적화할 항목이 없습니다.",
+  "settings.toastMockNothingToOptimize": "모의 지갑은 최적화가 필요하지 않습니다.",
+  "settings.toastOptimizeFailed": "최적화에 실패했습니다.",
+  "settings.toastTickerUpdated": "티커가 업데이트되었습니다.",
+  "settings.toastMockTickerUpdated": "모의 티커가 업데이트되었습니다.",
   "wallets.switcherLabel": "지갑 전환",
   "wallets.active": "사용 중",
   "wallets.addWallet": "지갑 추가",
@@ -6419,6 +6811,9 @@ const ko: Dictionary = {
   "txn.exportSuccess": "거래 {count}건을 내보냈습니다.",
   "txn.exportSuccessOne": "거래 1건을 내보냈습니다.",
   "txn.exportError": "CSV 내보내기에 실패했습니다.",
+  "toast.noteSaved": "메모를 저장했습니다.",
+  "toast.noteRemoved": "메모를 삭제했습니다.",
+  "toast.noteSaveFailed": "메모를 저장할 수 없습니다.",
   "txn.rowAria": "{time}의 {amount} {label} 거래",
   "txn.confirmationsCount": "확인 {count}회",
   "txn.typeWithdrawal": "출금",
@@ -6462,7 +6857,8 @@ const ko: Dictionary = {
   "receive.messagePlaceholder": "보내는 사람을 위한 선택 메모",
   "receive.paymentLink": "결제 링크",
   "receive.copyPaymentLink": "결제 링크 복사",
-  "receive.enterAmountHint": "금액을 입력하면 공유 가능한 결제 링크가 생성되고 QR이 업데이트됩니다.",
+  "receive.enterAmountHint":
+    "금액을 입력하면 공유 가능한 결제 링크가 생성되고 QR이 업데이트됩니다.",
   "receive.recentlyReceived": "최근 받음",
   "receive.last5Incoming": "최근 입금 5건",
   "receive.viewAllTransactions": "모든 거래 보기 →",
@@ -6588,8 +6984,7 @@ const ko: Dictionary = {
   "insights.netFlowDetail": "받음 − 보냄",
   "insights.interestEarned": "획득 이자",
   "insights.monthlyFlow": "월별 흐름",
-  "insights.monthlyFlowDescription":
-    "월별 받음과 보냄 비교 — 거래 내역에서 산출됨",
+  "insights.monthlyFlowDescription": "월별 받음과 보냄 비교 — 거래 내역에서 산출됨",
   "insights.activityBreakdown": "활동 분석",
   "insights.activityBreakdownDescription": "유형별 거래",
   "insights.privacyNote":
@@ -6617,8 +7012,7 @@ const ko: Dictionary = {
   "checkIns.errUpdateFailed": "업데이트할 수 없습니다 — 기기 저장소를 사용할 수 없을 수 있습니다.",
   "checkIns.sentTo": "{label}에게 체크인을 보냈습니다.",
   "checkIns.errSendFailed": "체크인을 보낼 수 없습니다.",
-  "checkIns.overdueAlert":
-    "{count}건 기한 초과: {names}. 단지 바쁠 수도 있습니다 — 연락해 보세요.",
+  "checkIns.overdueAlert": "{count}건 기한 초과: {names}. 단지 바쁠 수도 있습니다 — 연락해 보세요.",
   "checkIns.watchTitle": "연락처 지켜보기",
   "checkIns.watchDescription":
     "다시 연락하기 위한 알림일 뿐 — 무언가를 증명하는 것은 아닙니다. 체크인은 예의상의 신호이며 인증되지 않습니다(원칙적으로 누구나 가짜를 보낼 수 있음). 따라서 안전과 관련된 중요한 결정에는 의존하지 마세요. 사람들은 일상적인 이유(지갑 분실, 수수료 부족, 여행)로 체크인을 놓칩니다. 알림은 지갑이 열려 있고 동기화된 동안에만 표시됩니다.",
@@ -6637,8 +7031,7 @@ const ko: Dictionary = {
   "checkIns.detailEvery": "{interval}일마다",
   "checkIns.checkedInSr": "체크인했습니다. ",
   "checkIns.sendCheckIn": "체크인 보내기",
-  "checkIns.sendCheckInTitle":
-    "온체인 체크인 메시지를 보냅니다(순 약 0.0011 CCX, 0.0111 예약).",
+  "checkIns.sendCheckInTitle": "온체인 체크인 메시지를 보냅니다(순 약 0.0011 CCX, 0.0111 예약).",
   "checkIns.resume": "재개",
   "checkIns.resumed": "{label}을(를) 재개했습니다.",
   "checkIns.snooze": "다시 알림",
@@ -6660,8 +7053,10 @@ const ko: Dictionary = {
   "scheduled.errSaveFailed":
     "알림을 저장할 수 없습니다 — 기기 저장소가 가득 찼거나 사용할 수 없을 수 있습니다.",
   "scheduled.markedPaid": "결제됨으로 표시 — 다음 알림이 예약되었습니다.",
-  "scheduled.errUpdateFailed": "알림을 업데이트할 수 없습니다 — 기기 저장소를 사용할 수 없을 수 있습니다.",
-  "scheduled.errRemoveFailed": "알림을 제거할 수 없습니다 — 기기 저장소를 사용할 수 없을 수 있습니다.",
+  "scheduled.errUpdateFailed":
+    "알림을 업데이트할 수 없습니다 — 기기 저장소를 사용할 수 없을 수 있습니다.",
+  "scheduled.errRemoveFailed":
+    "알림을 제거할 수 없습니다 — 기기 저장소를 사용할 수 없을 수 있습니다.",
   "scheduled.addTitle": "알림 추가",
   "scheduled.addDescription":
     "알림일 뿐입니다 — 키는 절대 자동으로 보내지 않습니다. 기한이 되면 검토하고 확인하라는 안내가 표시됩니다.",
@@ -6685,7 +7080,8 @@ const ko: Dictionary = {
   "donate.title": "Conceal 후원",
   "donate.subtitle": "당신의 기부가 프라이버시 우선 금융을 움직입니다. 감사합니다!",
   "donate.errChooseAmount": "먼저 금액을 선택하세요.",
-  "donate.mockToast": "{method}을(를) 통한 {amount} {cadence}(모의). 실제 결제는 처리되지 않았습니다.",
+  "donate.mockToast":
+    "{method}을(를) 통한 {amount} {cadence}(모의). 실제 결제는 처리되지 않았습니다.",
   "donate.recurringCadence": "{frequency} 기부",
   "donate.oneTimeCadence": "일회성 기부",
   "donate.whyTitle": "당신의 후원이 중요한 이유",
