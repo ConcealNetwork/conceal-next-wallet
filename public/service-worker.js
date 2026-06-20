@@ -160,24 +160,45 @@ self.addEventListener("fetch", (event) => {
 // Clicking an OS notification (from reminders / check-ins) focuses an existing
 // wallet window if one is open, otherwise opens a new one. Best-effort and
 // additive — it never touches the cache logic above. Resolves to the SW scope
-// so it works under any deploy base path.
+// so it works under any deploy base path. If the notification carries a target
+// path (`data.url`) it focuses/navigates there; otherwise the app root.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
     (async () => {
       try {
-        const target = new URL(self.registration.scope);
+        const scope = new URL(self.registration.scope);
+        // Resolve an optional target path RELATIVE to scope, so it works under
+        // any deploy base path. A bad/cross-origin value falls back to scope.
+        const raw = event.notification.data?.url;
+        let target = scope;
+        if (typeof raw === "string" && raw.length > 0) {
+          try {
+            const resolved = new URL(raw, scope);
+            if (resolved.href.startsWith(scope.href)) target = resolved;
+          } catch {
+            // Unparseable target — fall back to the scope root.
+          }
+        }
         const clientList = await self.clients.matchAll({
           type: "window",
           includeUncontrolled: true,
         });
         for (const client of clientList) {
-          // A window WITHIN OUR SCOPE is already open → focus it rather than
-          // spawning one. Scope (not just origin) matters: GitHub Pages hosts
-          // many projects on one origin, so an origin-only check could focus a
-          // different app's window.
+          // A window WITHIN OUR SCOPE is already open → focus it (navigating to
+          // the target first when one was supplied) rather than spawning one.
+          // Scope (not just origin) matters: GitHub Pages hosts many projects on
+          // one origin, so an origin-only check could focus a different app.
           try {
-            if (new URL(client.url).href.startsWith(target.href) && "focus" in client) {
+            if (new URL(client.url).href.startsWith(scope.href) && "focus" in client) {
+              if (target.href !== scope.href && typeof client.navigate === "function") {
+                try {
+                  const navigated = await client.navigate(target.href);
+                  if (navigated && "focus" in navigated) return await navigated.focus();
+                } catch {
+                  // Navigation can reject (e.g. cross-origin guard) — just focus.
+                }
+              }
               return await client.focus();
             }
           } catch {
