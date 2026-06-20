@@ -103,11 +103,11 @@ export function DepositsRail({ embedded = false }: { embedded?: boolean }) {
       </section>
 
       <section>
-        <RailSectionHeading icon={Calculator}>Deposit Calculator</RailSectionHeading>
+        <RailSectionHeading icon={Calculator}>{t("deposits.calculatorTitle")}</RailSectionHeading>
         <div className="mt-3.5 space-y-4 rounded-xl border border-border/70 p-5">
           <div className="space-y-1.5">
             <Label htmlFor="rail-calc-amount" className="text-xs text-muted-foreground">
-              Amount (CCX)
+              {t("deposits.amountCcx")}
             </Label>
             <Input
               id="rail-calc-amount"
@@ -115,21 +115,21 @@ export function DepositsRail({ embedded = false }: { embedded?: boolean }) {
               onChange={(event) => setCalcAmount(event.target.value.replace(/[^\d]/g, ""))}
               inputMode="numeric"
               pattern="[0-9]*"
-              placeholder="Enter amount"
+              placeholder={t("deposits.enterAmountPlaceholder")}
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="rail-calc-term" className="text-xs text-muted-foreground">
-              Term
+              {t("deposits.term")}
             </Label>
             <Select value={calcTerm} onValueChange={setCalcTerm}>
-              <SelectTrigger id="rail-calc-term" aria-label="Deposit term">
+              <SelectTrigger id="rail-calc-term" aria-label={t("deposits.depositTermAria")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: DEPOSIT_MAX_TERM_MONTH }, (_, i) => i + 1).map((m) => (
                   <SelectItem key={m} value={String(m)}>
-                    {m} month{m === 1 ? "" : "s"}
+                    {t(m === 1 ? "deposits.monthsValueOne" : "deposits.monthsValue", { count: m })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -137,23 +137,23 @@ export function DepositsRail({ embedded = false }: { embedded?: boolean }) {
           </div>
           <dl className="grid grid-cols-2 gap-3 border-t border-border/70 pt-4">
             <CalcCell
-              label="Effective APR"
+              label={t("deposits.effectiveApr")}
               value={calcValid ? `${earPct.toFixed(2)}%` : "—"}
               tone="amber"
             />
             <CalcCell
-              label="Period rate"
+              label={t("deposits.periodRate")}
               value={calcValid ? `${eirPct.toFixed(2)}%` : "—"}
               tone="amber"
             />
             <CalcCell
-              label="Est. interest"
+              label={t("deposits.estInterest")}
               value={calcValid ? formatCcx(interestCcx, COIN_UNIT_PLACES, true) : "—"}
               tone="incoming"
               ccx
             />
             <CalcCell
-              label="At maturity"
+              label={t("deposits.atMaturity")}
               value={calcValid ? formatCcx(calcCcx + interestCcx, COIN_UNIT_PLACES, true) : "—"}
               tone="deposit"
               ccx

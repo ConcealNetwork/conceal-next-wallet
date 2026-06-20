@@ -10,8 +10,8 @@ import { useFormatters } from "@/lib/i18n/use-formatters";
 import { ccxToNumber, cn } from "@/lib/utils";
 
 // Market-page contextual rail (#122): an at-a-glance stat summary that
-// complements the page's chart. Stat labels mirror the page's (hardcoded
-// English) MarketStatsGrid; fetches its own data so it stays live.
+// complements the page's chart. Stat labels share the market.* i18n keys with
+// the page's MarketStatsGrid; fetches its own data so it stays live.
 export function MarketRail({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   const { formatUsd, formatCcx } = useFormatters();
@@ -27,18 +27,30 @@ export function MarketRail({ embedded = false }: { embedded?: boolean }) {
         <div className="mt-3.5 rounded-xl border border-border/70 px-5">
           {market ? (
             <>
-              <RailStatRow first label="Price" value={formatUsd(market.price.value, 4)} />
-              <RailStatRow label="24h change" value={<ChangeValue pct={market.change24hPct} />} />
-              <RailStatRow label="24h high" value={formatUsd(market.high24h.value, 4)} />
-              <RailStatRow label="24h low" value={formatUsd(market.low24h.value, 4)} />
-              <RailStatRow label="24h volume" value={formatUsd(market.volume24h.value, 0)} />
-              <RailStatRow label="Market cap" value={formatUsd(market.marketCap.value, 0)} />
+              <RailStatRow first label={t("market.price")} value={formatUsd(market.price.value, 4)} />
               <RailStatRow
-                label="Circulating supply"
+                label={t("market.change24h")}
+                value={<ChangeValue pct={market.change24hPct} />}
+              />
+              <RailStatRow label={t("market.high24h")} value={formatUsd(market.high24h.value, 4)} />
+              <RailStatRow label={t("market.low24h")} value={formatUsd(market.low24h.value, 4)} />
+              <RailStatRow
+                label={t("market.volume24h")}
+                value={formatUsd(market.volume24h.value, 0)}
+              />
+              <RailStatRow
+                label={t("market.marketCap")}
+                value={formatUsd(market.marketCap.value, 0)}
+              />
+              <RailStatRow
+                label={t("market.circulatingSupply")}
                 value={formatCcx(ccxToNumber(market.circulatingSupply), 0)}
               />
               {market.ath ? (
-                <RailStatRow label="All-time high" value={formatUsd(market.ath.value, 4)} />
+                <RailStatRow
+                  label={t("market.allTimeHigh")}
+                  value={formatUsd(market.ath.value, 4)}
+                />
               ) : null}
             </>
           ) : (

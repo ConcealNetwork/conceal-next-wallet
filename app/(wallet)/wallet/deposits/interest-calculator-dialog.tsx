@@ -21,12 +21,16 @@ import {
 import { CcxAmount } from "@/components/wallet/ccx";
 import { COIN_UNIT_PLACES, DEPOSIT_MAX_TERM_MONTH, DEPOSIT_RATE_V3 } from "@/lib/config/config";
 import { computeDepositInterest, getDepositTierIndex } from "@/lib/deposits/interest-calc";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 
+// Tier bounds are numeric so thresholds + "Tier N" labels render locale-aware:
+// the threshold string (e.g. "< 10,000 CCX") is formatted via formatCcx at render
+// so number grouping follows the active locale (de "10.000", not "10,000").
 const TIER_META = [
-  { label: "Tier 1", threshold: "< 10,000 CCX", color: "text-primary" },
-  { label: "Tier 2", threshold: "10,000 – 19,999 CCX", color: "text-wallet-deposit" },
-  { label: "Tier 3", threshold: "≥ 20,000 CCX", color: "text-wallet-incoming" },
+  { kind: "under", a: 10000, color: "text-primary" },
+  { kind: "range", a: 10000, b: 19999, color: "text-wallet-deposit" },
+  { kind: "atLeast", a: 20000, color: "text-wallet-incoming" },
 ] as const;
 
 const TIER_ANNUALISED = DEPOSIT_RATE_V3.map((base) => base + 11 * 0.001);
@@ -38,7 +42,8 @@ export function InterestCalculatorDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { formatCcx } = useFormatters();
+  const { t } = useI18n();
+  const { formatCcx, formatNumber } = useFormatters();
   const [amount, setAmount] = useState("1000");
   const [term, setTerm] = useState("12");
 
@@ -54,61 +59,82 @@ export function InterestCalculatorDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="size-5 text-primary" aria-hidden="true" />
-            Deposit Calculator
+            {t("deposits.calculatorTitle")}
           </DialogTitle>
-          <DialogDescription>Estimate earnings -- based on interest model V3.</DialogDescription>
+          <DialogDescription>{t("deposits.calculatorDescription")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
           <div className="rounded-xl border border-border bg-secondary/60 p-4">
-            <p className="text-sm font-medium text-muted-foreground">Interest Tiers</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              {t("deposits.interestTiers")}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Base APR from <code className="text-foreground">depositRateV3</code> — annualised at
-              max term (12 months)
+              {t("deposits.tierBaseAprNote", { months: DEPOSIT_MAX_TERM_MONTH })}
             </p>
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="pb-2 pr-3 font-medium">Tier</th>
-                    <th className="pb-2 pr-3 font-medium">Threshold</th>
-                    <th className="pb-2 pr-3 font-medium text-right">Base APR</th>
-                    <th className="pb-2 font-medium text-right">Annualised</th>
+                    <th className="pb-2 pr-3 font-medium">{t("deposits.colTier")}</th>
+                    <th className="pb-2 pr-3 font-medium">{t("deposits.colThreshold")}</th>
+                    <th className="pb-2 pr-3 font-medium text-right">{t("deposits.colBaseApr")}</th>
+                    <th className="pb-2 font-medium text-right">{t("deposits.colAnnualised")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {TIER_META.map((tier, idx) => (
-                    <tr
-                      key={tier.label}
-                      className={
-                        tierIdx === idx ? "font-semibold text-foreground" : "text-muted-foreground"
-                      }
-                    >
-                      <td className={`py-1.5 pr-3 ${tier.color}`}>{tier.label}</td>
-                      <td className="py-1.5 pr-3">{tier.threshold}</td>
-                      <td className="py-1.5 pr-3 text-right font-mono">
-                        {(DEPOSIT_RATE_V3[idx] * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-1.5 text-right font-mono">
-                        {(TIER_ANNUALISED[idx] * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
+                  {TIER_META.map((tier, idx) => {
+                    // Plain locale-grouped number (no ticker) — the pattern key
+                    // appends " CCX" once; formatCcx would double it.
+                    const fmt = (n: number) => formatNumber(n);
+                    const threshold =
+                      tier.kind === "under"
+                        ? t("deposits.tierThresholdUnder", { amount: fmt(tier.a) })
+                        : tier.kind === "atLeast"
+                          ? t("deposits.tierThresholdAtLeast", { amount: fmt(tier.a) })
+                          : t("deposits.tierThresholdRange", {
+                              min: fmt(tier.a),
+                              max: fmt(tier.b),
+                            });
+                    return (
+                      <tr
+                        key={tier.kind}
+                        className={
+                          tierIdx === idx
+                            ? "font-semibold text-foreground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        <td className={`py-1.5 pr-3 ${tier.color}`}>
+                          {t("deposits.tierLabel", { n: idx + 1 })}
+                        </td>
+                        <td className="py-1.5 pr-3">{threshold}</td>
+                        <td className="py-1.5 pr-3 text-right font-mono">
+                          {(DEPOSIT_RATE_V3[idx] * 100).toFixed(1)}%
+                        </td>
+                        <td className="py-1.5 text-right font-mono">
+                          {(TIER_ANNUALISED[idx] * 100).toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              For {amountIsValid ? formatCcx(ccx) : "0"} CCX →{" "}
-              <span className={TIER_META[tierIdx].color}>{TIER_META[tierIdx].label}</span>
+              {t("deposits.forAmountPrefix", { amount: amountIsValid ? formatNumber(ccx) : "0" })}{" "}
+              <span className={TIER_META[tierIdx].color}>
+                {t("deposits.tierLabel", { n: tierIdx + 1 })}
+              </span>
             </p>
           </div>
 
           <div className="rounded-xl border border-border bg-secondary/60 p-4">
-            <p className="text-sm font-medium text-muted-foreground">Try it out</p>
+            <p className="text-sm font-medium text-muted-foreground">{t("deposits.tryItOut")}</p>
 
             <div className="mt-3 grid gap-4 sm:grid-cols-[1fr_170px]">
               <div className="space-y-2">
-                <Label htmlFor="calc-amount">Amount (CCX)</Label>
+                <Label htmlFor="calc-amount">{t("deposits.amountCcx")}</Label>
                 <Input
                   id="calc-amount"
                   value={amount}
@@ -116,19 +142,21 @@ export function InterestCalculatorDialog({
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  placeholder="Enter amount"
+                  placeholder={t("deposits.enterAmountPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="calc-term">Term</Label>
+                <Label htmlFor="calc-term">{t("deposits.term")}</Label>
                 <Select value={term} onValueChange={setTerm}>
-                  <SelectTrigger id="calc-term" aria-label="Deposit term">
+                  <SelectTrigger id="calc-term" aria-label={t("deposits.depositTermAria")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: DEPOSIT_MAX_TERM_MONTH }, (_, i) => i + 1).map((m) => (
                       <SelectItem key={m} value={String(m)}>
-                        {m} month{m === 1 ? "" : "s"}
+                        {t(m === 1 ? "deposits.monthsValueOne" : "deposits.monthsValue", {
+                          count: m,
+                        })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -138,22 +166,22 @@ export function InterestCalculatorDialog({
 
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <CalcResult
-                label="Effective APR"
+                label={t("deposits.effectiveApr")}
                 value={amountIsValid ? `${earPct.toFixed(2)}%` : "—"}
                 tone="amber"
               />
               <CalcResult
-                label="Period Rate"
+                label={t("deposits.periodRate")}
                 value={amountIsValid ? `${eirPct.toFixed(2)}%` : "—"}
                 tone="amber"
               />
               <CalcResult
-                label="Est. Interest"
+                label={t("deposits.estInterest")}
                 value={amountIsValid ? formatCcx(interestCcx, COIN_UNIT_PLACES, true) : "—"}
                 tone="incoming"
               />
               <CalcResult
-                label="Value at Maturity"
+                label={t("deposits.valueAtMaturity")}
                 value={amountIsValid ? formatCcx(ccx + interestCcx, COIN_UNIT_PLACES, true) : "—"}
                 tone="deposit"
               />
