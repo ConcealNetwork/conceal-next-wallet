@@ -104,7 +104,7 @@ export const realSdkWalletService: WalletService = {
     // every few seconds, and syncOnce now publishes `scannedHeight` per batch, so each
     // poll reads the scan's live progress — `currentHeight` climbs block-by-block during
     // a long initial sync or a height-reset re-scan instead of freezing until it ends.
-    void sync().catch(() => {});
+    void sync().catch((error) => console.warn("Background wallet sync failed:", error));
     return openedInfo();
   },
 

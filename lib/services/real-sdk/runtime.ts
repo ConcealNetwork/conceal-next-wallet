@@ -552,16 +552,23 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
       }
     }
     scanned = endBlock;
-    // Publish progress after EACH batch (never backwards) so a concurrent read — the
+    // Publish progress after each batch (never backwards) so a concurrent read — the
     // polled getWalletInfo — sees `currentHeight` climb block-by-block during a long
     // initial scan or a height-reset re-scan, instead of jumping only when the whole
     // catch-up finishes. In-memory only; the encrypted persist still happens once below.
-    state = { ...state, scannedHeight: Math.max(state.scannedHeight, scanned) };
-    rt.state = state;
+    // BUT only when something actually changed this batch — the cursor advanced, or a
+    // tx folded — so an idle at-tip re-scan (the lag window with no new tx) never
+    // allocates a new state and never triggers a persist (no per-poll write churn).
+    const cursorAdvanced = scanned > rt.state.scannedHeight;
+    const foldedThisBatch = state !== rt.state;
+    if (cursorAdvanced || foldedThisBatch) {
+      state = { ...state, scannedHeight: Math.max(rt.state.scannedHeight, scanned) };
+      rt.state = state;
+    }
   }
 
-  // The per-batch publish above already advanced rt.state to the latest scan cursor +
-  // folded data; persist below only if anything changed since this scan began.
+  // The per-batch publish advances rt.state only on real change, so `rt.state !==
+  // startState` means this scan genuinely advanced/folded something — persist iff so.
   const stateChanged = rt.state !== startState;
   if (receivedChanged) {
     rt.raw = withReceivedRecords(rt.raw, [...received.values()]);
