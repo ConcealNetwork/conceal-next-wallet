@@ -20,7 +20,6 @@ describe("useSyncWakeLock", () => {
     Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
   });
   afterEach(() => {
-    // biome-ignore lint/performance/noDelete: test cleanup of the injected global
     delete (navigator as unknown as { wakeLock?: unknown }).wakeLock;
     vi.restoreAllMocks();
   });

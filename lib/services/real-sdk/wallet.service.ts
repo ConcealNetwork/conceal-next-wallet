@@ -100,7 +100,12 @@ async function safeNetworkHeight(): Promise<number> {
 export const realSdkWalletService: WalletService = {
   async getWalletInfo(): Promise<WalletInfo> {
     await ensureSdkReady();
-    return syncedInfo();
+    // Kick off a catch-up scan but DON'T block on it (coalesced): the shell polls this
+    // every few seconds, and syncOnce now publishes `scannedHeight` per batch, so each
+    // poll reads the scan's live progress — `currentHeight` climbs block-by-block during
+    // a long initial sync or a height-reset re-scan instead of freezing until it ends.
+    void sync().catch((error) => console.warn("Background wallet sync failed:", error));
+    return openedInfo();
   },
 
   async refreshWallet(): Promise<WalletInfo> {
