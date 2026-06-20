@@ -513,6 +513,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // floored at the wallet's seed/creation height so we never scan pre-existence blocks.
   const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
   let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS);
+  const startState = rt.state;
   let state = rt.state;
 
   // Our own outbound message txs already live in `sentMessages`; never reclassify
@@ -551,18 +552,17 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
       }
     }
     scanned = endBlock;
+    // Publish progress after EACH batch (never backwards) so a concurrent read — the
+    // polled getWalletInfo — sees `currentHeight` climb block-by-block during a long
+    // initial scan or a height-reset re-scan, instead of jumping only when the whole
+    // catch-up finishes. In-memory only; the encrypted persist still happens once below.
+    state = { ...state, scannedHeight: Math.max(state.scannedHeight, scanned) };
+    rt.state = state;
   }
 
-  // Advance the scan cursor to the highest block scanned (never backwards). Only
-  // allocate a new state object when the cursor or folded data actually changed, so an
-  // idle re-scan (nothing new in the window) does not churn the serialized persist.
-  const finalScanned = Math.max(rt.state.scannedHeight, scanned);
-  const nextState =
-    finalScanned !== state.scannedHeight ? { ...state, scannedHeight: finalScanned } : state;
-  const stateChanged = nextState !== rt.state;
-  if (stateChanged) {
-    rt.state = nextState;
-  }
+  // The per-batch publish above already advanced rt.state to the latest scan cursor +
+  // folded data; persist below only if anything changed since this scan began.
+  const stateChanged = rt.state !== startState;
   if (receivedChanged) {
     rt.raw = withReceivedRecords(rt.raw, [...received.values()]);
   }
@@ -572,7 +572,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   const currentPending = readPendingRecords(rt.raw);
   let pendingChanged = false;
   if (currentPending.length > 0) {
-    const survivors = prunePendingRecords(rt.raw, nextState, Date.now());
+    const survivors = prunePendingRecords(rt.raw, rt.state, Date.now());
     if (survivors.length !== currentPending.length) {
       rt.raw = withPendingRecords(rt.raw, survivors);
       pendingChanged = true;

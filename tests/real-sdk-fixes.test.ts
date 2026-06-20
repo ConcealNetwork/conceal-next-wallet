@@ -126,6 +126,54 @@ describe("sync concurrency guard (review #2)", () => {
   });
 });
 
+describe("sync publishes scannedHeight per batch (live progress)", () => {
+  it("advances rt.state.scannedHeight between batches, not only at the end", async () => {
+    const acct = createAccount("english");
+    const networkHeight = 350; // > 3 batches of 100
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const seen: number[] = [];
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(networkHeight),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: async () => {
+        // The cursor visible to a concurrent reader (the polled getWalletInfo) at the
+        // moment each batch is fetched — should climb across batches.
+        seen.push(runtimeMod.getRuntime()?.state.scannedHeight ?? -1);
+        return [];
+      },
+    };
+    runtimeMod._setRuntimeForTest({
+      account: acct,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+      },
+      state: { ...createWalletState(acct), scannedHeight: 0 },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    const final = await runtimeMod.sync();
+    expect(final).toBe(networkHeight);
+    expect(runtimeMod.getRuntime()?.state.scannedHeight).toBe(networkHeight);
+    // Several batches ran, and each saw a strictly higher published cursor than the
+    // previous — progress is committed per batch, not only when the whole scan ends.
+    expect(seen.length).toBeGreaterThanOrEqual(3);
+    for (let i = 1; i < seen.length; i += 1) {
+      expect(seen[i]).toBeGreaterThan(seen[i - 1]);
+    }
+  });
+});
+
 describe("inbound message classification by decryptability (review #6 / #97)", () => {
   it("treats a message tx (owned 100-atomic output) as inbound", async () => {
     const { reconstructReceivedMessage } = await import("@/lib/services/real-sdk/messages-store");
