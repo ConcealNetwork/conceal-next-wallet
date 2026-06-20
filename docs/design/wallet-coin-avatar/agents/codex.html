@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conceal Wallet Avatar Directions</title>
+  <style>
+    :root {
+      --orange: #ffa500;
+      --amber: #f5a623;
+      --dark: #1a1714;
+      --dark-card: #241f1c;
+      --dark-border: #39332d;
+      --light: #f3efe9;
+      --light-card: #fff;
+      --light-border: #e4ddd1;
+      --ink: #221d18;
+      --paper: #fbf8f2;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: 21px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    .variant {
+      margin: 0 0 18px;
+      padding: 16px;
+      border: 1px solid var(--light-border);
+      border-radius: 8px;
+      background: var(--light-card);
+    }
+
+    .variant-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      align-items: baseline;
+      justify-content: space-between;
+      margin: 0 0 14px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 780;
+      letter-spacing: 0;
+    }
+
+    .note {
+      max-width: 650px;
+      margin: 0;
+      color: #655b50;
+      font-size: 12px;
+      line-height: 1.42;
+    }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .swatch {
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--swatch-border);
+      border-radius: 8px;
+      background: var(--swatch-bg);
+    }
+
+    .swatch.dark {
+      --swatch-bg: var(--dark);
+      --swatch-border: var(--dark-border);
+      --label: #fff7eb;
+      --muted: #b7afa6;
+    }
+
+    .swatch.light {
+      --swatch-bg: var(--light);
+      --swatch-border: var(--light-border);
+      --label: #221d18;
+      --muted: #756a5e;
+    }
+
+    .swatch-title {
+      margin: 0 0 12px;
+      color: var(--label);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .size-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(60px, 1fr));
+      gap: 11px;
+      align-items: end;
+    }
+
+    .size-label {
+      display: block;
+      margin: 0 0 7px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 680;
+      line-height: 1;
+    }
+
+    .samples {
+      display: flex;
+      min-height: 38px;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .avatar {
+      position: relative;
+      display: inline-grid;
+      width: var(--size);
+      height: var(--size);
+      flex: 0 0 var(--size);
+      place-items: center;
+      overflow: hidden;
+      isolation: isolate;
+      color: var(--glyph);
+      font-size: max(11px, calc(var(--size) * .47));
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .avatar::before,
+    .avatar::after {
+      position: absolute;
+      content: "";
+      pointer-events: none;
+    }
+
+    .avatar span {
+      position: relative;
+      z-index: 2;
+      transform: translateY(-.02em);
+    }
+
+    .size-24 { --size: 24px; }
+    .size-28 { --size: 28px; }
+    .size-32 { --size: 32px; }
+    .size-36 { --size: 36px; }
+
+    .notch {
+      --glyph: #fff8ed;
+      border-radius: 7px 4px 7px 4px;
+      background:
+        linear-gradient(135deg, transparent 0 10%, rgba(255, 255, 255, .14) 10% 26%, transparent 26%),
+        linear-gradient(155deg, #ffad1c 0%, #f18f08 46%, #8c4510 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .2),
+        inset 0 -4px 7px rgba(80, 29, 0, .28),
+        0 1px 2px rgba(0, 0, 0, .24);
+      text-shadow: 0 1px 1px rgba(80, 30, 0, .45);
+    }
+
+    .notch::before {
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, .2) 0 1px, transparent 1px) 33% 0 / 33% 100% no-repeat,
+        linear-gradient(0deg, rgba(44, 19, 0, .18) 0 1px, transparent 1px) 0 64% / 100% 33% no-repeat;
+      mix-blend-mode: soft-light;
+      z-index: 1;
+    }
+
+    .notch::after {
+      top: 0;
+      right: 0;
+      width: 34%;
+      height: 34%;
+      background: var(--swatch-bg);
+      border-left: 1px solid rgba(255, 255, 255, .3);
+      border-bottom: 1px solid rgba(110, 51, 0, .22);
+      clip-path: polygon(100% 0, 100% 100%, 0 0);
+      opacity: .95;
+      z-index: 3;
+    }
+
+    .swatch.light .notch {
+      --glyph: #271b0b;
+      background:
+        linear-gradient(135deg, transparent 0 10%, rgba(255, 255, 255, .35) 10% 29%, transparent 29%),
+        linear-gradient(155deg, #ffd36b 0%, #ffa500 45%, #d66e0d 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(115, 60, 0, .2),
+        inset 0 -4px 7px rgba(138, 70, 0, .16),
+        0 1px 2px rgba(99, 73, 38, .24);
+      text-shadow: 0 1px 0 rgba(255, 239, 198, .55);
+    }
+
+    .chip {
+      --glyph: #fffaf0;
+      border-radius: 6px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .04) 42%, rgba(255, 165, 0, .2)),
+        rgba(255, 165, 0, .16);
+      border: 1px solid rgba(255, 183, 50, .48);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .1),
+        inset 0 -5px 9px rgba(0, 0, 0, .23),
+        0 1px 4px rgba(255, 165, 0, .18);
+      backdrop-filter: blur(0);
+      text-shadow: 0 1px 1px rgba(31, 17, 7, .62);
+    }
+
+    .chip::before {
+      inset: 18% 11%;
+      border-top: 1px solid rgba(255, 255, 255, .5);
+      border-bottom: 1px solid rgba(255, 165, 0, .42);
+      transform: skewX(-16deg);
+      z-index: 1;
+    }
+
+    .chip::after {
+      inset: 0;
+      background:
+        linear-gradient(90deg, transparent 0 17%, rgba(255, 255, 255, .2) 17% 20%, transparent 20% 80%, rgba(255, 255, 255, .16) 80% 83%, transparent 83%),
+        linear-gradient(0deg, transparent 0 18%, rgba(255, 165, 0, .25) 18% 21%, transparent 21% 79%, rgba(255, 165, 0, .22) 79% 82%, transparent 82%);
+      z-index: 1;
+    }
+
+    .swatch.light .chip {
+      --glyph: #21190f;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, .78), rgba(255, 249, 238, .26) 46%, rgba(245, 166, 35, .24)),
+        rgba(255, 255, 255, .38);
+      border-color: rgba(201, 126, 16, .5);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .5),
+        inset 0 -5px 9px rgba(135, 83, 16, .12),
+        0 1px 3px rgba(91, 65, 33, .18);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, .75);
+    }
+
+    .seal {
+      --glyph: #fff8ea;
+      border-radius: 50% 50% 46% 50%;
+      background:
+        radial-gradient(circle at 50% 45%, #332a21 0 42%, transparent 43%),
+        conic-gradient(from 8deg, #f5a623 0 12%, #a65a13 12% 24%, #f6b43a 24% 37%, #8d4610 37% 51%, #ffbd42 51% 65%, #9b4d10 65% 80%, #e68b13 80% 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 244, 218, .16),
+        inset 0 -3px 6px rgba(0, 0, 0, .32),
+        0 1px 3px rgba(0, 0, 0, .3);
+      text-shadow: 0 1px 1px rgba(0, 0, 0, .78);
+    }
+
+    .seal::before {
+      inset: 16%;
+      border: 1px solid rgba(255, 165, 0, .55);
+      border-radius: 44% 50% 48% 50%;
+      background: linear-gradient(145deg, rgba(255, 255, 255, .08), rgba(255, 165, 0, .04));
+      z-index: 1;
+    }
+
+    .seal::after {
+      inset: 3px;
+      border: 1px dashed rgba(255, 222, 153, .36);
+      border-radius: 50%;
+      opacity: .9;
+      z-index: 1;
+    }
+
+    .swatch.light .seal {
+      --glyph: #2a1c0c;
+      background:
+        radial-gradient(circle at 50% 45%, #fff7e7 0 42%, transparent 43%),
+        conic-gradient(from 8deg, #f5a623 0 12%, #cf7616 12% 24%, #ffd268 24% 37%, #bd6214 37% 51%, #ffbf43 51% 65%, #c96f18 65% 80%, #ee9419 80% 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(122, 66, 8, .14),
+        inset 0 -3px 6px rgba(159, 94, 17, .13),
+        0 1px 2px rgba(101, 73, 35, .2);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, .85);
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 16px;
+      }
+
+      .swatches {
+        grid-template-columns: 1fr;
+      }
+
+      .size-grid {
+        grid-template-columns: repeat(2, minmax(96px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Conceal Wallet Avatar Directions</h1>
+
+    <section class="variant" aria-labelledby="notch-title">
+      <div class="variant-head">
+        <h2 id="notch-title">01. Notch Tile</h2>
+        <p class="note">A minimal typographic app tile with a cut corner; the solid orange field keeps the initial crisp at 24px and adapts cleanly on light chrome.</p>
+      </div>
+      <div class="swatches">
+        <div class="swatch dark">
+          <p class="swatch-title">Dark #1a1714</p>
+          <div class="size-grid">
+            <div><span class="size-label">24px</span><div class="samples"><div class="avatar notch size-24"><span>M</span></div><div class="avatar notch size-24"><span>S</span></div><div class="avatar notch size-24"><span>A</span></div></div></div>
+            <div><span class="size-label">28px</span><div class="samples"><div class="avatar notch size-28"><span>M</span></div><div class="avatar notch size-28"><span>S</span></div><div class="avatar notch size-28"><span>A</span></div></div></div>
+            <div><span class="size-label">32px</span><div class="samples"><div class="avatar notch size-32"><span>M</span></div><div class="avatar notch size-32"><span>S</span></div><div class="avatar notch size-32"><span>A</span></div></div></div>
+            <div><span class="size-label">36px</span><div class="samples"><div class="avatar notch size-36"><span>M</span></div><div class="avatar notch size-36"><span>S</span></div><div class="avatar notch size-36"><span>A</span></div></div></div>
+          </div>
+        </div>
+        <div class="swatch light">
+          <p class="swatch-title">Light #f3efe9</p>
+          <div class="size-grid">
+            <div><span class="size-label">24px</span><div class="samples"><div class="avatar notch size-24"><span>M</span></div><div class="avatar notch size-24"><span>S</span></div><div class="avatar notch size-24"><span>A</span></div></div></div>
+            <div><span class="size-label">28px</span><div class="samples"><div class="avatar notch size-28"><span>M</span></div><div class="avatar notch size-28"><span>S</span></div><div class="avatar notch size-28"><span>A</span></div></div></div>
+            <div><span class="size-label">32px</span><div class="samples"><div class="avatar notch size-32"><span>M</span></div><div class="avatar notch size-32"><span>S</span></div><div class="avatar notch size-32"><span>A</span></div></div></div>
+            <div><span class="size-label">36px</span><div class="samples"><div class="avatar notch size-36"><span>M</span></div><div class="avatar notch size-36"><span>S</span></div><div class="avatar notch size-36"><span>A</span></div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="variant" aria-labelledby="chip-title">
+      <div class="variant-head">
+        <h2 id="chip-title">02. Glass Keychip</h2>
+        <p class="note">A small translucent access chip with etched edge lines; it feels wallet-native without becoming a metal coin, and the letter remains the main graphic.</p>
+      </div>
+      <div class="swatches">
+        <div class="swatch dark">
+          <p class="swatch-title">Dark #1a1714</p>
+          <div class="size-grid">
+            <div><span class="size-label">24px</span><div class="samples"><div class="avatar chip size-24"><span>M</span></div><div class="avatar chip size-24"><span>S</span></div><div class="avatar chip size-24"><span>A</span></div></div></div>
+            <div><span class="size-label">28px</span><div class="samples"><div class="avatar chip size-28"><span>M</span></div><div class="avatar chip size-28"><span>S</span></div><div class="avatar chip size-28"><span>A</span></div></div></div>
+            <div><span class="size-label">32px</span><div class="samples"><div class="avatar chip size-32"><span>M</span></div><div class="avatar chip size-32"><span>S</span></div><div class="avatar chip size-32"><span>A</span></div></div></div>
+            <div><span class="size-label">36px</span><div class="samples"><div class="avatar chip size-36"><span>M</span></div><div class="avatar chip size-36"><span>S</span></div><div class="avatar chip size-36"><span>A</span></div></div></div>
+          </div>
+        </div>
+        <div class="swatch light">
+          <p class="swatch-title">Light #f3efe9</p>
+          <div class="size-grid">
+            <div><span class="size-label">24px</span><div class="samples"><div class="avatar chip size-24"><span>M</span></div><div class="avatar chip size-24"><span>S</span></div><div class="avatar chip size-24"><span>A</span></div></div></div>
+            <div><span class="size-label">28px</span><div class="samples"><div class="avatar chip size-28"><span>M</span></div><div class="avatar chip size-28"><span>S</span></div><div class="avatar chip size-28"><span>A</span></div></div></div>
+            <div><span class="size-label">32px</span><div class="samples"><div class="avatar chip size-32"><span>M</span></div><div class="avatar chip size-32"><span>S</span></div><div class="avatar chip size-32"><span>A</span></div></div></div>
+            <div><span class="size-label">36px</span><div class="samples"><div class="avatar chip size-36"><span>M</span></div><div class="avatar chip size-36"><span>S</span></div><div class="avatar chip size-36"><span>A</span></div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="variant" aria-labelledby="seal-title">
+      <div class="variant-head">
+        <h2 id="seal-title">03. Cipher Seal</h2>
+        <p class="note">A compact stamped seal with an irregular rim and quiet ink center; it nods to privacy and verification while staying readable at the smallest size.</p>
+      </div>
+      <div class="swatches">
+        <div class="swatch dark">
+          <p class="swatch-title">Dark #1a1714</p>
+          <div class="size-grid">
+            <div><span class="size-label">24px</span><div class="samples"><div class="avatar seal size-24"><span>M</span></div><div class="avatar seal size-24"><span>S</span></div><div class="avatar seal size-24"><span>A</span></div></div></div>
+            <div><span class="size-label">28px</span><div class="samples"><div class="avatar seal size-28"><span>M</span></div><div class="avatar seal size-28"><span>S</span></div><div class="avatar seal size-28"><span>A</span></div></div></div>
+            <div><span class="size-label">32px</span><div class="samples"><div class="avatar seal size-32"><span>M</span></div><div class="avatar seal size-32"><span>S</span></div><div class="avatar seal size-32"><span>A</span></div></div></div>
+            <div><span class="size-label">36px</span><div class="samples"><div class="avatar seal size-36"><span>M</span></div><div class="avatar seal size-36"><span>S</span></div><div class="avatar seal size-36"><span>A</span></div></div></div>
+          </div>
+        </div>
+        <div class="swatch light">
+          <p class="swatch-title">Light #f3efe9</p>
+          <div class="size-grid">
+            <div><span class="size-label">24px</span><div class="samples"><div class="avatar seal size-24"><span>M</span></div><div class="avatar seal size-24"><span>S</span></div><div class="avatar seal size-24"><span>A</span></div></div></div>
+            <div><span class="size-label">28px</span><div class="samples"><div class="avatar seal size-28"><span>M</span></div><div class="avatar seal size-28"><span>S</span></div><div class="avatar seal size-28"><span>A</span></div></div></div>
+            <div><span class="size-label">32px</span><div class="samples"><div class="avatar seal size-32"><span>M</span></div><div class="avatar seal size-32"><span>S</span></div><div class="avatar seal size-32"><span>A</span></div></div></div>
+            <div><span class="size-label">36px</span><div class="samples"><div class="avatar seal size-36"><span>M</span></div><div class="avatar seal size-36"><span>S</span></div><div class="avatar seal size-36"><span>A</span></div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

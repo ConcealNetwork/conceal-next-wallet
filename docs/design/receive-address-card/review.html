@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Receive · Address Card — Design Review</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0f0d0c;
+    color: #efeae3;
+  }
+  header.page {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(15,13,12,0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid #2a2521;
+    padding: 18px 28px;
+  }
+  header.page h1 { margin: 0 0 4px; font-size: 18px; letter-spacing: -0.01em; }
+  header.page p { margin: 0; font-size: 13px; color: #a9a097; max-width: 80ch; line-height: 1.5; }
+  .rec {
+    margin-top: 10px; font-size: 12.5px; color: #FFA500;
+    border: 1px solid #4a3a1c; background: #241c10; border-radius: 8px;
+    padding: 8px 12px; display: inline-block;
+  }
+  nav.jump { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  nav.jump a {
+    font-size: 12px; color: #efeae3; text-decoration: none;
+    border: 1px solid #39332d; border-radius: 999px; padding: 4px 12px;
+    background: #1c1916;
+  }
+  nav.jump a:hover { border-color: #FFA500; }
+  section.agent { border-bottom: 1px solid #2a2521; }
+  .agent-label {
+    padding: 16px 28px 4px; font-size: 13px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #cdc4b8;
+  }
+  .agent-label b { color: #FFA500; letter-spacing: 0; text-transform: none; font-size: 15px; }
+  .agent-label span { color: #8a817760; }
+  iframe {
+    width: 100%; border: 0; display: block; background: transparent;
+  }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Receive · &ldquo;Your Wallet Address&rdquo; card — design exploration</h1>
+  <p>Three model families each redesigned the address card to kill the vertical-gap imbalance in the current
+     2-column layout. Each sheet shows 2–3 structural variants, rendered on the dark surface (left) and light
+     surface (right) in the real Conceal tokens (primary <code>#FFA500</code>). Placeholder QR — layout study only.</p>
+  <div class="rec" id="rec">My pick: the <b>QR-led hero</b> direction (all three pursued it) — going vertical + symmetric kills the side-by-side gap entirely. Tightest execution is <b>Gemini · Variant A</b> (centered QR, full-width address, one Copy / Download / V1 action row), ideally grafting <b>Opus</b>'s logo-picker-under-QR with the hairline divider. <b>GLM · Variant C</b> (compact single-column) is the denser alternative if you want the address read first.</div>
+  <nav class="jump">
+    <a href="#opus">Opus 4.8</a>
+    <a href="#gemini">Gemini 3.1 Pro</a>
+    <a href="#glm">GLM-5.2</a>
+  </nav>
+</header>
+
+<section class="agent" id="opus">
+  <div class="agent-label"><b>Opus 4.8</b> &nbsp;·&nbsp; in-process subagent</div>
+  <iframe src="agents/opus.html" loading="eager"></iframe>
+</section>
+
+<section class="agent" id="gemini">
+  <div class="agent-label"><b>Gemini 3.1 Pro</b> &nbsp;·&nbsp; via agy <span id="gemini-missing"></span></div>
+  <iframe src="agents/gemini.html" loading="eager" onerror="document.getElementById('gemini-missing').textContent=' (not generated)'"></iframe>
+</section>
+
+<section class="agent" id="glm">
+  <div class="agent-label"><b>GLM-5.2</b> &nbsp;·&nbsp; via opencode</div>
+  <iframe src="agents/glm.html" loading="eager"></iframe>
+</section>
+
+<script>
+  // Same-origin (all served from this host) → auto-size each iframe to its content
+  // so every variant is visible inline without a nested scrollbar.
+  function fit(frame) {
+    try {
+      const doc = frame.contentDocument;
+      if (!doc || !doc.body) return;
+      const h = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight);
+      frame.style.height = (h + 24) + "px";
+    } catch (e) { frame.style.height = "1600px"; }
+  }
+  for (const frame of document.querySelectorAll("iframe")) {
+    frame.addEventListener("load", () => { fit(frame); setTimeout(() => fit(frame), 300); });
+  }
+  // Re-fit on window resize (column reflow changes content height).
+  let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => {
+    for (const frame of document.querySelectorAll("iframe")) fit(frame);
+  }, 150); });
+</script>
+</body>
+</html>

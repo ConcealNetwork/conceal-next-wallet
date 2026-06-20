@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Receive page — layout variants (Opus)</title>
+<style>
+  /* ---- Conceal tokens (from BRIEF) ---- */
+  .theme-dark{
+    --background:#171513; --card:#241f1c; --card-foreground:#ffffff;
+    --primary:#FFA500; --primary-foreground:#000000;
+    --secondary:#2b2521; --secondary-foreground:#ffffff;
+    --muted-foreground:#a9a097; --border:#39332d; --ring:#FFA500;
+  }
+  .theme-light{
+    --background:#faf7f2; --card:#ffffff; --card-foreground:#221d18;
+    --primary:#FFA500; --primary-foreground:#000000;
+    --secondary:#f0ebe2; --secondary-foreground:#2e2820;
+    --muted-foreground:#6b6258; --border:#e6ddd0; --ring:#FFA500;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#0c0b0a;
+    color:#e7e2db;
+    -webkit-font-smoothing:antialiased;
+    padding:40px 28px 80px;
+    line-height:1.45;
+  }
+  .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace; }
+
+  /* ---- page scaffolding (the harness, not the design) ---- */
+  .pagehead{ max-width:1420px; margin:0 auto 8px; }
+  .pagehead h1{ font-size:20px; font-weight:650; letter-spacing:-0.01em; margin:0 0 4px; color:#fff; }
+  .pagehead p{ margin:0; font-size:13px; color:#8d867d; max-width:780px; }
+
+  .variant{ max-width:1420px; margin:44px auto 0; }
+  .variant > .vlabel{
+    display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    padding-bottom:14px; margin-bottom:20px; border-bottom:1px solid #2a2724;
+  }
+  .vlabel .tag{
+    font-size:11px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase;
+    color:#000; background:#FFA500; padding:3px 9px; border-radius:999px;
+  }
+  .vlabel h2{ font-size:16px; font-weight:600; margin:0; color:#fff; letter-spacing:-0.01em; }
+  .vlabel .desc{ font-size:13px; color:#8d867d; margin:0; }
+
+  .pair{ display:grid; grid-template-columns:1fr 1fr; gap:26px; align-items:start; }
+  @media (max-width:1180px){ .pair{ grid-template-columns:1fr; } }
+
+  .surface{
+    background:var(--background);
+    border-radius:18px;
+    padding:30px;
+    border:1px solid rgba(128,128,128,0.14);
+  }
+  .surface .modetag{
+    font-size:10.5px; font-weight:650; letter-spacing:0.10em; text-transform:uppercase;
+    color:var(--muted-foreground); margin:0 0 16px;
+  }
+
+  /* the page content lives in a max-w-2xl-ish column */
+  .col{ max-width:672px; margin:0 auto; }
+
+  /* ---- card primitives (base-nova) ---- */
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:15px;
+    padding:24px;
+    color:var(--card-foreground);
+  }
+  .card + .card{ margin-top:20px; }
+
+  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
+  .card-head .titles h3{ margin:0 0 3px; font-size:15.5px; font-weight:600; letter-spacing:-0.006em; }
+  .card-head .titles p{ margin:0; font-size:13px; color:var(--muted-foreground); }
+
+  /* buttons */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:7px;
+    font-size:13px; font-weight:550; line-height:1; cursor:pointer;
+    border-radius:10px; padding:9px 13px; border:1px solid var(--border);
+    background:transparent; color:var(--card-foreground); white-space:nowrap;
+  }
+  .btn.solid{ background:var(--primary); color:var(--primary-foreground); border-color:var(--primary); font-weight:600; }
+  .btn.ghost{ background:var(--secondary); }
+  .btn .ic{ width:15px; height:15px; display:block; }
+  .btn.sm{ padding:7px 11px; font-size:12.5px; }
+  .btn.block{ width:100%; }
+
+  /* address panel */
+  .addr{
+    background:var(--secondary); border:1px solid var(--border); border-radius:12px;
+    padding:14px 16px; font-size:13px; line-height:1.65; word-break:break-all;
+    color:var(--card-foreground);
+  }
+
+  /* QR tile — always white, scannable, themed-independent */
+  .qrtile{
+    background:#fff; border:1px solid #e3ddd3; border-radius:12px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.16);
+    padding:12px; display:inline-grid; place-items:center;
+  }
+  .qr{
+    display:grid; grid-template-columns:repeat(21,1fr); grid-template-rows:repeat(21,1fr);
+    gap:0; position:relative; background:#fff;
+  }
+  .qr i{ background:#15110d; width:100%; height:100%; display:block; }
+  .qr i.o{ background:transparent; }
+  .qrlogo{
+    position:absolute; inset:0; margin:auto; width:30%; height:30%;
+    background:#fff; border-radius:7px; display:grid; place-items:center;
+    box-shadow:0 0 0 3px #fff;
+  }
+  .coinmark{ width:74%; height:74%; display:block; }
+
+  /* form */
+  .field{ display:flex; flex-direction:column; gap:7px; }
+  .field label{ font-size:12.5px; font-weight:550; color:var(--card-foreground); }
+  .field .opt{ color:var(--muted-foreground); font-weight:450; }
+  .input{
+    background:var(--secondary); border:1px solid var(--border); border-radius:10px;
+    padding:9px 12px; font-size:13.5px; color:var(--card-foreground); width:100%;
+    font-family:inherit;
+  }
+  .input::placeholder{ color:var(--muted-foreground); }
+  textarea.input{ resize:none; min-height:60px; line-height:1.5; }
+  /* a "focused" input to show the ring without JS */
+  .input.focused{ border-color:var(--ring); box-shadow:0 0 0 3px rgba(255,165,0,0.22); outline:none; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:520px){ .grid2{ grid-template-columns:1fr; } }
+
+  /* payment-link inset */
+  .linkbox{
+    background:var(--secondary); border:1px solid var(--border); border-radius:12px;
+    padding:14px 16px; margin-top:16px;
+  }
+  .linkbox .lbl{ font-size:10.5px; font-weight:650; letter-spacing:0.07em; text-transform:uppercase; color:var(--muted-foreground); margin:0 0 8px; }
+  .linkbox .url{ font-size:12.5px; word-break:break-all; color:var(--card-foreground); margin:0 0 12px; line-height:1.6; }
+  .linkbox .row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+
+  .muted{ color:var(--muted-foreground); font-size:13px; margin:0; }
+
+  /* toggle (v1 link) */
+  .toggle{ display:inline-flex; align-items:center; gap:9px; }
+  .switch{ width:34px; height:20px; border-radius:999px; background:var(--border); position:relative; flex:none; }
+  .switch.on{ background:var(--primary); }
+  .switch::after{ content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:none; }
+  .switch.on::after{ left:16px; }
+  .toggle span{ font-size:12.5px; color:var(--card-foreground); }
+
+  /* logo picker swatches */
+  .swatches{ display:flex; gap:8px; }
+  .sw{
+    width:34px; height:34px; border-radius:10px; border:1px solid var(--border);
+    background:var(--secondary); display:grid; place-items:center; cursor:pointer;
+  }
+  .sw.active{ border-color:var(--primary); box-shadow:0 0 0 1px var(--primary) inset; }
+  .sw .dot{ width:15px; height:15px; border-radius:50%; }
+
+  .divider{ height:1px; background:var(--border); border:0; margin:0; }
+
+  /* small helper rows */
+  .stack{ display:flex; flex-direction:column; }
+  .between{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .tiny{ font-size:11.5px; color:var(--muted-foreground); }
+
+  /* live badge for interactive variant */
+  .live{
+    display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:650;
+    letter-spacing:0.05em; text-transform:uppercase; color:var(--primary);
+  }
+  .live .pulse{ width:6px; height:6px; border-radius:50%; background:var(--primary); }
+
+  /* Variant C — payment card visual */
+  .paycard{
+    background:var(--secondary); border:1px solid var(--border); border-radius:14px;
+    padding:22px; display:flex; gap:20px; align-items:center;
+  }
+  @media (max-width:520px){ .paycard{ flex-direction:column; text-align:center; } }
+  .paycard .meta{ flex:1; min-width:0; }
+  .paycard .brandrow{ display:flex; align-items:center; gap:9px; margin-bottom:14px; }
+  .paycard .brandrow .name{ font-size:13px; font-weight:650; letter-spacing:0.01em; }
+  .paycard .amt{ font-size:26px; font-weight:680; letter-spacing:-0.02em; margin:0 0 2px; }
+  .paycard .amt .ccx{ font-size:14px; font-weight:600; color:var(--muted-foreground); margin-left:5px; }
+  .paycard .req{ font-size:11px; font-weight:650; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted-foreground); margin:0 0 14px; }
+  .paycard .addr-sm{ font-size:11.5px; color:var(--muted-foreground); word-break:break-all; line-height:1.6; }
+
+  .hero-qr{ display:flex; flex-direction:column; align-items:center; gap:16px; }
+</style>
+</head>
+<body>
+
+  <div class="pagehead">
+    <h1>Receive page — layout variants</h1>
+    <p>Three takes on killing the L-shaped dead space beside the QR. Each variant is shown twice — dark Conceal surface (left), light surface (right). Placeholder QR only; the orange coin mark is the centred logo. Real copy and the sample address are used throughout.</p>
+  </div>
+
+  <!-- ================= VARIANT A ================= -->
+  <section class="variant">
+    <div class="vlabel">
+      <span class="tag">Variant A</span>
+      <h2>Interactive merged card</h2>
+      <p class="desc">One card. Request fields fill the void to the right of the QR; QR + payment link regenerate live as you type. (Direction A.)</p>
+    </div>
+
+    <div class="pair">
+      <!-- DARK -->
+      <div class="surface theme-dark">
+        <p class="modetag">Dark surface</p>
+        <div class="col">
+
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Your Wallet Address</h3>
+                <p>Share this address or QR to receive funds</p>
+              </div>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                Copy Address
+              </button>
+            </div>
+
+            <div class="addr mono">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+
+            <div style="height:18px"></div>
+
+            <!-- QR left + live request form right -->
+            <div style="display:flex; gap:22px; align-items:flex-start; flex-wrap:wrap;">
+              <div class="stack" style="gap:12px; align-items:center;">
+                <div class="qrtile" aria-label="QR placeholder">
+                  <div class="qr" id="qrA-dark"></div>
+                </div>
+                <div class="swatches" aria-label="QR logo">
+                  <div class="sw active"><span class="dot" style="background:#FFA500"></span></div>
+                  <div class="sw"><span class="dot" style="background:#7c8794"></span></div>
+                  <div class="sw"><span class="dot" style="background:#c9a14a"></span></div>
+                  <div class="sw"><span class="dot" style="background:#15110d"></span></div>
+                </div>
+              </div>
+
+              <div class="stack" style="flex:1; min-width:236px; gap:13px;">
+                <div class="between">
+                  <span class="tiny" style="font-weight:650; letter-spacing:0.04em; text-transform:uppercase;">Request a payment</span>
+                  <span class="live"><span class="pulse"></span>Live</span>
+                </div>
+                <div class="grid2">
+                  <div class="field">
+                    <label>Amount <span class="opt">(CCX)</span></label>
+                    <input class="input focused mono" value="5" />
+                  </div>
+                  <div class="field">
+                    <label>Payment ID</label>
+                    <input class="input" placeholder="Optional" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Message <span class="opt">(optional)</span></label>
+                  <textarea class="input" placeholder="What's this for?"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="linkbox">
+              <p class="lbl">Payment link · 5 CCX</p>
+              <p class="url mono">https://wallet.conceal.network/#/send?address=ccx7QbH7J9Pp…K3m&amount=5</p>
+              <div class="row">
+                <button class="btn ghost sm">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                  Copy payment link
+                </button>
+                <div class="toggle">
+                  <span class="switch"></span><span>Use legacy (v1) link</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- LIGHT -->
+      <div class="surface theme-light">
+        <p class="modetag">Light surface</p>
+        <div class="col">
+
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Your Wallet Address</h3>
+                <p>Share this address or QR to receive funds</p>
+              </div>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                Copy Address
+              </button>
+            </div>
+
+            <div class="addr mono">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+
+            <div style="height:18px"></div>
+
+            <div style="display:flex; gap:22px; align-items:flex-start; flex-wrap:wrap;">
+              <div class="stack" style="gap:12px; align-items:center;">
+                <div class="qrtile" aria-label="QR placeholder">
+                  <div class="qr" id="qrA-light"></div>
+                </div>
+                <div class="swatches" aria-label="QR logo">
+                  <div class="sw active"><span class="dot" style="background:#FFA500"></span></div>
+                  <div class="sw"><span class="dot" style="background:#7c8794"></span></div>
+                  <div class="sw"><span class="dot" style="background:#c9a14a"></span></div>
+                  <div class="sw"><span class="dot" style="background:#15110d"></span></div>
+                </div>
+              </div>
+
+              <div class="stack" style="flex:1; min-width:236px; gap:13px;">
+                <div class="between">
+                  <span class="tiny" style="font-weight:650; letter-spacing:0.04em; text-transform:uppercase;">Request a payment</span>
+                  <span class="live"><span class="pulse"></span>Live</span>
+                </div>
+                <div class="grid2">
+                  <div class="field">
+                    <label>Amount <span class="opt">(CCX)</span></label>
+                    <input class="input focused mono" value="5" />
+                  </div>
+                  <div class="field">
+                    <label>Payment ID</label>
+                    <input class="input" placeholder="Optional" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Message <span class="opt">(optional)</span></label>
+                  <textarea class="input" placeholder="What's this for?"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="linkbox">
+              <p class="lbl">Payment link · 5 CCX</p>
+              <p class="url mono">https://wallet.conceal.network/#/send?address=ccx7QbH7J9Pp…K3m&amount=5</p>
+              <div class="row">
+                <button class="btn ghost sm">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                  Copy payment link
+                </button>
+                <div class="toggle">
+                  <span class="switch"></span><span>Use legacy (v1) link</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VARIANT B ================= -->
+  <section class="variant">
+    <div class="vlabel">
+      <span class="tag">Variant B</span>
+      <h2>Receive-action right column</h2>
+      <p class="desc">Address-focused. The void becomes a deliberate action stack — Share, Present QR, logo picker, Download PNG — balanced to the QR's height. (Direction B.)</p>
+    </div>
+
+    <div class="pair">
+      <!-- DARK -->
+      <div class="surface theme-dark">
+        <p class="modetag">Dark surface</p>
+        <div class="col">
+
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Your Wallet Address</h3>
+                <p>Share this address or QR to receive funds</p>
+              </div>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                Copy Address
+              </button>
+            </div>
+
+            <div class="addr mono">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+
+            <div style="height:18px"></div>
+
+            <div style="display:flex; gap:22px; align-items:stretch;">
+              <div class="qrtile" aria-label="QR placeholder" style="align-self:stretch;">
+                <div class="qr" id="qrB-dark"></div>
+              </div>
+
+              <div class="stack" style="flex:1; min-width:200px; gap:10px;">
+                <button class="btn ghost block" style="justify-content:flex-start;">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                  Share address
+                </button>
+                <button class="btn ghost block" style="justify-content:flex-start;">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+                  Present QR
+                </button>
+
+                <hr class="divider" />
+
+                <div class="stack" style="gap:9px;">
+                  <span class="tiny" style="font-weight:600;">QR logo</span>
+                  <div class="swatches">
+                    <div class="sw active"><span class="dot" style="background:#FFA500"></span></div>
+                    <div class="sw"><span class="dot" style="background:#7c8794"></span></div>
+                    <div class="sw"><span class="dot" style="background:#c9a14a"></span></div>
+                    <div class="sw"><span class="dot" style="background:#15110d"></span></div>
+                  </div>
+                </div>
+
+                <button class="btn ghost block" style="justify-content:flex-start; margin-top:2px;">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                  Download PNG
+                </button>
+              </div>
+            </div>
+
+            <p class="muted" style="margin-top:16px;">Scan the QR to send CCX to this address.</p>
+          </div>
+
+          <!-- card 2 stays: Request a Payment -->
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Request a Payment</h3>
+                <p>Add an amount or note to share a specific request</p>
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label>Amount <span class="opt">(CCX)</span></label>
+                <input class="input" placeholder="0.00" />
+              </div>
+              <div class="field">
+                <label>Payment ID</label>
+                <input class="input" placeholder="Optional" />
+              </div>
+            </div>
+            <div class="field" style="margin-top:14px;">
+              <label>Message <span class="opt">(optional)</span></label>
+              <textarea class="input" placeholder="What's this for?"></textarea>
+            </div>
+            <p class="muted" style="margin-top:14px;">Enter an amount to generate a shareable payment link.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- LIGHT -->
+      <div class="surface theme-light">
+        <p class="modetag">Light surface</p>
+        <div class="col">
+
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Your Wallet Address</h3>
+                <p>Share this address or QR to receive funds</p>
+              </div>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                Copy Address
+              </button>
+            </div>
+
+            <div class="addr mono">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+
+            <div style="height:18px"></div>
+
+            <div style="display:flex; gap:22px; align-items:stretch;">
+              <div class="qrtile" aria-label="QR placeholder" style="align-self:stretch;">
+                <div class="qr" id="qrB-light"></div>
+              </div>
+
+              <div class="stack" style="flex:1; min-width:200px; gap:10px;">
+                <button class="btn ghost block" style="justify-content:flex-start;">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                  Share address
+                </button>
+                <button class="btn ghost block" style="justify-content:flex-start;">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+                  Present QR
+                </button>
+
+                <hr class="divider" />
+
+                <div class="stack" style="gap:9px;">
+                  <span class="tiny" style="font-weight:600;">QR logo</span>
+                  <div class="swatches">
+                    <div class="sw active"><span class="dot" style="background:#FFA500"></span></div>
+                    <div class="sw"><span class="dot" style="background:#7c8794"></span></div>
+                    <div class="sw"><span class="dot" style="background:#c9a14a"></span></div>
+                    <div class="sw"><span class="dot" style="background:#15110d"></span></div>
+                  </div>
+                </div>
+
+                <button class="btn ghost block" style="justify-content:flex-start; margin-top:2px;">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                  Download PNG
+                </button>
+              </div>
+            </div>
+
+            <p class="muted" style="margin-top:16px;">Scan the QR to send CCX to this address.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Request a Payment</h3>
+                <p>Add an amount or note to share a specific request</p>
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label>Amount <span class="opt">(CCX)</span></label>
+                <input class="input" placeholder="0.00" />
+              </div>
+              <div class="field">
+                <label>Payment ID</label>
+                <input class="input" placeholder="Optional" />
+              </div>
+            </div>
+            <div class="field" style="margin-top:14px;">
+              <label>Message <span class="opt">(optional)</span></label>
+              <textarea class="input" placeholder="What's this for?"></textarea>
+            </div>
+            <p class="muted" style="margin-top:14px;">Enter an amount to generate a shareable payment link.</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VARIANT C ================= -->
+  <section class="variant">
+    <div class="vlabel">
+      <span class="tag">Variant C</span>
+      <h2>Shareable payment card</h2>
+      <p class="desc">QR as a designed object: a centred hero with a tidy action row, plus a screenshot-ready payment card (amount + address + brand). (Direction C.)</p>
+    </div>
+
+    <div class="pair">
+      <!-- DARK -->
+      <div class="surface theme-dark">
+        <p class="modetag">Dark surface</p>
+        <div class="col">
+
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Your Wallet Address</h3>
+                <p>Share this address or QR to receive funds</p>
+              </div>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                Copy Address
+              </button>
+            </div>
+
+            <!-- screenshot-ready payment card -->
+            <div class="paycard">
+              <div class="qrtile" aria-label="QR placeholder">
+                <div class="qr" id="qrC-dark"></div>
+              </div>
+              <div class="meta">
+                <div class="brandrow">
+                  <span class="coinwrap" style="width:22px;height:22px;display:grid;place-items:center;background:#FFA500;border-radius:6px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#000" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.2a3.6 3.6 0 1 0 0 5.6"/></svg>
+                  </span>
+                  <span class="name">Conceal · Request</span>
+                </div>
+                <p class="req">Requesting</p>
+                <p class="amt">5.00<span class="ccx">CCX</span></p>
+                <p class="addr-sm mono">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</p>
+              </div>
+            </div>
+
+            <!-- tidy action row beneath -->
+            <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+              <button class="btn solid sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                Share
+              </button>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Download PNG
+              </button>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+                Present
+              </button>
+            </div>
+          </div>
+
+          <!-- card 2: request stays, but its amount feeds the card above -->
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Request a Payment</h3>
+                <p>Set an amount to personalise the card above</p>
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label>Amount <span class="opt">(CCX)</span></label>
+                <input class="input focused mono" value="5" />
+              </div>
+              <div class="field">
+                <label>Payment ID</label>
+                <input class="input" placeholder="Optional" />
+              </div>
+            </div>
+            <div class="field" style="margin-top:14px;">
+              <label>Message <span class="opt">(optional)</span></label>
+              <textarea class="input" placeholder="What's this for?"></textarea>
+            </div>
+            <div class="linkbox">
+              <p class="lbl">Payment link · 5 CCX</p>
+              <p class="url mono">https://wallet.conceal.network/#/send?address=ccx7QbH7J9Pp…K3m&amount=5</p>
+              <div class="row">
+                <button class="btn ghost sm">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                  Copy payment link
+                </button>
+                <div class="toggle">
+                  <span class="switch"></span><span>Use legacy (v1) link</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- LIGHT -->
+      <div class="surface theme-light">
+        <p class="modetag">Light surface</p>
+        <div class="col">
+
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Your Wallet Address</h3>
+                <p>Share this address or QR to receive funds</p>
+              </div>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                Copy Address
+              </button>
+            </div>
+
+            <div class="paycard">
+              <div class="qrtile" aria-label="QR placeholder">
+                <div class="qr" id="qrC-light"></div>
+              </div>
+              <div class="meta">
+                <div class="brandrow">
+                  <span class="coinwrap" style="width:22px;height:22px;display:grid;place-items:center;background:#FFA500;border-radius:6px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#000" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.2a3.6 3.6 0 1 0 0 5.6"/></svg>
+                  </span>
+                  <span class="name">Conceal · Request</span>
+                </div>
+                <p class="req">Requesting</p>
+                <p class="amt">5.00<span class="ccx">CCX</span></p>
+                <p class="addr-sm mono">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</p>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+              <button class="btn solid sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+                Share
+              </button>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Download PNG
+              </button>
+              <button class="btn ghost sm">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+                Present
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div class="titles">
+                <h3>Request a Payment</h3>
+                <p>Set an amount to personalise the card above</p>
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label>Amount <span class="opt">(CCX)</span></label>
+                <input class="input focused mono" value="5" />
+              </div>
+              <div class="field">
+                <label>Payment ID</label>
+                <input class="input" placeholder="Optional" />
+              </div>
+            </div>
+            <div class="field" style="margin-top:14px;">
+              <label>Message <span class="opt">(optional)</span></label>
+              <textarea class="input" placeholder="What's this for?"></textarea>
+            </div>
+            <div class="linkbox">
+              <p class="lbl">Payment link · 5 CCX</p>
+              <p class="url mono">https://wallet.conceal.network/#/send?address=ccx7QbH7J9Pp…K3m&amount=5</p>
+              <div class="row">
+                <button class="btn ghost sm">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                  Copy payment link
+                </button>
+                <div class="toggle">
+                  <span class="switch"></span><span>Use legacy (v1) link</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--
+    QR placeholder generator. NOT a real QR — a deterministic 21×21 grid with the
+    three finder squares + a cleared centre for the orange coin mark. Inline JS only
+    builds DOM (no external deps); renders fine offline inside an iframe.
+  -->
+  <script>
+    (function () {
+      var N = 21;
+      // deterministic pseudo-random so every tile is identical & stable
+      function cell(r, c) {
+        // finder patterns (top-left, top-right, bottom-left)
+        function finder(br, bc) {
+          var dr = r - br, dc = c - bc;
+          if (dr < 0 || dr > 6 || dc < 0 || dc > 6) return null;
+          var ring = (dr === 0 || dr === 6 || dc === 0 || dc === 6);
+          var core = (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
+          return ring || core;
+        }
+        var f = finder(0, 0);
+        if (f === null) f = finder(0, N - 7);
+        if (f === null) f = finder(N - 7, 0);
+        if (f !== null) return f;
+        // quiet zone around finders
+        if ((r <= 7 && c <= 7) || (r <= 7 && c >= N - 8) || (r >= N - 8 && c <= 7)) return false;
+        // clear centre for the logo (5×5)
+        if (r >= 8 && r <= 12 && c >= 8 && c <= 12) return false;
+        // data pattern
+        var h = (r * 7 + c * 13 + r * c * 5 + 11) % 100;
+        return h % 100 < 47;
+      }
+      function build(el) {
+        if (!el) return;
+        var html = "";
+        for (var r = 0; r < N; r++) {
+          for (var c = 0; c < N; c++) {
+            html += cell(r, c) ? '<i></i>' : '<i class="o"></i>';
+          }
+        }
+        el.innerHTML = html;
+        var logo = document.createElement("div");
+        logo.className = "qrlogo";
+        logo.innerHTML =
+          '<svg class="coinmark" viewBox="0 0 24 24" fill="none" stroke="#FFA500" stroke-width="2.4">' +
+          '<circle cx="12" cy="12" r="9"/>' +
+          '<path d="M15 9.3a4 4 0 1 0 0 5.4"/></svg>';
+        el.appendChild(logo);
+      }
+      ["qrA-dark","qrA-light","qrB-dark","qrB-light","qrC-dark","qrC-light"]
+        .forEach(function (id) { build(document.getElementById(id)); });
+    })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conceal coin avatar — design review (4 models)</title>
+<style>
+  :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { margin: 0; background: #0c0a09; color: #ece6dc; }
+  header.top { padding: 32px 40px 24px; border-bottom: 1px solid #2a2520; position: sticky; top: 0; background: #0c0a09; z-index: 5; }
+  header.top h1 { margin: 0 0 6px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+  header.top p { margin: 0; color: #9b938a; font-size: 13.5px; max-width: 760px; line-height: 1.5; }
+  .ref { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+  .ref img { width: 56px; height: 56px; border-radius: 10px; border: 1px solid #2a2520; }
+  .ref span { font-size: 12px; color: #847b71; }
+  .agent { border-bottom: 1px solid #2a2520; }
+  .agent > h2 { margin: 0; padding: 18px 40px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em;
+                display: flex; align-items: center; gap: 10px; background: #141110; }
+  .agent > h2 .pill { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+                      padding: 3px 8px; border-radius: 999px; background: #2a2520; color: #b7ad9f; }
+  .agent > h2 .rec { background: #ff9012; color: #160f06; }
+  iframe { width: 100%; height: 760px; border: 0; background: #100d0b; display: block; }
+</style>
+</head>
+<body>
+  <header class="top">
+    <h1>Conceal coin avatar — 4 models, side by side</h1>
+    <p>Each model proposed 3 CSS-only coin-avatar variants, shown at 24/28/32/36px with initials M·S·A on both dark and light chrome. Pick a model + variant (e.g. “Opus B”, “Gemini 2”) and I’ll wire it into <code>WalletAvatar</code>.</p>
+    <div class="ref">
+      <img src="conceal-coin.png" alt="login coin reference" />
+      <span>Reference: the login/landing coin — dark faceted metal, extruded mark, orange rim glow. The variants echo this material in CSS so they carry any wallet initial.</span>
+    </div>
+  </header>
+
+  <div class="agent"><h2>Opus <span class="pill">orchestrator</span></h2><iframe src="agents/opus.html" title="opus"></iframe></div>
+  <div class="agent"><h2>Codex · gpt-5.5 <span class="pill">co-model</span></h2><iframe src="agents/codex.html" title="codex"></iframe></div>
+  <div class="agent"><h2>Gemini 3.1 Pro <span class="pill">co-model</span></h2><iframe src="agents/gemini.html" title="gemini"></iframe></div>
+  <div class="agent"><h2>GLM-5.2 <span class="pill">co-model</span></h2><iframe src="agents/glm.html" title="glm"></iframe></div>
+
+  <script>
+    // Same-origin iframes: grow each to its content height so nothing is clipped.
+    function fit(f) {
+      try {
+        var h = f.contentDocument.body.scrollHeight;
+        if (h > 0) f.style.height = (h + 24) + "px";
+      } catch (e) {}
+    }
+    document.querySelectorAll("iframe").forEach(function (f) {
+      f.addEventListener("load", function () { fit(f); });
+      if (f.contentDocument && f.contentDocument.readyState === "complete") fit(f);
+    });
+    window.addEventListener("resize", function () {
+      document.querySelectorAll("iframe").forEach(fit);
+    });
+  </script>
+</body>
+</html>

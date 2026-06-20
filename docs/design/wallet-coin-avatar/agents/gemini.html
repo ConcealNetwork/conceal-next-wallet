@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conceal Wallet Avatars - Gemini Exploration</title>
+<style>
+  :root {
+    --brand-orange: #FFA500;
+    --brand-amber: #f5a623;
+    --dark-chrome: #1a1714;
+    --dark-card: #241f1c;
+    --dark-border: #39332d;
+    --light-chrome: #f3efe9;
+    --light-card: #fff;
+    --light-border: #e4ddd1;
+  }
+  
+  body {
+    margin: 0; 
+    padding: 60px 40px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1a1714;
+    background: #e4ddd1;
+  }
+
+  .header {
+    max-width: 1000px;
+    margin: 0 auto 60px auto;
+  }
+
+  h1 { margin: 0 0 16px 0; font-size: 28px; letter-spacing: -0.5px; }
+  .rationale { font-size: 16px; opacity: 0.8; max-width: 700px; line-height: 1.5; margin-bottom: 24px; }
+
+  .variant-section {
+    max-width: 1000px;
+    margin: 0 auto 80px auto;
+  }
+
+  .variant-header {
+    margin-bottom: 24px;
+  }
+  .variant-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .variant-header p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.7;
+    line-height: 1.4;
+  }
+
+  .boards {
+    display: flex;
+    gap: 40px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+  }
+
+  .theme-board {
+    flex: 1; 
+    padding: 40px;
+  }
+  .theme-dark { background: var(--dark-chrome); color: #fff; }
+  .theme-light { background: var(--light-chrome); color: var(--dark-chrome); }
+  
+  .theme-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.5;
+    margin-bottom: 32px;
+    font-weight: 600;
+  }
+
+  .row { display: flex; align-items: flex-end; gap: 20px; margin-bottom: 32px; }
+  .row:last-child { margin-bottom: 0; }
+  
+  .divider { width: 1px; height: 24px; background: currentColor; opacity: 0.1; margin: 0 4px; }
+
+  /* Base Avatar Classes */
+  .avatar-wrap {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    box-sizing: border-box;
+  }
+  
+  /* Sizing mapping */
+  .sz-24 { width: 24px; height: 24px; font-size: 13px; }
+  .sz-28 { width: 28px; height: 28px; font-size: 15px; }
+  .sz-32 { width: 32px; height: 32px; font-size: 17px; }
+  .sz-36 { width: 36px; height: 36px; font-size: 19px; }
+
+
+  /* =========================================
+     VARIANT 1: AMBER RESIN CHIP
+     A thick, liquid, glassy squircle with high refraction. 
+     ========================================= */
+  .v1-resin {
+    border-radius: 35%; /* Squircle */
+    font-weight: 700;
+    color: #fff;
+    position: relative;
+  }
+  .theme-dark .v1-resin {
+    background: linear-gradient(135deg, #FFC966 0%, #FFA500 40%, #B35900 100%);
+    box-shadow: 
+      inset 1px 2px 2px rgba(255, 255, 255, 0.8), /* top glare */
+      inset -1px -2px 4px rgba(100, 30, 0, 0.6),  /* bottom shadow */
+      inset 0 0 10px rgba(255, 165, 0, 0.5),      /* inner warmth */
+      0 4px 8px rgba(0, 0, 0, 0.4),               /* drop shadow */
+      0 2px 4px rgba(255, 100, 0, 0.2);           /* colored cast */
+    text-shadow: 0 1px 2px rgba(120, 40, 0, 0.8);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .theme-light .v1-resin {
+    background: linear-gradient(135deg, #FFD680 0%, #f5a623 45%, #CC6600 100%);
+    box-shadow: 
+      inset 1px 2px 2px rgba(255, 255, 255, 0.9),
+      inset -1px -2px 3px rgba(150, 50, 0, 0.4),
+      inset 0 0 8px rgba(255, 255, 255, 0.3),
+      0 4px 10px rgba(200, 100, 0, 0.15),
+      0 2px 4px rgba(0, 0, 0, 0.05);
+    text-shadow: 0 1px 2px rgba(150, 50, 0, 0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+
+
+  /* =========================================
+     VARIANT 2: CERAMIC KEYCAP / TILE
+     Tactile, matte, manufactured. Heavy card block with debossed text.
+     ========================================= */
+  .v2-tile {
+    border-radius: 6px;
+    font-weight: 800;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .theme-dark .v2-tile {
+    background: linear-gradient(180deg, #322d28 0%, #241f1c 100%);
+    border-top: 1px solid #4a433b;
+    border-bottom: 1px solid #14110f;
+    border-left: 1px solid #2e2924;
+    border-right: 1px solid #2e2924;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.5);
+    color: var(--brand-orange);
+    text-shadow: 0 -1px 1px rgba(0,0,0,0.8), 0 1px 1px rgba(255,255,255,0.05);
+  }
+  .theme-light .v2-tile {
+    background: linear-gradient(180deg, #ffffff 0%, #f7f5f2 100%);
+    border-top: 1px solid #ffffff;
+    border-bottom: 1px solid #dcd3c4;
+    border-left: 1px solid #eae3d8;
+    border-right: 1px solid #eae3d8;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.05);
+    color: #e67e00; /* Deep enough for white bg */
+    text-shadow: 0 1px 1px rgba(255,255,255,1), 0 -1px 1px rgba(0,0,0,0.15);
+  }
+
+
+  /* =========================================
+     VARIANT 3: BRUTALIST CIPHER TAG
+     Raw, technical, monospace. Striped hazard background.
+     ========================================= */
+  .v3-cipher {
+    border-radius: 2px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-weight: 700;
+    position: relative;
+    overflow: hidden;
+  }
+  .v3-cipher span {
+    position: relative;
+    z-index: 1;
+  }
+  .theme-dark .v3-cipher {
+    background: #14110f;
+    border: 1px solid rgba(255, 165, 0, 0.4);
+    color: var(--brand-orange);
+    box-shadow: 0 0 10px rgba(255, 165, 0, 0.05);
+  }
+  .theme-dark .v3-cipher::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      rgba(255, 165, 0, 0.1),
+      rgba(255, 165, 0, 0.1) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+    z-index: 0;
+  }
+  .theme-dark .v3-cipher::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 4px;
+    background: var(--brand-orange);
+    opacity: 0.5;
+    z-index: 0;
+  }
+  
+  .theme-light .v3-cipher {
+    background: #fff;
+    border: 1px solid #f5a623;
+    color: #cc6600;
+    box-shadow: 0 2px 4px rgba(245, 166, 35, 0.1);
+  }
+  .theme-light .v3-cipher::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      rgba(245, 166, 35, 0.15),
+      rgba(245, 166, 35, 0.15) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+    z-index: 0;
+  }
+  .theme-light .v3-cipher::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 4px;
+    background: #f5a623;
+    opacity: 0.5;
+    z-index: 0;
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Wallet Avatar Explorations (Gemini)</h1>
+    <p class="rationale">Round 2 discards the generic "metal coin" paradigm to explore three distinct, material-expressive languages. Ranging from an organic fluid resin, to a dense manufactured ceramic tile, to a raw technical cipher tag. All rely purely on HTML/CSS with system fonts, avoiding network assets while maintaining sharp legibility down to 24px.</p>
+  </div>
+
+  <!-- Variant 1 -->
+  <div class="variant-section">
+    <div class="variant-header">
+      <h2>1. Amber Resin Chip</h2>
+      <p>A thick, glassy squircle with deep refraction. Feels highly premium and organic, standing out from typical flat UI. Strong inner highlights maintain the dimensional pop at 24px without getting muddy.</p>
+    </div>
+    <div class="boards">
+      <div class="theme-board theme-dark">
+        <div class="theme-label">Dark Theme (#1a1714)</div>
+        <div class="row">
+          <div class="avatar-wrap v1-resin sz-36">M</div>
+          <div class="avatar-wrap v1-resin sz-32">S</div>
+          <div class="avatar-wrap v1-resin sz-28">A</div>
+          <div class="divider"></div>
+          <div class="avatar-wrap v1-resin sz-24">M</div>
+          <div class="avatar-wrap v1-resin sz-24">S</div>
+          <div class="avatar-wrap v1-resin sz-24">A</div>
+        </div>
+      </div>
+      <div class="theme-board theme-light">
+        <div class="theme-label">Light Theme (#f3efe9)</div>
+        <div class="row">
+          <div class="avatar-wrap v1-resin sz-36">M</div>
+          <div class="avatar-wrap v1-resin sz-32">S</div>
+          <div class="avatar-wrap v1-resin sz-28">A</div>
+          <div class="divider"></div>
+          <div class="avatar-wrap v1-resin sz-24">M</div>
+          <div class="avatar-wrap v1-resin sz-24">S</div>
+          <div class="avatar-wrap v1-resin sz-24">A</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 2 -->
+  <div class="variant-section">
+    <div class="variant-header">
+      <h2>2. Ceramic Keycap Tile</h2>
+      <p>A matte, manufactured block with deeply debossed letterforms. It looks heavy and secure. At 24px, the tight border and contrasting text-shadow trick the eye into seeing a real physical stamp.</p>
+    </div>
+    <div class="boards">
+      <div class="theme-board theme-dark">
+        <div class="theme-label">Dark Theme (#1a1714)</div>
+        <div class="row">
+          <div class="avatar-wrap v2-tile sz-36">M</div>
+          <div class="avatar-wrap v2-tile sz-32">S</div>
+          <div class="avatar-wrap v2-tile sz-28">A</div>
+          <div class="divider"></div>
+          <div class="avatar-wrap v2-tile sz-24">M</div>
+          <div class="avatar-wrap v2-tile sz-24">S</div>
+          <div class="avatar-wrap v2-tile sz-24">A</div>
+        </div>
+      </div>
+      <div class="theme-board theme-light">
+        <div class="theme-label">Light Theme (#f3efe9)</div>
+        <div class="row">
+          <div class="avatar-wrap v2-tile sz-36">M</div>
+          <div class="avatar-wrap v2-tile sz-32">S</div>
+          <div class="avatar-wrap v2-tile sz-28">A</div>
+          <div class="divider"></div>
+          <div class="avatar-wrap v2-tile sz-24">M</div>
+          <div class="avatar-wrap v2-tile sz-24">S</div>
+          <div class="avatar-wrap v2-tile sz-24">A</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 3 -->
+  <div class="variant-section">
+    <div class="variant-header">
+      <h2>3. Brutalist Cipher Tag</h2>
+      <p>A raw, code-inspired aesthetic reflecting Conceal's privacy roots. Monospace typography over a hazard-striped background creates a distinctive, technical alternative that scales perfectly.</p>
+    </div>
+    <div class="boards">
+      <div class="theme-board theme-dark">
+        <div class="theme-label">Dark Theme (#1a1714)</div>
+        <div class="row">
+          <div class="avatar-wrap v3-cipher sz-36"><span>M</span></div>
+          <div class="avatar-wrap v3-cipher sz-32"><span>S</span></div>
+          <div class="avatar-wrap v3-cipher sz-28"><span>A</span></div>
+          <div class="divider"></div>
+          <div class="avatar-wrap v3-cipher sz-24"><span>M</span></div>
+          <div class="avatar-wrap v3-cipher sz-24"><span>S</span></div>
+          <div class="avatar-wrap v3-cipher sz-24"><span>A</span></div>
+        </div>
+      </div>
+      <div class="theme-board theme-light">
+        <div class="theme-label">Light Theme (#f3efe9)</div>
+        <div class="row">
+          <div class="avatar-wrap v3-cipher sz-36"><span>M</span></div>
+          <div class="avatar-wrap v3-cipher sz-32"><span>S</span></div>
+          <div class="avatar-wrap v3-cipher sz-28"><span>A</span></div>
+          <div class="divider"></div>
+          <div class="avatar-wrap v3-cipher sz-24"><span>M</span></div>
+          <div class="avatar-wrap v3-cipher sz-24"><span>S</span></div>
+          <div class="avatar-wrap v3-cipher sz-24"><span>A</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

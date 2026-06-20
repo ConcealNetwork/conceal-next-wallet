@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conceal wallet avatar — Opus round 2</title>
+<style>
+  :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { margin: 0; background: #100d0b; color: #e8e2d8; padding: 40px 32px 80px; }
+  h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; }
+  .sub { color: #9b938a; font-size: 13px; margin: 0 0 36px; }
+  .variant { margin-bottom: 44px; }
+  .vh { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .vh b { font-size: 15px; font-weight: 700; }
+  .vh span { font-size: 12.5px; color: #948c83; }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 860px; }
+  .panel { border-radius: 14px; padding: 20px 22px; border: 1px solid; }
+  .panel.dark { background: #1a1714; border-color: #39332d; }
+  .panel.light { background: #f3efe9; border-color: #e4ddd1; }
+  .panel .tag { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px; }
+  .panel.dark .tag { color: #7c746b; }
+  .panel.light .tag { color: #a89e90; }
+  .row { display: flex; align-items: center; gap: 16px; }
+  .row + .row { margin-top: 18px; }
+  .lab { font-size: 10px; color: #8a8178; width: 38px; flex-shrink: 0; }
+  .panel.light .lab { color: #a89e90; }
+
+  .av { display: grid; place-items: center; flex-shrink: 0; font-weight: 800; line-height: 1; user-select: none; }
+  .s24 { width: 24px; height: 24px; font-size: 11px; }
+  .s28 { width: 28px; height: 28px; font-size: 12.5px; }
+  .s32 { width: 32px; height: 32px; font-size: 14px; }
+  .s36 { width: 36px; height: 36px; font-size: 16px; }
+
+  /* A — Squircle monogram: a modern app-icon tile, warm orange gradient, white initial */
+  .A { border-radius: 32%; background: linear-gradient(145deg, #ffb52e, #ff8a00 55%, #f5760a);
+       box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 4px rgba(150,66,0,.4), 0 1px 2px rgba(0,0,0,.25); }
+  .A .ini { color: #fff; text-shadow: 0 1px 1px rgba(140,60,0,.5); }
+
+  /* B — Ghost ring: minimal outline; orange ring + orange letter, surface-aware per theme */
+  .B { border-radius: 50%; background: transparent; }
+  .panel.dark .B { box-shadow: inset 0 0 0 1.5px #f5a623; }
+  .panel.dark .B .ini { color: #ffcf8c; }
+  .panel.light .B { box-shadow: inset 0 0 0 1.5px #c0700a; }
+  .panel.light .B .ini { color: #bd6a08; }
+
+  /* C — Warm mesh token: a rich multi-stop ember gradient disc, white initial */
+  .C { border-radius: 50%;
+       background:
+         radial-gradient(circle at 28% 24%, #ffd884, transparent 46%),
+         radial-gradient(circle at 78% 82%, #cf3d0c, transparent 55%),
+         radial-gradient(circle at 60% 38%, #ff8a00, transparent 62%),
+         linear-gradient(140deg, #ff9e22, #e8590c);
+       box-shadow: inset 0 1px 1px rgba(255,255,255,.42), 0 1px 3px rgba(0,0,0,.3); }
+  .C .ini { color: #fff; text-shadow: 0 1px 1.5px rgba(110,36,0,.55); }
+</style>
+</head>
+<body>
+  <h1>Conceal wallet avatar — Opus round 2 · 3 directions</h1>
+  <p class="sub">Three different languages (no dark coin) · CSS-only, dynamic initial · dark #1a1714 + light #f3efe9 · 24/28/32/36px</p>
+
+  <section class="variant">
+    <div class="vh"><b>A · Squircle monogram</b><span>modern app-icon tile — warm orange gradient, white initial, soft top sheen; flat, friendly, fintech</span></div>
+    <div class="panels">
+      <div class="panel dark"><div class="tag">Dark chrome</div>
+        <div class="row"><span class="lab">sizes</span><span class="av s24 A"><span class="ini">M</span></span><span class="av s28 A"><span class="ini">M</span></span><span class="av s32 A"><span class="ini">M</span></span><span class="av s36 A"><span class="ini">M</span></span></div>
+        <div class="row"><span class="lab">M S A</span><span class="av s32 A"><span class="ini">M</span></span><span class="av s32 A"><span class="ini">S</span></span><span class="av s32 A"><span class="ini">A</span></span></div></div>
+      <div class="panel light"><div class="tag">Light chrome</div>
+        <div class="row"><span class="lab">sizes</span><span class="av s24 A"><span class="ini">M</span></span><span class="av s28 A"><span class="ini">M</span></span><span class="av s32 A"><span class="ini">M</span></span><span class="av s36 A"><span class="ini">M</span></span></div>
+        <div class="row"><span class="lab">M S A</span><span class="av s32 A"><span class="ini">M</span></span><span class="av s32 A"><span class="ini">S</span></span><span class="av s32 A"><span class="ini">A</span></span></div></div>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><b>B · Ghost ring</b><span>quietest, most modern — a thin orange ring + orange letter, adapts amber depth per theme; nearly weightless</span></div>
+    <div class="panels">
+      <div class="panel dark"><div class="tag">Dark chrome</div>
+        <div class="row"><span class="lab">sizes</span><span class="av s24 B"><span class="ini">M</span></span><span class="av s28 B"><span class="ini">M</span></span><span class="av s32 B"><span class="ini">M</span></span><span class="av s36 B"><span class="ini">M</span></span></div>
+        <div class="row"><span class="lab">M S A</span><span class="av s32 B"><span class="ini">M</span></span><span class="av s32 B"><span class="ini">S</span></span><span class="av s32 B"><span class="ini">A</span></span></div></div>
+      <div class="panel light"><div class="tag">Light chrome</div>
+        <div class="row"><span class="lab">sizes</span><span class="av s24 B"><span class="ini">M</span></span><span class="av s28 B"><span class="ini">M</span></span><span class="av s32 B"><span class="ini">M</span></span><span class="av s36 B"><span class="ini">M</span></span></div>
+        <div class="row"><span class="lab">M S A</span><span class="av s32 B"><span class="ini">M</span></span><span class="av s32 B"><span class="ini">S</span></span><span class="av s32 B"><span class="ini">A</span></span></div></div>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><b>C · Warm mesh token</b><span>rich multi-stop ember gradient disc, white initial — warmer/deeper than a flat fill, still crisp at 24px</span></div>
+    <div class="panels">
+      <div class="panel dark"><div class="tag">Dark chrome</div>
+        <div class="row"><span class="lab">sizes</span><span class="av s24 C"><span class="ini">M</span></span><span class="av s28 C"><span class="ini">M</span></span><span class="av s32 C"><span class="ini">M</span></span><span class="av s36 C"><span class="ini">M</span></span></div>
+        <div class="row"><span class="lab">M S A</span><span class="av s32 C"><span class="ini">M</span></span><span class="av s32 C"><span class="ini">S</span></span><span class="av s32 C"><span class="ini">A</span></span></div></div>
+      <div class="panel light"><div class="tag">Light chrome</div>
+        <div class="row"><span class="lab">sizes</span><span class="av s24 C"><span class="ini">M</span></span><span class="av s28 C"><span class="ini">M</span></span><span class="av s32 C"><span class="ini">M</span></span><span class="av s36 C"><span class="ini">M</span></span></div>
+        <div class="row"><span class="lab">M S A</span><span class="av s32 C"><span class="ini">M</span></span><span class="av s32 C"><span class="ini">S</span></span><span class="av s32 C"><span class="ini">A</span></span></div></div>
+    </div>
+  </section>
+</body>
+</html>
