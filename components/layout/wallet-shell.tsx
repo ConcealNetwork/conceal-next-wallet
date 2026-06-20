@@ -9,12 +9,14 @@ import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
 import { StorageWarningBanner } from "@/components/wallet/storage-warning-banner";
 import { UnlockWalletProvider } from "@/components/wallet/unlock-wallet-provider";
-import { useWalletLiveSync, useWalletSettings } from "@/lib/hooks";
+import { useWalletLiveSync, useWalletSettings, useWalletSyncStatus } from "@/lib/hooks";
 import { NetworkTelemetryProvider } from "@/lib/hooks/network-telemetry-provider";
+import { useAppBadge } from "@/lib/hooks/use-app-badge";
 import { useCheckInAlerts } from "@/lib/hooks/use-check-ins";
 import { useDuePaymentReminders } from "@/lib/hooks/use-due-reminders";
 import { useIdleLock } from "@/lib/hooks/use-idle-lock";
 import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-messages-since-open";
+import { useSyncWakeLock } from "@/lib/hooks/use-sync-wake-lock";
 import { cn } from "@/lib/utils";
 
 export function WalletShell({ children }: { children: React.ReactNode }) {
@@ -23,6 +25,10 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   usePrefetchMessagesForBadge();
   useDuePaymentReminders();
   useCheckInAlerts();
+  // Mirror actionable counts (overdue check-ins + due reminders) on the app icon.
+  useAppBadge();
+  // Keep the screen awake during long syncs so a scan doesn't stall on sleep.
+  useSyncWakeLock(useWalletSyncStatus().isSyncing);
 
   // Auto-lock: after the configured idle window, drop the in-memory session and
   // bounce to the unlock screen. Disabled when autoLockMinutes is 0.
