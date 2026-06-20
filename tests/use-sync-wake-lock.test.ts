@@ -20,7 +20,7 @@ describe("useSyncWakeLock", () => {
     Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
   });
   afterEach(() => {
-    (navigator as unknown as { wakeLock?: unknown }).wakeLock = undefined;
+    delete (navigator as unknown as { wakeLock?: unknown }).wakeLock;
     vi.restoreAllMocks();
   });
 
