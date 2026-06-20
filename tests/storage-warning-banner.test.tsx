@@ -4,15 +4,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Storage-warning banner: the not-persisted case must offer a "Keep on this device"
 // action that requests durable storage from the click and re-probes health (#storage).
 
-const { useStorageHealth, requestPersistentStorage, invalidateQueries, toastSuccess, toastInfo, useInstallPrompt } =
-  vi.hoisted(() => ({
-    useStorageHealth: vi.fn(),
-    requestPersistentStorage: vi.fn(),
-    invalidateQueries: vi.fn().mockResolvedValue(undefined),
-    toastSuccess: vi.fn(),
-    toastInfo: vi.fn(),
-    useInstallPrompt: vi.fn(),
-  }));
+const {
+  useStorageHealth,
+  requestPersistentStorage,
+  invalidateQueries,
+  toastSuccess,
+  toastInfo,
+  useInstallPrompt,
+} = vi.hoisted(() => ({
+  useStorageHealth: vi.fn(),
+  requestPersistentStorage: vi.fn(),
+  invalidateQueries: vi.fn().mockResolvedValue(undefined),
+  toastSuccess: vi.fn(),
+  toastInfo: vi.fn(),
+  useInstallPrompt: vi.fn(),
+}));
 vi.mock("@/lib/hooks/use-storage-health", () => ({ useStorageHealth, requestPersistentStorage }));
 vi.mock("@/lib/hooks/query-provider", () => ({ useQueryClient: () => ({ invalidateQueries }) }));
 vi.mock("@/lib/hooks/use-install-prompt", () => ({ useInstallPrompt }));

@@ -1,6 +1,6 @@
 "use client";
 
-import { Cog, Heart, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
+import { ArrowLeft, Cog, Heart, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
@@ -34,6 +34,7 @@ import {
   useWalletSyncStatus,
   useWalletViewOnly,
 } from "@/lib/hooks";
+import { useCreateDeepLink } from "@/lib/hooks/use-create-deeplink";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import {
@@ -78,6 +79,8 @@ export default function MessagesPage() {
   const [readThreads, setReadThreads] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState("");
   const [compose, setCompose] = useState(false);
+  // Sidebar "+" quick-create deep-link (?new=1) opens the compose dialog.
+  useCreateDeepLink(() => setCompose(true));
   const [recipient, setRecipient] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [composePaymentId, setComposePaymentId] = useState("");
@@ -299,8 +302,15 @@ export default function MessagesPage() {
 
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <div className="wallet-card messages-inbox-height grid grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-          {/* Message list (all sent + received) */}
-          <div className="flex min-h-0 min-w-0 flex-col border-b border-border md:border-b-0 md:border-r">
+          {/* Message list (all sent + received). On mobile this is a master-detail
+              view: the list shows until a thread is opened, then the thread takes
+              over (the list hides) — md+ keeps both panes side by side. */}
+          <div
+            className={cn(
+              "flex min-h-0 min-w-0 flex-col border-b border-border md:border-b-0 md:border-r",
+              activeMessageId && "hidden md:flex",
+            )}
+          >
             <div className="border-b border-border p-3">
               <div className="relative">
                 <Search
@@ -337,11 +347,19 @@ export default function MessagesPage() {
 
           {/* Thread */}
           {active ? (
-            <div className="flex min-h-0 min-w-0 flex-col">
+            <div
+              className={cn(
+                "flex min-h-0 min-w-0 flex-col",
+                // Mobile: only show the thread once one is explicitly opened
+                // (otherwise the list owns the screen). md+ always shows it.
+                !activeMessageId && "hidden md:flex",
+              )}
+            >
               <ThreadHeader
                 conversation={active}
                 threadViewMd={threadViewMd}
                 onToggleMd={() => setThreadViewMd((on) => !on)}
+                onBack={() => setActiveMessageId(null)}
               />
 
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
@@ -600,10 +618,12 @@ function ThreadHeader({
   conversation,
   threadViewMd,
   onToggleMd,
+  onBack,
 }: {
   conversation: MessageConversation;
   threadViewMd: boolean;
   onToggleMd: () => void;
+  onBack: () => void;
 }) {
   const { t } = useI18n();
   const entry: AddressEntry = {
@@ -616,6 +636,14 @@ function ThreadHeader({
 
   return (
     <div className="flex items-center gap-3 border-b border-border px-5 py-3">
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label={t("rail.backToList")}
+        className="-ml-1 grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+      >
+        <ArrowLeft className="size-5" aria-hidden="true" />
+      </button>
       <ContactAvatar entry={entry} className="size-9 shrink-0 rounded-full text-sm" />
       <div className="min-w-0">
         <p className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-sm font-semibold">

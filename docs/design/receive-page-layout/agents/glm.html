@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receive Page Layout — GLM Variants</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 40px;
+      background: #f5f5f5;
+    }
+
+    .theme-dark{
+      --background:#171513; --card:#241f1c; --card-foreground:#ffffff;
+      --primary:#FFA500; --primary-foreground:#000000;
+      --secondary:#2b2521; --secondary-foreground:#ffffff;
+      --muted-foreground:#a9a097; --border:#39332d; --ring:#FFA500;
+    }
+    .theme-light{
+      --background:#faf7f2; --card:#ffffff; --card-foreground:#221d18;
+      --primary:#FFA500; --primary-foreground:#000000;
+      --secondary:#f0ebe2; --secondary-foreground:#2e2820;
+      --muted-foreground:#6b6258; --border:#e6ddd0; --ring:#FFA500;
+    }
+
+    .variant-section {
+      margin-bottom: 60px;
+    }
+
+    .variant-label {
+      font-size: 18px;
+      font-weight: 600;
+      color: #221d18;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e6ddd0;
+    }
+
+    .themes-row {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    .theme-wrapper {
+      flex: 1;
+      min-width: 340px;
+    }
+
+    .theme-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #6b6258;
+      margin-bottom: 12px;
+    }
+
+    .preview-container {
+      background: var(--background);
+      padding: 24px;
+      border-radius: 16px;
+      min-height: 600px;
+    }
+
+    .page-container {
+      max-width: 672px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .card-title-group h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--card-foreground);
+      margin-bottom: 4px;
+    }
+
+    .card-title-group p {
+      font-size: 13px;
+      color: var(--muted-foreground);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: var(--secondary-foreground);
+      border: 1px solid var(--border);
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .address-panel {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+
+    .address-text {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 14px;
+      color: var(--secondary-foreground);
+      word-break: break-all;
+      letter-spacing: -0.3px;
+    }
+
+    .qr-section {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .qr-tile {
+      width: 150px;
+      height: 150px;
+      background: #ffffff;
+      border: 1px solid #d4d4d4;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      flex-shrink: 0;
+    }
+
+    .qr-grid {
+      width: 110px;
+      height: 110px;
+      display: grid;
+      grid-template-columns: repeat(21, 1fr);
+      grid-template-rows: repeat(21, 1fr);
+      gap: 0;
+    }
+
+    .qr-cell {
+      background: #000;
+    }
+
+    .qr-cell.empty {
+      background: #fff;
+    }
+
+    .qr-center {
+      grid-column: 9 / 14;
+      grid-row: 9 / 14;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .coin-mark {
+      width: 24px;
+      height: 24px;
+      background: #FFA500;
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .coin-mark::after {
+      content: "C";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      font-weight: 700;
+      color: #000;
+    }
+
+    .qr-caption {
+      font-size: 12px;
+      color: var(--muted-foreground);
+      margin-top: 8px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .right-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .logo-picker {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .logo-option {
+      width: 36px;
+      height: 36px;
+      background: var(--secondary);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .logo-option.active {
+      border-color: var(--primary);
+      background: var(--secondary);
+    }
+
+    .logo-option svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .logo-option.coin svg circle { fill: #FFA500; }
+    .logo-option.coin svg text { fill: #000; font-size: 10px; font-weight: 700; }
+    .logo-option.ink svg { fill: var(--card-foreground); }
+
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 13px;
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--secondary-foreground);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      border-color: var(--primary);
+    }
+
+    .action-btn svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--card-foreground);
+      margin-bottom: 4px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--secondary-foreground);
+      outline: none;
+      transition: all 0.15s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--ring);
+      box-shadow: 0 0 0 3px rgba(255,165,0,0.1);
+    }
+
+    .form-input::placeholder {
+      color: var(--muted-foreground);
+    }
+
+    .payment-link-box {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 4px;
+    }
+
+    .payment-link-text {
+      font-size: 12px;
+      color: var(--muted-foreground);
+      margin-bottom: 6px;
+    }
+
+    .payment-link-url {
+      font-size: 13px;
+      color: var(--secondary-foreground);
+      word-break: break-all;
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .toggle {
+      width: 36px;
+      height: 20px;
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .toggle::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: var(--muted-foreground);
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: all 0.15s ease;
+    }
+
+    .toggle.active {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .toggle.active::after {
+      background: #000;
+      left: 18px;
+    }
+
+    .toggle-label {
+      font-size: 12px;
+      color: var(--muted-foreground);
+    }
+
+    .hero-variant .qr-tile {
+      width: 200px;
+      height: 200px;
+    }
+
+    .hero-variant .qr-grid {
+      width: 150px;
+      height: 150px;
+    }
+
+    .hero-variant .coin-mark {
+      width: 32px;
+      height: 32px;
+    }
+
+    .hero-variant .coin-mark::after {
+      font-size: 18px;
+    }
+
+    .hero-variant .qr-section {
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hero-variant .qr-caption {
+      margin-top: 12px;
+    }
+
+    .card-variant {
+      border: 1px solid #d4d4d4;
+      border-radius: 12px;
+      padding: 24px;
+      background: linear-gradient(135deg, #fff8ed 0%, #ffffff 100%);
+      max-width: 380px;
+    }
+
+    .card-variant-header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .card-variant-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #221d18;
+      margin-bottom: 4px;
+    }
+
+    .card-variant-amount {
+      font-size: 32px;
+      font-weight: 700;
+      color: #FFA500;
+      margin: 8px 0;
+    }
+
+    .card-variant-address {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      color: #6b6258;
+      background: #f0ebe2;
+      padding: 8px 12px;
+      border-radius: 6px;
+      word-break: break-all;
+      letter-spacing: -0.3px;
+    }
+
+    .card-variant-footer {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 20px; }
+      .themes-row { flex-direction: column; gap: 20px; }
+      .qr-section { flex-direction: column; align-items: center; }
+      .right-column { width: 100%; }
+      .logo-picker { justify-content: center; }
+      .actions-row { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- VARIANT A — Interactive merged card -->
+  <div class="variant-section">
+    <div class="variant-label">Variant A — Interactive merged card</div>
+    <div class="themes-row">
+      <!-- Dark -->
+      <div class="theme-wrapper">
+        <div class="theme-label">Dark surface</div>
+        <div class="preview-container theme-dark">
+          <div class="page-container">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2>Your Wallet Address</h2>
+                  <p>Share this address or QR to receive funds</p>
+                </div>
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy Address
+                </button>
+              </div>
+              
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+              
+              <div class="qr-section">
+                <div class="qr-tile">
+                  <div class="qr-grid">
+                    <div class="qr-center">
+                      <div class="coin-mark"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="right-column form-section">
+                  <div>
+                    <label class="form-label">Amount (CCX)</label>
+                    <input type="text" class="form-input" value="5" placeholder="0.00">
+                  </div>
+                  <div>
+                    <label class="form-label">Payment ID</label>
+                    <input type="text" class="form-input" placeholder="Optional">
+                  </div>
+                  <div>
+                    <label class="form-label">Message</label>
+                    <input type="text" class="form-input" placeholder="Optional note">
+                  </div>
+                  <div class="payment-link-box">
+                    <div class="payment-link-text">Payment Link</div>
+                    <div class="payment-link-url">conceal:ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m?amount=5</div>
+                    <div class="toggle-row">
+                      <div class="toggle"></div>
+                      <span class="toggle-label">Use legacy (v1) link</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Light -->
+      <div class="theme-wrapper">
+        <div class="theme-label">Light surface</div>
+        <div class="preview-container theme-light">
+          <div class="page-container">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2>Your Wallet Address</h2>
+                  <p>Share this address or QR to receive funds</p>
+                </div>
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy Address
+                </button>
+              </div>
+              
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+              
+              <div class="qr-section">
+                <div class="qr-tile">
+                  <div class="qr-grid">
+                    <div class="qr-center">
+                      <div class="coin-mark"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="right-column form-section">
+                  <div>
+                    <label class="form-label">Amount (CCX)</label>
+                    <input type="text" class="form-input" value="5" placeholder="0.00">
+                  </div>
+                  <div>
+                    <label class="form-label">Payment ID</label>
+                    <input type="text" class="form-input" placeholder="Optional">
+                  </div>
+                  <div>
+                    <label class="form-label">Message</label>
+                    <input type="text" class="form-input" placeholder="Optional note">
+                  </div>
+                  <div class="payment-link-box">
+                    <div class="payment-link-text">Payment Link</div>
+                    <div class="payment-link-url">conceal:ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m?amount=5</div>
+                    <div class="toggle-row">
+                      <div class="toggle"></div>
+                      <span class="toggle-label">Use legacy (v1) link</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIANT B — Receive-action right column -->
+  <div class="variant-section">
+    <div class="variant-label">Variant B — Receive-action right column</div>
+    <div class="themes-row">
+      <!-- Dark -->
+      <div class="theme-wrapper">
+        <div class="theme-label">Dark surface</div>
+        <div class="preview-container theme-dark">
+          <div class="page-container">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2>Your Wallet Address</h2>
+                  <p>Share this address or QR to receive funds</p>
+                </div>
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy Address
+                </button>
+              </div>
+              
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+              
+              <div class="qr-section">
+                <div>
+                  <div class="qr-tile">
+                    <div class="qr-grid">
+                      <div class="qr-center">
+                        <div class="coin-mark"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="qr-caption">Scan the QR to send CCX to this address.</div>
+                </div>
+                <div class="right-column">
+                  <div class="logo-picker">
+                    <div class="logo-option coin active">
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <text x="12" y="16" text-anchor="middle">C</text>
+                      </svg>
+                    </div>
+                    <div class="logo-option">
+                      <svg viewBox="0 0 24 24">
+                        <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                      </svg>
+                    </div>
+                    <div class="logo-option">
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                      </svg>
+                    </div>
+                    <div class="logo-option ink">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M12 2L2 22h20L12 2z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <div class="actions-row">
+                    <button class="action-btn">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                      </svg>
+                      Share
+                    </button>
+                    <button class="action-btn">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                      </svg>
+                      Present QR
+                    </button>
+                  </div>
+                  
+                  <button class="btn btn-primary" style="width: 100%;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download PNG
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Light -->
+      <div class="theme-wrapper">
+        <div class="theme-label">Light surface</div>
+        <div class="preview-container theme-light">
+          <div class="page-container">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2>Your Wallet Address</h2>
+                  <p>Share this address or QR to receive funds</p>
+                </div>
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy Address
+                </button>
+              </div>
+              
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+              
+              <div class="qr-section">
+                <div>
+                  <div class="qr-tile">
+                    <div class="qr-grid">
+                      <div class="qr-center">
+                        <div class="coin-mark"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="qr-caption">Scan the QR to send CCX to this address.</div>
+                </div>
+                <div class="right-column">
+                  <div class="logo-picker">
+                    <div class="logo-option coin active">
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <text x="12" y="16" text-anchor="middle">C</text>
+                      </svg>
+                    </div>
+                    <div class="logo-option">
+                      <svg viewBox="0 0 24 24">
+                        <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                      </svg>
+                    </div>
+                    <div class="logo-option">
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                      </svg>
+                    </div>
+                    <div class="logo-option ink">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M12 2L2 22h20L12 2z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <div class="actions-row">
+                    <button class="action-btn">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                      </svg>
+                      Share
+                    </button>
+                    <button class="action-btn">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                      </svg>
+                      Present QR
+                    </button>
+                  </div>
+                  
+                  <button class="btn btn-primary" style="width: 100%;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download PNG
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIANT C — Different format / bigger visual -->
+  <div class="variant-section">
+    <div class="variant-label">Variant C — Different format / bigger visual</div>
+    <div class="themes-row">
+      <!-- Dark -->
+      <div class="theme-wrapper">
+        <div class="theme-label">Dark surface</div>
+        <div class="preview-container theme-dark">
+          <div class="page-container">
+            <div class="card hero-variant">
+              <div class="card-header" style="justify-content: center; margin-bottom: 12px;">
+                <div class="card-title-group" style="text-align: center;">
+                  <h2>Your Wallet Address</h2>
+                  <p>Share this address or QR to receive funds</p>
+                </div>
+              </div>
+              
+              <div class="qr-section">
+                <div class="qr-tile">
+                  <div class="qr-grid">
+                    <div class="qr-center">
+                      <div class="coin-mark"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="qr-caption">Scan the QR to send CCX to this address.</div>
+              </div>
+              
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+              
+              <div class="actions-row" style="justify-content: center;">
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy Address
+                </button>
+                <button class="btn btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                  </svg>
+                  Share
+                </button>
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                  </svg>
+                  Present QR
+                </button>
+              </div>
+            </div>
+            
+            <div class="card" style="margin-top: 16px;">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2>Request a Payment</h2>
+                  <p>Specify an amount and optional details to create a payment link</p>
+                </div>
+              </div>
+              
+              <div class="form-section">
+                <div>
+                  <label class="form-label">Amount (CCX)</label>
+                  <input type="text" class="form-input" placeholder="0.00">
+                </div>
+                <div>
+                  <label class="form-label">Payment ID</label>
+                  <input type="text" class="form-input" placeholder="Optional">
+                </div>
+                <div>
+                  <label class="form-label">Message</label>
+                  <input type="text" class="form-input" placeholder="Optional note">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Light -->
+      <div class="theme-wrapper">
+        <div class="theme-label">Light surface</div>
+        <div class="preview-container theme-light">
+          <div class="page-container">
+            <div class="card hero-variant">
+              <div class="card-header" style="justify-content: center; margin-bottom: 12px;">
+                <div class="card-title-group" style="text-align: center;">
+                  <h2>Your Wallet Address</h2>
+                  <p>Share this address or QR to receive funds</p>
+                </div>
+              </div>
+              
+              <div class="qr-section">
+                <div class="qr-tile">
+                  <div class="qr-grid">
+                    <div class="qr-center">
+                      <div class="coin-mark"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="qr-caption">Scan the QR to send CCX to this address.</div>
+              </div>
+              
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+              
+              <div class="actions-row" style="justify-content: center;">
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy Address
+                </button>
+                <button class="btn btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                  </svg>
+                  Share
+                </button>
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                  </svg>
+                  Present QR
+                </button>
+              </div>
+            </div>
+            
+            <div class="card" style="margin-top: 16px;">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2>Request a Payment</h2>
+                  <p>Specify an amount and optional details to create a payment link</p>
+                </div>
+              </div>
+              
+              <div class="form-section">
+                <div>
+                  <label class="form-label">Amount (CCX)</label>
+                  <input type="text" class="form-input" placeholder="0.00">
+                </div>
+                <div>
+                  <label class="form-label">Payment ID</label>
+                  <input type="text" class="form-input" placeholder="Optional">
+                </div>
+                <div>
+                  <label class="form-label">Message</label>
+                  <input type="text" class="form-input" placeholder="Optional note">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

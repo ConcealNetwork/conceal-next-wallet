@@ -307,19 +307,30 @@ export function WalletQrCode({
   value,
   size = 180,
   logoSrc,
+  fullWidth = false,
 }: {
   value: string;
   size?: number;
   /** Public path of the centre logo. Defaults to the orange Conceal mark. */
   logoSrc?: string;
+  /** Stretch the QR to fill its container's width (square) instead of fixed `size`. */
+  fullWidth?: boolean;
 }) {
   // Level-H error correction leaves headroom for the underlying logo and the
   // dot styling without breaking scannability.
   return (
-    <div className="inline-flex rounded-2xl bg-white p-4">
+    <div
+      className={cn(
+        // Border + soft shadow so the white tile separates from a light card
+        // surface (where bg-white would otherwise merge into it).
+        "rounded-2xl border border-border bg-white p-4 shadow-sm",
+        fullWidth ? "flex w-full" : "inline-flex",
+      )}
+    >
       <DottedQrCode
         value={value}
         size={size}
+        className={fullWidth ? "h-auto w-full" : undefined}
         fgColor="#171513"
         bgColor="#ffffff"
         logoSrc={withBasePath(logoSrc ?? "/brand/conceal-mark-orange.svg")}

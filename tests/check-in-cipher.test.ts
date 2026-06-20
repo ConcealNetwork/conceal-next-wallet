@@ -67,8 +67,8 @@ describe("check-in cipher scheme (real conceal-lib-js WASM)", () => {
 
   it("ChaCha8 and ChaCha12 keystreams differ (so the cipher choice is meaningful)", () => {
     const data = new Uint8Array(32).fill(1);
-    expect(Buffer.from(chacha8(key, nonce, data)).equals(Buffer.from(chacha12(key, nonce, data)))).toBe(
-      false,
-    );
+    expect(
+      Buffer.from(chacha8(key, nonce, data)).equals(Buffer.from(chacha12(key, nonce, data))),
+    ).toBe(false);
   });
 });

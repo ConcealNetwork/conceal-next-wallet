@@ -17,7 +17,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
+import {
+  walletPasswordIsAcceptable,
+  WalletPasswordStrengthPanel,
+} from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -360,7 +363,12 @@ export function ImportKeysForm() {
     : estimateScanHeight(heightPreset, undefined, chainTip);
 
   // Step 1 (type) and step 3 (history) always have a valid default selection.
-  const stepCanAdvance = [true, keysValid, true, passwordsMatch && !loading][step - 1];
+  const stepCanAdvance = [
+    true,
+    keysValid,
+    true,
+    passwordsMatch && walletPasswordIsAcceptable(password) && !loading,
+  ][step - 1];
 
   function goBack() {
     setStep((value) => Math.max(1, value - 1));
@@ -394,7 +402,7 @@ export function ImportKeysForm() {
   }
 
   async function submit() {
-    if (!keysValid || !passwordsMatch || loading) return;
+    if (!keysValid || !passwordsMatch || !walletPasswordIsAcceptable(password) || loading) return;
 
     setLoading(true);
     try {
@@ -655,6 +663,11 @@ export function ImportKeysForm() {
               autoComplete="new-password"
             />
             <WalletPasswordStrengthPanel password={password} />
+            {password.length > 0 && !walletPasswordIsAcceptable(password) ? (
+              <p className="text-sm text-wallet-outgoing">
+                Use at least 8 characters with a mix of letters, numbers, or symbols.
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="import-keys-confirm">Confirm password</Label>
@@ -693,7 +706,9 @@ export function ImportKeysForm() {
             type="button"
             className="flex-1"
             onClick={submit}
-            disabled={!keysValid || !passwordsMatch || loading}
+            disabled={
+              !keysValid || !passwordsMatch || !walletPasswordIsAcceptable(password) || loading
+            }
           >
             {loading ? "Importing…" : walletCopy.importWallet}
           </Button>
@@ -726,9 +741,10 @@ export function ImportMnemonicForm() {
   const [language, setLanguage] = useState<MnemonicImportLanguageKey>("auto");
 
   const words = mnemonic.trim().split(/\s+/).filter(Boolean);
-  const mnemonicLooksValid = words.length >= 12;
+  const mnemonicLooksValid = words.length === 25;
   const passwordsMatch = password !== "" && password === confirmPassword;
-  const canSubmit = mnemonicLooksValid && passwordsMatch && !loading;
+  const canSubmit =
+    mnemonicLooksValid && passwordsMatch && walletPasswordIsAcceptable(password) && !loading;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -816,6 +832,11 @@ export function ImportMnemonicForm() {
           required
         />
         <WalletPasswordStrengthPanel password={password} />
+        {password.length > 0 && !walletPasswordIsAcceptable(password) ? (
+          <p className="text-sm text-wallet-outgoing">
+            Use at least 8 characters with a mix of letters, numbers, or symbols.
+          </p>
+        ) : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="mnemonic-confirm">Confirm password</Label>

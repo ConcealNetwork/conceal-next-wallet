@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AMOUNT_COUNT_UP_MS } from "@/lib/ui/animation";
 
 type UseCountUpOptions = {
   durationMs?: number;
@@ -31,7 +32,7 @@ export function usePrefersReducedMotion() {
 }
 
 export function useCountUp(target: number, options: UseCountUpOptions = {}) {
-  const { durationMs = 700, formatter } = options;
+  const { durationMs = AMOUNT_COUNT_UP_MS, formatter } = options;
   const prefersReducedMotion = usePrefersReducedMotion();
   const [displayValue, setDisplayValue] = useState(target);
   // Track the latest shown value (and whether we've animated once) so a new

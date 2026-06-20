@@ -18,8 +18,8 @@ test("watch a contact for check-ins, snooze and remove", async ({ page }) => {
   await openWallet(page);
 
   await expect(async () => {
-    await page.getByRole("link", { name: "Check-ins", exact: true }).click({ timeout: 2000 });
-    await expect(page.getByRole("heading", { name: "Check-ins" })).toBeVisible({ timeout: 2000 });
+    await page.getByRole("link", { name: "Safety", exact: true }).click({ timeout: 2000 });
+    await expect(page.getByRole("heading", { name: "Safety" })).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20_000 });
 
   // Watch a mock contact.

@@ -13,6 +13,7 @@ import {
   LogOut,
   Mail,
   Network,
+  Plus,
   QrCode,
   Send,
   Settings,
@@ -48,7 +49,10 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 
-type NavItem = { href: string; labelKey: string; icon: LucideIcon };
+// `canCreate` marks items whose page has a create flow (add contact, new
+// deposit, add reminder, compose message, watch a check-in) — the sidebar shows
+// a trailing "+" affordance on those rows when expanded.
+type NavItem = { href: string; labelKey: string; icon: LucideIcon; canCreate?: boolean };
 type NavSectionDef = { label: string; items: NavItem[] };
 
 // Nav is grouped into labeled sections (issue #122, stage 1). The section
@@ -63,25 +67,38 @@ const NAV_SECTIONS: NavSectionDef[] = [
       { href: "/wallet/transactions", labelKey: "nav.transactions", icon: WalletCards },
       { href: "/wallet/send", labelKey: "nav.send", icon: Send },
       { href: "/wallet/receive", labelKey: "nav.receive", icon: QrCode },
-      { href: "/wallet/messages", labelKey: "nav.messages", icon: Mail },
-      { href: "/wallet/market", labelKey: "nav.market", icon: BarChart3 },
+      {
+        href: "/wallet/address-book",
+        labelKey: "nav.addressBook",
+        icon: BookOpen,
+        canCreate: true,
+      },
+      { href: "/wallet/messages", labelKey: "nav.messages", icon: Mail, canCreate: true },
+      { href: "/wallet/export", labelKey: "nav.export", icon: Download },
     ],
   },
   {
-    label: "Banking",
+    // "Banking" was renamed to "Earn" to avoid EU banking-terminology legal
+    // ambiguity — deposits are an interest-bearing product, not a bank account.
+    // Market + Insights live here too: price and performance frame the earn story.
+    label: "Earn",
     items: [
-      { href: "/wallet/deposits", labelKey: "nav.deposits", icon: Coins },
-      { href: "/wallet/scheduled", labelKey: "nav.scheduled", icon: CalendarClock },
-      { href: "/wallet/check-ins", labelKey: "nav.checkIns", icon: HeartPulse },
+      { href: "/wallet/deposits", labelKey: "nav.deposits", icon: Coins, canCreate: true },
+      { href: "/wallet/market", labelKey: "nav.market", icon: BarChart3 },
       { href: "/wallet/insights", labelKey: "nav.insights", icon: LineChart },
     ],
   },
   {
     label: "More",
     items: [
-      { href: "/wallet/address-book", labelKey: "nav.addressBook", icon: BookOpen },
+      {
+        href: "/wallet/scheduled",
+        labelKey: "nav.reminders",
+        icon: CalendarClock,
+        canCreate: true,
+      },
+      { href: "/wallet/check-ins", labelKey: "nav.checkIns", icon: HeartPulse, canCreate: true },
       { href: "/wallet/network", labelKey: "nav.network", icon: Network },
-      { href: "/wallet/export", labelKey: "nav.export", icon: Download },
       { href: "/wallet/donate", labelKey: "nav.donate", icon: Gift },
     ],
   },
@@ -114,6 +131,8 @@ function NavLink({
         "flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         active &&
           "bg-wallet-amber/12 text-wallet-amber hover:bg-wallet-amber/12 hover:text-wallet-amber",
+        // reserve room on the right for the overlaid quick-create button
+        !collapsed && item.canCreate && !showBadge && "pr-10",
       )}
     >
       <span className={cn("relative shrink-0", collapsed && showBadge && "mr-auto")}>
@@ -132,24 +151,49 @@ function NavLink({
           {label}
         </span>
       ) : null}
-      {showBadge && !collapsed ? (
+      {!collapsed && showBadge ? (
         <NavMessageBadge count={badge} className="ml-auto shrink-0" />
       ) : null}
     </Link>
   );
 
-  if (!collapsed) {
-    return link;
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right">
+          {showBadge ? `${label} (+${badge > 99 ? "99" : badge} new)` : label}
+        </TooltipContent>
+      </Tooltip>
+    );
   }
 
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{link}</TooltipTrigger>
-      <TooltipContent side="right">
-        {showBadge ? `${label} (+${badge > 99 ? "99" : badge} new)` : label}
-      </TooltipContent>
-    </Tooltip>
-  );
+  // Creatable items get an overlaid "+" that deep-links to the page's create
+  // flow (`?new=1`). It's a sibling of the row link (not nested — two <a> can't
+  // nest) positioned over the row's right edge. Suppressed while a badge shows
+  // so the two never collide.
+  if (item.canCreate && !showBadge) {
+    const createLabel = t("action.createNew", { name: label });
+    return (
+      <div className="relative">
+        {link}
+        <Link
+          href={`${item.href}?new=1`}
+          onClick={onNavigate}
+          aria-label={createLabel}
+          title={createLabel}
+          className={cn(
+            "absolute right-1.5 top-1/2 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded-md transition-colors hover:bg-wallet-amber/15 hover:text-wallet-amber focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+            active ? "text-wallet-amber/80" : "text-muted-foreground/55",
+          )}
+        >
+          <Plus className="size-4" aria-hidden="true" />
+        </Link>
+      </div>
+    );
+  }
+
+  return link;
 }
 
 function NavSection({
@@ -232,62 +276,53 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function SidebarFooter({
-  collapsed,
-  onNavigate,
-}: {
-  collapsed: boolean;
-  onNavigate?: () => void;
-}) {
+function SidebarFooter({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { t } = useI18n();
   const { data: wallets } = useWallets();
   const list = wallets ?? [];
   const active = list.find((wallet) => wallet.isActive) ?? list[0];
   const settingsLabel = t("nav.settings");
 
-  const gear = (
-    <Link
-      href="/wallet/settings"
-      onClick={onNavigate}
-      aria-label={settingsLabel}
-      className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <Settings className="size-[18px]" aria-hidden="true" />
-    </Link>
-  );
-
+  // The wallet identity + settings gear are one button: the whole row links to
+  // Settings (collapsed → a single centered gear). The wallet SWITCHER lives in
+  // the global header, so this footer is purely "current wallet → its settings".
   return (
     <div className="border-t border-border px-3 py-3">
-      <div className={cn("flex items-center gap-2", collapsed && "justify-center")}>
-        {active ? (
-          <span
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg",
-              collapsed ? "px-0" : "min-w-0 flex-1 px-1",
-            )}
-          >
-            <WalletAvatar wallet={active} className="size-8" />
-            {!collapsed ? (
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] font-semibold leading-tight text-foreground">
-                  {active.label}
-                </span>
-                <span className="block text-[11px] leading-tight text-muted-foreground">
-                  {list.length} {list.length === 1 ? "wallet" : "wallets"}
-                </span>
-              </span>
-            ) : null}
+      {collapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              href="/wallet/settings"
+              onClick={onNavigate}
+              aria-label={settingsLabel}
+              className="mx-auto grid size-9 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Settings className="size-[18px]" aria-hidden="true" />
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="right">{settingsLabel}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <Link
+          href="/wallet/settings"
+          onClick={onNavigate}
+          aria-label={settingsLabel}
+          className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {active ? <WalletAvatar wallet={active} className="size-8" /> : null}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-semibold leading-tight text-foreground">
+              {active?.label}
+            </span>
+            <span className="block text-[11px] leading-tight text-muted-foreground">
+              {t(list.length === 1 ? "wallets.countOne" : "wallets.countOther", {
+                count: list.length,
+              })}
+            </span>
           </span>
-        ) : null}
-        {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>{gear}</TooltipTrigger>
-            <TooltipContent side="right">{settingsLabel}</TooltipContent>
-          </Tooltip>
-        ) : (
-          gear
-        )}
-      </div>
+          <Settings className="size-[18px] shrink-0 text-muted-foreground" aria-hidden="true" />
+        </Link>
+      )}
       <DisconnectButton collapsed={collapsed} />
     </div>
   );

@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conceal wallet avatar — GLM · round 2</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{
+    font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+    background:#100e0c;color:#d8cfc2;min-height:100vh;
+    padding:40px 28px 72px;line-height:1.5;
+  }
+
+  /* ---------- page header ---------- */
+  header.page{max-width:1180px;margin:0 auto 36px}
+  .crumb{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#9c8b76;font-weight:600}
+  header.page h1{
+    font-size:26px;font-weight:800;letter-spacing:-0.02em;color:#f6ede1;margin-top:10px;max-width:24ch;
+  }
+  header.page .sub{
+    font-size:13.5px;color:#a89b8b;margin-top:10px;max-width:68ch;
+  }
+  header.page .sub b{color:#f6ede1;font-weight:600;}
+  .legend{
+    display:flex;gap:14px;align-items:center;margin-top:18px;flex-wrap:wrap;
+    font-size:11.5px;color:#8a7d6c;letter-spacing:.02em;
+  }
+  .legend .sw{display:inline-flex;gap:3px;align-items:center}
+  .legend .chip{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .legend .chip.dk{background:#1a1714;outline:1px solid #39332d}
+  .legend .chip.lt{background:#f3efe9;outline:1px solid #e4ddd1}
+  .legend .or{background:#FFA500}
+
+  /* ---------- variant section ---------- */
+  section.variant{max-width:1180px;margin:0 auto 44px}
+  .meta{
+    display:grid;grid-template-columns:auto auto 1fr;gap:10px 14px;align-items:baseline;margin-bottom:18px;
+  }
+  .meta .num{
+    font-size:12px;font-weight:700;color:#100e0c;background:#FFA500;
+    padding:3px 8px;border-radius:4px;letter-spacing:.02em;justify-self:start;
+  }
+  .meta h2{font-size:18px;font-weight:800;letter-spacing:-0.015em;color:#f6ede1}
+  .meta .pill{
+    font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#b3a99c;
+    border:1px solid #39332d;border-radius:999px;padding:3px 9px;justify-self:start;grid-column:2;
+  }
+  .meta .note{
+    grid-column:1 / -1;font-size:13px;color:#a89b8b;max-width:90ch;line-height:1.55;
+  }
+  .meta .note em{color:#e08e00;font-style:normal;font-weight:600}
+
+  /* ---------- swatch pair ---------- */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px;border-radius:14px;overflow:hidden}
+  .swatch{padding:20px 18px 22px}
+  .swatch.dark{background:#1a1714}
+  .swatch.light{background:#f3efe9}
+  .swatch .label{
+    font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:14px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .swatch.dark .label{color:#7d7165}
+  .swatch.light .label{color:#8b8074}
+  .swatch .label .dot{width:8px;height:8px;border-radius:2px}
+  .swatch.dark .label .dot{background:#39332d}
+  .swatch.light .label .dot{background:#e4ddd1}
+
+  .rows{display:flex;flex-direction:column;gap:14px}
+  .row{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .row .sz{
+    width:26px;font-size:11px;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.02em;
+  }
+  .swatch.dark .row .sz{color:#6f6357}
+  .swatch.light .row .sz{color:#9c9183}
+  .row .letters{display:flex;gap:14px;align-items:center}
+
+  /* ---------- avatar base ---------- */
+  .av{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:1em;height:1em;line-height:1;position:relative;flex:0 0 auto;
+    vertical-align:middle;
+  }
+  .av .g{display:inline-block;line-height:1;font-family:-apple-system,system-ui,sans-serif}
+  .s24{font-size:24px}
+  .s28{font-size:28px}
+  .s32{font-size:32px}
+  .s36{font-size:36px}
+
+  /* ================ 01 · EMBER TILE — brutalist monogram ================ */
+  .tile{
+    background:#221d18;
+    border:1.5px solid #39332d;
+    border-radius:0.16em;
+    box-shadow:0.14em 0.14em 0 rgba(0,0,0,0.6);
+  }
+  .tile .g{
+    font-size:0.6em;font-weight:800;letter-spacing:-0.05em;color:#FFA500;
+    transform:translateY(0.01em);
+  }
+  .tile::after{
+    content:"";position:absolute;top:0;right:0;width:36%;height:36%;
+    background:#FFA500;clip-path:polygon(100% 0,100% 100%,0 0);
+  }
+  .tile::before{
+    content:"";position:absolute;inset:0.14em;border:1px solid rgba(255,165,0,0.16);pointer-events:none;
+  }
+  .swatch.light .tile{
+    background:#ffffff;border-color:#221d18;box-shadow:0.14em 0.14em 0 #221d18;
+  }
+  .swatch.light .tile .g{color:#221d18}
+  .swatch.light .tile::before{border-color:rgba(34,29,24,0.10)}
+
+  /* ================ 02 · GLASSINE CHIP — warm frosted glass ================ */
+  .glass{
+    border-radius:0.3em;
+    background:
+      linear-gradient(180deg,
+        rgba(255,255,255,0.12) 0%,
+        rgba(255,255,255,0.03) 38%,
+        rgba(0,0,0,0.22) 100%);
+    border:1px solid rgba(255,165,0,0.5);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.22),
+      inset 0 -1px 0 rgba(0,0,0,0.3),
+      0 1px 2px rgba(0,0,0,0.4);
+  }
+  .glass .g{
+    font-size:0.58em;font-weight:600;letter-spacing:-0.01em;color:#fbeee0;
+    text-shadow:0 1px 1px rgba(0,0,0,0.35);
+  }
+  .glass::after{
+    content:"";position:absolute;left:0;top:20%;bottom:20%;width:0.09em;
+    background:linear-gradient(180deg,transparent,#FFA500 30%,#f5a623 70%,transparent);
+    border-radius:1em;
+  }
+  .swatch.light .glass{
+    background:
+      linear-gradient(180deg,
+        rgba(255,255,255,0.95) 0%,
+        rgba(255,255,255,0.65) 42%,
+        rgba(34,29,24,0.06) 100%);
+    border-color:rgba(34,29,24,0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.9),
+      inset 0 -1px 0 rgba(34,29,24,0.05),
+      0 1px 2px rgba(34,29,24,0.08);
+  }
+  .swatch.light .glass .g{
+    color:#221d18;text-shadow:0 1px 0 rgba(255,255,255,0.7);
+  }
+  .swatch.light .glass::after{
+    background:linear-gradient(180deg,transparent,#f5a623 30%,#FFA500 70%,transparent);
+  }
+
+  /* ================ 03 · LETTERPRESS SEAL — pressed paper ================ */
+  .seal{
+    border-radius:47% 53% 52% 48% / 53% 47% 54% 46%;
+    background:#f3efe9;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.5),
+      inset 0 0 0 1px rgba(34,29,24,0.05),
+      0 0.12em 0.2em rgba(0,0,0,0.5);
+  }
+  .seal .g{
+    font-size:0.58em;font-weight:700;letter-spacing:-0.02em;color:#3a2e24;
+    position:relative;text-shadow:0 1px 0 rgba(255,255,255,0.7);
+    transform:translateY(-0.04em);
+  }
+  .seal .g::after{
+    content:"";position:absolute;left:12%;right:12%;bottom:-0.22em;height:0.11em;
+    background:#FFA500;border-radius:1em;
+  }
+  .swatch.light .seal{
+    background:#ffffff;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      inset 0 0 0 1px rgba(34,29,24,0.06),
+      0 0.12em 0.22em rgba(34,29,24,0.14);
+  }
+  .swatch.light .seal .g{color:#3a2e24;text-shadow:0 1px 0 rgba(255,255,255,0.9)}
+
+  /* ---------- footer notes ---------- */
+  footer.notes{
+    max-width:1180px;margin:8px auto 0;border-top:1px solid #2a2420;padding-top:20px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:24px;
+  }
+  footer.notes .n h4{
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#7d7165;font-weight:700;margin-bottom:6px;
+  }
+  footer.notes .n p{font-size:12.5px;color:#8c8071;line-height:1.55}
+  footer.notes .n em{color:#e08e00;font-style:normal}
+
+  @media (max-width:760px){
+    .duo{grid-template-columns:1fr}
+    footer.notes{grid-template-columns:1fr}
+    .meta{grid-template-columns:auto 1fr}
+    .meta .pill{grid-column:2}
+  }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <div class="crumb">CCX · wallet avatar · round 2 · GLM</div>
+  <h1>Three materials, none of them a coin.</h1>
+  <p class="sub">
+    Round 1 collapsed onto a dark metal disc. This round picks three genuinely different
+    visual languages — a flat <b>brutalist tile</b>, a warm <b>frosted-glass chip</b>, and a
+    pressed-<b>paper seal</b> — so the wallet avatar can be told apart by material, not just
+    by letter. Every variant below is drawn in pure HTML+CSS (system font, no images, no JS),
+    shown at <b>24 / 28 / 32 / 36 px</b> with initials <b>M · S · A</b>, on both a dark
+    <b>#1a1714</b> and a light <b>#f3efe9</b> swatch.
+  </p>
+  <div class="legend">
+    <span class="sw"><span class="chip dk"></span> dark #1a1714</span>
+    <span class="sw"><span class="chip lt"></span> light #f3efe9</span>
+    <span class="sw"><span class="chip or"></span> brand #FFA500</span>
+    <span>· sizes 24 / 28 / 32 / 36 px · letters M · S · A</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ 01 · EMBER TILE ============ -->
+  <section class="variant">
+    <div class="meta">
+      <span class="num">01</span>
+      <h2>Ember Tile</h2>
+      <span class="pill">brutalist monogram</span>
+      <p class="note">
+        A flat square of warm charcoal, an <em>orange letter carved in</em>, and a single faceted
+        orange corner — a quiet nod to the polygon geometry of the Conceal mark. No gradients, no
+        metal: it's pure typography plus one geometric accent, which is exactly why it stays crisp
+        at 24px. On the light swatch it inverts to a white block with a hard charcoal offset — same
+        poster energy, opposite polarity.
+      </p>
+    </div>
+    <div class="duo">
+      <div class="swatch dark">
+        <div class="label"><span class="dot"></span>dark · #1a1714</div>
+        <div class="rows">
+          <div class="row"><span class="sz">24</span><div class="letters">
+            <div class="av tile s24"><span class="g">M</span></div>
+            <div class="av tile s24"><span class="g">S</span></div>
+            <div class="av tile s24"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">28</span><div class="letters">
+            <div class="av tile s28"><span class="g">M</span></div>
+            <div class="av tile s28"><span class="g">S</span></div>
+            <div class="av tile s28"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">32</span><div class="letters">
+            <div class="av tile s32"><span class="g">M</span></div>
+            <div class="av tile s32"><span class="g">S</span></div>
+            <div class="av tile s32"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">36</span><div class="letters">
+            <div class="av tile s36"><span class="g">M</span></div>
+            <div class="av tile s36"><span class="g">S</span></div>
+            <div class="av tile s36"><span class="g">A</span></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="swatch light">
+        <div class="label"><span class="dot"></span>light · #f3efe9</div>
+        <div class="rows">
+          <div class="row"><span class="sz">24</span><div class="letters">
+            <div class="av tile s24"><span class="g">M</span></div>
+            <div class="av tile s24"><span class="g">S</span></div>
+            <div class="av tile s24"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">28</span><div class="letters">
+            <div class="av tile s28"><span class="g">M</span></div>
+            <div class="av tile s28"><span class="g">S</span></div>
+            <div class="av tile s28"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">32</span><div class="letters">
+            <div class="av tile s32"><span class="g">M</span></div>
+            <div class="av tile s32"><span class="g">S</span></div>
+            <div class="av tile s32"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">36</span><div class="letters">
+            <div class="av tile s36"><span class="g">M</span></div>
+            <div class="av tile s36"><span class="g">S</span></div>
+            <div class="av tile s36"><span class="g">A</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 · GLASSINE CHIP ============ -->
+  <section class="variant">
+    <div class="meta">
+      <span class="num">02</span>
+      <h2>Glassine Chip</h2>
+      <span class="pill">warm frosted glass</span>
+      <p class="note">
+        A soft squircle of <em>warm smoked glass</em> — not the generic blue glassy blob, but a
+        translucent amber-tinted chip with a thin orange hairline glowing down the left edge as
+        the brand signature. The letter sits weight-600 in warm white on dark, deep charcoal on
+        light, with a 1px inner-top highlight carrying the "glass" read. At 24px the silhouette is
+        just a clean rounded square with an orange thread — legible — and the material richness
+        opens up as it scales up.
+      </p>
+    </div>
+    <div class="duo">
+      <div class="swatch dark">
+        <div class="label"><span class="dot"></span>dark · #1a1714</div>
+        <div class="rows">
+          <div class="row"><span class="sz">24</span><div class="letters">
+            <div class="av glass s24"><span class="g">M</span></div>
+            <div class="av glass s24"><span class="g">S</span></div>
+            <div class="av glass s24"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">28</span><div class="letters">
+            <div class="av glass s28"><span class="g">M</span></div>
+            <div class="av glass s28"><span class="g">S</span></div>
+            <div class="av glass s28"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">32</span><div class="letters">
+            <div class="av glass s32"><span class="g">M</span></div>
+            <div class="av glass s32"><span class="g">S</span></div>
+            <div class="av glass s32"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">36</span><div class="letters">
+            <div class="av glass s36"><span class="g">M</span></div>
+            <div class="av glass s36"><span class="g">S</span></div>
+            <div class="av glass s36"><span class="g">A</span></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="swatch light">
+        <div class="label"><span class="dot"></span>light · #f3efe9</div>
+        <div class="rows">
+          <div class="row"><span class="sz">24</span><div class="letters">
+            <div class="av glass s24"><span class="g">M</span></div>
+            <div class="av glass s24"><span class="g">S</span></div>
+            <div class="av glass s24"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">28</span><div class="letters">
+            <div class="av glass s28"><span class="g">M</span></div>
+            <div class="av glass s28"><span class="g">S</span></div>
+            <div class="av glass s28"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">32</span><div class="letters">
+            <div class="av glass s32"><span class="g">M</span></div>
+            <div class="av glass s32"><span class="g">S</span></div>
+            <div class="av glass s32"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">36</span><div class="letters">
+            <div class="av glass s36"><span class="g">M</span></div>
+            <div class="av glass s36"><span class="g">S</span></div>
+            <div class="av glass s36"><span class="g">A</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 · LETTERPRESS SEAL ============ -->
+  <section class="variant">
+    <div class="meta">
+      <span class="num">03</span>
+      <h2>Letterpress Seal</h2>
+      <span class="pill">pressed paper</span>
+      <p class="note">
+        A deckle-edged cream sticker with a <em>debossed monogram</em> and a single orange rule
+        beneath the letter — a bookplate, a waxless seal, a piece of paper. It's the warmest of the
+        three: opaque, soft, tactile, intentionally a little imperfect (the organic radius). On dark
+        it pops as a bright tag; on light it layers as white-on-cream with a whisper-soft shadow.
+        The orange rule is the only brand cue — and it's enough.
+      </p>
+    </div>
+    <div class="duo">
+      <div class="swatch dark">
+        <div class="label"><span class="dot"></span>dark · #1a1714</div>
+        <div class="rows">
+          <div class="row"><span class="sz">24</span><div class="letters">
+            <div class="av seal s24"><span class="g">M</span></div>
+            <div class="av seal s24"><span class="g">S</span></div>
+            <div class="av seal s24"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">28</span><div class="letters">
+            <div class="av seal s28"><span class="g">M</span></div>
+            <div class="av seal s28"><span class="g">S</span></div>
+            <div class="av seal s28"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">32</span><div class="letters">
+            <div class="av seal s32"><span class="g">M</span></div>
+            <div class="av seal s32"><span class="g">S</span></div>
+            <div class="av seal s32"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">36</span><div class="letters">
+            <div class="av seal s36"><span class="g">M</span></div>
+            <div class="av seal s36"><span class="g">S</span></div>
+            <div class="av seal s36"><span class="g">A</span></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="swatch light">
+        <div class="label"><span class="dot"></span>light · #f3efe9</div>
+        <div class="rows">
+          <div class="row"><span class="sz">24</span><div class="letters">
+            <div class="av seal s24"><span class="g">M</span></div>
+            <div class="av seal s24"><span class="g">S</span></div>
+            <div class="av seal s24"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">28</span><div class="letters">
+            <div class="av seal s28"><span class="g">M</span></div>
+            <div class="av seal s28"><span class="g">S</span></div>
+            <div class="av seal s28"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">32</span><div class="letters">
+            <div class="av seal s32"><span class="g">M</span></div>
+            <div class="av seal s32"><span class="g">S</span></div>
+            <div class="av seal s32"><span class="g">A</span></div>
+          </div></div>
+          <div class="row"><span class="sz">36</span><div class="letters">
+            <div class="av seal s36"><span class="g">M</span></div>
+            <div class="av seal s36"><span class="g">S</span></div>
+            <div class="av seal s36"><span class="g">A</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="notes">
+    <div class="n">
+      <h4>Why three materials</h4>
+      <p>
+        Matte print, warm glass, pressed paper — different <em>silhouettes</em>, different
+        surface logic. Whichever direction wins, the wallet system gets a look no other crypto
+        app is wearing right now.
+      </p>
+    </div>
+    <div class="n">
+      <h4>Legibility at 24px</h4>
+      <p>
+        Letters run 0.58–0.6em of the avatar with weight 600–800, so the glyph owns the tile.
+        No stroke thinner than ~1.5px appears at 24, and every accent is geometric (wedge,
+        hairline, rule) so nothing dithers into mud.
+      </p>
+    </div>
+    <div class="n">
+      <h4>Brand thread</h4>
+      <p>
+        Orange lives in exactly one place per variant — the corner wedge, the left hairline, the
+        under-rule — so the brand reads instantly without dyeing the whole avatar. Easy to tint
+        per-wallet later by recoloring that single accent.
+      </p>
+    </div>
+  </footer>
+
+</main>
+
+</body>
+</html>

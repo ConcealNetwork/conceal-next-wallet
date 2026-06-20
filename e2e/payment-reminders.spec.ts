@@ -20,8 +20,8 @@ test("adds a recurring reminder and pre-fills the send form from it", async ({ p
   await openWallet(page);
 
   await expect(async () => {
-    await page.getByRole("link", { name: "Scheduled", exact: true }).click({ timeout: 2000 });
-    await expect(page.getByRole("heading", { name: "Scheduled" })).toBeVisible({ timeout: 2000 });
+    await page.getByRole("link", { name: "Reminders", exact: true }).click({ timeout: 2000 });
+    await expect(page.getByRole("heading", { name: "Reminders" })).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20_000 });
 
   await page.getByLabel("Name").fill("Rent");

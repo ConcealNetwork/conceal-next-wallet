@@ -75,7 +75,11 @@ describe("real-sdk importWallet file (#102)", () => {
     const { realSdkWalletService } = await import("@/lib/services/real-sdk/wallet.service");
     const backup = encryptedBackup("correct-password");
     await expect(
-      realSdkWalletService.importWallet({ method: "file", file: backup, password: "wrong-password" }),
+      realSdkWalletService.importWallet({
+        method: "file",
+        file: backup,
+        password: "wrong-password",
+      }),
     ).rejects.toThrow(/Invalid wallet file or password/i);
   });
 });

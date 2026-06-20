@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receive Address Card Redesign - GLM</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 32px;
+      background: #171513;
+      color: #ffffff;
+    }
+
+    /* CSS Token Block from Brief */
+    .theme-dark {
+      --background: #171513;
+      --card: #241f1c;
+      --card-foreground: #ffffff;
+      --primary: #FFA500;
+      --primary-foreground: #000000;
+      --secondary: #2b2521;
+      --secondary-foreground: #ffffff;
+      --muted-foreground: #a9a097;
+      --border: #39332d;
+      --ring: #FFA500;
+    }
+
+    .theme-light {
+      --background: #faf7f2;
+      --card: #ffffff;
+      --card-foreground: #221d18;
+      --primary: #FFA500;
+      --primary-foreground: #000000;
+      --secondary: #f0ebe2;
+      --secondary-foreground: #2e2820;
+      --muted-foreground: #6b6258;
+      --border: #e6ddd0;
+      --ring: #FFA500;
+    }
+
+    /* Variant Section */
+    .variant-section {
+      margin-bottom: 64px;
+    }
+
+    .variant-label {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: #a9a097;
+    }
+
+    .surfaces-container {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .surface-wrapper {
+      flex: 1;
+      min-width: 340px;
+    }
+
+    .surface-label {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      color: #a9a097;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .surface {
+      background: var(--background);
+      padding: 24px;
+      border-radius: 16px;
+      min-height: 400px;
+    }
+
+    /* Card Base */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      color: var(--card-foreground);
+      max-width: 672px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .card-subtitle {
+      font-size: 14px;
+      color: var(--muted-foreground);
+      margin-bottom: 20px;
+    }
+
+    /* Address Panel */
+    .address-panel {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .address-text {
+      font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Droid Sans Mono", "Source Code Pro", monospace;
+      font-size: 13px;
+      word-break: break-all;
+      line-height: 1.5;
+      color: var(--secondary-foreground);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--card-foreground);
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: var(--secondary);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Toggle Switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .toggle-label {
+      font-size: 14px;
+      color: var(--muted-foreground);
+    }
+
+    .switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: var(--secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      background: var(--muted-foreground);
+      border-radius: 50%;
+      transition: transform 0.15s ease;
+    }
+
+    .switch.checked {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .switch.checked::after {
+      transform: translateX(20px);
+      background: var(--primary-foreground);
+    }
+
+    /* QR Panel */
+    .qr-panel {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .qr-placeholder {
+      width: 160px;
+      height: 160px;
+      position: relative;
+    }
+
+    .qr-grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(21, 1fr);
+      grid-template-rows: repeat(21, 1fr);
+      gap: 1px;
+    }
+
+    .qr-cell {
+      background: #000;
+      border-radius: 1px;
+    }
+
+    .qr-cell.white {
+      background: #fff;
+    }
+
+    /* Coin mark in center */
+    .qr-coin-mark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #FFA500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #000;
+      font-weight: bold;
+    }
+
+    .qr-caption {
+      font-size: 13px;
+      color: var(--muted-foreground);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    /* Logo Picker */
+    .logo-picker {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      justify-content: center;
+    }
+
+    .logo-swatch {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: var(--secondary);
+    }
+
+    .logo-swatch.selected {
+      border-color: var(--primary);
+      border-radius: 8px;
+    }
+
+    .logo-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+    }
+
+    .logo-icon.orange {
+      background: #FFA500;
+    }
+
+    .logo-icon.steel {
+      background: #6b7280;
+    }
+
+    .logo-icon.coin {
+      background: linear-gradient(135deg, #FFA500, #FF8C00);
+    }
+
+    /* Icons */
+    .icon-clipboard {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .icon-download {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Variant A: QR-led hero */
+    .variant-a .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .variant-a .card-title,
+    .variant-a .card-subtitle {
+      text-align: center;
+    }
+
+    .variant-a .address-panel {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .variant-a .qr-panel {
+      margin-bottom: 12px;
+    }
+
+    .variant-a .controls-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .variant-a .toggle-row {
+      justify-content: center;
+    }
+
+    /* Variant B: Aligned two-column */
+    .variant-b .card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .variant-b .left-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .variant-b .right-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .variant-b .qr-panel {
+      margin-bottom: 12px;
+    }
+
+    .variant-b .logo-picker {
+      margin-bottom: 12px;
+    }
+
+    .variant-b .download-btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .variant-b .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .variant-b .toggle-row {
+      margin-top: auto;
+    }
+
+    @media (max-width: 500px) {
+      .variant-b .card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Variant C: Compact single-column */
+    .variant-c .card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .variant-c .address-section {
+      margin-bottom: 20px;
+    }
+
+    .variant-c .address-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .variant-c .address-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted-foreground);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .variant-c .qr-section {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .variant-c .qr-left {
+      flex-shrink: 0;
+    }
+
+    .variant-c .qr-panel {
+      margin-bottom: 8px;
+    }
+
+    .variant-c .qr-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .variant-c .toggle-row {
+      margin-bottom: 0;
+    }
+
+    .variant-c .actions-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 450px) {
+      .variant-c .qr-section {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .variant-c .qr-right {
+        width: 100%;
+      }
+
+      .variant-c .actions-row {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Variant A: QR-led hero -->
+  <div class="variant-section">
+    <div class="variant-label">Variant A — QR-led hero</div>
+    <div class="surfaces-container">
+      <!-- Dark -->
+      <div class="surface-wrapper">
+        <div class="surface-label">Dark Surface</div>
+        <div class="surface theme-dark">
+          <div class="card variant-a">
+            <div class="card-title">Your Wallet Address</div>
+            <div class="card-subtitle">Share this address or QR to receive funds</div>
+
+            <div class="qr-panel">
+              <div class="qr-placeholder">
+                <div class="qr-grid" id="qr-grid-a-dark"></div>
+                <div class="qr-coin-mark">C</div>
+              </div>
+            </div>
+
+            <div class="qr-caption">Scan the QR to send CCX to this address.</div>
+
+            <div class="address-panel">
+              <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+            </div>
+
+            <div class="controls-row">
+              <button class="btn">
+                <svg class="icon-clipboard btn-icon" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Copy Address
+              </button>
+              <button class="btn">
+                <svg class="icon-download btn-icon" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download PNG
+              </button>
+            </div>
+
+            <div class="toggle-row">
+              <div class="switch"></div>
+              <span class="toggle-label">QR encode for V1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Light -->
+      <div class="surface-wrapper">
+        <div class="surface-label">Light Surface</div>
+        <div class="surface theme-light">
+          <div class="card variant-a">
+            <div class="card-title">Your Wallet Address</div>
+            <div class="card-subtitle">Share this address or QR to receive funds</div>
+
+            <div class="qr-panel">
+              <div class="qr-placeholder">
+                <div class="qr-grid" id="qr-grid-a-light"></div>
+                <div class="qr-coin-mark">C</div>
+              </div>
+            </div>
+
+            <div class="qr-caption">Scan the QR to send CCX to this address.</div>
+
+            <div class="address-panel">
+              <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+            </div>
+
+            <div class="controls-row">
+              <button class="btn">
+                <svg class="icon-clipboard btn-icon" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Copy Address
+              </button>
+              <button class="btn">
+                <svg class="icon-download btn-icon" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download PNG
+              </button>
+            </div>
+
+            <div class="toggle-row">
+              <div class="switch"></div>
+              <span class="toggle-label">QR encode for V1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant B: Aligned two-column -->
+  <div class="variant-section">
+    <div class="variant-label">Variant B — Aligned two-column</div>
+    <div class="surfaces-container">
+      <!-- Dark -->
+      <div class="surface-wrapper">
+        <div class="surface-label">Dark Surface</div>
+        <div class="surface theme-dark">
+          <div class="card variant-b">
+            <div class="left-col">
+              <div class="card-title">Your Wallet Address</div>
+              <div class="card-subtitle">Share this address or QR to receive funds</div>
+
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+
+              <div class="btn-row">
+                <button class="btn">
+                  <svg class="icon-clipboard btn-icon" viewBox="0 0 24 24">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  Copy Address
+                </button>
+              </div>
+
+              <div class="toggle-row">
+                <div class="switch"></div>
+                <span class="toggle-label">QR encode for V1</span>
+              </div>
+            </div>
+
+            <div class="right-col">
+              <div class="qr-panel">
+                <div class="qr-placeholder">
+                  <div class="qr-grid" id="qr-grid-b-dark"></div>
+                  <div class="qr-coin-mark">C</div>
+                </div>
+              </div>
+
+              <div class="logo-picker">
+                <div class="logo-swatch selected">
+                  <div class="logo-icon orange"></div>
+                </div>
+                <div class="logo-swatch">
+                  <div class="logo-icon steel"></div>
+                </div>
+                <div class="logo-swatch">
+                  <div class="logo-icon coin"></div>
+                </div>
+              </div>
+
+              <button class="btn download-btn">
+                <svg class="icon-download btn-icon" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download PNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Light -->
+      <div class="surface-wrapper">
+        <div class="surface-label">Light Surface</div>
+        <div class="surface theme-light">
+          <div class="card variant-b">
+            <div class="left-col">
+              <div class="card-title">Your Wallet Address</div>
+              <div class="card-subtitle">Share this address or QR to receive funds</div>
+
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+
+              <div class="btn-row">
+                <button class="btn">
+                  <svg class="icon-clipboard btn-icon" viewBox="0 0 24 24">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  Copy Address
+                </button>
+              </div>
+
+              <div class="toggle-row">
+                <div class="switch"></div>
+                <span class="toggle-label">QR encode for V1</span>
+              </div>
+            </div>
+
+            <div class="right-col">
+              <div class="qr-panel">
+                <div class="qr-placeholder">
+                  <div class="qr-grid" id="qr-grid-b-light"></div>
+                  <div class="qr-coin-mark">C</div>
+                </div>
+              </div>
+
+              <div class="logo-picker">
+                <div class="logo-swatch selected">
+                  <div class="logo-icon orange"></div>
+                </div>
+                <div class="logo-swatch">
+                  <div class="logo-icon steel"></div>
+                </div>
+                <div class="logo-swatch">
+                  <div class="logo-icon coin"></div>
+                </div>
+              </div>
+
+              <button class="btn download-btn">
+                <svg class="icon-download btn-icon" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download PNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant C: Compact single-column -->
+  <div class="variant-section">
+    <div class="variant-label">Variant C — Compact single-column</div>
+    <div class="surfaces-container">
+      <!-- Dark -->
+      <div class="surface-wrapper">
+        <div class="surface-label">Dark Surface</div>
+        <div class="surface theme-dark">
+          <div class="card variant-c">
+            <div class="card-title">Your Wallet Address</div>
+            <div class="card-subtitle">Share this address or QR to receive funds</div>
+
+            <div class="address-section">
+              <div class="address-header">
+                <span class="address-label">Address</span>
+                <button class="btn">
+                  <svg class="icon-clipboard btn-icon" viewBox="0 0 24 24">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  Copy
+                </button>
+              </div>
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+            </div>
+
+            <div class="qr-section">
+              <div class="qr-left">
+                <div class="qr-panel">
+                  <div class="qr-placeholder">
+                    <div class="qr-grid" id="qr-grid-c-dark"></div>
+                    <div class="qr-coin-mark">C</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="qr-right">
+                <div class="toggle-row">
+                  <div class="switch"></div>
+                  <span class="toggle-label">QR encode for V1</span>
+                </div>
+
+                <div class="logo-picker">
+                  <div class="logo-swatch selected">
+                    <div class="logo-icon orange"></div>
+                  </div>
+                  <div class="logo-swatch">
+                    <div class="logo-icon steel"></div>
+                  </div>
+                  <div class="logo-swatch">
+                    <div class="logo-icon coin"></div>
+                  </div>
+                </div>
+
+                <div class="actions-row">
+                  <button class="btn btn-primary">
+                    <svg class="icon-download btn-icon" viewBox="0 0 24 24">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download PNG
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Light -->
+      <div class="surface-wrapper">
+        <div class="surface-label">Light Surface</div>
+        <div class="surface theme-light">
+          <div class="card variant-c">
+            <div class="card-title">Your Wallet Address</div>
+            <div class="card-subtitle">Share this address or QR to receive funds</div>
+
+            <div class="address-section">
+              <div class="address-header">
+                <span class="address-label">Address</span>
+                <button class="btn">
+                  <svg class="icon-clipboard btn-icon" viewBox="0 0 24 24">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  Copy
+                </button>
+              </div>
+              <div class="address-panel">
+                <div class="address-text">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+              </div>
+            </div>
+
+            <div class="qr-section">
+              <div class="qr-left">
+                <div class="qr-panel">
+                  <div class="qr-placeholder">
+                    <div class="qr-grid" id="qr-grid-c-light"></div>
+                    <div class="qr-coin-mark">C</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="qr-right">
+                <div class="toggle-row">
+                  <div class="switch"></div>
+                  <span class="toggle-label">QR encode for V1</span>
+                </div>
+
+                <div class="logo-picker">
+                  <div class="logo-swatch selected">
+                    <div class="logo-icon orange"></div>
+                  </div>
+                  <div class="logo-swatch">
+                    <div class="logo-icon steel"></div>
+                  </div>
+                  <div class="logo-swatch">
+                    <div class="logo-icon coin"></div>
+                  </div>
+                </div>
+
+                <div class="actions-row">
+                  <button class="btn btn-primary">
+                    <svg class="icon-download btn-icon" viewBox="0 0 24 24">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download PNG
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Generate QR grid pattern (21x21)
+    function generateQRGrid(containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const pattern = [
+        // Corner finder patterns (7x7 with border)
+        [1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,1],
+        [1,0,1,1,1,0,1],
+        [1,0,1,1,1,0,1],
+        [1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1],
+      ];
+
+      for (let row = 0; row < 21; row++) {
+        for (let col = 0; col < 21; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'qr-cell';
+
+          // Check if we're in a corner pattern
+          const inTopLeft = row < 7 && col < 7;
+          const inTopRight = row < 7 && col >= 14;
+          const inBottomLeft = row >= 14 && col < 7;
+
+          if (inTopLeft) {
+            cell.classList.toggle('white', pattern[row][col] === 0);
+          } else if (inTopRight) {
+            cell.classList.toggle('white', pattern[row][col - 14] === 0);
+          } else if (inBottomLeft) {
+            cell.classList.toggle('white', pattern[row - 14][col] === 0);
+          } else {
+            // Random data pattern with some structure
+            const isWhite = (row * col + row + col) % 3 !== 0;
+            cell.classList.toggle('white', isWhite);
+          }
+
+          // Clear center area for coin mark (3x3)
+          if (row >= 9 && row <= 11 && col >= 9 && col <= 11) {
+            cell.classList.add('white');
+          }
+
+          container.appendChild(cell);
+        }
+      }
+    }
+
+    // Generate grids for all QR placeholders
+    const gridIds = [
+      'qr-grid-a-dark', 'qr-grid-a-light',
+      'qr-grid-b-dark', 'qr-grid-b-light',
+      'qr-grid-c-dark', 'qr-grid-c-light'
+    ];
+
+    gridIds.forEach(id => generateQRGrid(id));
+  </script>
+
+</body>
+</html>

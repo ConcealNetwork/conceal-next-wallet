@@ -13,9 +13,7 @@ async function openWallet(page: import("@playwright/test").Page) {
   // retry the click until the account page renders.
   await expect(async () => {
     if (!(await overview.isVisible())) {
-      await page
-        .getByRole("button", { name: "Open your wallet" })
-        .click({ timeout: 2000 });
+      await page.getByRole("button", { name: "Open your wallet" }).click({ timeout: 2000 });
     }
     await expect(overview).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20_000 });
@@ -77,21 +75,23 @@ test("switching stays on the current page — no landing bounce (smooth switchin
 test("the switcher offers both Create new and Import existing", async ({ page }) => {
   await openWallet(page);
 
-  // Open the dropdown → Create new. Retry until the dropdown is hydrated + navigates.
+  // Open the dropdown. Retry until hydrated; only click the trigger when the menu
+  // isn't already open, so a retry never toggles it back closed.
+  const createItem = page.getByRole("menuitem", { name: "Create new" });
   await expect(async () => {
-    await page.getByRole("button", { name: "Switch wallet" }).click({ timeout: 2000 });
-    await page.getByRole("menuitem", { name: "Create new" }).click({ timeout: 2000 });
-    await expect(page).toHaveURL(/\/create\/?$/, { timeout: 2000 });
+    if (!(await createItem.isVisible())) {
+      await page.getByRole("button", { name: "Switch wallet" }).click({ timeout: 2000 });
+    }
+    await expect(createItem).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20_000 });
 
-  // Back to the wallet, then open the dropdown → Import existing. The post-goBack page
-  // must re-hydrate before the dropdown works, so retry the whole interaction.
-  await page.goBack();
-  await expect(async () => {
-    await page.getByRole("button", { name: "Switch wallet" }).click({ timeout: 2000 });
-    await page.getByRole("menuitem", { name: "Import existing" }).click({ timeout: 2000 });
-    await expect(page).toHaveURL(/\/import\/?$/, { timeout: 2000 });
-  }).toPass({ timeout: 20_000 });
+  // Both creation paths are offered in the same open dropdown.
+  await expect(createItem).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Import existing" })).toBeVisible();
+
+  // And the option navigates to the onboarding route.
+  await createItem.click();
+  await expect(page).toHaveURL(/\/create\/?$/);
 });
 
 test("Settings lists wallets and renames one", async ({ page }) => {

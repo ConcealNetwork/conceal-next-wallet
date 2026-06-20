@@ -172,7 +172,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
           })}
         </p>
 
-        <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-5">
+        <div className="mt-5 grid grid-cols-1 gap-x-5 gap-y-4 border-t border-border pt-5 min-[400px]:grid-cols-2 xl:grid-cols-5">
           {segments.map((segment) => (
             <div key={segment.label} className="min-w-0">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -217,7 +217,7 @@ export function BalanceHeroSkeleton() {
           </div>
         </div>
         <Skeleton className="mt-6 h-3.5 w-full rounded-full" />
-        <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-5 xl:grid-cols-5">
+        <div className="mt-5 grid grid-cols-1 gap-x-5 gap-y-4 border-t border-border pt-5 min-[400px]:grid-cols-2 xl:grid-cols-5">
           {BALANCE_SEGMENT_LABELS.map((segmentLabel) => (
             <div key={segmentLabel} className="space-y-2">
               <Skeleton className="h-4 w-24" />
@@ -232,9 +232,12 @@ export function BalanceHeroSkeleton() {
 }
 
 function BalanceSparkline({ values, className }: { values: number[]; className?: string }) {
+  // No flat-line placeholder: with <2 points there's no real trend to draw, so
+  // render nothing (matches the market/rail sparklines).
+  if (values.length < 2) return null;
   const width = 240;
   const height = 50;
-  const trend = values.length > 1 ? values : [0, 0];
+  const trend = values;
   const min = Math.min(...trend);
   const max = Math.max(...trend);
   const range = max - min || 1;

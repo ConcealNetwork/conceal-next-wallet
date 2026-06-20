@@ -52,7 +52,10 @@ describe("pending-store (#96)", () => {
 
   it("projects the balance-hold total and the locked key-image set", () => {
     let raw = addPendingRecord(baseRaw(), record());
-    raw = addPendingRecord(raw, record({ hash: "hash-2", amountAtomic: 1000, spentKeyImages: ["ki-c"] }));
+    raw = addPendingRecord(
+      raw,
+      record({ hash: "hash-2", amountAtomic: 1000, spentKeyImages: ["ki-c"] }),
+    );
     expect(pendingOutAtomic(raw)).toBe(511_000 + 1000);
     expect(pendingSpentKeyImages(raw)).toEqual(new Set(["ki-a", "ki-b", "ki-c"]));
   });

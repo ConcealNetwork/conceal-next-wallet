@@ -7,12 +7,15 @@ import { useQuery } from "@/lib/hooks/query-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
+import { MarketRail } from "@/components/layout/rails/market-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { queryKeys, useMarketData, useWalletInfo } from "@/lib/hooks";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import { marketHistoryQueryOptions } from "@/lib/services/query-options";
 import { services } from "@/lib/services";
 import type { MarketData, MarketHistoryPoint, MarketTimeframe, WalletInfo } from "@/lib/types";
+import { CHART_DRAW_MS, CHART_EASING } from "@/lib/ui/animation";
 import { ccxToNumber, cn, formatCcx, formatUsd } from "@/lib/utils";
 
 const Area = dynamic(() => import("recharts").then((mod) => mod.Area), { ssr: false });
@@ -42,6 +45,7 @@ export default function MarketPage() {
     ...marketHistoryQueryOptions,
   });
   const chartData = historyQuery.data ?? data?.historyByTimeframe[activeRange] ?? [];
+  usePageRightRail(<MarketRail />);
 
   return (
     <>
@@ -98,6 +102,10 @@ export default function MarketPage() {
         <h2 className="text-lg font-semibold text-foreground">Market Metrics</h2>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">CCX market snapshot</p>
         {data ? <MarketStatsGrid market={data} /> : <StatsSkeleton />}
+      </div>
+
+      <div className="mt-8 min-[1200px]:hidden">
+        <MarketRail embedded />
       </div>
     </>
   );
@@ -266,8 +274,8 @@ function PriceAreaChart({ data, range }: { data: MarketHistoryPoint[]; range: Ma
             strokeWidth={3}
             fill="url(#marketPriceFill)"
             isAnimationActive={!prefersReducedMotion}
-            animationDuration={800}
-            animationEasing="ease-out"
+            animationDuration={CHART_DRAW_MS}
+            animationEasing={CHART_EASING}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -281,7 +289,7 @@ const tileDelay = (index: number) => ({ animationDelay: `${180 + index * 40}ms` 
 
 function MarketStatsGrid({ market }: { market: MarketData }) {
   return (
-    <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid auto-rows-fr gap-4 @sm:grid-cols-2 @4xl:grid-cols-3">
       <ChangeMetric market={market} index={0} />
       <RangeMetric market={market} index={1} />
       <ValueMetric
@@ -413,7 +421,14 @@ function RangeMetric({ market, index }: { market: MarketData; index: number }) {
         <p className="mt-1 text-sm text-muted-foreground">Current price within 24h range</p>
       </div>
       <div>
-        <div className="relative h-1.5 rounded-full bg-secondary">
+        <div
+          role="progressbar"
+          aria-label="Price position within the 24h range"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(pct)}
+          className="relative h-1.5 rounded-full bg-secondary"
+        >
           <div className="h-full rounded-full bg-primary/40" style={{ width: `${pct}%` }} />
           <span
             className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-primary"
@@ -440,7 +455,14 @@ function AthMetric({ market, index }: { market: MarketData; index: number }) {
       <p className="text-sm text-muted-foreground">All-Time High</p>
       <p className="font-mono text-2xl font-bold tracking-tight text-primary">{display}</p>
       <div>
-        <div className="h-1.5 rounded-full bg-secondary">
+        <div
+          role="progressbar"
+          aria-label="Current price as a percentage of the all-time high"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(pctOfAth)}
+          className="h-1.5 rounded-full bg-secondary"
+        >
           <div className="h-full rounded-full bg-primary" style={{ width: `${pctOfAth}%` }} />
         </div>
         <p className="mt-2 text-sm text-wallet-outgoing">{fromAth.toFixed(1)}% from ATH</p>
@@ -490,7 +512,7 @@ const MARKET_STAT_SKELETON_KEYS = [
 
 function StatsSkeleton() {
   return (
-    <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid auto-rows-fr gap-4 @sm:grid-cols-2 @4xl:grid-cols-3">
       {MARKET_STAT_SKELETON_KEYS.map((key) => (
         <Skeleton key={key} className="min-h-[132px] rounded-xl" />
       ))}

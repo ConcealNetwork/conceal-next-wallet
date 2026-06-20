@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Receive — Your Wallet Address (Opus variants)</title>
+<style>
+  /* ----------------------------------------------------------------
+     Conceal design tokens (verbatim from BRIEF.md)
+  ---------------------------------------------------------------- */
+  .theme-dark{
+    --background:#171513; --card:#241f1c; --card-foreground:#ffffff;
+    --primary:#FFA500; --primary-foreground:#000000;
+    --secondary:#2b2521; --secondary-foreground:#ffffff;
+    --muted-foreground:#a9a097; --border:#39332d; --ring:#FFA500;
+  }
+  .theme-light{
+    --background:#faf7f2; --card:#ffffff; --card-foreground:#221d18;
+    --primary:#FFA500; --primary-foreground:#000000;
+    --secondary:#f0ebe2; --secondary-foreground:#2e2820;
+    --muted-foreground:#6b6258; --border:#e6ddd0; --ring:#FFA500;
+  }
+
+  /* ----------------------------------------------------------------
+     Page chrome (study harness — NOT part of the card design)
+  ---------------------------------------------------------------- */
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    background:#0d0c0b;
+    color:#cfc8bf;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:32px 24px 64px;
+  }
+  .page-title{
+    max-width:1180px; margin:0 auto 4px; font-size:13px; letter-spacing:.14em;
+    text-transform:uppercase; color:#8a8276; font-weight:600;
+  }
+  .page-sub{
+    max-width:1180px; margin:0 auto 36px; font-size:13px; color:#6f685e;
+  }
+  .variant{ max-width:1180px; margin:0 auto 52px; }
+  .variant__label{
+    display:flex; align-items:baseline; gap:12px; margin-bottom:6px;
+  }
+  .variant__name{ font-size:15px; font-weight:650; color:#efe9df; }
+  .variant__desc{ font-size:13px; color:#7c756a; }
+  .pair{
+    display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:14px;
+  }
+  @media (max-width:960px){ .pair{ grid-template-columns:1fr; } }
+  /* the "surface" = the page background a card would sit on */
+  .surface{
+    background:var(--background);
+    border-radius:18px;
+    padding:28px;
+    border:1px solid rgba(255,255,255,.04);
+  }
+  .surface__tag{
+    font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--muted-foreground); margin:0 0 16px; font-weight:600;
+  }
+
+  /* ----------------------------------------------------------------
+     THE CARD — shadcn base-nova warm aesthetic
+  ---------------------------------------------------------------- */
+  .card{
+    background:var(--card);
+    color:var(--card-foreground);
+    border:1px solid var(--border);
+    border-radius:15px;
+    padding:24px;
+  }
+  .card__head{ margin-bottom:20px; }
+  .card__title{ margin:0; font-size:16px; font-weight:650; letter-spacing:-.01em; }
+  .card__desc{ margin:4px 0 0; font-size:13.5px; color:var(--muted-foreground); }
+
+  .addr{
+    font-family:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size:13px; line-height:1.7; word-break:break-all;
+    background:var(--secondary); color:var(--card-foreground);
+    border-radius:12px; padding:16px;
+  }
+  .label-mini{
+    font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--muted-foreground); font-weight:600; margin:0 0 8px;
+  }
+  .muted{ color:var(--muted-foreground); font-size:13.5px; margin:0; }
+
+  /* buttons (outline + ghost, base-nova) */
+  .btn{
+    display:inline-flex; gap:8px;
+    align-items:center; justify-content:center;
+    font:inherit; font-size:13.5px; font-weight:550;
+    height:38px; padding:0 16px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--border); background:transparent;
+    color:var(--card-foreground);
+    transition:border-color .15s, background .15s;
+  }
+  .btn:hover{ border-color:var(--ring); }
+  .btn svg{ width:16px; height:16px; flex:none; }
+  .btn--block{ width:100%; }
+  .btn--primary{
+    background:var(--primary); color:var(--primary-foreground); border-color:var(--primary);
+  }
+  .btn--primary:hover{ filter:brightness(1.06); border-color:var(--primary); }
+
+  /* switch (shadcn Switch) */
+  .switch{ display:inline-flex; align-items:center; gap:9px; }
+  .switch__track{
+    width:34px; height:19px; border-radius:999px;
+    background:var(--secondary); border:1px solid var(--border);
+    position:relative; flex:none;
+  }
+  .switch__track.on{ background:var(--primary); border-color:var(--primary); }
+  .switch__thumb{
+    position:absolute; top:1px; left:1px; width:15px; height:15px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.3);
+    transition:left .15s;
+  }
+  .switch__track.on .switch__thumb{ left:16px; }
+  .switch__label{ font-size:13.5px; color:var(--card-foreground); }
+
+  /* QR panel — always white, dark modules */
+  .qr{
+    background:#fff; border-radius:14px; padding:14px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .qr svg{ display:block; }
+
+  /* logo picker swatches */
+  .swatches{ display:flex; gap:8px; }
+  .swatch{
+    width:40px; height:40px; border-radius:11px;
+    border:1px solid var(--border); background:var(--secondary);
+    display:grid; place-items:center; cursor:pointer; padding:0;
+    transition:border-color .15s;
+  }
+  .swatch:hover{ border-color:var(--ring); }
+  .swatch.sel{ border-color:var(--primary); box-shadow:0 0 0 1px var(--primary); }
+  .swatch svg{ width:22px; height:22px; }
+
+  /* ---- Variant A: QR-led hero ---- */
+  .vA{ }
+  .vA__hero{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:14px; }
+  .vA__caption{ max-width:300px; }
+  .vA__picker{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .vA__rule{ height:1px; background:var(--border); margin:22px 0; border:0; }
+  .vA__foot{ display:flex; flex-direction:column; gap:14px; }
+  .vA__actions{ display:flex; gap:10px; flex-wrap:wrap; }
+  .vA__actions .btn{ flex:1 1 0; min-width:140px; }
+  .vA__v1{ display:flex; justify-content:center; }
+
+  /* ---- Variant B: aligned two-column ---- */
+  .vB__grid{ display:grid; grid-template-columns:1fr auto; gap:24px; align-items:stretch; }
+  @media (max-width:520px){ .vB__grid{ grid-template-columns:1fr; } }
+  .vB__left{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .vB__left .addr{ flex:1; }            /* address grows to match QR column height */
+  .vB__row{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .vB__right{
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+    justify-content:space-between;
+  }
+  .vB__rcap{ text-align:center; }
+
+  /* ---- Variant C: compact single column ---- */
+  .vC__addr-wrap{ position:relative; }
+  .vC__strip{
+    margin-top:14px;
+    display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:center;
+    background:var(--secondary); border:1px solid var(--border);
+    border-radius:12px; padding:14px;
+  }
+  @media (max-width:520px){ .vC__strip{ grid-template-columns:1fr; justify-items:center; text-align:center; } }
+  .vC__strip .qr{ padding:10px; }
+  .vC__sright{ display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .vC__sactions{ display:flex; gap:10px; flex-wrap:wrap; }
+  .vC__pickrow{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:space-between; }
+</style>
+</head>
+<body>
+
+  <div class="page-title">Receive · Your Wallet Address</div>
+  <div class="page-sub">Three structural directions. Each rendered on the dark surface (left) and light surface (right). Placeholder QR — layout study only.</div>
+
+  <!-- ================= VARIANT A ================= -->
+  <section class="variant">
+    <div class="variant__label">
+      <span class="variant__name">Variant A — QR-led hero</span>
+      <span class="variant__desc">QR is the centered focal point; address + actions form a balanced footer. Vertical, symmetric, zero side gap.</span>
+    </div>
+    <div class="pair">
+
+      <!-- dark -->
+      <div class="theme-dark surface">
+        <p class="surface__tag">Dark surface</p>
+        <article class="card vA">
+          <header class="card__head">
+            <h2 class="card__title">Your Wallet Address</h2>
+            <p class="card__desc">Share this address or QR to receive funds</p>
+          </header>
+
+          <div class="vA__hero">
+            <div class="qr" id="qrA-dark"></div>
+            <p class="muted vA__caption">Scan the QR to send CCX to this address.</p>
+            <div class="vA__picker">
+              <p class="label-mini" style="margin:0">QR logo</p>
+              <div class="swatches" id="swA-dark"></div>
+            </div>
+          </div>
+
+          <hr class="vA__rule" />
+
+          <div class="vA__foot">
+            <p class="addr">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</p>
+            <div class="vA__actions">
+              <button class="btn btn--primary" id="copyA-dark"></button>
+              <button class="btn" id="dlA-dark"></button>
+            </div>
+            <div class="vA__v1">
+              <span class="switch"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">QR encode for V1</span></span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- light -->
+      <div class="theme-light surface">
+        <p class="surface__tag">Light surface</p>
+        <article class="card vA">
+          <header class="card__head">
+            <h2 class="card__title">Your Wallet Address</h2>
+            <p class="card__desc">Share this address or QR to receive funds</p>
+          </header>
+
+          <div class="vA__hero">
+            <div class="qr" id="qrA-light"></div>
+            <p class="muted vA__caption">Scan the QR to send CCX to this address.</p>
+            <div class="vA__picker">
+              <p class="label-mini" style="margin:0">QR logo</p>
+              <div class="swatches" id="swA-light"></div>
+            </div>
+          </div>
+
+          <hr class="vA__rule" />
+
+          <div class="vA__foot">
+            <p class="addr">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</p>
+            <div class="vA__actions">
+              <button class="btn btn--primary" id="copyA-light"></button>
+              <button class="btn" id="dlA-light"></button>
+            </div>
+            <div class="vA__v1">
+              <span class="switch"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">QR encode for V1</span></span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= VARIANT B ================= -->
+  <section class="variant">
+    <div class="variant__label">
+      <span class="variant__name">Variant B — Aligned two-column</span>
+      <span class="variant__desc">Columns equal-height by design: address grows to fill, all controls sit in the left column, QR + picker on the right. No dead space.</span>
+    </div>
+    <div class="pair">
+
+      <!-- dark -->
+      <div class="theme-dark surface">
+        <p class="surface__tag">Dark surface</p>
+        <article class="card">
+          <header class="card__head">
+            <h2 class="card__title">Your Wallet Address</h2>
+            <p class="card__desc">Share this address or QR to receive funds</p>
+          </header>
+          <div class="vB__grid">
+            <div class="vB__left">
+              <p class="addr">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</p>
+              <button class="btn btn--primary btn--block" id="copyB-dark"></button>
+              <div class="vB__row">
+                <span class="switch"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">QR encode for V1</span></span>
+                <button class="btn" id="dlB-dark"></button>
+              </div>
+            </div>
+            <div class="vB__right">
+              <div class="qr" id="qrB-dark"></div>
+              <div class="swatches" id="swB-dark"></div>
+              <p class="muted vB__rcap" style="font-size:12.5px">Scan the QR to send<br />CCX to this address.</p>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- light -->
+      <div class="theme-light surface">
+        <p class="surface__tag">Light surface</p>
+        <article class="card">
+          <header class="card__head">
+            <h2 class="card__title">Your Wallet Address</h2>
+            <p class="card__desc">Share this address or QR to receive funds</p>
+          </header>
+          <div class="vB__grid">
+            <div class="vB__left">
+              <p class="addr">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</p>
+              <button class="btn btn--primary btn--block" id="copyB-light"></button>
+              <div class="vB__row">
+                <span class="switch"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">QR encode for V1</span></span>
+                <button class="btn" id="dlB-light"></button>
+              </div>
+            </div>
+            <div class="vB__right">
+              <div class="qr" id="qrB-light"></div>
+              <div class="swatches" id="swB-light"></div>
+              <p class="muted vB__rcap" style="font-size:12.5px">Scan the QR to send<br />CCX to this address.</p>
+            </div>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= VARIANT C ================= -->
+  <section class="variant">
+    <div class="variant__label">
+      <span class="variant__name">Variant C — Compact single-column</span>
+      <span class="variant__desc">Full-width address on top, then one tidy QR + actions strip. Dense, minimal, scales cleanly to ~360px.</span>
+    </div>
+    <div class="pair">
+
+      <!-- dark -->
+      <div class="theme-dark surface">
+        <p class="surface__tag">Dark surface</p>
+        <article class="card">
+          <header class="card__head">
+            <h2 class="card__title">Your Wallet Address</h2>
+            <p class="card__desc">Share this address or QR to receive funds</p>
+          </header>
+          <div class="vC__addr-wrap">
+            <p class="label-mini">Address</p>
+            <p class="addr">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</p>
+          </div>
+          <div class="vC__strip">
+            <div class="qr" id="qrC-dark"></div>
+            <div class="vC__sright">
+              <p class="muted" style="font-size:13px">Scan the QR to send CCX to this address.</p>
+              <div class="vC__pickrow">
+                <div class="swatches" id="swC-dark"></div>
+                <span class="switch"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">V1</span></span>
+              </div>
+              <div class="vC__sactions">
+                <button class="btn btn--primary" id="copyC-dark"></button>
+                <button class="btn" id="dlC-dark"></button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- light -->
+      <div class="theme-light surface">
+        <p class="surface__tag">Light surface</p>
+        <article class="card">
+          <header class="card__head">
+            <h2 class="card__title">Your Wallet Address</h2>
+            <p class="card__desc">Share this address or QR to receive funds</p>
+          </header>
+          <div class="vC__addr-wrap">
+            <p class="label-mini">Address</p>
+            <p class="addr">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</p>
+          </div>
+          <div class="vC__strip">
+            <div class="qr" id="qrC-light"></div>
+            <div class="vC__sright">
+              <p class="muted" style="font-size:13px">Scan the QR to send CCX to this address.</p>
+              <div class="vC__pickrow">
+                <div class="swatches" id="swC-light"></div>
+                <span class="switch"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">V1</span></span>
+              </div>
+              <div class="vC__sactions">
+                <button class="btn btn--primary" id="copyC-light"></button>
+                <button class="btn" id="dlC-light"></button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+<script>
+/* ------------------------------------------------------------------
+   Tiny build helpers. No external deps — emits inline SVG so the
+   file renders fully offline inside an iframe. Pure DOM construction;
+   nothing here is part of the shipped card (that's the markup above).
+------------------------------------------------------------------ */
+
+/* Orange coin mark — a simple "C"-style ring, Conceal-flavoured.
+   Used both inside the QR center and in the small logo swatches. */
+function coinMark(size, withRing){
+  var s = size;
+  return ''
+    + '<svg width="'+s+'" height="'+s+'" viewBox="0 0 48 48" aria-hidden="true">'
+    + (withRing ? '<circle cx="24" cy="24" r="22" fill="#FFA500"/>' : '<circle cx="24" cy="24" r="22" fill="#FFA500"/>')
+    + '<path d="M31.5 17.6a10 10 0 1 0 0 12.8" fill="none" stroke="#171513" stroke-width="4.4" stroke-linecap="round"/>'
+    + '</svg>';
+}
+
+/* Steel mark variant — same glyph, muted steel fill */
+function steelMark(size){
+  var s = size;
+  return ''
+    + '<svg width="'+s+'" height="'+s+'" viewBox="0 0 48 48" aria-hidden="true">'
+    + '<circle cx="24" cy="24" r="22" fill="#8a8f99"/>'
+    + '<path d="M31.5 17.6a10 10 0 1 0 0 12.8" fill="none" stroke="#1c1f24" stroke-width="4.4" stroke-linecap="round"/>'
+    + '</svg>';
+}
+
+/* Coin/full-logo variant — ring + inner glyph */
+function fullCoin(size){
+  var s = size;
+  return ''
+    + '<svg width="'+s+'" height="'+s+'" viewBox="0 0 48 48" aria-hidden="true">'
+    + '<circle cx="24" cy="24" r="22" fill="none" stroke="#FFA500" stroke-width="3"/>'
+    + '<path d="M31.5 17.6a10 10 0 1 0 0 12.8" fill="none" stroke="#FFA500" stroke-width="4.4" stroke-linecap="round"/>'
+    + '</svg>';
+}
+
+/* Deterministic placeholder "QR": 21x21 module grid + 3 finder
+   patterns + a knocked-out center holding the orange coin mark.
+   NOT a real QR — purely a layout placeholder, per the brief. */
+function placeholderQr(px){
+  var N = 21, q = px / N;
+  var rng = 0x9e3779b1;
+  function rand(){ rng ^= rng<<13; rng ^= rng>>>17; rng ^= rng<<5; return ((rng>>>0)%1000)/1000; }
+
+  function inFinder(r,c){
+    function box(r0,c0){ return r>=r0 && r<r0+7 && c>=c0 && c<c0+7; }
+    return box(0,0) || box(0,N-7) || box(N-7,0);
+  }
+  // center knockout (for the logo) ~ 7x7 modules
+  var lo = Math.floor((N-7)/2), hi = lo+7;
+  function inCenter(r,c){ return r>=lo && r<hi && c>=lo && c<hi; }
+
+  var rects = '';
+  for(var r=0;r<N;r++){
+    for(var c=0;c<N;c++){
+      if(inFinder(r,c) || inCenter(r,c)) continue;
+      if(rand() > 0.5){
+        rects += '<rect x="'+(c*q).toFixed(2)+'" y="'+(r*q).toFixed(2)+'" width="'+(q+0.4).toFixed(2)+'" height="'+(q+0.4).toFixed(2)+'" fill="#171513"/>';
+      }
+    }
+  }
+  // finder patterns (3 corners): outer 7x7 ring + inner 3x3 dot
+  function finder(r0,c0){
+    var x=c0*q, y=r0*q, w=7*q;
+    return ''
+      + '<rect x="'+x.toFixed(2)+'" y="'+y.toFixed(2)+'" width="'+w.toFixed(2)+'" height="'+w.toFixed(2)+'" rx="'+(q*1.1).toFixed(2)+'" fill="#171513"/>'
+      + '<rect x="'+(x+q).toFixed(2)+'" y="'+(y+q).toFixed(2)+'" width="'+(5*q).toFixed(2)+'" height="'+(5*q).toFixed(2)+'" rx="'+(q*0.7).toFixed(2)+'" fill="#fff"/>'
+      + '<rect x="'+(x+2*q).toFixed(2)+'" y="'+(y+2*q).toFixed(2)+'" width="'+(3*q).toFixed(2)+'" height="'+(3*q).toFixed(2)+'" rx="'+(q*0.5).toFixed(2)+'" fill="#171513"/>';
+  }
+
+  var logoPx = 7*q;
+  var logoXY = lo*q;
+  var svg = ''
+    + '<svg width="'+px+'" height="'+px+'" viewBox="0 0 '+px+' '+px+'" role="img" aria-label="Wallet address QR placeholder">'
+    + '<rect width="'+px+'" height="'+px+'" fill="#fff"/>'
+    + rects
+    + finder(0,0) + finder(0,N-7) + finder(N-7,0)
+    // white rounded plate behind the logo so modules don't clash
+    + '<rect x="'+(logoXY-1).toFixed(2)+'" y="'+(logoXY-1).toFixed(2)+'" width="'+(logoPx+2).toFixed(2)+'" height="'+(logoPx+2).toFixed(2)+'" rx="'+(q*1.4).toFixed(2)+'" fill="#fff"/>'
+    + '<g transform="translate('+(logoXY + (logoPx-logoPx*0.82)/2).toFixed(2)+','+(logoXY + (logoPx-logoPx*0.82)/2).toFixed(2)+')">'
+    +   coinMark(logoPx*0.82, true)
+    + '</g>'
+    + '</svg>';
+  return svg;
+}
+
+var ICON = {
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+};
+
+function setBtn(id, icon, text){
+  var el = document.getElementById(id);
+  if(el) el.innerHTML = icon + '<span>'+text+'</span>';
+}
+
+function buildSwatches(id, selectedIndex){
+  var host = document.getElementById(id);
+  if(!host) return;
+  var marks = [ coinMark(22, true), steelMark(22), fullCoin(22) ];
+  var labels = ['Orange mark','Steel mark','Coin'];
+  marks.forEach(function(m, i){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch' + (i===selectedIndex ? ' sel' : '');
+    b.setAttribute('aria-label', labels[i]);
+    b.setAttribute('aria-pressed', i===selectedIndex ? 'true' : 'false');
+    b.innerHTML = m;
+    host.appendChild(b);
+  });
+}
+
+/* ---- paint QR placeholders ---- */
+[['qrA-dark',176],['qrA-light',176],
+ ['qrB-dark',158],['qrB-light',158],
+ ['qrC-dark',132],['qrC-light',132]].forEach(function(pair){
+  var el = document.getElementById(pair[0]);
+  if(el) el.innerHTML = placeholderQr(pair[1]);
+});
+
+/* ---- swatches (orange selected by default, matching the real page) ---- */
+['swA-dark','swA-light','swB-dark','swB-light','swC-dark','swC-light']
+  .forEach(function(id){ buildSwatches(id, 0); });
+
+/* ---- buttons ---- */
+['copyA-dark','copyA-light','copyB-dark','copyB-light','copyC-dark','copyC-light']
+  .forEach(function(id){ setBtn(id, ICON.copy, 'Copy Address'); });
+['dlA-dark','dlA-light','dlB-dark','dlB-light','dlC-dark','dlC-light']
+  .forEach(function(id){ setBtn(id, ICON.download, 'Download PNG'); });
+</script>
+</body>
+</html>

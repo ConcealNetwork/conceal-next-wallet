@@ -26,9 +26,7 @@ export const DEFAULT_WALLET_ID = "default";
 
 /** Per-wallet storage key. The default wallet inherits the legacy global key. */
 function storageKeyFor(walletId: string): string {
-  return walletId === DEFAULT_WALLET_ID
-    ? LEGACY_STORAGE_KEY
-    : `${LEGACY_STORAGE_KEY}:${walletId}`;
+  return walletId === DEFAULT_WALLET_ID ? LEGACY_STORAGE_KEY : `${LEGACY_STORAGE_KEY}:${walletId}`;
 }
 
 export interface PasskeyCredential {

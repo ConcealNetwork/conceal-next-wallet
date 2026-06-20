@@ -19,14 +19,20 @@ test("shows on-device activity insights", async ({ page }) => {
 
   await expect(async () => {
     await page.getByRole("link", { name: "Insights", exact: true }).click({ timeout: 2000 });
-    await expect(page.getByRole("heading", { name: "Insights" })).toBeVisible({ timeout: 2000 });
+    // level:1 disambiguates the page h1 from the Insights rail's section heading.
+    await expect(page.getByRole("heading", { name: "Insights", level: 1 })).toBeVisible({
+      timeout: 2000,
+    });
   }).toPass({ timeout: 20_000 });
 
-  // Mock wallet has history → the summary renders.
-  await expect(page.getByText("Total received")).toBeVisible();
-  await expect(page.getByText("Interest earned")).toBeVisible();
-  await expect(page.getByText("Monthly flow")).toBeVisible();
-  await expect(page.getByText("Activity breakdown")).toBeVisible();
+  // Mock wallet has history → the summary renders. Scope to main + first: the
+  // Insights rail repeats some of these labels (and the <1200px embedded fallback
+  // is in the DOM), so an unscoped getByText is ambiguous under strict mode.
+  const main = page.getByRole("main");
+  await expect(main.getByText("Total received").first()).toBeVisible();
+  await expect(main.getByText("Interest earned").first()).toBeVisible();
+  await expect(main.getByText("Monthly flow").first()).toBeVisible();
+  await expect(main.getByText("Activity breakdown").first()).toBeVisible();
   // Privacy promise is stated.
-  await expect(page.getByText(/nothing here leaves your browser/i)).toBeVisible();
+  await expect(main.getByText(/nothing here leaves your browser/i).first()).toBeVisible();
 });

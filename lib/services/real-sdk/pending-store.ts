@@ -116,8 +116,7 @@ export function pendingWithdrawnDepositKeys(raw: RawWalletV1): Set<string> {
 export function pendingOutAtomic(raw: RawWalletV1): number {
   return readPendingRecords(raw)
     .filter(
-      (record) =>
-        record.type === undefined || record.type === "send" || record.type === "fusion",
+      (record) => record.type === undefined || record.type === "send" || record.type === "fusion",
     )
     .reduce((sum, record) => sum + Math.max(0, record.amountAtomic), 0);
 }

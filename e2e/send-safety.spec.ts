@@ -10,9 +10,15 @@ async function openSend(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Open your wallet" }).click();
   // Wait for the wallet shell to hydrate before a client-side nav click.
-  await expect(page.getByRole("heading", { name: "Account Overview" })).toBeVisible();
-  await page.getByRole("link", { name: "Send", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Send CCX" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Account Overview" })).toBeVisible({
+    timeout: 15_000,
+  });
+  // Retry the nav click until the (cold-compiled under webpack dev) Send route
+  // mounts — a single click can land before hydration / route compile finishes.
+  await expect(async () => {
+    await page.getByRole("link", { name: "Send", exact: true }).click({ timeout: 2000 });
+    await expect(page.getByRole("heading", { name: "Send CCX" })).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 test("warns about locked deposits when a send exceeds the available balance", async ({ page }) => {

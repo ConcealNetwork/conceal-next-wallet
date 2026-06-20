@@ -81,6 +81,34 @@ describe("CoinUri.encodeTx", () => {
   });
 });
 
+describe("CoinUri.encodeTx free-text safety", () => {
+  it("percent-encodes recipient_name / label so delimiters can't corrupt the query", () => {
+    const encoded = CoinUri.encodeTx(ADDRESS, null, "5", "A&B=C?D", "note ? & =");
+    // The raw '?', '&', '=' must NOT appear inside the encoded values.
+    expect(encoded).toContain("recipient_name=A%26B%3DC%3FD");
+    expect(encoded).toContain("label=note%20%3F%20%26%20%3D");
+  });
+
+  it("round-trips special characters through decodeTx", () => {
+    const name = "Café & Co ?x=1";
+    const desc = "rent — 50% now";
+    const encoded = CoinUri.encodeTx(ADDRESS, null, "5", name, desc);
+    expect(CoinUri.decodeTx(encoded)).toEqual({
+      address: ADDRESS,
+      amount: "5",
+      recipientName: name,
+      description: desc,
+    });
+  });
+
+  it("tolerates a malformed percent-sequence without throwing", () => {
+    expect(CoinUri.decodeTx(`${ADDRESS}?recipient_name=100%off`)).toEqual({
+      address: ADDRESS,
+      recipientName: "100%off",
+    });
+  });
+});
+
 describe("CoinUri wallet URIs", () => {
   it("encodeWalletKeys uses coinWalletPrefix (conceal.)", () => {
     expect(CoinUri.encodeWalletKeys(ADDRESS, SPEND_KEY, VIEW_KEY, 1000)).toBe(

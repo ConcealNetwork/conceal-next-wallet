@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receive Page Layout - Gemini</title>
+<style>
+  :root {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+  }
+  *, *:before, *:after { box-sizing: inherit; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    color: #fff;
+  }
+  
+  /* Conceal Tokens */
+  .theme-dark{
+    --background:#171513; --card:#241f1c; --card-foreground:#ffffff;
+    --primary:#FFA500; --primary-foreground:#000000;
+    --secondary:#2b2521; --secondary-foreground:#ffffff;
+    --muted-foreground:#a9a097; --border:#39332d; --ring:#FFA500;
+  }
+  .theme-light{
+    --background:#faf7f2; --card:#ffffff; --card-foreground:#221d18;
+    --primary:#FFA500; --primary-foreground:#000000;
+    --secondary:#f0ebe2; --secondary-foreground:#2e2820;
+    --muted-foreground:#6b6258; --border:#e6ddd0; --ring:#FFA500;
+  }
+
+  .variant-section {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 2px solid #333;
+  }
+  .variant-title {
+    padding: 16px 24px;
+    background: #111;
+    color: #fff;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .split-view {
+    display: flex;
+    width: 100%;
+  }
+  .split-pane {
+    flex: 1;
+    padding: 48px 24px;
+    background-color: var(--background);
+    color: var(--card-foreground);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  @media (max-width: 1000px) {
+    .split-view { flex-direction: column; }
+  }
+
+  /* Card Component */
+  .card {
+    width: 100%;
+    max-width: 672px;
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
+  .card-subtitle {
+    font-size: 14px;
+    color: var(--muted-foreground);
+    margin: 0;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    height: 36px;
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    background-color: var(--card);
+    color: var(--card-foreground);
+    transition: background-color 0.2s, border-color 0.2s;
+  }
+  .btn:hover {
+    background-color: var(--secondary);
+  }
+  .btn-primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+  }
+  .btn-primary:hover {
+    background-color: #e69500;
+    border-color: #e69500;
+  }
+  .btn-icon {
+    margin-right: 6px;
+  }
+
+  /* Address Panel */
+  .address-panel {
+    background-color: var(--secondary);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+    word-break: break-all;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 14px;
+    color: var(--secondary-foreground);
+    line-height: 1.5;
+  }
+
+  /* QR Styling */
+  .qr-container {
+    background-color: #ffffff;
+    border: 1px solid #e6ddd0;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .qr-placeholder {
+    display: block;
+  }
+  .qr-logo {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 3px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-logo::after {
+    content: "C";
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    font-family: sans-serif;
+  }
+
+  /* Forms */
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--card-foreground);
+  }
+  .form-input {
+    width: 100%;
+    background-color: var(--secondary);
+    border: 1px solid var(--border);
+    color: var(--secondary-foreground);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: 0 0 0 1px var(--ring);
+  }
+
+  /* Payment Link Box */
+  .payment-link-box {
+    display: flex;
+    align-items: center;
+    background-color: var(--secondary);
+    border-radius: 6px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border);
+    margin-top: 8px;
+  }
+  .payment-link-text {
+    flex: 1;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 12px;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .payment-link-copy {
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 12px;
+    transition: opacity 0.2s;
+  }
+  .payment-link-copy:hover {
+    opacity: 0.8;
+  }
+
+  /* Layout helpers */
+  .layout-row {
+    display: flex;
+    gap: 32px;
+  }
+  .layout-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  @media (max-width: 600px) {
+    .layout-row { flex-direction: column; gap: 24px; }
+    .action-list { width: 100% !important; }
+  }
+
+  /* Swatches */
+  .logo-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    margin-bottom: 12px;
+  }
+  .logo-picker-label {
+    font-size: 12px;
+    color: var(--muted-foreground);
+    margin-right: 4px;
+  }
+  .swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .swatch:hover {
+    transform: scale(1.1);
+  }
+  .swatch.active {
+    box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--ring);
+  }
+  .swatch-orange { background: #FFA500; border-color: #cc8400; }
+  .swatch-steel { background: #6c757d; border-color: #495057; }
+  .swatch-coin { background: #e0a800; border-color: #b38600; }
+  .swatch-ink { background: #111111; border-color: #000; }
+
+  /* Variant B Action List */
+  .action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    background-color: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--secondary-foreground);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+  }
+  .action-btn:hover {
+    border-color: var(--muted-foreground);
+    background-color: var(--card);
+  }
+  .action-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--muted-foreground);
+    flex-shrink: 0;
+  }
+  .action-content {
+    flex: 1;
+  }
+  .action-title {
+    font-size: 14px;
+    font-weight: 500;
+    display: block;
+    color: var(--card-foreground);
+  }
+  .action-subtitle {
+    font-size: 12px;
+    color: var(--muted-foreground);
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* Variant C overrides */
+  .payment-card-wrap {
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .payment-card-body {
+    padding: 40px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .payment-card-footer {
+    padding: 16px 24px;
+    background-color: var(--secondary);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  @media (max-width: 480px) {
+    .payment-card-footer {
+      flex-direction: column;
+      gap: 12px;
+    }
+    .payment-card-footer .btn {
+      width: 100%;
+    }
+    .payment-card-footer > div {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+    }
+    .payment-card-footer > div .btn {
+      flex: 1;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- VARIANT A -->
+  <div class="variant-section">
+    <h2 class="variant-title">Variant A — Interactive Merged Card</h2>
+    <div class="split-view">
+      <!-- Dark -->
+      <div class="split-pane theme-dark">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Your Wallet Address</h2>
+              <p class="card-subtitle">Share this address or QR to receive funds</p>
+            </div>
+            <button class="btn">
+              <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy
+            </button>
+          </div>
+          <div class="address-panel">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+          
+          <div class="layout-row">
+            <div style="display:flex; flex-direction:column; align-items:center; width: 176px; flex-shrink: 0;">
+              <div class="qr-container">
+                <svg class="qr-placeholder" viewBox="0 0 21 21" width="150" height="150">
+                  <path d="M0,0 h7 v7 h-7 z M2,2 h3 v3 h-3 z M14,0 h7 v7 h-7 z M16,2 h3 v3 h-3 z M0,14 h7 v7 h-7 z M2,16 h3 v3 h-3 z M8,0 h2 v1 h-2 z M11,0 h1 v2 h-1 z M13,1 h1 v1 h-1 z M8,2 h2 v1 h-2 z M12,2 h1 v1 h-1 z M8,4 h1 v2 h-1 z M10,4 h2 v1 h-1 z M12,5 h1 v1 h-1 z M8,7 h3 v1 h-3 z M12,7 h1 v1 h-1 z M0,8 h2 v1 h-2 z M3,8 h1 v2 h-1 z M5,8 h2 v1 h-2 z M8,8 h1 v1 h-1 z M10,8 h2 v1 h-2 z M13,8 h2 v1 h-2 z M16,8 h1 v1 h-1 z M18,8 h3 v1 h-3 z M1,10 h1 v1 h-1 z M4,10 h2 v1 h-2 z M7,10 h1 v1 h-1 z M9,10 h1 v1 h-1 z M12,10 h2 v1 h-2 z M15,10 h2 v1 h-2 z M18,10 h1 v2 h-1 z M20,10 h1 v1 h-1 z M0,12 h2 v1 h-2 z M3,12 h1 v1 h-1 z M5,12 h1 v2 h-1 z M7,12 h2 v1 h-2 z M10,12 h1 v1 h-1 z M12,12 h3 v1 h-3 z M16,12 h1 v1 h-1 z M19,12 h2 v1 h-2 z M8,14 h2 v1 h-2 z M11,14 h1 v1 h-1 z M13,14 h1 v2 h-1 z M15,14 h2 v1 h-2 z M18,14 h1 v1 h-1 z M20,14 h1 v1 h-1 z M8,16 h1 v1 h-1 z M10,16 h2 v1 h-2 z M15,16 h1 v2 h-1 z M17,16 h2 v1 h-2 z M20,16 h1 v1 h-1 z M8,18 h2 v1 h-2 z M11,18 h2 v1 h-2 z M14,18 h1 v1 h-1 z M16,18 h1 v1 h-1 z M19,18 h1 v2 h-1 z M8,20 h3 v1 h-3 z M12,20 h1 v1 h-1 z M14,20 h2 v1 h-2 z M17,20 h1 v1 h-1 z M20,20 h1 v1 h-1 z" fill="#000" />
+                </svg>
+                <div class="qr-logo"></div>
+              </div>
+              <div class="logo-picker">
+                <div class="swatch swatch-orange active"></div>
+                <div class="swatch swatch-steel"></div>
+                <div class="swatch swatch-coin"></div>
+                <div class="swatch swatch-ink"></div>
+              </div>
+              <button class="btn" style="width: 100%; margin-bottom: 12px; height: 32px;">Download PNG</button>
+              <p style="font-size: 12px; color: var(--muted-foreground); margin: 0; text-align: center; width: 100%;">Scan to send CCX.</p>
+            </div>
+            <div class="layout-col">
+              <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 16px 0; color: var(--card-foreground);">Request a Payment</h3>
+              <div class="layout-row" style="gap: 16px; margin-bottom: 16px;">
+                <div class="form-group" style="flex: 1; margin: 0;">
+                  <label class="form-label">Amount (CCX)</label>
+                  <input type="text" class="form-input" value="5.00">
+                </div>
+                <div class="form-group" style="flex: 1; margin: 0;">
+                  <label class="form-label">Payment ID</label>
+                  <input type="text" class="form-input" placeholder="Optional">
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 24px;">
+                <label class="form-label">Message</label>
+                <input type="text" class="form-input" placeholder="What's this for?">
+              </div>
+              
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size: 13px; font-weight: 500;">Payment Link</span>
+                <label style="font-size: 12px; color: var(--muted-foreground); display: flex; align-items:center; gap:6px; cursor: pointer;">
+                  <input type="checkbox" style="margin:0; cursor:pointer;"> Use legacy (v1)
+                </label>
+              </div>
+              <div class="payment-link-box">
+                <span class="payment-link-text">conceal://pay?address=ccx7QbH7J9P...&amount=5.00</span>
+                <span class="payment-link-copy">Copy</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Light -->
+      <div class="split-pane theme-light">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Your Wallet Address</h2>
+              <p class="card-subtitle">Share this address or QR to receive funds</p>
+            </div>
+            <button class="btn">
+              <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy
+            </button>
+          </div>
+          <div class="address-panel">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</div>
+          
+          <div class="layout-row">
+            <div style="display:flex; flex-direction:column; align-items:center; width: 176px; flex-shrink: 0;">
+              <div class="qr-container">
+                <svg class="qr-placeholder" viewBox="0 0 21 21" width="150" height="150">
+                  <path d="M0,0 h7 v7 h-7 z M2,2 h3 v3 h-3 z M14,0 h7 v7 h-7 z M16,2 h3 v3 h-3 z M0,14 h7 v7 h-7 z M2,16 h3 v3 h-3 z M8,0 h2 v1 h-2 z M11,0 h1 v2 h-1 z M13,1 h1 v1 h-1 z M8,2 h2 v1 h-2 z M12,2 h1 v1 h-1 z M8,4 h1 v2 h-1 z M10,4 h2 v1 h-1 z M12,5 h1 v1 h-1 z M8,7 h3 v1 h-3 z M12,7 h1 v1 h-1 z M0,8 h2 v1 h-2 z M3,8 h1 v2 h-1 z M5,8 h2 v1 h-2 z M8,8 h1 v1 h-1 z M10,8 h2 v1 h-2 z M13,8 h2 v1 h-2 z M16,8 h1 v1 h-1 z M18,8 h3 v1 h-3 z M1,10 h1 v1 h-1 z M4,10 h2 v1 h-2 z M7,10 h1 v1 h-1 z M9,10 h1 v1 h-1 z M12,10 h2 v1 h-2 z M15,10 h2 v1 h-2 z M18,10 h1 v2 h-1 z M20,10 h1 v1 h-1 z M0,12 h2 v1 h-2 z M3,12 h1 v1 h-1 z M5,12 h1 v2 h-1 z M7,12 h2 v1 h-2 z M10,12 h1 v1 h-1 z M12,12 h3 v1 h-3 z M16,12 h1 v1 h-1 z M19,12 h2 v1 h-2 z M8,14 h2 v1 h-2 z M11,14 h1 v1 h-1 z M13,14 h1 v2 h-1 z M15,14 h2 v1 h-2 z M18,14 h1 v1 h-1 z M20,14 h1 v1 h-1 z M8,16 h1 v1 h-1 z M10,16 h2 v1 h-2 z M15,16 h1 v2 h-1 z M17,16 h2 v1 h-2 z M20,16 h1 v1 h-1 z M8,18 h2 v1 h-2 z M11,18 h2 v1 h-2 z M14,18 h1 v1 h-1 z M16,18 h1 v1 h-1 z M19,18 h1 v2 h-1 z M8,20 h3 v1 h-3 z M12,20 h1 v1 h-1 z M14,20 h2 v1 h-2 z M17,20 h1 v1 h-1 z M20,20 h1 v1 h-1 z" fill="#000" />
+                </svg>
+                <div class="qr-logo"></div>
+              </div>
+              <div class="logo-picker">
+                <div class="swatch swatch-orange active"></div>
+                <div class="swatch swatch-steel"></div>
+                <div class="swatch swatch-coin"></div>
+                <div class="swatch swatch-ink"></div>
+              </div>
+              <button class="btn" style="width: 100%; margin-bottom: 12px; height: 32px;">Download PNG</button>
+              <p style="font-size: 12px; color: var(--muted-foreground); margin: 0; text-align: center; width: 100%;">Scan to send CCX.</p>
+            </div>
+            <div class="layout-col">
+              <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 16px 0; color: var(--card-foreground);">Request a Payment</h3>
+              <div class="layout-row" style="gap: 16px; margin-bottom: 16px;">
+                <div class="form-group" style="flex: 1; margin: 0;">
+                  <label class="form-label">Amount (CCX)</label>
+                  <input type="text" class="form-input" value="5.00">
+                </div>
+                <div class="form-group" style="flex: 1; margin: 0;">
+                  <label class="form-label">Payment ID</label>
+                  <input type="text" class="form-input" placeholder="Optional">
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 24px;">
+                <label class="form-label">Message</label>
+                <input type="text" class="form-input" placeholder="What's this for?">
+              </div>
+              
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size: 13px; font-weight: 500;">Payment Link</span>
+                <label style="font-size: 12px; color: var(--muted-foreground); display: flex; align-items:center; gap:6px; cursor: pointer;">
+                  <input type="checkbox" style="margin:0; cursor:pointer;"> Use legacy (v1)
+                </label>
+              </div>
+              <div class="payment-link-box">
+                <span class="payment-link-text">conceal://pay?address=ccx7QbH7J9P...&amount=5.00</span>
+                <span class="payment-link-copy">Copy</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIANT B -->
+  <div class="variant-section">
+    <h2 class="variant-title">Variant B — Receive-Action Right Column</h2>
+    <div class="split-view">
+      <!-- Dark -->
+      <div class="split-pane theme-dark">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Your Wallet Address</h2>
+              <p class="card-subtitle">Share this address or QR to receive funds</p>
+            </div>
+          </div>
+          <div class="address-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
+            <span style="flex:1; padding-right:16px;">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</span>
+            <button class="btn" style="height: 32px; padding: 0 12px; flex-shrink: 0;">Copy</button>
+          </div>
+          
+          <div class="layout-row">
+            <div style="flex: 1; display:flex; flex-direction:column; align-items:flex-start;">
+              <div class="qr-container">
+                <svg class="qr-placeholder" viewBox="0 0 21 21" width="150" height="150">
+                  <path d="M0,0 h7 v7 h-7 z M2,2 h3 v3 h-3 z M14,0 h7 v7 h-7 z M16,2 h3 v3 h-3 z M0,14 h7 v7 h-7 z M2,16 h3 v3 h-3 z M8,0 h2 v1 h-2 z M11,0 h1 v2 h-1 z M13,1 h1 v1 h-1 z M8,2 h2 v1 h-2 z M12,2 h1 v1 h-1 z M8,4 h1 v2 h-1 z M10,4 h2 v1 h-1 z M12,5 h1 v1 h-1 z M8,7 h3 v1 h-3 z M12,7 h1 v1 h-1 z M0,8 h2 v1 h-2 z M3,8 h1 v2 h-1 z M5,8 h2 v1 h-2 z M8,8 h1 v1 h-1 z M10,8 h2 v1 h-2 z M13,8 h2 v1 h-2 z M16,8 h1 v1 h-1 z M18,8 h3 v1 h-3 z M1,10 h1 v1 h-1 z M4,10 h2 v1 h-2 z M7,10 h1 v1 h-1 z M9,10 h1 v1 h-1 z M12,10 h2 v1 h-2 z M15,10 h2 v1 h-2 z M18,10 h1 v2 h-1 z M20,10 h1 v1 h-1 z M0,12 h2 v1 h-2 z M3,12 h1 v1 h-1 z M5,12 h1 v2 h-1 z M7,12 h2 v1 h-2 z M10,12 h1 v1 h-1 z M12,12 h3 v1 h-3 z M16,12 h1 v1 h-1 z M19,12 h2 v1 h-2 z M8,14 h2 v1 h-2 z M11,14 h1 v1 h-1 z M13,14 h1 v2 h-1 z M15,14 h2 v1 h-2 z M18,14 h1 v1 h-1 z M20,14 h1 v1 h-1 z M8,16 h1 v1 h-1 z M10,16 h2 v1 h-2 z M15,16 h1 v2 h-1 z M17,16 h2 v1 h-2 z M20,16 h1 v1 h-1 z M8,18 h2 v1 h-2 z M11,18 h2 v1 h-2 z M14,18 h1 v1 h-1 z M16,18 h1 v1 h-1 z M19,18 h1 v2 h-1 z M8,20 h3 v1 h-3 z M12,20 h1 v1 h-1 z M14,20 h2 v1 h-2 z M17,20 h1 v1 h-1 z M20,20 h1 v1 h-1 z" fill="#000" />
+                </svg>
+                <div class="qr-logo"></div>
+              </div>
+              <p style="font-size: 13px; color: var(--muted-foreground); margin: 16px 0 0 0; max-width: 176px; line-height: 1.5;">Scan this QR code from any Conceal wallet to receive funds.</p>
+            </div>
+            <div style="width: 280px; flex-shrink: 0;" class="action-list">
+              <button class="action-btn">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                <div class="action-content">
+                  <span class="action-title">Share Address</span>
+                  <span class="action-subtitle">Send via email or message</span>
+                </div>
+              </button>
+              <button class="action-btn">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                <div class="action-content">
+                  <span class="action-title">Present QR</span>
+                  <span class="action-subtitle">Show full-screen for scanning</span>
+                </div>
+              </button>
+              
+              <div style="height: 1px; background: var(--border); margin: 12px 0;"></div>
+              
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="logo-picker" style="margin:0;">
+                  <span class="logo-picker-label">Mark:</span>
+                  <div class="swatch swatch-orange active" style="width:16px;height:16px;"></div>
+                  <div class="swatch swatch-steel" style="width:16px;height:16px;"></div>
+                  <div class="swatch swatch-coin" style="width:16px;height:16px;"></div>
+                </div>
+                <button class="btn" style="height: 28px; padding: 0 12px; font-size: 12px;">Download PNG</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Light -->
+      <div class="split-pane theme-light">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Your Wallet Address</h2>
+              <p class="card-subtitle">Share this address or QR to receive funds</p>
+            </div>
+          </div>
+          <div class="address-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
+            <span style="flex:1; padding-right:16px;">ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m</span>
+            <button class="btn" style="height: 32px; padding: 0 12px; flex-shrink: 0;">Copy</button>
+          </div>
+          
+          <div class="layout-row">
+            <div style="flex: 1; display:flex; flex-direction:column; align-items:flex-start;">
+              <div class="qr-container">
+                <svg class="qr-placeholder" viewBox="0 0 21 21" width="150" height="150">
+                  <path d="M0,0 h7 v7 h-7 z M2,2 h3 v3 h-3 z M14,0 h7 v7 h-7 z M16,2 h3 v3 h-3 z M0,14 h7 v7 h-7 z M2,16 h3 v3 h-3 z M8,0 h2 v1 h-2 z M11,0 h1 v2 h-1 z M13,1 h1 v1 h-1 z M8,2 h2 v1 h-2 z M12,2 h1 v1 h-1 z M8,4 h1 v2 h-1 z M10,4 h2 v1 h-1 z M12,5 h1 v1 h-1 z M8,7 h3 v1 h-3 z M12,7 h1 v1 h-1 z M0,8 h2 v1 h-2 z M3,8 h1 v2 h-1 z M5,8 h2 v1 h-2 z M8,8 h1 v1 h-1 z M10,8 h2 v1 h-2 z M13,8 h2 v1 h-2 z M16,8 h1 v1 h-1 z M18,8 h3 v1 h-3 z M1,10 h1 v1 h-1 z M4,10 h2 v1 h-2 z M7,10 h1 v1 h-1 z M9,10 h1 v1 h-1 z M12,10 h2 v1 h-2 z M15,10 h2 v1 h-2 z M18,10 h1 v2 h-1 z M20,10 h1 v1 h-1 z M0,12 h2 v1 h-2 z M3,12 h1 v1 h-1 z M5,12 h1 v2 h-1 z M7,12 h2 v1 h-2 z M10,12 h1 v1 h-1 z M12,12 h3 v1 h-3 z M16,12 h1 v1 h-1 z M19,12 h2 v1 h-2 z M8,14 h2 v1 h-2 z M11,14 h1 v1 h-1 z M13,14 h1 v2 h-1 z M15,14 h2 v1 h-2 z M18,14 h1 v1 h-1 z M20,14 h1 v1 h-1 z M8,16 h1 v1 h-1 z M10,16 h2 v1 h-2 z M15,16 h1 v2 h-1 z M17,16 h2 v1 h-2 z M20,16 h1 v1 h-1 z M8,18 h2 v1 h-2 z M11,18 h2 v1 h-2 z M14,18 h1 v1 h-1 z M16,18 h1 v1 h-1 z M19,18 h1 v2 h-1 z M8,20 h3 v1 h-3 z M12,20 h1 v1 h-1 z M14,20 h2 v1 h-2 z M17,20 h1 v1 h-1 z M20,20 h1 v1 h-1 z" fill="#000" />
+                </svg>
+                <div class="qr-logo"></div>
+              </div>
+              <p style="font-size: 13px; color: var(--muted-foreground); margin: 16px 0 0 0; max-width: 176px; line-height: 1.5;">Scan this QR code from any Conceal wallet to receive funds.</p>
+            </div>
+            <div style="width: 280px; flex-shrink: 0;" class="action-list">
+              <button class="action-btn">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                <div class="action-content">
+                  <span class="action-title">Share Address</span>
+                  <span class="action-subtitle">Send via email or message</span>
+                </div>
+              </button>
+              <button class="action-btn">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                <div class="action-content">
+                  <span class="action-title">Present QR</span>
+                  <span class="action-subtitle">Show full-screen for scanning</span>
+                </div>
+              </button>
+              
+              <div style="height: 1px; background: var(--border); margin: 12px 0;"></div>
+              
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="logo-picker" style="margin:0;">
+                  <span class="logo-picker-label">Mark:</span>
+                  <div class="swatch swatch-orange active" style="width:16px;height:16px;"></div>
+                  <div class="swatch swatch-steel" style="width:16px;height:16px;"></div>
+                  <div class="swatch swatch-coin" style="width:16px;height:16px;"></div>
+                </div>
+                <button class="btn" style="height: 28px; padding: 0 12px; font-size: 12px;">Download PNG</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIANT C -->
+  <div class="variant-section" style="border-bottom: none;">
+    <h2 class="variant-title">Variant C — Shareable Payment Card</h2>
+    <div class="split-view">
+      <!-- Dark -->
+      <div class="split-pane theme-dark">
+        <div class="card payment-card-wrap">
+          <div class="payment-card-body">
+            <div class="qr-container" style="width: 220px; height: 220px; padding: 16px; margin-bottom: 24px; border-radius: 16px;">
+              <svg class="qr-placeholder" viewBox="0 0 21 21" width="186" height="186">
+                <path d="M0,0 h7 v7 h-7 z M2,2 h3 v3 h-3 z M14,0 h7 v7 h-7 z M16,2 h3 v3 h-3 z M0,14 h7 v7 h-7 z M2,16 h3 v3 h-3 z M8,0 h2 v1 h-2 z M11,0 h1 v2 h-1 z M13,1 h1 v1 h-1 z M8,2 h2 v1 h-2 z M12,2 h1 v1 h-1 z M8,4 h1 v2 h-1 z M10,4 h2 v1 h-1 z M12,5 h1 v1 h-1 z M8,7 h3 v1 h-3 z M12,7 h1 v1 h-1 z M0,8 h2 v1 h-2 z M3,8 h1 v2 h-1 z M5,8 h2 v1 h-2 z M8,8 h1 v1 h-1 z M10,8 h2 v1 h-2 z M13,8 h2 v1 h-2 z M16,8 h1 v1 h-1 z M18,8 h3 v1 h-3 z M1,10 h1 v1 h-1 z M4,10 h2 v1 h-2 z M7,10 h1 v1 h-1 z M9,10 h1 v1 h-1 z M12,10 h2 v1 h-2 z M15,10 h2 v1 h-2 z M18,10 h1 v2 h-1 z M20,10 h1 v1 h-1 z M0,12 h2 v1 h-2 z M3,12 h1 v1 h-1 z M5,12 h1 v2 h-1 z M7,12 h2 v1 h-2 z M10,12 h1 v1 h-1 z M12,12 h3 v1 h-3 z M16,12 h1 v1 h-1 z M19,12 h2 v1 h-2 z M8,14 h2 v1 h-2 z M11,14 h1 v1 h-1 z M13,14 h1 v2 h-1 z M15,14 h2 v1 h-2 z M18,14 h1 v1 h-1 z M20,14 h1 v1 h-1 z M8,16 h1 v1 h-1 z M10,16 h2 v1 h-2 z M15,16 h1 v2 h-1 z M17,16 h2 v1 h-2 z M20,16 h1 v1 h-1 z M8,18 h2 v1 h-2 z M11,18 h2 v1 h-2 z M14,18 h1 v1 h-1 z M16,18 h1 v1 h-1 z M19,18 h1 v2 h-1 z M8,20 h3 v1 h-3 z M12,20 h1 v1 h-1 z M14,20 h2 v1 h-2 z M17,20 h1 v1 h-1 z M20,20 h1 v1 h-1 z" fill="#000" />
+              </svg>
+              <div class="qr-logo" style="width: 44px; height: 44px; border-width: 4px;"></div>
+            </div>
+            <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: var(--card-foreground);">Conceal Deposit</h2>
+            <p style="color: var(--muted-foreground); font-size: 15px; margin: 0 0 24px 0;">Scan to send CCX</p>
+            
+            <div class="address-panel" style="width: 100%; margin-bottom: 0; text-align: center; background: transparent; border: 1px dashed var(--border);">
+              ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m
+            </div>
+          </div>
+          <div class="payment-card-footer">
+            <button class="btn">
+              <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Address
+            </button>
+            <div style="display: flex; gap: 12px;">
+              <button class="btn">Download PNG</button>
+              <button class="btn btn-primary">
+                <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: #000;"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Light -->
+      <div class="split-pane theme-light">
+        <div class="card payment-card-wrap">
+          <div class="payment-card-body">
+            <div class="qr-container" style="width: 220px; height: 220px; padding: 16px; margin-bottom: 24px; border-radius: 16px;">
+              <svg class="qr-placeholder" viewBox="0 0 21 21" width="186" height="186">
+                <path d="M0,0 h7 v7 h-7 z M2,2 h3 v3 h-3 z M14,0 h7 v7 h-7 z M16,2 h3 v3 h-3 z M0,14 h7 v7 h-7 z M2,16 h3 v3 h-3 z M8,0 h2 v1 h-2 z M11,0 h1 v2 h-1 z M13,1 h1 v1 h-1 z M8,2 h2 v1 h-2 z M12,2 h1 v1 h-1 z M8,4 h1 v2 h-1 z M10,4 h2 v1 h-1 z M12,5 h1 v1 h-1 z M8,7 h3 v1 h-3 z M12,7 h1 v1 h-1 z M0,8 h2 v1 h-2 z M3,8 h1 v2 h-1 z M5,8 h2 v1 h-2 z M8,8 h1 v1 h-1 z M10,8 h2 v1 h-2 z M13,8 h2 v1 h-2 z M16,8 h1 v1 h-1 z M18,8 h3 v1 h-3 z M1,10 h1 v1 h-1 z M4,10 h2 v1 h-2 z M7,10 h1 v1 h-1 z M9,10 h1 v1 h-1 z M12,10 h2 v1 h-2 z M15,10 h2 v1 h-2 z M18,10 h1 v2 h-1 z M20,10 h1 v1 h-1 z M0,12 h2 v1 h-2 z M3,12 h1 v1 h-1 z M5,12 h1 v2 h-1 z M7,12 h2 v1 h-2 z M10,12 h1 v1 h-1 z M12,12 h3 v1 h-3 z M16,12 h1 v1 h-1 z M19,12 h2 v1 h-2 z M8,14 h2 v1 h-2 z M11,14 h1 v1 h-1 z M13,14 h1 v2 h-1 z M15,14 h2 v1 h-2 z M18,14 h1 v1 h-1 z M20,14 h1 v1 h-1 z M8,16 h1 v1 h-1 z M10,16 h2 v1 h-2 z M15,16 h1 v2 h-1 z M17,16 h2 v1 h-2 z M20,16 h1 v1 h-1 z M8,18 h2 v1 h-2 z M11,18 h2 v1 h-2 z M14,18 h1 v1 h-1 z M16,18 h1 v1 h-1 z M19,18 h1 v2 h-1 z M8,20 h3 v1 h-3 z M12,20 h1 v1 h-1 z M14,20 h2 v1 h-2 z M17,20 h1 v1 h-1 z M20,20 h1 v1 h-1 z" fill="#000" />
+              </svg>
+              <div class="qr-logo" style="width: 44px; height: 44px; border-width: 4px;"></div>
+            </div>
+            <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: var(--card-foreground);">Conceal Deposit</h2>
+            <p style="color: var(--muted-foreground); font-size: 15px; margin: 0 0 24px 0;">Scan to send CCX</p>
+            
+            <div class="address-panel" style="width: 100%; margin-bottom: 0; text-align: center; background: transparent; border: 1px dashed var(--border);">
+              ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m
+            </div>
+          </div>
+          <div class="payment-card-footer">
+            <button class="btn">
+              <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Address
+            </button>
+            <div style="display: flex; gap: 12px;">
+              <button class="btn">Download PNG</button>
+              <button class="btn btn-primary">
+                <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: #000;"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

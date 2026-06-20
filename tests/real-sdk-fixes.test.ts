@@ -335,7 +335,14 @@ describe("createDeposit pending record (#110)", () => {
     const runtimeMod = await import("@/lib/services/real-sdk/runtime");
     runtimeMod._setRuntimeForTest({
       account: alice,
-      raw: { deposits: [], withdrawals: [], transactions: [], lastHeight: 0, nonce: "", options: {} },
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+      },
       state: { ...createWalletState(alice), scannedHeight: 2000, outputs: [funded] },
       // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
       daemon: daemon as any,

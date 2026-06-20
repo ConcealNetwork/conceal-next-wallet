@@ -29,7 +29,8 @@ test("switches the UI language and persists it", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20_000 });
 
-  await page.getByLabel("Language").selectOption("es");
+  // Use the Settings <select> (the header also has a "Language" switcher button).
+  await page.getByRole("main").getByLabel("Language").selectOption("es");
 
   // Sidebar nav is now Spanish.
   await expect(page.getByRole("link", { name: "Enviar", exact: true })).toBeVisible();

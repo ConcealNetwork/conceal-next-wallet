@@ -1,8 +1,17 @@
 "use client";
 
-import { CalendarClock, EyeOff, LayoutGrid, Lock, Plus, Table2, Unlock } from "lucide-react";
+import {
+  Calculator,
+  CalendarClock,
+  EyeOff,
+  LayoutGrid,
+  Lock,
+  Plus,
+  Table2,
+  Unlock,
+} from "lucide-react";
 import dynamic from "next/dynamic";
-import { useEffect, useId, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { InfoPillButton } from "@/components/ui/info-pill-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -25,6 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DepositsRail } from "@/components/layout/rails/deposits-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { EmptyState, PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
@@ -44,6 +54,7 @@ import {
   useWithdrawDeposit,
 } from "@/lib/hooks";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
+import { useCreateDeepLink } from "@/lib/hooks/use-create-deeplink";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import type { CreateDepositInput } from "@/lib/services/deposit.service";
@@ -52,6 +63,7 @@ import {
   estimateDepositUnlockDays,
 } from "@/lib/services/deposit.service";
 import type { Deposit } from "@/lib/types";
+import { CHART_DRAW_MS, CHART_EASING } from "@/lib/ui/animation";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxToNumber, cn, truncateAddress, usdSubline } from "@/lib/utils";
 import { InterestCalculatorDialog } from "./interest-calculator-dialog";
@@ -92,12 +104,15 @@ const DEPOSITS_VIEW_KEY = "conceal-deposits-view";
 
 export default function DepositsPageClient() {
   const { t } = useI18n();
+  usePageRightRail(<DepositsRail />);
   const { data = [] } = useDeposits();
   const constraints = useDepositConstraints();
   const createDeposit = useCreateDeposit();
   const [open, setOpen] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
   const [view, setView] = useState<DepositView>("cards");
+  // Sidebar "+" quick-create deep-link (?new=1) opens the create dialog.
+  useCreateDeepLink(() => setOpen(true));
 
   const openDeposits = useMemo(() => data.filter((deposit) => deposit.status !== "spent"), [data]);
 
@@ -165,10 +180,14 @@ export default function DepositsPageClient() {
           title={t("txn.summary")}
           description={t("deposits.summaryDescription")}
           headerAction={
-            <InfoPillButton
+            <button
+              type="button"
               onClick={() => setCalcOpen(true)}
               aria-label={t("deposits.openCalculator")}
-            />
+              className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg border border-border bg-secondary/95 text-muted-foreground shadow-sm transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Calculator className="size-4" aria-hidden="true" />
+            </button>
           }
         >
           <DepositsSummary deposits={openDeposits} />
@@ -180,7 +199,9 @@ export default function DepositsPageClient() {
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold leading-none tracking-tight text-card-foreground">
-                {withdrawnDeposits.length > 0 ? t("deposits.allHeading") : t("deposits.activeHeading")}
+                {withdrawnDeposits.length > 0
+                  ? t("deposits.allHeading")
+                  : t("deposits.activeHeading")}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 {data.length === 0
@@ -231,6 +252,11 @@ export default function DepositsPageClient() {
       />
 
       <InterestCalculatorDialog open={calcOpen} onOpenChange={setCalcOpen} />
+      {/* Small-screen fallback: rail column hidden < 1200px → surface the
+          earnings summary + market inline. CSS-hidden above the breakpoint. */}
+      <div className="mt-8 min-[1200px]:hidden">
+        <DepositsRail embedded />
+      </div>
     </>
   );
 }
@@ -319,7 +345,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid auto-rows-fr gap-4 @sm:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-5">
         <SummaryCard
           label={t("deposits.totalLocked")}
           value={totalLocked}
@@ -347,7 +373,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
         <SummaryCard
           label={t("deposits.totalEstInterest")}
           value={totalInterest}
-          formatter={(value) => formatCcx(value, 4)}
+          formatter={(value) => formatCcx(value, 6)}
           detail={t("deposits.projectedReturn")}
           tone="amber"
           index={2}
@@ -389,7 +415,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
       </div>
 
       {activeDeposits.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <div className="grid gap-4 @4xl:grid-cols-[1.6fr_1fr]">
           <ProjectionChart
             projection={projection}
             totalLocked={totalLocked}
@@ -513,10 +539,14 @@ function MiniArea({ values, color }: { values: number[]; color: string }) {
       </defs>
       <path d={`${line} L100,34 L0,34 Z`} fill={`url(#${gradientId})`} />
       <path
+        className="animate-stroke-draw motion-reduce:animate-none"
         d={line}
         fill="none"
         stroke={color}
         strokeWidth={1.6}
+        pathLength={1}
+        strokeDasharray={1}
+        strokeDashoffset={0}
         vectorEffect="non-scaling-stroke"
       />
     </svg>
@@ -559,6 +589,7 @@ function ProgressRing({ pct }: { pct: number }) {
     <svg viewBox="0 0 44 44" className="h-11 w-11" aria-hidden="true">
       <circle cx="22" cy="22" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="5" />
       <circle
+        className="animate-donut-sweep motion-reduce:animate-none"
         cx="22"
         cy="22"
         r={radius}
@@ -569,6 +600,12 @@ function ProgressRing({ pct }: { pct: number }) {
         strokeDasharray={circumference}
         strokeDashoffset={offset}
         transform="rotate(-90 22 22)"
+        style={
+          {
+            "--donut-offset": String(offset),
+            "--donut-pct": String(circumference - offset),
+          } as CSSProperties
+        }
       />
       <text x="22" y="26" textAnchor="middle" className="fill-foreground font-mono text-[10px]">
         {`${Math.round(clamped)}%`}
@@ -592,6 +629,7 @@ function ProjectionChart({
 }) {
   const { t } = useI18n();
   const { formatCcx } = useFormatters();
+  const prefersReducedMotion = usePrefersReducedMotion();
   return (
     <div className="rounded-xl border border-border bg-secondary/60 p-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -644,6 +682,9 @@ function ProjectionChart({
               stroke="hsl(var(--primary))"
               strokeWidth={2}
               fill="url(#depositProjectionFill)"
+              isAnimationActive={!prefersReducedMotion}
+              animationDuration={CHART_DRAW_MS}
+              animationEasing={CHART_EASING}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -718,7 +759,9 @@ function CompositionDonut({
             <span className="font-mono text-xl font-bold leading-none text-foreground">
               {formatNumber(Math.round(totalLocked))}
             </span>
-            <span className="mt-1 text-[10px] text-muted-foreground">{t("deposits.ccxLocked")}</span>
+            <span className="mt-1 text-[10px] text-muted-foreground">
+              {t("deposits.ccxLocked")}
+            </span>
           </div>
         </div>
         <ul className="flex min-w-0 flex-1 flex-col justify-center gap-4 text-sm">
@@ -890,7 +933,7 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
               {isWithdrawn
                 ? t("deposits.cardWithdrawnSubtitle", {
                     principal: formatCcx(deposit.amount),
-                    interest: formatCcx(deposit.interest, 4),
+                    interest: formatCcx(deposit.interest, 6),
                     address: truncateAddress(deposit.address),
                   })
                 : t("deposits.cardOpenSubtitle", {
@@ -903,23 +946,27 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
         {!isWithdrawn ? <DepositWithdrawButton deposit={deposit} size="default" /> : null}
       </div>
 
-      <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <dl className="mt-5 grid gap-3 @sm:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-5">
         <DepositDetail
           label={t("deposits.principal")}
           value={formatCcx(deposit.amount)}
           tone="deposit"
           usd={usd(principal)}
         />
-        <DepositDetail label={t("deposits.apr")} value={`${deposit.apr.toFixed(2)}%`} tone="amber" />
+        <DepositDetail
+          label={t("deposits.apr")}
+          value={`${deposit.apr.toFixed(2)}%`}
+          tone="amber"
+        />
         <DepositDetail
           label={t("deposits.estInterest")}
-          value={formatCcx(deposit.interest, 4)}
+          value={formatCcx(deposit.interest, 6)}
           tone="incoming"
           usd={usd(interest)}
         />
         <DepositDetail
           label={t("deposits.valueAtMaturity")}
-          value={formatCcx(maturityValue, 4)}
+          value={formatCcx(maturityValue, 6)}
           tone="default"
           usd={usd(maturityValue)}
         />
@@ -936,7 +983,9 @@ function DepositCard({ deposit, index }: { deposit: Deposit; index: number }) {
       {!isWithdrawn ? (
         <div className="mt-5 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between gap-4">
-            <p className="text-sm font-medium text-muted-foreground">{t("deposits.progressLabel")}</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              {t("deposits.progressLabel")}
+            </p>
             <p className="font-mono text-sm font-semibold text-foreground">
               {t("deposits.percentComplete", { pct: Math.min(deposit.progressPct, 100) })}
             </p>
@@ -994,10 +1043,10 @@ function DepositsTable({ deposits }: { deposits: Deposit[] }) {
                   {deposit.apr.toFixed(2)}%
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-wallet-incoming">
-                  +<CcxAmount>{formatCcx(interest, 4)}</CcxAmount>
+                  +<CcxAmount>{formatCcx(interest, 6)}</CcxAmount>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-foreground">
-                  <CcxAmount>{formatCcx(maturityValue, 4)}</CcxAmount>
+                  <CcxAmount>{formatCcx(maturityValue, 6)}</CcxAmount>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex min-w-[132px] items-center gap-2">
@@ -1079,11 +1128,11 @@ function DepositsTimeline({ deposits }: { deposits: Deposit[] }) {
                   </span>
                   <span aria-hidden="true"> · </span>
                   <span className="font-mono text-wallet-incoming">
-                    +<CcxAmount>{formatCcx(interest, 4)}</CcxAmount>
+                    +<CcxAmount>{formatCcx(interest, 6)}</CcxAmount>
                   </span>
                   <span aria-hidden="true"> → </span>
                   <span className="font-mono text-foreground">
-                    <CcxAmount>{formatCcx(maturityValue, 4)}</CcxAmount>
+                    <CcxAmount>{formatCcx(maturityValue, 6)}</CcxAmount>
                   </span>
                   <span> {t("deposits.atMaturitySuffix")}</span>
                 </p>
@@ -1214,13 +1263,13 @@ function DepositWithdrawButton({
             <ConfirmRow label={t("deposits.principal")} value={formatCcx(deposit.amount)} />
             <ConfirmRow
               label={t("deposits.interest")}
-              value={formatCcx(deposit.interest, 4)}
+              value={formatCcx(deposit.interest, 6)}
               tone="incoming"
             />
             <ConfirmRow label={t("deposits.networkFee")} value={formatCcx(withdrawFee, 6)} />
             <ConfirmRow
               label={t("deposits.youReceive")}
-              value={formatCcx(Math.max(netReceive, 0), 4)}
+              value={formatCcx(Math.max(netReceive, 0), 6)}
               strong
             />
           </dl>
@@ -1499,7 +1548,7 @@ function CreateDepositDialog({
                   <PreviewRow label={t("deposits.estUnlock")} value={maturityDate} />
                   <PreviewRow
                     label={t("deposits.estInterest")}
-                    value={preview.isFetching ? "…" : formatCcx(previewInterest, 4)}
+                    value={preview.isFetching ? "…" : formatCcx(previewInterest, 6)}
                     tone="incoming"
                   />
                   <PreviewRow
@@ -1507,7 +1556,7 @@ function CreateDepositDialog({
                     value={
                       preview.isFetching || !amountIsValid
                         ? "…"
-                        : formatCcx(amountValue + previewInterest, 4)
+                        : formatCcx(amountValue + previewInterest, 6)
                     }
                     tone="deposit"
                   />
@@ -1545,7 +1594,7 @@ function CreateDepositDialog({
               />
               <ConfirmRow
                 label={t("deposits.estInterestLower")}
-                value={formatCcx(previewInterest, 4)}
+                value={formatCcx(previewInterest, 6)}
                 tone="incoming"
               />
               <ConfirmRow label={t("deposits.networkFee")} value={formatCcx(createFee, 6)} />

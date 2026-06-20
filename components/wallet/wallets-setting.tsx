@@ -93,9 +93,19 @@ export function WalletsSetting() {
                 onChange={(event) => setEditLabel(event.target.value)}
                 aria-label={t("wallets.nameLabel")}
                 autoFocus
+                maxLength={60}
                 className="h-9"
               />
-              <Button type="submit" variant="ghost" size="sm" disabled={renameWallet.isPending}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                disabled={
+                  renameWallet.isPending ||
+                  editLabel.trim() === "" ||
+                  editLabel.trim() === wallet.label
+                }
+              >
                 {t("wallets.save")}
               </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => setEditingId(null)}>

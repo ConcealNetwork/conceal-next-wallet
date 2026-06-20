@@ -96,7 +96,8 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("donate.whyBody")}</p>
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-2">
-                <Lock className="size-4 text-primary" aria-hidden="true" /> {t("donate.securePayments")}
+                <Lock className="size-4 text-primary" aria-hidden="true" />{" "}
+                {t("donate.securePayments")}
               </span>
               <span className="inline-flex items-center gap-2">
                 <ShieldCheck className="size-4 text-primary" aria-hidden="true" />{" "}

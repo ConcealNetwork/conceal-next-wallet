@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Receive page — dead-space rethink · Review</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #0f0d0c; color: #efeae3; }
+  header.page { position: sticky; top: 0; z-index: 10; background: rgba(15,13,12,0.92); backdrop-filter: blur(8px); border-bottom: 1px solid #2a2521; padding: 18px 28px; }
+  header.page h1 { margin: 0 0 4px; font-size: 18px; letter-spacing: -0.01em; }
+  header.page p { margin: 0; font-size: 13px; color: #a9a097; max-width: 90ch; line-height: 1.5; }
+  .rec { margin-top: 10px; font-size: 12.5px; color: #FFA500; border: 1px solid #4a3a1c; background: #241c10; border-radius: 8px; padding: 8px 12px; }
+  .rec b { color: #ffd27f; }
+  nav.jump { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  nav.jump a { font-size: 12px; color: #efeae3; text-decoration: none; border: 1px solid #39332d; border-radius: 999px; padding: 4px 12px; background: #1c1916; }
+  nav.jump a:hover { border-color: #FFA500; }
+  section.agent { border-bottom: 1px solid #2a2521; }
+  .agent-label { padding: 16px 28px 4px; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: #cdc4b8; }
+  .agent-label b { color: #FFA500; letter-spacing: 0; text-transform: none; font-size: 15px; }
+  iframe { width: 100%; border: 0; display: block; background: transparent; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Receive page — killing the dead space right of the QR</h1>
+  <p>Three model families each rethought the Receive card so the void beside the QR earns its place.
+     Directions: <b style="color:#ffd27f">A</b> merge the two cards (request fields live beside the QR, QR/link regenerate as you type),
+     <b style="color:#ffd27f">B</b> a deliberate receive-action column (Share / Present QR / picker / Download),
+     <b style="color:#ffd27f">C</b> reframe the QR as a shareable payment card. Each sheet: 2–3 variants, dark (left) + light (right), real Conceal tokens.</p>
+  <div class="rec" id="rec">My pick: <b>Direction A — merged interactive card</b> (all three led with it). It fills the void with the Request-a-Payment fields beside the QR and the QR/link regenerate live, collapsing two cards into one. Tightest execution is <b>Gemini · Variant A</b> (QR + picker + Download left; Amount / Payment ID / Message + payment link with the v1 toggle right). Each sheet's Variant B (receive-action column: Share / Present QR) and Variant C (shareable payment card) are the alternates below.</div>
+  <nav class="jump"><a href="#opus">Opus 4.8</a><a href="#gemini">Gemini 3.1 Pro</a><a href="#glm">GLM-5.2</a></nav>
+</header>
+
+<section class="agent" id="opus">
+  <div class="agent-label"><b>Opus 4.8</b> &nbsp;·&nbsp; in-process subagent</div>
+  <iframe src="agents/opus.html" loading="eager"></iframe>
+</section>
+<section class="agent" id="gemini">
+  <div class="agent-label"><b>Gemini 3.1 Pro</b> &nbsp;·&nbsp; via agy</div>
+  <iframe src="agents/gemini.html" loading="eager"></iframe>
+</section>
+<section class="agent" id="glm">
+  <div class="agent-label"><b>GLM-5.2</b> &nbsp;·&nbsp; via opencode</div>
+  <iframe src="agents/glm.html" loading="eager"></iframe>
+</section>
+
+<script>
+  function fit(frame) {
+    try {
+      const doc = frame.contentDocument;
+      if (!doc || !doc.body) return;
+      const h = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight);
+      frame.style.height = (h + 24) + "px";
+    } catch (e) { frame.style.height = "1600px"; }
+  }
+  for (const frame of document.querySelectorAll("iframe")) {
+    frame.addEventListener("load", () => { fit(frame); setTimeout(() => fit(frame), 300); });
+  }
+  let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { for (const frame of document.querySelectorAll("iframe")) fit(frame); }, 150); });
+</script>
+</body>
+</html>

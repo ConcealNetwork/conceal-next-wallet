@@ -4,10 +4,11 @@ import { expect, test } from "@playwright/test";
  * Dual-sidebar shell redesign (#122), mock mode.
  *
  * Stage 1: a sticky global header carries the brand, wallet switcher, sync pill,
- * notifications, and theme toggle; the left sidenav is grouped Wallet/Banking/More.
+ * notifications, theme toggle, and a far-right rail toggle; the left sidenav is
+ * grouped Wallet/Earn/More.
  * Stage 2: a contextual right rail registered per page — the Account page shows a
- * Market + Holdings + Quick-actions panel that collapses to a narrow strip; pages
- * that register no rail (Transactions) render full width.
+ * Market + Holdings + Quick-actions panel that the header toggle collapses away
+ * fully; pages that register no rail (Transactions) render full width.
  *
  * The rail is desktop-only (hidden < 1200px), so these run at a wide viewport.
  */
@@ -53,21 +54,27 @@ test("Account page registers a contextual right rail", async ({ page }) => {
   await expect(rail.getByRole("link", { name: "Create a deposit" })).toBeVisible();
 });
 
-test("the rail collapse pin shrinks the column to an expand strip", async ({ page }) => {
+test("the global-header rail toggle collapses the panel away fully", async ({ page }) => {
   await openWallet(page);
 
-  const rail = page.getByRole("complementary", { name: "Context panel" });
-  await expect(rail.getByRole("heading", { name: "Market" })).toBeVisible();
+  const header = page.getByRole("banner");
+  await expect(
+    page
+      .getByRole("complementary", { name: "Context panel" })
+      .getByRole("heading", { name: "Market" }),
+  ).toBeVisible();
 
-  // Collapse: the panel header pin hides the content and leaves a narrow strip.
-  await rail.getByRole("button", { name: "Collapse panel" }).click();
-  await expect(rail.getByRole("heading", { name: "Market" })).toBeHidden();
-  const expand = rail.getByRole("button", { name: "Expand panel" });
-  await expect(expand).toBeVisible();
+  // Collapse: the header toggle removes the rail column entirely (no leftover strip).
+  await header.getByRole("button", { name: "Collapse panel" }).click();
+  await expect(page.getByRole("complementary", { name: "Context panel" })).toHaveCount(0);
 
   // Expand restores the full panel.
-  await expand.click();
-  await expect(rail.getByRole("heading", { name: "Market" })).toBeVisible();
+  await header.getByRole("button", { name: "Expand panel" }).click();
+  await expect(
+    page
+      .getByRole("complementary", { name: "Context panel" })
+      .getByRole("heading", { name: "Market" }),
+  ).toBeVisible();
 });
 
 test("pages without a registered rail render full width", async ({ page }) => {
@@ -76,9 +83,9 @@ test("pages without a registered rail render full width", async ({ page }) => {
   // Account has a rail.
   await expect(page.getByRole("complementary", { name: "Context panel" })).toBeVisible();
 
-  // Navigate to Address Book, which registers no rail (only Account + Transactions do).
-  await page.getByRole("link", { name: "Address Book", exact: true }).click();
-  await expect(page).toHaveURL(/\/wallet\/address-book\/?$/);
+  // Navigate to Messages, which registers no contextual rail.
+  await page.getByRole("link", { name: "Messages", exact: true }).click();
+  await expect(page).toHaveURL(/\/wallet\/messages\/?$/);
 
   // The context panel is gone — the rail cleared on unmount.
   await expect(page.getByRole("complementary", { name: "Context panel" })).toHaveCount(0);
@@ -114,22 +121,24 @@ test("Transactions page shows a detail rail; selecting a row fills it (wide)", a
 
   const rail = page.getByRole("complementary", { name: "Context panel" });
   await expect(rail).toBeVisible();
-  // No selection → hint, not detail.
-  await expect(rail.getByText("No transaction selected")).toBeVisible();
+  // No selection → the recent-tx list (no detail panel yet).
+  await expect(rail.getByRole("button", { name: "Back to list" })).toHaveCount(0);
 
-  // Select the first transaction row.
-  await page.getByRole("button", { name: /transaction for/ }).first().click();
+  // Select the first transaction row from the main table.
+  await page
+    .getByRole("button", { name: /transaction for/ })
+    .first()
+    .click();
 
   // Detail appears in the rail (not a dialog), with the back affordance.
-  await expect(rail.getByText("No transaction selected")).toBeHidden();
   await expect(rail.getByRole("button", { name: "Back to list" })).toBeVisible();
   await expect(rail.getByText("Amount", { exact: true })).toBeVisible();
   // The detail dialog must NOT open at wide widths (the rail replaces it).
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  // Back clears the selection.
+  // Back returns the rail to the list.
   await rail.getByRole("button", { name: "Back to list" }).click();
-  await expect(rail.getByText("No transaction selected")).toBeVisible();
+  await expect(rail.getByRole("button", { name: "Back to list" })).toHaveCount(0);
 });
 
 test("Transactions detail uses the dialog below the rail breakpoint (narrow)", async ({ page }) => {
@@ -139,7 +148,10 @@ test("Transactions detail uses the dialog below the rail breakpoint (narrow)", a
   await page.setViewportSize({ width: 860, height: 900 });
 
   await expect(page.getByRole("complementary", { name: "Context panel" })).toBeHidden();
-  await page.getByRole("button", { name: /transaction for/ }).first().click();
+  await page
+    .getByRole("button", { name: /transaction for/ })
+    .first()
+    .click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
@@ -147,13 +159,18 @@ test("Transactions detail falls back to the dialog when the rail is collapsed (w
   page,
 }) => {
   await openTransactions(page);
+  const header = page.getByRole("banner");
   const rail = page.getByRole("complementary", { name: "Context panel" });
   await expect(rail).toBeVisible();
 
-  // Collapse the rail to its strip — the detail can no longer render there.
-  await rail.getByRole("button", { name: "Collapse panel" }).click();
+  // Collapse the rail away via the header toggle — the detail can no longer render there.
+  await header.getByRole("button", { name: "Collapse panel" }).click();
+  await expect(rail).toHaveCount(0);
 
   // Selecting a row now opens the dialog instead of showing nothing.
-  await page.getByRole("button", { name: /transaction for/ }).first().click();
+  await page
+    .getByRole("button", { name: /transaction for/ })
+    .first()
+    .click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });

@@ -60,7 +60,9 @@ export function encodeSmartMessage(module: string, action: string, ...data: stri
     (part) => part.includes(",") || part.includes("{") || part.includes("}"),
   );
   if (invalid !== undefined) {
-    throw new Error(`Smart-message parts cannot contain "," "{" or "}": ${JSON.stringify(invalid)}`);
+    throw new Error(
+      `Smart-message parts cannot contain "," "{" or "}": ${JSON.stringify(invalid)}`,
+    );
   }
   const serializedAction = Object.hasOwn(ACTION_MAP, action) ? ACTION_MAP[action] : action;
   return `${PREFIX}${[module, serializedAction, ...data].join(",")}${SUFFIX}`;

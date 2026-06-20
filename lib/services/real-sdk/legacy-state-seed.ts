@@ -60,7 +60,9 @@ function toOwnedOutput(out: Record<string, unknown>, txPublicKey: string): Owned
 function toOwnedDeposit(deposit: Record<string, unknown>): OwnedDeposit {
   const blockHeight = num(deposit.blockHeight);
   const term = num(deposit.term);
-  const keys = Array.isArray(deposit.keys) ? deposit.keys.filter((k): k is string => typeof k === "string") : [];
+  const keys = Array.isArray(deposit.keys)
+    ? deposit.keys.filter((k): k is string => typeof k === "string")
+    : [];
   return {
     amount: num(deposit.amount),
     globalIndex: num(deposit.globalOutputIndex),
@@ -107,9 +109,7 @@ function spentKeyImagesOf(tx: Record<string, unknown>): string[] {
  * blob has no scanned history (`lastHeight` 0 with no transactions/deposits).
  */
 export function seedStateFromLegacyBlob(account: Account, raw: RawWalletV1): WalletState | null {
-  const transactions = Array.isArray(raw.transactions)
-    ? raw.transactions.filter(isRecord)
-    : [];
+  const transactions = Array.isArray(raw.transactions) ? raw.transactions.filter(isRecord) : [];
   const deposits = Array.isArray(raw.deposits) ? raw.deposits.filter(isRecord) : [];
   const lastHeight = num(raw.lastHeight);
 
@@ -136,7 +136,11 @@ export function seedStateFromLegacyBlob(account: Account, raw: RawWalletV1): Wal
     if (ownedOutputs.length === 0 && spentKeyImages.length === 0) continue;
     state = applyScannedTransaction(
       state,
-      { hash: str(tx.hash), height, ...(num(tx.timestamp) > 0 ? { timestamp: num(tx.timestamp) } : {}) },
+      {
+        hash: str(tx.hash),
+        height,
+        ...(num(tx.timestamp) > 0 ? { timestamp: num(tx.timestamp) } : {}),
+      },
       ownedOutputs,
       spentKeyImages,
     );
