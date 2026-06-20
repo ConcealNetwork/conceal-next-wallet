@@ -10,5 +10,9 @@ export default {
     ],
     // Allow longer subjects than the 72-char default for descriptive commits.
     "header-max-length": [2, "always", 100],
+    // Don't cap body line length: Dependabot's commit bodies (release notes, commit
+    // links) legitimately exceed 100 chars, and wrapping detailed bodies adds no value
+    // over the enforced header format. (Was failing every Dependabot PR.)
+    "body-max-line-length": [0, "always", Number.POSITIVE_INFINITY],
   },
 };
