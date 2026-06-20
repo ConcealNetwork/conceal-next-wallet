@@ -20,10 +20,8 @@ import {
 } from "@/components/ui/select";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { COIN_UNIT_PLACES, DEPOSIT_MAX_TERM_MONTH, DEPOSIT_RATE_V3 } from "@/lib/config/config";
-// Provides the global `config` the legacy InterestCalculator reads (absent in mock mode).
-import "@/lib/config/legacy-interest-config";
+import { InterestCalculator } from "@/lib/deposits/interest";
 import { useFormatters } from "@/lib/i18n/use-formatters";
-import { InterestCalculator } from "@/lib/wallet-core/Interest";
 
 const TIER_META = [
   { label: "Tier 1", threshold: "< 10,000 CCX", color: "text-primary" },
