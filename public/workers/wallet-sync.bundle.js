@@ -2066,7 +2066,52 @@ var reportError = self.reportError || function (e) { console.error(e); };
     return headerSize + inputCount * inputSize + outputsSize;
   };
 
-  // lib/wallet-core/Interest.ts
+  // lib/config/wallet-network-scalars.mjs
+  var walletNetworkScalars = {
+    coinUnitPlaces: 6,
+    coinFeeAtomic: 1e3,
+    minimumFeeV2Atomic: 1e3,
+    remoteNodeFeeAtomic: 1e4,
+    feePerKBAtomic: 1e3,
+    defaultDustThresholdAtomic: 10,
+    messageTxAmountAtomic: 100,
+    depositMinAmountCoin: 1,
+    depositMinTermMonth: 1,
+    depositMinTermBlock: 21900,
+    depositMaxTermMonth: 12,
+    depositSmallWithdrawFee: 10,
+    avgBlockTime: 120,
+    // Max ENCRYPTED-BODY length in UTF-8 BYTES. The on-chain tx_extra message
+    // length field is a single byte (≤255) and the blob = body bytes + 4-byte
+    // zero checksum, so the body ceiling is 255 − 4 = 251 bytes. Treated as a
+    // byte budget everywhere it's checked (NOT a UTF-16 char count) — a value
+    // >251 here would silently corrupt long/multi-byte messages.
+    maxMessageSize: 251,
+    cryptonoteMemPoolTxLifetimeSeconds: 60 * 60 * 12
+  };
+
+  // lib/config/config.ts
+  var walletNetworkScalars2 = walletNetworkScalars;
+  var COIN_UNIT_PLACES = walletNetworkScalars2.coinUnitPlaces;
+  var COIN_FEE_ATOMIC = walletNetworkScalars2.coinFeeAtomic;
+  var REMOTE_NODE_FEE_ATOMIC = walletNetworkScalars2.remoteNodeFeeAtomic;
+  var DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC = walletNetworkScalars2.depositSmallWithdrawFee;
+  var DEPOSIT_MIN_TERM_MONTH = walletNetworkScalars2.depositMinTermMonth;
+  var DEPOSIT_MAX_TERM_MONTH = walletNetworkScalars2.depositMaxTermMonth;
+  var DEPOSIT_MIN_TERM_BLOCK = walletNetworkScalars2.depositMinTermBlock;
+  var DEPOSIT_RATE_V3 = [0.029, 0.039, 0.049];
+  var AVG_BLOCK_TIME_SECONDS = walletNetworkScalars2.avgBlockTime;
+  var MAX_MESSAGE_SIZE = walletNetworkScalars2.maxMessageSize;
+  var MAX_TTL_MINUTES = walletNetworkScalars2.cryptonoteMemPoolTxLifetimeSeconds / 60;
+  var MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars2.messageTxAmountAtomic;
+  var SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE_NODE_FEE_ATOMIC;
+  var SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
+
+  // lib/deposits/interest.ts
+  var DEPOSIT_HEIGHT_V3_DEFAULT = 413400;
+  var INVESTMENT_MQ = 1.4473;
+  var WEEKLY_BASE_INTEREST = 0.0696;
+  var WEEKLY_INTEREST_INCREMENT = 2e-4;
   var _InterestCalculator = class _InterestCalculator {
     /**
      * Calculates interest for a deposit based on amount, term, and lock height
@@ -2079,13 +2124,12 @@ var reportError = self.reportError || function (e) { console.error(e); };
       if (lockHeight === _InterestCalculator.BLOCK_WITH_MISSING_INTEREST) {
         lockHeight = lockHeight + term;
       }
-      if (term % _InterestCalculator.DEPOSIT_MIN_TERM_V3 === 0 && lockHeight > (config.depositHeightV3 || _InterestCalculator.DEPOSIT_HEIGHT_V3)) {
+      if (term % _InterestCalculator.DEPOSIT_MIN_TERM_V3 === 0 && lockHeight > _InterestCalculator.DEPOSIT_HEIGHT_V3) {
         return _InterestCalculator.calculateInterestV3(amount, term);
       }
       if (term % 64800 === 0 || term % _InterestCalculator.DEPOSIT_MIN_TERM === 0) {
         return _InterestCalculator.calculateInterestV2(amount, term);
       }
-      logDebugMsg("Warning: Using legacy V1 interest calculation");
       const m_depositMaxTerm = _InterestCalculator.DEPOSIT_MAX_TERM;
       const a = term * _InterestCalculator.DEPOSIT_MAX_TOTAL_RATE - _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR;
       const product = BigInt(Math.trunc(amount)) * BigInt(a);
@@ -2099,13 +2143,13 @@ var reportError = self.reportError || function (e) { console.error(e); };
      * @returns The calculated interest amount in atomic units
      */
     static calculateInterestV3(amount, term) {
-      const m_coin = Math.pow(10, config.coinUnitPlaces);
+      const m_coin = 10 ** COIN_UNIT_PLACES;
       const amount4Humans = amount / m_coin;
-      let baseInterest = config.depositRateV3[0] || 0.029;
+      let baseInterest = DEPOSIT_RATE_V3[0];
       if (amount4Humans >= 2e4) {
-        baseInterest = config.depositRateV3[2] || 0.049;
+        baseInterest = DEPOSIT_RATE_V3[2];
       } else if (amount4Humans >= 1e4) {
-        baseInterest = config.depositRateV3[1] || 0.039;
+        baseInterest = DEPOSIT_RATE_V3[1];
       }
       let months = term / _InterestCalculator.DEPOSIT_MIN_TERM_V3;
       if (months > 12) {
@@ -2123,7 +2167,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
      * @returns The calculated interest amount in atomic units
      */
     static calculateInterestV2(amount, term) {
-      const m_coin = Math.pow(10, config.coinUnitPlaces);
+      const m_coin = 10 ** COIN_UNIT_PLACES;
       if (term % 64800 === 0) {
         const amount4Humans = amount / m_coin;
         let qTier = 1;
@@ -2142,9 +2186,9 @@ var reportError = self.reportError || function (e) { console.error(e); };
         if (amount4Humans >= 161e4 && amount4Humans < 18e5) qTier = 1.13;
         if (amount4Humans >= 18e5 && amount4Humans < 2e6) qTier = 1.14;
         if (amount4Humans > 2e6) qTier = 1.15;
-        const mq = config.investmentMq || 1.4473;
+        const mq = INVESTMENT_MQ;
         const termQuarters = term / 64800;
-        const m8 = 100 * Math.pow(1 + mq / 100, termQuarters) - 100;
+        const m8 = 100 * (1 + mq / 100) ** termQuarters - 100;
         const m5 = termQuarters * 0.5;
         const m7 = m8 * (1 + m5 / 100);
         const rate = m7 * qTier;
@@ -2153,8 +2197,8 @@ var reportError = self.reportError || function (e) { console.error(e); };
       }
       if (term % _InterestCalculator.DEPOSIT_MIN_TERM === 0) {
         const weeks = term / _InterestCalculator.DEPOSIT_MIN_TERM;
-        const baseInterest = config.weeklyBaseInterest || 0.0696;
-        const interestPerWeek = config.weeklyInterestIncrement || 2e-4;
+        const baseInterest = WEEKLY_BASE_INTEREST;
+        const interestPerWeek = WEEKLY_INTEREST_INCREMENT;
         const interestRate = baseInterest + weeks * interestPerWeek;
         const interest = amount * (weeks * interestRate / 100);
         return Math.floor(interest);
@@ -2172,7 +2216,7 @@ var reportError = self.reportError || function (e) { console.error(e); };
   // 262800 — one year
   _InterestCalculator.DEPOSIT_MIN_TERM_V3 = 21900;
   // One month
-  _InterestCalculator.DEPOSIT_HEIGHT_V3 = 413400;
+  _InterestCalculator.DEPOSIT_HEIGHT_V3 = DEPOSIT_HEIGHT_V3_DEFAULT;
   // Height when V3 deposit rates were activated
   _InterestCalculator.DEPOSIT_MIN_TOTAL_RATE_FACTOR = 0;
   // Constant rate
@@ -3624,46 +3668,6 @@ var reportError = self.reportError || function (e) { console.error(e); };
       return mixOuts;
     }
   };
-
-  // lib/config/wallet-network-scalars.mjs
-  var walletNetworkScalars = {
-    coinUnitPlaces: 6,
-    coinFeeAtomic: 1e3,
-    minimumFeeV2Atomic: 1e3,
-    remoteNodeFeeAtomic: 1e4,
-    feePerKBAtomic: 1e3,
-    defaultDustThresholdAtomic: 10,
-    messageTxAmountAtomic: 100,
-    depositMinAmountCoin: 1,
-    depositMinTermMonth: 1,
-    depositMinTermBlock: 21900,
-    depositMaxTermMonth: 12,
-    depositSmallWithdrawFee: 10,
-    avgBlockTime: 120,
-    // Max ENCRYPTED-BODY length in UTF-8 BYTES. The on-chain tx_extra message
-    // length field is a single byte (≤255) and the blob = body bytes + 4-byte
-    // zero checksum, so the body ceiling is 255 − 4 = 251 bytes. Treated as a
-    // byte budget everywhere it's checked (NOT a UTF-16 char count) — a value
-    // >251 here would silently corrupt long/multi-byte messages.
-    maxMessageSize: 251,
-    cryptonoteMemPoolTxLifetimeSeconds: 60 * 60 * 12
-  };
-
-  // lib/config/config.ts
-  var walletNetworkScalars2 = walletNetworkScalars;
-  var COIN_UNIT_PLACES = walletNetworkScalars2.coinUnitPlaces;
-  var COIN_FEE_ATOMIC = walletNetworkScalars2.coinFeeAtomic;
-  var REMOTE_NODE_FEE_ATOMIC = walletNetworkScalars2.remoteNodeFeeAtomic;
-  var DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC = walletNetworkScalars2.depositSmallWithdrawFee;
-  var DEPOSIT_MIN_TERM_MONTH = walletNetworkScalars2.depositMinTermMonth;
-  var DEPOSIT_MAX_TERM_MONTH = walletNetworkScalars2.depositMaxTermMonth;
-  var DEPOSIT_MIN_TERM_BLOCK = walletNetworkScalars2.depositMinTermBlock;
-  var AVG_BLOCK_TIME_SECONDS = walletNetworkScalars2.avgBlockTime;
-  var MAX_MESSAGE_SIZE = walletNetworkScalars2.maxMessageSize;
-  var MAX_TTL_MINUTES = walletNetworkScalars2.cryptonoteMemPoolTxLifetimeSeconds / 60;
-  var MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars2.messageTxAmountAtomic;
-  var SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE_NODE_FEE_ATOMIC;
-  var SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
 
   // lib/wallet-core/wallet-conversation-persistence.ts
   function walletHasTransaction(wallet, hash) {
