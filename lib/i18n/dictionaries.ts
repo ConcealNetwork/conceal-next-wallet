@@ -7,6 +7,9 @@ import type { Dictionary, Locale } from "@/lib/i18n/i18n";
  * should be community/native-reviewed before being treated as final.
  */
 const en: Dictionary = {
+  // Service worker update prompt
+  "sw.updateAvailable": "A new version is available",
+  "sw.reload": "Reload",
   // Sidebar navigation
   "nav.account": "Account",
   "nav.market": "Market",
@@ -729,6 +732,8 @@ const en: Dictionary = {
 };
 
 const es: Dictionary = {
+  "sw.updateAvailable": "Hay una nueva versión disponible",
+  "sw.reload": "Recargar",
   "nav.account": "Cuenta",
   "nav.market": "Mercado",
   "nav.transactions": "Transacciones",
@@ -1459,6 +1464,8 @@ const es: Dictionary = {
 };
 
 const fr: Dictionary = {
+  "sw.updateAvailable": "Une nouvelle version est disponible",
+  "sw.reload": "Recharger",
   "nav.account": "Compte",
   "nav.market": "Marché",
   "nav.transactions": "Transactions",
@@ -2196,6 +2203,8 @@ const fr: Dictionary = {
 };
 
 const de: Dictionary = {
+  "sw.updateAvailable": "Eine neue Version ist verfügbar",
+  "sw.reload": "Neu laden",
   "nav.account": "Konto",
   "nav.market": "Markt",
   "nav.transactions": "Transaktionen",
@@ -2930,6 +2939,8 @@ const de: Dictionary = {
 };
 
 const it: Dictionary = {
+  "sw.updateAvailable": "È disponibile una nuova versione",
+  "sw.reload": "Ricarica",
   "nav.account": "Account",
   "nav.market": "Mercato",
   "nav.transactions": "Transazioni",
@@ -3661,6 +3672,8 @@ const it: Dictionary = {
 };
 
 const pt: Dictionary = {
+  "sw.updateAvailable": "Uma nova versão está disponível",
+  "sw.reload": "Recarregar",
   "nav.account": "Conta",
   "nav.market": "Mercado",
   "nav.transactions": "Transações",
@@ -4386,6 +4399,8 @@ const pt: Dictionary = {
 };
 
 const ru: Dictionary = {
+  "sw.updateAvailable": "Доступна новая версия",
+  "sw.reload": "Перезагрузить",
   "nav.account": "Аккаунт",
   "nav.market": "Рынок",
   "nav.transactions": "Транзакции",
@@ -5108,6 +5123,8 @@ const ru: Dictionary = {
 };
 
 const zh: Dictionary = {
+  "sw.updateAvailable": "有新版本可用",
+  "sw.reload": "重新加载",
   "nav.account": "账户",
   "nav.market": "行情",
   "nav.transactions": "交易",
@@ -5799,6 +5816,8 @@ const zh: Dictionary = {
 };
 
 const ja: Dictionary = {
+  "sw.updateAvailable": "新しいバージョンが利用可能です",
+  "sw.reload": "再読み込み",
   "nav.account": "アカウント",
   "nav.market": "マーケット",
   "nav.transactions": "取引履歴",
@@ -6514,6 +6533,8 @@ const ja: Dictionary = {
 };
 
 const ko: Dictionary = {
+  "sw.updateAvailable": "새 버전을 사용할 수 있습니다",
+  "sw.reload": "새로고침",
   "nav.account": "계정",
   "nav.market": "시장",
   "nav.transactions": "거래",
