@@ -17,6 +17,7 @@ import {
   QrCode,
   Send,
   Settings,
+  Target,
   WalletCards,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -84,6 +85,7 @@ const NAV_SECTIONS: NavSectionDef[] = [
     label: "Earn",
     items: [
       { href: "/wallet/deposits", labelKey: "nav.deposits", icon: Coins, canCreate: true },
+      { href: "/wallet/goals", labelKey: "nav.goals", icon: Target, canCreate: true },
       { href: "/wallet/market", labelKey: "nav.market", icon: BarChart3 },
       { href: "/wallet/insights", labelKey: "nav.insights", icon: LineChart },
     ],
