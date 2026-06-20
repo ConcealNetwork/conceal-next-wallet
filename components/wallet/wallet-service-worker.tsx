@@ -31,35 +31,48 @@ export function WalletServiceWorkerRegister() {
     const swUrl = publicAssetPath("/service-worker.js");
     const scope = publicAssetPath("/");
 
-    // Reload once when the new worker takes control, never in a loop.
-    let reloading = false;
+    let cancelled = false;
+    // Only reload once the user ACCEPTS the update (we posted SKIP_WAITING).
+    // Without this gate the SW's first-install activate → clients.claim() fires
+    // `controllerchange` and would reload an untouched first-time session.
+    let reloadRequested = false;
+    let reloaded = false;
+    // De-dupe: don't stack a second toast for a worker we already prompted for.
+    let promptedWorker: ServiceWorker | null = null;
+
     function onControllerChange() {
-      if (reloading) return;
-      reloading = true;
+      if (!reloadRequested || reloaded) return;
+      reloaded = true;
       window.location.reload();
     }
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
     function promptUpdate(worker: ServiceWorker) {
+      if (cancelled || promptedWorker === worker) return;
+      promptedWorker = worker;
       const translate = tRef.current;
       toast(translate("sw.updateAvailable"), {
+        // Stable id so Sonner coalesces rather than stacking duplicate prompts.
+        id: "sw-update",
         // Sticky: the user decides when to reload — don't auto-dismiss it.
         duration: Number.POSITIVE_INFINITY,
         action: {
           label: translate("sw.reload"),
-          onClick: () => worker.postMessage({ type: "SKIP_WAITING" }),
+          onClick: () => {
+            reloadRequested = true;
+            worker.postMessage({ type: "SKIP_WAITING" });
+          },
         },
       });
     }
 
-    function watchInstalling(registration: ServiceWorkerRegistration) {
-      const installing = registration.installing;
-      if (!installing) return;
-      installing.addEventListener("statechange", () => {
+    function watchInstalling(worker: ServiceWorker | null) {
+      if (!worker) return;
+      worker.addEventListener("statechange", () => {
         // `installed` + an existing controller = an UPDATE is waiting (a fresh
         // install with no prior controller is the first load — nothing to prompt).
-        if (installing.state === "installed" && navigator.serviceWorker.controller) {
-          promptUpdate(installing);
+        if (worker.state === "installed" && navigator.serviceWorker.controller) {
+          promptUpdate(worker);
         }
       });
     }
@@ -68,11 +81,15 @@ export function WalletServiceWorkerRegister() {
       navigator.serviceWorker
         .register(swUrl, { scope })
         .then((registration) => {
-          // An update may already be waiting from a previous page load.
+          if (cancelled) return;
+          // An update may already be waiting, or mid-install, when we register.
           if (registration.waiting && navigator.serviceWorker.controller) {
             promptUpdate(registration.waiting);
           }
-          registration.addEventListener("updatefound", () => watchInstalling(registration));
+          watchInstalling(registration.installing);
+          registration.addEventListener("updatefound", () =>
+            watchInstalling(registration.installing),
+          );
         })
         .catch((error) => {
           console.warn("Service worker registration failed:", error);
@@ -81,13 +98,12 @@ export function WalletServiceWorkerRegister() {
 
     if (document.readyState === "complete") {
       register();
-      return () => {
-        navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
-      };
+    } else {
+      window.addEventListener("load", register, { once: true });
     }
 
-    window.addEventListener("load", register, { once: true });
     return () => {
+      cancelled = true;
       window.removeEventListener("load", register);
       navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
     };
