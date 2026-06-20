@@ -141,6 +141,15 @@ export type AddressEntry = {
   avatar?: string;
 };
 
+/** Stored address-book row (v1/v3 wallet backup shape). Relocated from lib/wallet-core/Wallet (#91 decoupling). */
+export type RawAddressEntry = {
+  id: string;
+  label: string;
+  address: string;
+  paymentId?: string;
+  avatar?: string;
+};
+
 export type SmartNode = {
   id: string;
   name: string;

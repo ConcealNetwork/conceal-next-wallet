@@ -81,13 +81,7 @@ export class WalletOptions {
   }
 }
 
-export type RawAddressEntry = {
-  id: string;
-  label: string;
-  address: string;
-  paymentId?: string;
-  avatar?: string;
-};
+export type { RawAddressEntry } from "@/lib/types";
 
 export type RawWallet = {
   deposits: any[];
