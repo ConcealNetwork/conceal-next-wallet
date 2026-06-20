@@ -59,9 +59,21 @@ self.addEventListener("install", (event) => {
         const cache = await caches.open(SHELL_CACHE);
         await cache.addAll(urls);
       }
-      await self.skipWaiting();
+      // Do NOT skipWaiting() here: an updated SW must WAIT until the page tells it
+      // to activate (via the SKIP_WAITING message below). Activating mid-session
+      // with clients.claim() could swap content-hashed chunks under a running tab
+      // and break a lazy-loaded old chunk name. The page surfaces an "update
+      // available" prompt and only then asks this worker to take over.
     })(),
   );
+});
+
+// The page posts {type:"SKIP_WAITING"} (from the "Reload" action of its
+// update-available toast) when the user opts in to the new version. Only then
+// does the waiting worker activate; the page reloads on the resulting
+// `controllerchange`. Anything else is ignored.
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
