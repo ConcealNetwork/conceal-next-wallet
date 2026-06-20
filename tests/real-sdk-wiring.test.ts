@@ -35,8 +35,10 @@ describe("engine-selection env wiring", () => {
   });
 
   it("treats any non-'false' value as mock", async () => {
-    process.env[MOCK_ENV] = "true";
-    expect((await freshEnv()).useMockWallet).toBe(true);
+    for (const value of ["true", "1", "yes", "mock", ""]) {
+      process.env[MOCK_ENV] = value;
+      expect((await freshEnv()).useMockWallet).toBe(true);
+    }
   });
 });
 
