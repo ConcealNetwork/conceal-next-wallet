@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Goals — Momentum / pace-coach (Conceal CCX)</title>
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Dark theme tokens lifted verbatim from app/globals.css (:root, default dark).
+   HSL triplets, resolved with hsl(...) at usage sites.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --background: 30 9% 9%;       /* warm near-black ~#171513 */
+  --foreground: 0 0% 100%;
+  --card: 36 9% 13%;            /* warm lifted surface ~#241f1c */
+  --card-foreground: 0 0% 100%;
+  --popover: 36 10% 12%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 39 100% 50%;       /* #FFA500 pure orange */
+  --primary-foreground: 0 0% 0%;
+  --secondary: 34 8% 17%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 34 8% 17%;
+  --muted-foreground: 36 7% 64%;
+  --accent: 39 100% 50%;
+  --destructive: 0 84% 60%;
+  --border: 34 9% 21%;          /* warm hairline ~#39332d */
+  --input: 34 9% 21%;
+  --ring: 39 100% 50%;
+  --chrome: 30 10% 7%;
+
+  /* wallet semantic colours (from @theme static in globals.css) */
+  --wallet-amber: #f5a623;
+  --wallet-incoming: #10b981;   /* green / on-track / achieved */
+  --wallet-outgoing: #ef4444;
+  --wallet-deposit: #60a5fa;
+
+  /* GoalColor palette tokens (fixed swatch row from spec §4) */
+  --goal-amber:    #f5a623;
+  --goal-incoming: #10b981;
+  --goal-deposit:  #60a5fa;
+  --goal-violet:   #a78bfa;
+  --goal-rose:     #fb7185;
+  --goal-sky:      #38bdf8;
+  --goal-slate:    #94a3b8;
+
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  /* ambient warm glow so surfaces have something to refract, mirroring the app */
+  background-image:
+    radial-gradient(1100px 520px at 78% -8%, hsl(39 100% 50% / 0.06), transparent 60%),
+    radial-gradient(900px 480px at 8% 4%, hsl(199 89% 48% / 0.045), transparent 60%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: hsl(var(--muted-foreground)); }
+
+/* ── App-frame scaffolding (lightweight stand-in for the shell + right rail) ── */
+.frame {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 28px 80px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 360px;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 1120px) { .frame { grid-template-columns: 1fr; } }
+
+.context-banner {
+  max-width: 1280px;
+  margin: 0 auto 4px;
+  padding: 10px 28px 0;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground) / 0.7);
+}
+
+/* ── Page header (mirrors PageHeader in components/wallet/common.tsx) ── */
+.page-header {
+  margin-bottom: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.page-header h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.page-header .sub { margin-top: 8px; color: hsl(var(--muted-foreground)); font-size: 14px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 600;
+  padding: 8px 14px; border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--secondary) / 0.6);
+  color: hsl(var(--foreground));
+  cursor: pointer; transition: border-color .2s, background .2s, transform .05s;
+}
+.btn:hover { border-color: hsl(var(--ring) / 0.5); }
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.btn-primary:hover { filter: brightness(1.05); border-color: hsl(var(--primary)); }
+.btn-ghost { background: transparent; }
+.btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+.icon-btn {
+  display: grid; place-items: center; width: 32px; height: 32px;
+  border-radius: 9px; border: 1px solid hsl(var(--border));
+  background: hsl(var(--secondary) / 0.95);
+  color: hsl(var(--muted-foreground)); cursor: pointer;
+}
+.icon-btn:hover { border-color: hsl(var(--ring) / 0.5); color: hsl(var(--foreground)); }
+
+/* ── wallet-card surface (matches .wallet-card / SectionCard) ── */
+.card {
+  border-radius: 16px;
+  border: 1px solid hsl(var(--border));
+  background:
+    linear-gradient(180deg, hsl(36 9% 15% / 0.9), hsl(36 9% 12% / 0.92));
+  box-shadow: 0 1px 0 hsl(0 0% 100% / 0.02) inset, 0 12px 32px rgba(0,0,0,0.28);
+}
+.section-title { font-size: 16px; font-weight: 600; }
+
+/* ── Empty state (matches EmptyState dashed surface) ── */
+.empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 230px; text-align: center;
+  border-radius: 14px; border: 1px dashed hsl(var(--border));
+  background: hsl(var(--secondary) / 0.5);
+  padding: 36px;
+}
+.empty .glyph {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px;
+  background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+  color: hsl(var(--primary)); margin-bottom: 16px;
+}
+.empty h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+.empty p { margin: 0; max-width: 460px; color: hsl(var(--muted-foreground)); }
+.honest-line {
+  margin-top: 14px; font-size: 12.5px;
+  color: hsl(var(--muted-foreground) / 0.85);
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid hsl(var(--border)); background: hsl(var(--background) / 0.5);
+}
+.honest-line svg { color: hsl(var(--wallet-incoming)); }
+
+/* ── Goals grid (container-query parity: 1 → 2 → up to 3) ── */
+.goals { container-type: inline-size; }
+.goals-grid {
+  display: grid; gap: 16px;
+  grid-template-columns: 1fr;
+}
+@container (min-width: 640px)  { .goals-grid { grid-template-columns: repeat(2, 1fr); } }
+@container (min-width: 1040px) { .goals-grid { grid-template-columns: repeat(2, 1fr); } }
+.span-2 { grid-column: 1 / -1; }
+
+/* ── Goal card ── */
+.goal {
+  position: relative;
+  padding: 18px 18px 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  /* per-card accent colour, defaulted; overridden inline */
+  --accent: var(--goal-amber);
+}
+.goal::before {
+  /* thin top accent stripe in the goal colour */
+  content: ""; position: absolute; left: 18px; right: 18px; top: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent 80%);
+  border-radius: 2px; opacity: 0.7;
+}
+.goal-head { display: flex; align-items: flex-start; gap: 12px; }
+.goal-ring { flex-shrink: 0; }
+.goal-id { min-width: 0; flex: 1; }
+.goal-name { font-size: 15.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.goal-icon {
+  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent); flex-shrink: 0;
+}
+.goal-sub { margin-top: 3px; font-size: 12px; color: hsl(var(--muted-foreground)); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.dot-sep { color: hsl(var(--muted-foreground) / 0.5); }
+
+/* PACE HERO — the focal block of every deadline card */
+.pace-hero {
+  border-radius: 12px;
+  padding: 12px 13px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent),
+    hsl(var(--background) / 0.45);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, hsl(var(--border)));
+}
+.pace-hero.is-behind {
+  --accent: var(--wallet-amber);
+  border-color: color-mix(in srgb, var(--wallet-amber) 36%, hsl(var(--border)));
+  background: linear-gradient(180deg, hsl(38 90% 55% / 0.10), transparent), hsl(var(--background) / 0.5);
+}
+.pace-hero.is-ontrack { border-color: color-mix(in srgb, var(--wallet-incoming) 26%, hsl(var(--border))); }
+.pace-hero.is-achieved { border-color: color-mix(in srgb, var(--wallet-incoming) 34%, hsl(var(--border)));
+  background: linear-gradient(180deg, hsl(160 84% 39% / 0.10), transparent), hsl(var(--background) / 0.5); }
+.pace-hero.is-neutral { border-color: hsl(var(--border)); background: hsl(var(--background) / 0.4); }
+
+.pace-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pace-amount { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+.pace-amount .unit { font-size: 12px; font-weight: 600; color: hsl(var(--muted-foreground)); margin-left: 3px; }
+.pace-label { font-size: 11px; color: hsl(var(--muted-foreground)); margin-top: 2px; }
+
+/* status pill */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.01em;
+  padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.pill svg { width: 12px; height: 12px; }
+.pill-ontrack { color: var(--wallet-incoming); background: hsl(160 84% 39% / 0.12); border-color: hsl(160 84% 39% / 0.3); }
+.pill-behind  { color: var(--wallet-amber);    background: hsl(38 90% 55% / 0.13);  border-color: hsl(38 90% 55% / 0.35); }
+.pill-met     { color: var(--wallet-incoming); background: hsl(160 84% 39% / 0.14); border-color: hsl(160 84% 39% / 0.34); }
+.pill-neutral { color: hsl(var(--muted-foreground)); background: hsl(var(--secondary) / 0.7); border-color: hsl(var(--border)); }
+.pill-due     { color: var(--wallet-amber); background: hsl(38 90% 55% / 0.12); border-color: hsl(38 90% 55% / 0.3); }
+
+/* amounts row */
+.amounts { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.amt-block .k { font-size: 11px; color: hsl(var(--muted-foreground)); }
+.amt-block .v { font-size: 14px; font-weight: 600; }
+.amt-block .usd { font-size: 11px; color: hsl(var(--muted-foreground) / 0.85); }
+.amt-block.right { text-align: right; }
+
+/* ── progress bar with expected-pace marker ── */
+.bar-wrap { position: relative; }
+.bar {
+  position: relative; height: 8px; border-radius: 999px;
+  background: hsl(var(--secondary)); overflow: hidden;
+}
+.bar > i {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 70%, white 0%), var(--accent));
+}
+.bar.is-behind > i { background: linear-gradient(90deg, hsl(38 90% 60%), var(--wallet-amber)); }
+.bar.is-achieved > i { background: linear-gradient(90deg, hsl(160 70% 50%), var(--wallet-incoming)); }
+/* expected-pace marker: a subtle vertical tick where the linear plan says you "should" be */
+.pace-marker {
+  position: absolute; top: -3px; bottom: -3px; width: 2px;
+  background: hsl(var(--foreground) / 0.85);
+  border-radius: 2px; transform: translateX(-50%);
+  box-shadow: 0 0 0 2px hsl(var(--background));
+}
+.pace-marker::after {
+  content: ""; position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+  border-left: 3px solid transparent; border-right: 3px solid transparent;
+  border-top: 4px solid hsl(var(--foreground) / 0.85);
+}
+.bar-legend { display: flex; gap: 14px; margin-top: 7px; font-size: 10.5px; color: hsl(var(--muted-foreground)); }
+.bar-legend .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+
+/* card footer actions */
+.goal-actions { display: flex; gap: 8px; margin-top: 2px; }
+.goal-actions .btn { flex: 1; justify-content: center; }
+
+/* expanded card: contributions trail + sparkline */
+.trail { border-top: 1px solid hsl(var(--border)); margin-top: 2px; padding-top: 12px; }
+.trail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.trail-head .t { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: hsl(var(--muted-foreground) / 0.85); }
+.trail-list { display: flex; flex-direction: column; }
+.trail-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-top: 1px solid hsl(var(--border) / 0.6); font-size: 12.5px;
+}
+.trail-row:first-child { border-top: none; }
+.trail-row .when { width: 64px; color: hsl(var(--muted-foreground)); flex-shrink: 0; }
+.trail-row .note { flex: 1; min-width: 0; color: hsl(var(--foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trail-row .delta { font-weight: 600; }
+.trail-row .delta.plus { color: var(--wallet-incoming); }
+.trail-row .delta.minus { color: hsl(var(--muted-foreground)); }
+.sparkbox {
+  margin-top: 12px; padding: 12px; border-radius: 12px;
+  border: 1px solid hsl(var(--border)); background: hsl(var(--background) / 0.4);
+  display: flex; align-items: center; gap: 16px;
+}
+.sparkbox .meta { font-size: 11px; color: hsl(var(--muted-foreground)); }
+.sparkbox .meta b { color: hsl(var(--foreground)); font-weight: 600; }
+
+/* achieved card restraint */
+.goal.achieved { opacity: 0.92; }
+.goal.achieved .goal-name { color: hsl(var(--foreground)); }
+
+/* ── Dialog panels (rendered static + clearly labelled) ── */
+.dialog-zone { margin-top: 36px; display: grid; gap: 20px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 900px) { .dialog-zone { grid-template-columns: 1fr; } }
+.dialog {
+  border-radius: 16px; border: 1px solid hsl(var(--border));
+  background: hsl(var(--popover)); padding: 0; overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.dialog-tag {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+  color: hsl(var(--primary));
+  padding: 10px 18px 0;
+}
+.dialog-body { padding: 8px 18px 18px; }
+.dialog h2 { margin: 4px 0 2px; font-size: 17px; font-weight: 600; }
+.dialog .desc { margin: 0 0 14px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.field { margin-bottom: 13px; }
+.field label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 5px; color: hsl(var(--foreground)); }
+.field .hint { font-size: 11px; color: hsl(var(--muted-foreground)); margin-top: 5px; }
+.input {
+  width: 100%; padding: 9px 11px; font-size: 13px;
+  border-radius: 9px; border: 1px solid hsl(var(--input));
+  background: hsl(var(--background) / 0.6); color: hsl(var(--foreground));
+  font-family: inherit;
+}
+.input.mono { font-family: var(--font-mono); }
+.input:focus { outline: 2px solid hsl(var(--ring) / 0.5); outline-offset: 0; border-color: hsl(var(--ring) / 0.6); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+
+/* icon picker */
+.icon-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.icon-pick {
+  width: 38px; height: 38px; display: grid; place-items: center;
+  border-radius: 10px; border: 1px solid hsl(var(--border));
+  background: hsl(var(--secondary) / 0.5); color: hsl(var(--muted-foreground)); cursor: pointer;
+}
+.icon-pick:hover { border-color: hsl(var(--ring) / 0.5); color: hsl(var(--foreground)); }
+.icon-pick.sel { border-color: hsl(var(--primary)); color: hsl(var(--primary)); background: hsl(39 100% 50% / 0.1); }
+
+/* colour swatches */
+.swatch-row { display: flex; gap: 9px; flex-wrap: wrap; }
+.swatch {
+  width: 28px; height: 28px; border-radius: 999px; cursor: pointer;
+  border: 2px solid transparent; box-shadow: 0 0 0 1px hsl(var(--border)) inset;
+  position: relative;
+}
+.swatch.sel { border-color: hsl(var(--foreground)); }
+.swatch.sel::after {
+  content: ""; position: absolute; inset: 0; margin: auto; width: 8px; height: 8px;
+  border-radius: 999px; background: hsl(0 0% 0% / 0.55);
+}
+
+/* live preview line */
+.preview {
+  margin-top: 6px; padding: 11px 13px; border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--wallet-incoming) 22%, hsl(var(--border)));
+  background: linear-gradient(180deg, hsl(160 84% 39% / 0.08), transparent), hsl(var(--background) / 0.4);
+  font-size: 12.5px; display: flex; gap: 9px; align-items: flex-start;
+}
+.preview svg { color: var(--wallet-incoming); flex-shrink: 0; margin-top: 1px; }
+.preview b { font-weight: 600; }
+.preview .calc { color: hsl(var(--primary)); font-weight: 600; }
+
+.dialog-foot { display: flex; justify-content: flex-end; gap: 9px; margin-top: 16px; }
+
+/* helper muted line for contribute dialog */
+.safe-helper {
+  margin-top: 12px; font-size: 11.5px; color: hsl(var(--muted-foreground));
+  display: flex; gap: 7px; align-items: flex-start;
+}
+.safe-helper svg { flex-shrink: 0; margin-top: 1px; color: hsl(var(--muted-foreground)); }
+
+/* sign toggle in contribute */
+.sign-toggle { display: inline-flex; border: 1px solid hsl(var(--border)); border-radius: 9px; overflow: hidden; }
+.sign-toggle button {
+  border: none; background: transparent; color: hsl(var(--muted-foreground));
+  font-size: 12px; font-weight: 600; padding: 7px 12px; cursor: pointer;
+}
+.sign-toggle button.on-add { background: hsl(160 84% 39% / 0.16); color: var(--wallet-incoming); }
+.sign-toggle button.on-take { color: hsl(var(--muted-foreground)); }
+
+/* ── Right rail (mirrors rail-parts.tsx) ── */
+.rail { display: flex; flex-direction: column; gap: 4px; }
+.rail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 12px; margin-bottom: 4px; border-bottom: 1px solid hsl(var(--border));
+}
+.rail-header .t { font-size: 15px; font-weight: 600; }
+.rail-section-heading {
+  display: flex; align-items: center; gap: 8px; padding: 0 4px;
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em;
+  color: hsl(var(--muted-foreground) / 0.8);
+}
+.rail-section-heading.first { padding-top: 6px; }
+.rail-section-heading:not(.first) { padding-top: 30px; }
+.rail-section-heading svg { width: 14px; height: 14px; }
+.rail-box { margin-top: 14px; border-radius: 12px; border: 1px solid hsl(var(--border) / 0.7); padding: 0 20px; }
+.rail-stat {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 0;
+  border-top: 1px solid hsl(var(--border) / 0.7);
+}
+.rail-stat.first { border-top: none; }
+.rail-stat .label { font-size: 13px; color: hsl(var(--muted-foreground)); min-width: 0; }
+.rail-stat .val { text-align: right; flex-shrink: 0; }
+.rail-stat .val .v { display: block; font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+.rail-stat .val .s { display: block; font-size: 11px; color: hsl(var(--muted-foreground)); }
+.rail-stat .val .v.green { color: var(--wallet-incoming); }
+.rail-stat .val .v.amber { color: var(--wallet-amber); }
+
+/* overall progress block in rail */
+.rail-overall { margin-top: 14px; border-radius: 12px; border: 1px solid hsl(var(--border) / 0.7); padding: 16px; }
+.rail-overall .pct { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.rail-overall .pct small { font-size: 13px; color: hsl(var(--muted-foreground)); font-weight: 500; }
+.rail-overall .bar { margin-top: 10px; }
+.rail-overall .sub { margin-top: 9px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+
+/* next milestone (mini ring) */
+.milestone { margin-top: 14px; border-radius: 12px; border: 1px solid hsl(var(--border) / 0.7); padding: 14px; display: flex; gap: 13px; align-items: center; }
+.milestone .info { min-width: 0; }
+.milestone .info .n { font-size: 13.5px; font-weight: 600; }
+.milestone .info .d { font-size: 11.5px; color: hsl(var(--muted-foreground)); margin-top: 2px; }
+.milestone .info .pace { font-size: 11.5px; color: var(--wallet-incoming); margin-top: 5px; font-weight: 600; }
+
+/* split count chips */
+.split { display: flex; gap: 10px; margin-top: 14px; }
+.split .chip { flex: 1; border-radius: 12px; border: 1px solid hsl(var(--border) / 0.7); padding: 12px 14px; }
+.split .chip .num { font-size: 22px; font-weight: 700; line-height: 1; }
+.split .chip .lab { font-size: 11px; color: hsl(var(--muted-foreground)); margin-top: 5px; }
+.split .chip.green .num { color: var(--wallet-incoming); }
+.split .chip.amber .num { color: var(--wallet-amber); }
+
+/* small caps helper for section labels above grid */
+.grid-section-label {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 30px 0 12px;
+}
+.grid-section-label .t { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: hsl(var(--muted-foreground)); }
+
+.note-banner {
+  font-size: 11px; color: hsl(var(--muted-foreground) / 0.7); text-align: center;
+  margin: 56px auto 0; max-width: 900px; padding-top: 22px; border-top: 1px dashed hsl(var(--border));
+}
+</style>
+</head>
+<body>
+
+<div class="context-banner">Conceal CCX Wallet · Earn → Goals · momentum / pace-coach direction (hi-fi mockup)</div>
+
+<div class="frame">
+  <!-- ════════════════════════ MAIN COLUMN ════════════════════════ -->
+  <main>
+    <!-- 1 ── PAGE HEADER ─────────────────────────────────────────── -->
+    <div class="page-header">
+      <div>
+        <h1>Goals</h1>
+        <p class="sub">Name a target, log what you set aside, and keep a steady pace toward the deadline.</p>
+      </div>
+      <button class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New goal
+      </button>
+    </div>
+
+    <!-- 1b ── EMPTY STATE (shown for reference; honest framing line) ── -->
+    <div class="grid-section-label"><span class="t">Empty state</span></div>
+    <div class="empty">
+      <div class="glyph">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+      </div>
+      <h3>No goals yet</h3>
+      <p>Set your first savings target — a new laptop, an emergency fund — and track your progress toward it at your own pace.</p>
+      <span class="honest-line">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+        Goals are a personal tracker — they never move or lock your CCX.
+      </span>
+    </div>
+
+    <!-- 2 ── POPULATED GOALS GRID ─────────────────────────────────── -->
+    <div class="grid-section-label">
+      <span class="t">Active goals</span>
+      <span class="muted" style="font-size:12px;">Sorted by nearest deadline</span>
+    </div>
+
+    <div class="goals">
+      <div class="goals-grid">
+
+        <!-- CARD A · ON-TRACK ───────────────────────────────────── -->
+        <div class="card goal" style="--accent: var(--goal-sky);">
+          <div class="goal-head">
+            <div class="goal-ring">
+              <!-- ProgressRing reused: viewBox 0 0 44 44, r=18, sw=5 -->
+              <svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="hsl(var(--border))" stroke-width="5"/>
+                <circle cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"
+                        stroke-dasharray="113.1" stroke-dashoffset="44.1" transform="rotate(-90 22 22)"/>
+                <text x="22" y="26" text-anchor="middle" fill="hsl(var(--foreground))" font-family="var(--font-mono)" font-size="10">61%</text>
+              </svg>
+            </div>
+            <div class="goal-id">
+              <div class="goal-name">
+                <span class="goal-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+                </span>
+                New laptop
+              </div>
+              <div class="goal-sub">Target 5,000 CCX <span class="dot-sep">·</span> by 31 Dec 2026 <span class="dot-sep">·</span> 193 days left</div>
+            </div>
+            <button class="icon-btn" title="More" style="margin-left:auto;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
+            </button>
+          </div>
+
+          <!-- PACE HERO (the focal block) -->
+          <div class="pace-hero is-ontrack">
+            <div class="pace-top">
+              <div>
+                <div class="pace-amount">~96<span class="unit">CCX / week</span></div>
+                <div class="pace-label">to stay on plan · you're ahead by 84 CCX</div>
+              </div>
+              <span class="pill pill-ontrack">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>
+                On track
+              </span>
+            </div>
+          </div>
+
+          <div class="amounts">
+            <div class="amt-block">
+              <div class="k">Saved</div>
+              <div class="v mono">3,050.00 CCX</div>
+              <div class="usd">≈ $42.70</div>
+            </div>
+            <div class="amt-block right">
+              <div class="k">Remaining</div>
+              <div class="v mono">1,950.00 CCX</div>
+              <div class="usd">≈ $27.30</div>
+            </div>
+          </div>
+
+          <div class="bar-wrap">
+            <div class="bar is-ontrack" style="--accent: var(--goal-sky);">
+              <i style="width:61%;"></i>
+              <!-- expected-pace marker: linear plan says ~57% by today -->
+              <span class="pace-marker" style="left:57%;" title="Expected by today"></span>
+            </div>
+            <div class="bar-legend">
+              <span><span class="swatch" style="background:var(--goal-sky);"></span>Logged 61%</span>
+              <span><span class="swatch" style="background:hsl(var(--foreground)/0.85);"></span>Expected today 57%</span>
+            </div>
+          </div>
+
+          <div class="goal-actions">
+            <button class="btn btn-primary btn-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add
+            </button>
+            <button class="btn btn-sm">Edit</button>
+          </div>
+        </div>
+
+        <!-- CARD B · BEHIND (amber, never red) ──────────────────── -->
+        <div class="card goal" style="--accent: var(--goal-rose);">
+          <div class="goal-head">
+            <div class="goal-ring">
+              <svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="hsl(var(--border))" stroke-width="5"/>
+                <circle cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"
+                        stroke-dasharray="113.1" stroke-dashoffset="79.2" transform="rotate(-90 22 22)"/>
+                <text x="22" y="26" text-anchor="middle" fill="hsl(var(--foreground))" font-family="var(--font-mono)" font-size="10">30%</text>
+              </svg>
+            </div>
+            <div class="goal-id">
+              <div class="goal-name">
+                <span class="goal-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                </span>
+                Trip to Japan
+              </div>
+              <div class="goal-sub">Target 12,000 CCX <span class="dot-sep">·</span> by 30 Sep 2026 <span class="dot-sep">·</span> 101 days left</div>
+            </div>
+            <button class="icon-btn" title="More" style="margin-left:auto;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
+            </button>
+          </div>
+
+          <div class="pace-hero is-behind">
+            <div class="pace-top">
+              <div>
+                <div class="pace-amount">~582<span class="unit">CCX / week</span></div>
+                <div class="pace-label">to catch up — behind plan by ~1,440 CCX</div>
+              </div>
+              <span class="pill pill-behind">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                Behind
+              </span>
+            </div>
+          </div>
+
+          <div class="amounts">
+            <div class="amt-block">
+              <div class="k">Saved</div>
+              <div class="v mono">3,600.00 CCX</div>
+              <div class="usd">≈ $50.40</div>
+            </div>
+            <div class="amt-block right">
+              <div class="k">Remaining</div>
+              <div class="v mono">8,400.00 CCX</div>
+              <div class="usd">≈ $117.60</div>
+            </div>
+          </div>
+
+          <div class="bar-wrap">
+            <div class="bar is-behind">
+              <i style="width:30%;"></i>
+              <span class="pace-marker" style="left:42%;" title="Expected by today"></span>
+            </div>
+            <div class="bar-legend">
+              <span><span class="swatch" style="background:var(--wallet-amber);"></span>Logged 30%</span>
+              <span><span class="swatch" style="background:hsl(var(--foreground)/0.85);"></span>Expected today 42%</span>
+            </div>
+          </div>
+
+          <div class="goal-actions">
+            <button class="btn btn-primary btn-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add
+            </button>
+            <button class="btn btn-sm">Edit</button>
+          </div>
+        </div>
+
+        <!-- CARD C · NOT STARTED ────────────────────────────────── -->
+        <div class="card goal" style="--accent: var(--goal-violet);">
+          <div class="goal-head">
+            <div class="goal-ring">
+              <svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="hsl(var(--border))" stroke-width="5"/>
+                <circle cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"
+                        stroke-dasharray="113.1" stroke-dashoffset="113.1" transform="rotate(-90 22 22)"/>
+                <text x="22" y="26" text-anchor="middle" fill="hsl(var(--foreground))" font-family="var(--font-mono)" font-size="10">0%</text>
+              </svg>
+            </div>
+            <div class="goal-id">
+              <div class="goal-name">
+                <span class="goal-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.4-1.5 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h0"/></svg>
+                </span>
+                Emergency fund
+              </div>
+              <div class="goal-sub">Target 20,000 CCX <span class="dot-sep">·</span> by 30 Jun 2027 <span class="dot-sep">·</span> 374 days left</div>
+            </div>
+            <button class="icon-btn" title="More" style="margin-left:auto;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
+            </button>
+          </div>
+
+          <div class="pace-hero is-neutral">
+            <div class="pace-top">
+              <div>
+                <div class="pace-amount">~385<span class="unit">CCX / week</span></div>
+                <div class="pace-label">a steady weekly pace would get you there</div>
+              </div>
+              <span class="pill pill-neutral">Not started</span>
+            </div>
+          </div>
+
+          <div class="amounts">
+            <div class="amt-block">
+              <div class="k">Saved</div>
+              <div class="v mono">0.00 CCX</div>
+              <div class="usd">≈ $0.00</div>
+            </div>
+            <div class="amt-block right">
+              <div class="k">Remaining</div>
+              <div class="v mono">20,000.00 CCX</div>
+              <div class="usd">≈ $280.00</div>
+            </div>
+          </div>
+
+          <div class="bar-wrap">
+            <div class="bar" style="--accent: var(--goal-violet);">
+              <i style="width:0%;"></i>
+              <span class="pace-marker" style="left:1%;" title="Expected by today"></span>
+            </div>
+            <div class="bar-legend">
+              <span class="muted">Log a first contribution to start your pace.</span>
+            </div>
+          </div>
+
+          <div class="goal-actions">
+            <button class="btn btn-primary btn-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Log first contribution
+            </button>
+            <button class="btn btn-sm">Edit</button>
+          </div>
+        </div>
+
+        <!-- CARD D · ACHIEVED (restrained) ──────────────────────── -->
+        <div class="card goal achieved" style="--accent: var(--goal-incoming);">
+          <div class="goal-head">
+            <div class="goal-ring">
+              <svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="hsl(var(--border))" stroke-width="5"/>
+                <circle cx="22" cy="22" r="18" fill="none" stroke="var(--wallet-incoming)" stroke-width="5" stroke-linecap="round"
+                        stroke-dasharray="113.1" stroke-dashoffset="0" transform="rotate(-90 22 22)"/>
+                <path d="M16.5 22.5l3.5 3.5 7-7.5" fill="none" stroke="var(--wallet-incoming)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(-1.5 -1.5)"/>
+              </svg>
+            </div>
+            <div class="goal-id">
+              <div class="goal-name">
+                <span class="goal-icon" style="--accent: var(--goal-incoming);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C8 4 12 8 12 8s4-4 7.5-4a2.5 2.5 0 0 1 0 5H18"/><rect x="3" y="9" width="18" height="4" rx="1"/><path d="M5 13v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/><line x1="12" y1="9" x2="12" y2="21"/></svg>
+                </span>
+                Birthday gift fund
+              </div>
+              <div class="goal-sub">Target 1,500 CCX <span class="dot-sep">·</span> reached 12 May 2026</div>
+            </div>
+            <button class="icon-btn" title="More" style="margin-left:auto;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
+            </button>
+          </div>
+
+          <div class="pace-hero is-achieved">
+            <div class="pace-top">
+              <div>
+                <div class="pace-amount" style="font-size:16px;">Goal met</div>
+                <div class="pace-label">19 days ahead of the deadline · nicely paced</div>
+              </div>
+              <span class="pill pill-met">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>
+                Met
+              </span>
+            </div>
+          </div>
+
+          <div class="amounts">
+            <div class="amt-block">
+              <div class="k">Saved</div>
+              <div class="v mono">1,500.00 CCX</div>
+              <div class="usd">≈ $21.00</div>
+            </div>
+            <div class="amt-block right">
+              <div class="k">Remaining</div>
+              <div class="v mono">0.00 CCX</div>
+              <div class="usd">≈ $0.00</div>
+            </div>
+          </div>
+
+          <div class="bar-wrap">
+            <div class="bar is-achieved"><i style="width:100%;"></i></div>
+          </div>
+
+          <div class="goal-actions">
+            <button class="btn btn-sm" style="flex:1;">Reopen</button>
+            <button class="btn btn-sm" style="flex:1;">Archive</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 3 ── EXPANDED CARD (contributions trail + sparkline) ──────── -->
+    <div class="grid-section-label"><span class="t">Goal · expanded</span></div>
+    <div class="card goal span-2" style="--accent: var(--goal-sky); max-width:600px;">
+      <div class="goal-head">
+        <div class="goal-ring">
+          <svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="hsl(var(--border))" stroke-width="5"/>
+            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"
+                    stroke-dasharray="113.1" stroke-dashoffset="44.1" transform="rotate(-90 22 22)"/>
+            <text x="22" y="26" text-anchor="middle" fill="hsl(var(--foreground))" font-family="var(--font-mono)" font-size="10">61%</text>
+          </svg>
+        </div>
+        <div class="goal-id">
+          <div class="goal-name">
+            <span class="goal-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
+            New laptop
+          </div>
+          <div class="goal-sub">Target 5,000 CCX <span class="dot-sep">·</span> by 31 Dec 2026 <span class="dot-sep">·</span> 193 days left</div>
+        </div>
+        <button class="icon-btn" title="Collapse" style="margin-left:auto;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+      </div>
+
+      <div class="pace-hero is-ontrack">
+        <div class="pace-top">
+          <div>
+            <div class="pace-amount">~96<span class="unit">CCX / week</span></div>
+            <div class="pace-label">to stay on plan · you're ahead by 84 CCX</div>
+          </div>
+          <span class="pill pill-ontrack">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>
+            On track
+          </span>
+        </div>
+      </div>
+
+      <div class="bar-wrap">
+        <div class="bar is-ontrack" style="--accent: var(--goal-sky);">
+          <i style="width:61%;"></i>
+          <span class="pace-marker" style="left:57%;" title="Expected by today"></span>
+        </div>
+        <div class="bar-legend">
+          <span><span class="swatch" style="background:var(--goal-sky);"></span>Logged 61%</span>
+          <span><span class="swatch" style="background:hsl(var(--foreground)/0.85);"></span>Expected today 57%</span>
+        </div>
+      </div>
+
+      <!-- contribution-history sparkline (cumulative-saved trend) -->
+      <div class="sparkbox">
+        <svg width="180" height="46" viewBox="0 0 180 46" aria-hidden="true">
+          <!-- expected-pace guide (linear plan) -->
+          <line x1="4" y1="40" x2="176" y2="14" stroke="hsl(var(--foreground)/0.28)" stroke-width="1.2" stroke-dasharray="3 3"/>
+          <!-- cumulative saved area -->
+          <defs>
+            <linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="var(--goal-sky)" stop-opacity="0.35"/>
+              <stop offset="1" stop-color="var(--goal-sky)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M4 41 L30 39 L56 33 L82 30 L108 24 L134 18 L160 12 L176 9 L176 46 L4 46 Z" fill="url(#sparkfill)"/>
+          <polyline points="4,41 30,39 56,33 82,30 108,24 134,18 160,12 176,9" fill="none" stroke="var(--goal-sky)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="176" cy="9" r="2.6" fill="var(--goal-sky)"/>
+        </svg>
+        <div class="meta">
+          <div><b>+1,200 CCX</b> logged across <b>8 contributions</b></div>
+          <div style="margin-top:4px;">12-week trend · tracking just above the expected line</div>
+        </div>
+      </div>
+
+      <!-- recent contributions trail -->
+      <div class="trail">
+        <div class="trail-head">
+          <span class="t">Recent contributions</span>
+          <button class="btn btn-ghost btn-sm">View all</button>
+        </div>
+        <div class="trail-list">
+          <div class="trail-row"><span class="when">Jun 18</span><span class="note">Freelance payout set aside</span><span class="delta plus mono">+300.00</span></div>
+          <div class="trail-row"><span class="when">Jun 11</span><span class="note">Weekly transfer</span><span class="delta plus mono">+100.00</span></div>
+          <div class="trail-row"><span class="when">Jun 04</span><span class="note">Weekly transfer</span><span class="delta plus mono">+100.00</span></div>
+          <div class="trail-row"><span class="when">May 30</span><span class="note">Corrected an over-count</span><span class="delta minus mono">−50.00</span></div>
+          <div class="trail-row"><span class="when">May 28</span><span class="note">Mining reward</span><span class="delta plus mono">+250.00</span></div>
+        </div>
+      </div>
+
+      <div class="goal-actions">
+        <button class="btn btn-primary btn-sm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add contribution
+        </button>
+        <button class="btn btn-sm">Edit goal</button>
+      </div>
+    </div>
+
+    <!-- 4 + 5 ── DIALOGS (static inline panels) ───────────────────── -->
+    <div class="grid-section-label"><span class="t">Dialogs</span></div>
+    <div class="dialog-zone">
+
+      <!-- ADD / EDIT GOAL -->
+      <div class="dialog">
+        <div class="dialog-tag">Dialog · Add / edit goal</div>
+        <div class="dialog-body">
+          <h2>New goal</h2>
+          <p class="desc">A goal just tracks a target — it never spends or locks any CCX.</p>
+
+          <div class="field">
+            <label>Name</label>
+            <input class="input" value="New laptop" />
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label>Target (CCX)</label>
+              <input class="input mono" value="5,000" />
+            </div>
+            <div class="field">
+              <label>Deadline <span class="muted" style="font-weight:400;">(optional)</span></label>
+              <input class="input" value="31 Dec 2026" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Icon</label>
+            <div class="icon-grid">
+              <button class="icon-pick" title="Target"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg></button>
+              <button class="icon-pick sel" title="Laptop"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg></button>
+              <button class="icon-pick" title="Home"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></button>
+              <button class="icon-pick" title="Car"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13"/><rect x="3" y="13" width="18" height="5" rx="1.5"/><circle cx="7.5" cy="18" r="1.2"/><circle cx="16.5" cy="18" r="1.2"/></svg></button>
+              <button class="icon-pick" title="Plane"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></button>
+              <button class="icon-pick" title="Piggy bank"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.4-1.5 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/></svg></button>
+              <button class="icon-pick" title="Graduation"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 9l10-4 10 4-10 4z"/><path d="M6 11v5c0 1 3 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></button>
+              <button class="icon-pick" title="Gift"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="9" width="18" height="4" rx="1"/><path d="M5 13v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/><line x1="12" y1="9" x2="12" y2="21"/><path d="M12 9S9 4 6.5 5.5 9 9 12 9z"/></svg></button>
+              <button class="icon-pick" title="Heart"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20s-7-4.6-7-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 7 2.7C19 15.4 12 20 12 20z"/></svg></button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Colour</label>
+            <div class="swatch-row">
+              <span class="swatch" style="background:var(--goal-amber);" title="amber"></span>
+              <span class="swatch" style="background:var(--goal-incoming);" title="incoming"></span>
+              <span class="swatch" style="background:var(--goal-deposit);" title="deposit"></span>
+              <span class="swatch" style="background:var(--goal-violet);" title="violet"></span>
+              <span class="swatch" style="background:var(--goal-rose);" title="rose"></span>
+              <span class="swatch sel" style="background:var(--goal-sky);" title="sky"></span>
+              <span class="swatch" style="background:var(--goal-slate);" title="slate"></span>
+            </div>
+          </div>
+
+          <!-- live preview line with computed weekly pace -->
+          <div class="preview">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><polyline points="3 4 3 12 11 12"/></svg>
+            <span>Target <b>5,000 CCX</b> · by <b>31 Dec 2026</b> · <span class="calc">~96 CCX / week</span> from today to stay on plan.</span>
+          </div>
+
+          <div class="dialog-foot">
+            <button class="btn">Cancel</button>
+            <button class="btn btn-primary">Save goal</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOG CONTRIBUTION -->
+      <div class="dialog">
+        <div class="dialog-tag">Dialog · Log contribution</div>
+        <div class="dialog-body">
+          <h2>Log contribution</h2>
+          <p class="desc">New laptop · 3,050 / 5,000 CCX saved</p>
+
+          <div class="field">
+            <label>Direction</label>
+            <div class="sign-toggle">
+              <button class="on-add">+ Set aside</button>
+              <button class="on-take">− Take back out</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Amount (CCX)</label>
+            <input class="input mono" value="300.00" />
+            <div class="hint">≈ $4.20 · brings you to 3,350 / 5,000 CCX (67%)</div>
+          </div>
+
+          <div class="field">
+            <label>Date</label>
+            <input class="input" value="21 Jun 2026" />
+          </div>
+
+          <div class="field">
+            <label>Note <span class="muted" style="font-weight:400;">(optional)</span></label>
+            <input class="input" value="Freelance payout set aside" placeholder="What was this?" />
+            <div class="hint">Up to 80 characters.</div>
+          </div>
+
+          <!-- muted safety helper -->
+          <div class="safe-helper">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            This records money you've set aside — it doesn't move any CCX.
+          </div>
+
+          <div class="dialog-foot">
+            <button class="btn">Cancel</button>
+            <button class="btn btn-primary">Log contribution</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="note-banner">
+      Hi-fi mockup · momentum / pace-coach direction. Dialogs shown as static inline panels.
+      Tokens, ProgressRing geometry, wallet-card surfaces and rail parts mirror the live Conceal CCX wallet.
+      Behind state is always <strong style="color:var(--wallet-amber);">amber</strong>, never red.
+    </p>
+  </main>
+
+  <!-- ════════════════════════ 6 · RIGHT RAIL ════════════════════════ -->
+  <aside class="rail">
+    <div class="rail-header">
+      <span class="t">Goals</span>
+      <button class="icon-btn" title="Collapse rail">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <!-- OVERALL PROGRESS (emphasised) -->
+    <div class="rail-section-heading first">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M19 9l-5 5-4-4-3 3"/></svg>
+      Overall progress
+    </div>
+    <div class="rail-overall">
+      <div class="pct">53%<small> across 3 active goals</small></div>
+      <div class="bar-wrap">
+        <div class="bar" style="--accent: var(--primary); margin-top:10px;">
+          <i style="width:53%;"></i>
+          <span class="pace-marker" style="left:49%;" title="Expected by today"></span>
+        </div>
+      </div>
+      <div class="sub">6,650 / 37,000 CCX logged · expected ~49% by today — <span style="color:var(--wallet-incoming);font-weight:600;">slightly ahead</span>.</div>
+    </div>
+
+    <!-- NEXT MILESTONE (mini ring · focal point) -->
+    <div class="rail-section-heading">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22V4a1 1 0 0 1 1-1h11l-2 4 2 4H5"/></svg>
+      Next milestone
+    </div>
+    <div class="milestone">
+      <svg viewBox="0 0 44 44" width="46" height="46" aria-hidden="true">
+        <circle cx="22" cy="22" r="18" fill="none" stroke="hsl(var(--border))" stroke-width="5"/>
+        <circle cx="22" cy="22" r="18" fill="none" stroke="var(--goal-rose)" stroke-width="5" stroke-linecap="round"
+                stroke-dasharray="113.1" stroke-dashoffset="79.2" transform="rotate(-90 22 22)"/>
+        <text x="22" y="26" text-anchor="middle" fill="hsl(var(--foreground))" font-family="var(--font-mono)" font-size="10">30%</text>
+      </svg>
+      <div class="info">
+        <div class="n">Trip to Japan</div>
+        <div class="d">8,400 CCX to go · due 30 Sep 2026</div>
+        <div class="pace" style="color:var(--wallet-amber);">Keep ~582 CCX/week to catch up</div>
+      </div>
+    </div>
+
+    <!-- SOONEST DEADLINE -->
+    <div class="rail-section-heading">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+      Soonest deadline
+    </div>
+    <div class="rail-box">
+      <div class="rail-stat first">
+        <span class="label">Trip to Japan</span>
+        <span class="val"><span class="v amber">101 days</span><span class="s">due 30 Sep 2026</span></span>
+      </div>
+      <div class="rail-stat">
+        <span class="label">New laptop</span>
+        <span class="val"><span class="v">193 days</span><span class="s">due 31 Dec 2026</span></span>
+      </div>
+      <div class="rail-stat">
+        <span class="label">Emergency fund</span>
+        <span class="val"><span class="v">374 days</span><span class="s">due 30 Jun 2027</span></span>
+      </div>
+    </div>
+
+    <!-- ON-TRACK vs BEHIND count -->
+    <div class="rail-section-heading">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Pace check
+    </div>
+    <div class="split">
+      <div class="chip green">
+        <div class="num">2</div>
+        <div class="lab">On track</div>
+      </div>
+      <div class="chip amber">
+        <div class="num">1</div>
+        <div class="lab">Behind</div>
+      </div>
+    </div>
+
+    <!-- weekly-pace footer summary -->
+    <div class="rail-box" style="margin-top:14px;">
+      <div class="rail-stat first">
+        <span class="label">Combined weekly pace</span>
+        <span class="val"><span class="v">~1,063 CCX</span><span class="s">to keep every deadline</span></span>
+      </div>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>

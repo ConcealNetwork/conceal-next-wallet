@@ -1,13 +1,14 @@
 "use client";
 
 import { toast } from "sonner";
+import { useOpenWalletContext } from "@/components/wallet/unlock-wallet-provider";
 import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
 import { clearPasskeyEnrollment } from "@/lib/auth/biometric-store";
-import { useOpenWalletContext } from "@/components/wallet/unlock-wallet-provider";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQueryClient } from "@/lib/hooks/query-provider";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { clearAllGoals, goalsStore } from "@/lib/storage/goals-store";
 import { clearAllTxNotes } from "@/lib/storage/tx-notes";
 import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
 
@@ -100,6 +101,7 @@ export function useWalletDelete() {
         const walletId = await getActiveWalletId();
         await services.wallet.deleteStoredWallet();
         clearPasskeyEnrollment(walletId);
+        await goalsStore.clear(walletId).catch(() => {});
         queryClient.clear();
         resetMessageNavBadge();
         closeSession();
@@ -132,6 +134,11 @@ export function usePanicWipe() {
       }
       try {
         await clearAllTxNotes();
+      } catch {
+        failed = true;
+      }
+      try {
+        await clearAllGoals();
       } catch {
         failed = true;
       }
