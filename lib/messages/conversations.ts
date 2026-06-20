@@ -1,5 +1,5 @@
 import type { AddressEntry, Message } from "@/lib/types";
-import { resolveThreadKeyFromMeta, sortMessagesByHeight } from "@/lib/wallet-core/mappers";
+import { resolveThreadKeyFromMeta, sortMessagesByHeight } from "@/lib/messages/thread-mappers";
 import { addressIsValid, normalizePaymentId } from "@/lib/validation/ccx";
 
 export type MessageConversation = {

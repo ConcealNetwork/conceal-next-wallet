@@ -6,6 +6,7 @@ import {
   createWalletNetworkConfig,
   walletNetworkScalars,
 } from "@/lib/config/config";
+import { sortMessagesByHeight } from "@/lib/messages/thread-mappers";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/ui/transaction-kind";
 import {
   clampImportHeight,
@@ -21,7 +22,6 @@ import {
   resolveTransactionType,
   listWalletMessages,
   listWalletTransactions,
-  sortMessagesByHeight,
 } from "@/lib/wallet-core/mappers";
 import { Deposit, Transaction, TransactionIn, TransactionOut } from "@/lib/wallet-core/Transaction";
 
