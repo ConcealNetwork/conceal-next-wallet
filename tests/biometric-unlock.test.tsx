@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Real mode so the passkey path is active (it's gated off in mock).
 vi.mock("@/lib/env", () => ({
-  env: { useMockWallet: false, persistWalletSession: false, walletEngine: "sdk" },
+  env: { useMockWallet: false, persistWalletSession: false },
 }));
 
 // Per-wallet passkey keying (#95): resolve a fixed active id so the unlock flow

@@ -18,7 +18,6 @@
       "!public",
       "!docs",
       "!**/*.svg",
-      "!lib/conceal/concealjs",
       "!!out",
       "!!.next"
     ]
@@ -102,42 +101,6 @@
     }
   },
   "overrides": [
-    {
-      "includes": ["lib/wallet-core/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "useExponentiationOperator": "off",
-            "useTemplate": "off",
-            "useConst": "warn",
-            "noNonNullAssertion": "warn"
-          },
-          "complexity": {
-            "noForEach": "off",
-            "noUselessConstructor": "off",
-            "noUselessThisAlias": "off",
-            "useLiteralKeys": "off",
-            "noStaticOnlyClass": "off",
-            "noBannedTypes": "off",
-            "noCommaOperator": "off"
-          },
-          "correctness": {
-            "useParseIntRadix": "off",
-            "noInnerDeclarations": "off",
-            "noSwitchDeclarations": "off",
-            "noUnreachable": "off"
-          },
-          "suspicious": {
-            "noExplicitAny": "off",
-            "noDoubleEquals": "warn",
-            "noImplicitAnyLet": "off",
-            "noAssignInExpressions": "off",
-            "noAsyncPromiseExecutor": "off",
-            "useIterableCallbackReturn": "off"
-          }
-        }
-      }
-    },
     {
       "includes": ["types/**"],
       "linter": {

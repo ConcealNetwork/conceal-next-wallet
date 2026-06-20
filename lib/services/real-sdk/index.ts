@@ -9,8 +9,8 @@ import { realSdkWalletService } from "@/lib/services/real-sdk/wallet.service";
 import type { WalletServices } from "@/lib/services/types";
 
 /**
- * The real wallet engine backed by `conceal-wallet-sdk` (no `lib/wallet-core`).
- * Selected when `NEXT_PUBLIC_USE_MOCK=false` AND `NEXT_PUBLIC_WALLET_ENGINE=sdk`.
+ * The real wallet engine backed by `conceal-wallet-sdk` (the only real engine).
+ * Selected when `NEXT_PUBLIC_USE_MOCK=false`.
  */
 export const realServices: WalletServices = {
   wallet: realSdkWalletService,

@@ -35,7 +35,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
-          # Security-extended catches more (incl. lib/wallet-core, the highest-risk code).
+          # Security-extended catches more (incl. the SDK crypto + spend paths).
           queries: security-extended
       - name: Analyze
         uses: github/codeql-action/analyze@v3
