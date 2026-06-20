@@ -73,6 +73,9 @@ self.addEventListener("install", (event) => {
 // does the waiting worker activate; the page reloads on the resulting
 // `controllerchange`. Anything else is ignored.
 self.addEventListener("message", (event) => {
+  // Only honour messages from our OWN origin's pages — never a cross-origin sender
+  // (defense-in-depth; an in-scope SW shouldn't receive these, but be explicit).
+  if (event.origin && event.origin !== self.location.origin) return;
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
