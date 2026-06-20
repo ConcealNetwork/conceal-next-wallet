@@ -8,14 +8,9 @@
     "npm": ">=11"
   },
   "scripts": {
-    "concealjs:prebuild": "concealjs --prebuild --out lib/conceal/concealjs && node scripts/stamp-concealjs-version.mjs && cp lib/conceal/concealjs/concealjs.js public/lib/concealjs/concealjs.js",
-    "sync:legacy-libs": "node scripts/sync-legacy-libs.mjs",
-    "generate:config": "node scripts/generate-public-config.mjs",
-    "build:sync-worker": "node scripts/build-sync-worker.mjs",
     "generate:precache": "node scripts/generate-precache-manifest.mjs",
-    "prebuild:wallet": "npm run generate:config && npm run build:sync-worker",
     "dev": "next dev",
-    "build": "npm run prebuild:wallet && NODE_OPTIONS=--no-deprecation next build && npm run generate:precache",
+    "build": "NODE_OPTIONS=--no-deprecation next build && npm run generate:precache",
     "start": "next start",
     "types": "tsc --noEmit",
     "format": "npx biome format",

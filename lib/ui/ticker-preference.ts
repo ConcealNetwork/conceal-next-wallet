@@ -47,22 +47,9 @@ function writeLocalPreference(value: boolean): void {
   }
 }
 
-/** One-time migration: read the value persisted by older builds (wallet-core IndexedDB store). */
-async function readLegacyPreference(): Promise<boolean> {
-  try {
-    const { tickerStore } = await import("@/lib/wallet-core/Translations");
-    await tickerStore.initialize();
-    return tickerStore.useShortTicker;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Load the persisted preference. localStorage is the canonical store — the same
- * `useShortTicker` key the device-data vault backs up. Older builds kept it in the
- * wallet-core IndexedDB store, so on first run we migrate that value into
- * localStorage once (after which nothing here pulls wallet-core into mock mode).
+ * `useShortTicker` key the device-data vault backs up.
  */
 export async function loadTickerPreference(): Promise<boolean> {
   if (typeof window === "undefined") {
@@ -70,7 +57,7 @@ export async function loadTickerPreference(): Promise<boolean> {
   }
 
   const local = readLocalPreference();
-  useShortTicker = local ?? (await readLegacyPreference());
+  useShortTicker = local ?? false;
   if (local === null) {
     writeLocalPreference(useShortTicker);
   }

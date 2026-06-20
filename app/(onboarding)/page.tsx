@@ -5,7 +5,6 @@ import {
   OpenWalletProvider,
 } from "@/components/landing/landing-actions";
 import { LandingBalanceCard } from "@/components/landing/landing-balance-card";
-import { WalletRuntimePreload } from "@/components/wallet/wallet-runtime-preload";
 import { withBasePath } from "@/lib/utils";
 
 const trustPoints = [
@@ -18,7 +17,6 @@ const trustPoints = [
 export default function LandingPage() {
   return (
     <OpenWalletProvider>
-      <WalletRuntimePreload />
       <main className="relative min-h-screen overflow-x-hidden text-foreground">
         <ConcealBackdrop />
 

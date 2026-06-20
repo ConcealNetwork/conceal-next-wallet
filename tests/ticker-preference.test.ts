@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   getDisplayTicker,
   getUseShortTicker,
@@ -8,38 +8,8 @@ import {
 } from "@/lib/ui/ticker-preference";
 import { formatCcx } from "@/lib/utils";
 
-const storage = vi.hoisted(() => new Map<string, unknown>());
-
-vi.mock("@/lib/wallet-core/Storage", () => ({
-  Storage: {
-    getItem: vi.fn(async (key: string, defaultValue: unknown) =>
-      storage.has(key) ? storage.get(key) : defaultValue,
-    ),
-    setItem: vi.fn(async (key: string, value: unknown) => {
-      storage.set(key, value);
-    }),
-  },
-}));
-
-vi.mock("@/lib/wallet-core/Translations", () => ({
-  tickerStore: {
-    initialize: vi.fn(async () => {
-      const { Storage } = await import("@/lib/wallet-core/Storage");
-      const value = await Storage.getItem("useShortTicker", false);
-      return value;
-    }),
-    get useShortTicker() {
-      return Boolean(storage.get("useShortTicker"));
-    },
-    setTickerPreference: vi.fn(async (useShort: boolean) => {
-      storage.set("useShortTicker", useShort);
-    }),
-  },
-}));
-
 describe("ticker preference", () => {
   beforeEach(async () => {
-    storage.clear();
     localStorage.clear();
     await setTickerPreference(false);
   });
@@ -69,10 +39,9 @@ describe("ticker preference", () => {
     expect(getUseShortTicker()).toBe(true);
   });
 
-  it("migrates a legacy wallet-core value into localStorage on first load", async () => {
+  it("defaults to false when no preference is stored", async () => {
     localStorage.removeItem("useShortTicker");
-    storage.set("useShortTicker", true); // value persisted by an older build
-    expect(await loadTickerPreference()).toBe(true);
-    expect(localStorage.getItem("useShortTicker")).toBe("true"); // seeded for the vault
+    expect(await loadTickerPreference()).toBe(false);
+    expect(localStorage.getItem("useShortTicker")).toBe("false");
   });
 });

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createCoalescingThrottle } from "@/lib/hooks/coalescing-throttle";
 import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provider";
 import { env } from "@/lib/env";
 import { services } from "@/lib/services";
@@ -141,9 +140,8 @@ export function useWalletLiveSync() {
   // (useWalletInfo, WALLET_POLL) — NOT a blind list timer — so the heavy lists re-map
   // only when something actually changed. The poll cadence (≥2.5s) self-throttles this:
   // `liveHeight` can't change faster than the wallet query refetches, so there's no
-  // burst to coalesce and no risk of a 14k-tx re-walk storm. This is the path the SDK
-  // engine relies on (its runtime emits no sync events); the wallet-core notifier below
-  // adds finer-grained wallet/tx updates for the legacy engine.
+  // burst to coalesce and no risk of a 14k-tx re-walk storm. The SDK engine's runtime
+  // emits no sync events, so this polled-height watch is what keeps the lists live.
   const liveHeight = useWalletInfo().data?.currentHeight;
   const lastHeightRef = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -156,50 +154,6 @@ export function useWalletLiveSync() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
     void queryClient.invalidateQueries({ queryKey: queryKeys.optimizationStatus });
   }, [liveHeight, queryClient]);
-
-  useEffect(() => {
-    if (env.useMockWallet) return;
-
-    // Sync emits a 'modified' event per scanned block batch (the lastHeight
-    // setter). Coalesce those bursts into ~2 invalidations/sec so the refetch +
-    // balance recompute + re-render can't saturate the main thread — an
-    // unthrottled invalidation here froze the page during long scans.
-    const throttle = createCoalescingThrottle(() => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-    }, 500);
-
-    // Messages/deposits walk the full tx list — mark stale on sync but don't refetch ~2×/sec.
-    const throttleHeavy = createCoalescingThrottle(() => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.deposits, refetchType: "none" });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.messages, refetchType: "none" });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.optimizationStatus,
-        refetchType: "none",
-      });
-    }, 5000);
-
-    let unsubscribe: (() => void) | undefined;
-    let cancelled = false;
-
-    void import("@/lib/wallet-core/wallet-sync-notifier").then(({ subscribeWalletSync }) => {
-      // The effect may have been cleaned up (StrictMode double-mount, or a fast
-      // unmount) before this dynamic import resolved — don't subscribe a
-      // listener that would then leak and keep firing invalidations post-unmount.
-      if (cancelled) return;
-      unsubscribe = subscribeWalletSync(() => {
-        throttle.trigger();
-        throttleHeavy.trigger();
-      });
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-      throttle.cancel();
-      throttleHeavy.cancel();
-    };
-  }, [queryClient]);
 }
 
 export function useTransactions() {
