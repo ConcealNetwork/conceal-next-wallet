@@ -1,10 +1,11 @@
-import { publicAssetPath } from "@/lib/conceal/asset-path";
-import { ensureWalletExtendedLibs } from "@/lib/conceal/init";
 import type { ExportWalletData } from "@/lib/services/wallet.service";
+import { qrToDataUrl } from "@/lib/ui/qr-png";
 import { formatWalletBackupMarkdown } from "@/lib/ui/wallet-export-backup";
 
-const JSPDF_SCRIPT = "/lib/jspdf.min.js";
 const PDF_FILENAME = "conceal-wallet-backup.pdf";
+
+/** jsPDF document type (the npm package is dynamically imported to keep it out of the main bundle). */
+type JsPdfDoc = import("jspdf").jsPDF;
 
 /** Theme primary is hsl(39 100% 50%) — use a very light tint for print-friendly headers. */
 const PDF_THEME = {
@@ -16,44 +17,7 @@ const PDF_THEME = {
   sectionRule: [220, 220, 220] as const,
 } as const;
 
-let jsPdfLoadPromise: Promise<void> | null = null;
-
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[data-wallet-lib="${src}"]`);
-    if (existing) {
-      resolve();
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = publicAssetPath(src);
-    script.async = false;
-    script.dataset.walletLib = src;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Failed to load wallet script: ${src}`));
-    document.head.appendChild(script);
-  });
-}
-
-async function ensureJsPdf(): Promise<void> {
-  if (typeof jsPDF !== "undefined") {
-    return;
-  }
-
-  if (!jsPdfLoadPromise) {
-    jsPdfLoadPromise = loadScript(JSPDF_SCRIPT);
-  }
-
-  await jsPdfLoadPromise;
-
-  if (typeof jsPDF === "undefined") {
-    throw new Error("jsPDF is not available.");
-  }
-}
-
-/** Legacy jsPDF (public/lib/jspdf.min.js) exposes width/height getters, not getWidth(). */
-function getPdfPageDimensions(doc: InstanceType<typeof jsPDF>): { width: number; height: number } {
+function getPdfPageDimensions(doc: JsPdfDoc): { width: number; height: number } {
   const pageSize = doc.internal.pageSize as {
     width?: number;
     height?: number;
@@ -61,38 +25,17 @@ function getPdfPageDimensions(doc: InstanceType<typeof jsPDF>): { width: number;
     getHeight?: () => number;
   };
 
-  if (typeof pageSize.width === "number" && typeof pageSize.height === "number") {
-    return { width: pageSize.width, height: pageSize.height };
-  }
-
   if (typeof pageSize.getWidth === "function" && typeof pageSize.getHeight === "function") {
     return { width: pageSize.getWidth(), height: pageSize.getHeight() };
   }
-
+  if (typeof pageSize.width === "number" && typeof pageSize.height === "number") {
+    return { width: pageSize.width, height: pageSize.height };
+  }
   return { width: 210, height: 297 };
 }
 
-function createPdfDocument(): InstanceType<typeof jsPDF> {
-  return new jsPDF("portrait", "mm", "a4");
-}
-
-function renderQrCanvas(text: string, size: number, ecLevel?: string): HTMLCanvasElement {
-  const rendered = kjua({
-    render: "canvas",
-    text,
-    size,
-    ...(ecLevel ? { ecLevel } : {}),
-  });
-
-  if (typeof rendered === "string" || rendered instanceof HTMLImageElement) {
-    throw new Error("Expected kjua to return a canvas.");
-  }
-
-  return rendered;
-}
-
 function writeSection(
-  doc: InstanceType<typeof jsPDF>,
+  doc: JsPdfDoc,
   margin: number,
   pageWidth: number,
   yStart: number,
@@ -119,11 +62,7 @@ function writeSection(
   return y + lines.length * 4.2 + 5;
 }
 
-function drawPrintHeader(
-  doc: InstanceType<typeof jsPDF>,
-  pageWidth: number,
-  margin: number,
-): number {
+function drawPrintHeader(doc: JsPdfDoc, pageWidth: number, margin: number): number {
   const headerHeight = 16;
 
   doc.setFillColor(...PDF_THEME.headerFill);
@@ -142,9 +81,8 @@ function drawPrintHeader(
 
 /** Build and download a PDF backup (markdown-style keys + receive/import QR codes). */
 export async function downloadWalletExportPdf(data: ExportWalletData): Promise<string> {
-  await ensureWalletExtendedLibs();
-  await ensureJsPdf();
-
+  // Lazy-load the (heavy) PDF library so it never enters the main bundle.
+  const { jsPDF } = await import("jspdf");
   const { CoinUri } = await import("@/lib/ui/coin-uri");
   const importUri = CoinUri.encodeWalletKeys(
     data.address,
@@ -153,10 +91,11 @@ export async function downloadWalletExportPdf(data: ExportWalletData): Promise<s
     data.creationHeight,
   );
 
-  const addressQr = renderQrCanvas(data.address, 336);
-  const importQr = renderQrCanvas(importUri, 336, "M");
+  // Address fits level-H; the longer wallet-keys import URI uses level-M for capacity.
+  const addressQr = qrToDataUrl(data.address);
+  const importQr = qrToDataUrl(importUri, { ecLevel: "M" });
 
-  const doc = createPdfDocument();
+  const doc = new jsPDF("portrait", "mm", "a4");
   const margin = 14;
   const { width: pageWidth, height: pageHeight } = getPdfPageDimensions(doc);
 
@@ -168,14 +107,7 @@ export async function downloadWalletExportPdf(data: ExportWalletData): Promise<s
   const viewMatch = markdown.match(/## View Key\s+```\s*([\s\S]*?)```/);
   const spendMatch = markdown.match(/## SpendKey\s+```\s*([\s\S]*?)```/);
 
-  y = writeSection(
-    doc,
-    margin,
-    pageWidth,
-    y,
-    "mnemonic phrase",
-    mnemonicMatch?.[1] ?? data.mnemonic,
-  );
+  y = writeSection(doc, margin, pageWidth, y, "mnemonic phrase", mnemonicMatch?.[1] ?? data.mnemonic);
   y = writeSection(doc, margin, pageWidth, y, "View Key", viewMatch?.[1] ?? data.viewKey);
   y = writeSection(doc, margin, pageWidth, y, "SpendKey", spendMatch?.[1] ?? data.spendKey);
 
@@ -189,15 +121,8 @@ export async function downloadWalletExportPdf(data: ExportWalletData): Promise<s
   doc.text("Public address", margin, qrY);
   doc.text("Import wallet", margin + qrSize + qrGap, qrY);
 
-  doc.addImage(addressQr.toDataURL("image/png"), "PNG", margin, qrY + 3, qrSize, qrSize);
-  doc.addImage(
-    importQr.toDataURL("image/png"),
-    "PNG",
-    margin + qrSize + qrGap,
-    qrY + 3,
-    qrSize,
-    qrSize,
-  );
+  doc.addImage(addressQr, "PNG", margin, qrY + 3, qrSize, qrSize);
+  doc.addImage(importQr, "PNG", margin + qrSize + qrGap, qrY + 3, qrSize, qrSize);
 
   let captionY = qrY + qrSize + 8;
   doc.setFont("helvetica", "normal");

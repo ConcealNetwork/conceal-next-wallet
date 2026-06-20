@@ -14,8 +14,8 @@ export const QR_PNG_MODULE_SCALE = 10;
  * level H. Pure — no DOM — so it is unit-testable; the canvas rasterization is a
  * thin separate step.
  */
-export function qrModuleMatrix(value: string): boolean[][] {
-  const qr = qrcode(0, "H");
+export function qrModuleMatrix(value: string, ecLevel: "L" | "M" | "Q" | "H" = "H"): boolean[][] {
+  const qr = qrcode(0, ecLevel);
   qr.addData(value, "Byte");
   qr.make();
   const count = qr.getModuleCount();
@@ -27,6 +27,8 @@ export function qrModuleMatrix(value: string): boolean[][] {
 export interface QrPngOptions {
   scale?: number;
   quietZone?: number;
+  /** Error-correction level. Defaults to H; lower (e.g. M) fits more data per QR. */
+  ecLevel?: "L" | "M" | "Q" | "H";
 }
 
 /**
@@ -85,6 +87,43 @@ export function qrToPngBlob(value: string, options: QrPngOptions = {}): Promise<
       else reject(new Error("Failed to render QR PNG."));
     }, "image/png");
   });
+}
+
+/**
+ * Rasterize a value to a PNG data URL (square modules, no logo) — for embedding a
+ * QR into a generated PDF. Synchronous + browser-only.
+ */
+export function qrToDataUrl(value: string, options: QrPngOptions = {}): string {
+  if (typeof document === "undefined") {
+    throw new Error("QR rendering is only available in the browser.");
+  }
+  const scale = options.scale ?? QR_PNG_MODULE_SCALE;
+  const quietZone = options.quietZone ?? QR_PNG_QUIET_ZONE;
+  const matrix = qrModuleMatrix(value, options.ecLevel);
+  const count = matrix.length;
+  const dimension = (count + quietZone * 2) * scale;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = dimension;
+  canvas.height = dimension;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Canvas 2D context is unavailable.");
+  }
+  ctx.fillStyle = QR_LIGHT;
+  ctx.fillRect(0, 0, dimension, dimension);
+  ctx.fillStyle = QR_DARK;
+  for (let row = 0; row < count; row++) {
+    for (let col = 0; col < count; col++) {
+      if (matrix[row][col]) {
+        ctx.fillRect((col + quietZone) * scale, (row + quietZone) * scale, scale, scale);
+      }
+    }
+  }
+  const url = canvas.toDataURL("image/png");
+  canvas.width = 0;
+  canvas.height = 0;
+  return url;
 }
 
 /** Filename like `conceal-qr-ccx7abcd.png`, sanitized to `[a-z0-9-]`. */
