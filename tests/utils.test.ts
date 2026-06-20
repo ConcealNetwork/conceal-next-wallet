@@ -19,8 +19,8 @@ describe("wallet utils", () => {
   });
 
   it("formats USD amounts", () => {
-    expect(formatUsd(usdAmount(56.2725))).toBe("$56.27"); // fiat defaults to 2dp
-    expect(formatUsd(usdAmount(56.2725), 4)).toBe("$56.2725"); // sub-cent precision on request
+    expect(formatUsd(usdAmount(56.2725))).toBe("$56.2725"); // fiat defaults to 4dp (sub-cent CCX)
+    expect(formatUsd(usdAmount(56.2725), 2)).toBe("$56.27"); // explicit cents on request
     expect(formatUsd(125000, 0)).toBe("$125,000");
   });
 

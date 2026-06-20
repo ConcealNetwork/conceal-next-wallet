@@ -83,9 +83,9 @@ test("pages without a registered rail render full width", async ({ page }) => {
   // Account has a rail.
   await expect(page.getByRole("complementary", { name: "Context panel" })).toBeVisible();
 
-  // Navigate to Address Book, which registers no rail (only Account + Transactions do).
-  await page.getByRole("link", { name: "Address Book", exact: true }).click();
-  await expect(page).toHaveURL(/\/wallet\/address-book\/?$/);
+  // Navigate to Messages, which registers no contextual rail.
+  await page.getByRole("link", { name: "Messages", exact: true }).click();
+  await expect(page).toHaveURL(/\/wallet\/messages\/?$/);
 
   // The context panel is gone — the rail cleared on unmount.
   await expect(page.getByRole("complementary", { name: "Context panel" })).toHaveCount(0);

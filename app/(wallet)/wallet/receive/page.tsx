@@ -56,9 +56,14 @@ export default function ReceivePage() {
   const [qrLogo, setQrLogo] = useState<(typeof QR_LOGOS)[number]["src"]>(QR_LOGOS[0].src);
 
   const address = wallet.data?.address ?? "";
-  const amountNum = Number.parseFloat(amount);
-  const hasPaymentLink = Number.isFinite(amountNum) && amountNum > 0;
-  const hasRequest = Boolean(amount || paymentId || message || recipientName);
+  const amountTrimmed = amount.trim();
+  // Strict positive decimal, ≤6dp. `parseFloat` would accept "1e3"/"1." and the
+  // raw string then gets encoded into the QR/link — but the QR parser reads "1e3"
+  // as 1 and the payment-link parser rejects it. Validate before encoding.
+  const amountValid = /^\d{1,12}(\.\d{1,6})?$/.test(amountTrimmed) && Number(amountTrimmed) > 0;
+  const amountForUri = amountValid ? amountTrimmed : null;
+  const hasPaymentLink = amountValid;
+  const hasRequest = Boolean(amountTrimmed || paymentId || message || recipientName);
   // Light field validation: invalid payment-ID / over-size message are excluded
   // from the encoded QR + link (so they stay scannable/valid) and flagged inline.
   const paymentIdValid = paymentIdIsValid(paymentId);
@@ -72,16 +77,16 @@ export default function ReceivePage() {
     return CoinUri.encodeTx(
       address,
       paymentIdValid ? paymentId || null : null,
-      amount || null,
+      amountForUri,
       recipientName || null,
       messageTooLong ? null : message || null,
     );
-  }, [address, amount, message, messageTooLong, paymentId, paymentIdValid, recipientName]);
+  }, [address, amountForUri, message, messageTooLong, paymentId, paymentIdValid, recipientName]);
   const paymentPageUrl = useMemo(() => {
     if (!hasPaymentLink || !address) return "";
     return buildPaymentSendUrl({
       address,
-      amount,
+      amount: amountForUri ?? "",
       paymentId: paymentIdValid ? paymentId : "",
       message: messageTooLong ? "" : message,
       label: recipientName,
@@ -89,7 +94,7 @@ export default function ReceivePage() {
     });
   }, [
     address,
-    amount,
+    amountForUri,
     hasPaymentLink,
     message,
     messageTooLong,
@@ -99,8 +104,8 @@ export default function ReceivePage() {
     v1Link,
   ]);
   const qrDescription = hasRequest
-    ? amount
-      ? t("receive.qrRequestAmount", { amount })
+    ? amountForUri
+      ? t("receive.qrRequestAmount", { amount: amountForUri })
       : t("receive.qrRequest")
     : t("receive.qrAddress");
 
@@ -166,7 +171,7 @@ export default function ReceivePage() {
                   <SharePaymentCard
                     qrValue={paymentUri}
                     address={address}
-                    amountLabel={hasPaymentLink ? `${amount} CCX` : null}
+                    amountLabel={amountForUri ? `${amountForUri} CCX` : null}
                     disabled={!paymentUri}
                   />
                   <Button
@@ -201,7 +206,13 @@ export default function ReceivePage() {
                         value={amount}
                         onChange={(event) => setAmount(event.target.value)}
                         placeholder="0.00"
+                        aria-invalid={amountTrimmed !== "" && !amountValid ? true : undefined}
                       />
+                      {amountTrimmed !== "" && !amountValid ? (
+                        <p className="text-sm text-wallet-outgoing">
+                          {t("receive.errAmountInvalid")}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="req-paymentId">{t("rail.paymentId")}</Label>

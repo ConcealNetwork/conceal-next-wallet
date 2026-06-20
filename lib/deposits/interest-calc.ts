@@ -21,11 +21,20 @@ export interface DepositInterestEstimate {
 }
 
 /**
- * Estimate deposit interest. `ccx` must be a whole, positive number; anything
- * else yields a zeroed estimate (matches the form's validation).
+ * Estimate deposit interest. `ccx` must be a whole, positive number and `months`
+ * a positive number; anything else yields a zeroed estimate (matches the form's
+ * validation). Guarding `months` too keeps the exported contract safe for callers
+ * that don't pre-clamp the term (a non-positive term would otherwise drive `ear`
+ * below `base` and return a negative period rate).
  */
 export function computeDepositInterest(ccx: number, months: number): DepositInterestEstimate {
-  if (!Number.isFinite(ccx) || ccx <= 0 || !Number.isInteger(ccx)) {
+  if (
+    !Number.isFinite(ccx) ||
+    ccx <= 0 ||
+    !Number.isInteger(ccx) ||
+    !Number.isFinite(months) ||
+    months <= 0
+  ) {
     return { interestCcx: 0, earPct: 0, eirPct: 0 };
   }
 

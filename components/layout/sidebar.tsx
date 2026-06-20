@@ -315,7 +315,9 @@ function SidebarFooter({ collapsed, onNavigate }: { collapsed: boolean; onNaviga
               {active?.label}
             </span>
             <span className="block text-[11px] leading-tight text-muted-foreground">
-              {list.length} {list.length === 1 ? "wallet" : "wallets"}
+              {t(list.length === 1 ? "wallets.countOne" : "wallets.countOther", {
+                count: list.length,
+              })}
             </span>
           </span>
           <Settings className="size-[18px] shrink-0 text-muted-foreground" aria-hidden="true" />

@@ -17,8 +17,9 @@ test("import a view-only wallet and verify spend actions are disabled", async ({
   await page.getByRole("button", { name: "Continue" }).click();
 
   // Step 4 — device password.
-  await page.locator("#import-keys-password").fill("password123");
-  await page.locator("#import-keys-confirm").fill("password123");
+  // Must satisfy the min password-strength gate (length>=8 && >=3 strength hints).
+  await page.locator("#import-keys-password").fill("Password123!");
+  await page.locator("#import-keys-confirm").fill("Password123!");
   await page.getByRole("button", { name: "Open Mock Wallet" }).click();
 
   // Lands on the account with the view-only badge + banner.

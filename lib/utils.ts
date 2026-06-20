@@ -18,8 +18,9 @@ export function withBasePath(path: string): string {
 }
 
 export const CCX_ATOMIC_UNITS = 10 ** COIN_UNIT_PLACES;
-// CCX is shown at full 6-decimal precision across the app (USD stays 2dp). This
-// is the default for `formatCcx`; callers can still pass an explicit decimals arg.
+// CCX is shown at full 6-decimal precision across the app. This is the default
+// for `formatCcx`; callers can still pass an explicit decimals arg. (USD keeps its
+// 4dp default so low-price CCX→USD values don't collapse to $0.00.)
 export const CCX_HUMAIN_DECIMAL_DISPLAY = COIN_UNIT_PLACES;
 export const CCX_PRECISION_DECIMAL_DISPLAY = COIN_UNIT_PLACES;
 
@@ -63,7 +64,7 @@ export { stripTickerSuffix } from "@/lib/ui/ticker-preference";
 
 export function formatUsd(
   amount: UsdAmount | number,
-  decimals = 2,
+  decimals = 4,
   locale: string = DEFAULT_FORMAT_LOCALE,
 ): string {
   const value = typeof amount === "number" ? amount : amount.value;

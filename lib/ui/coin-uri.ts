@@ -19,6 +19,15 @@
 
 import { COIN_URI_PREFIX } from "@/lib/config/config";
 
+/** decodeURIComponent that returns the raw value instead of throwing on a malformed `%`. */
+function safeDecodeUriComponent(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 /** Decoded `conceal:` transaction (payment) URI. */
 export interface DecodedTxUri {
   address: string;
@@ -85,7 +94,7 @@ export const CoinUri = {
             decodedUri.paymentId = optionParts[1];
             break;
           case "recipient_name":
-            decodedUri.recipientName = optionParts[1];
+            decodedUri.recipientName = safeDecodeUriComponent(optionParts[1]);
             break;
           case "amount":
             decodedUri.amount = optionParts[1];
@@ -94,10 +103,10 @@ export const CoinUri = {
             decodedUri.amount = optionParts[1];
             break;
           case "tx_description":
-            decodedUri.description = optionParts[1];
+            decodedUri.description = safeDecodeUriComponent(optionParts[1]);
             break;
           case "label":
-            decodedUri.description = optionParts[1];
+            decodedUri.description = safeDecodeUriComponent(optionParts[1]);
             break;
         }
       }
@@ -130,10 +139,14 @@ export const CoinUri = {
     let encoded = address; //legacy: version === "v3" ? COIN_URI_PREFIX + address : address
     if (address.length !== CoinUri.coinAddressLength) throw "invalid_address_length";
 
+    // amount + payment_id are constrained (digits / hex) so they stay raw and
+    // legacy-scanner-readable. recipient_name + label are free text: percent-encode
+    // them so a literal '?', '&' or '=' can't corrupt or inject query segments
+    // (decodeTx mirrors this with a guarded decodeURIComponent).
     if (paymentId !== null) encoded += `?payment_id=${paymentId}`;
     if (amount !== null) encoded += `?amount=${amount}`;
-    if (recipientName !== null) encoded += `?recipient_name=${recipientName}`;
-    if (description !== null) encoded += `?label=${description}`;
+    if (recipientName !== null) encoded += `?recipient_name=${encodeURIComponent(recipientName)}`;
+    if (description !== null) encoded += `?label=${encodeURIComponent(description)}`;
     return encoded;
   },
 
