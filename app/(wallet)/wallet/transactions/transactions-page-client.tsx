@@ -97,9 +97,14 @@ export default function TransactionsPageClient() {
 
   // Register the contextual Transactions rail; re-register when `selected`
   // changes (a discrete user action) so the rail reflects the chosen row.
-  usePageRightRail(<TransactionsRail transaction={selected} onClose={() => setSelected(null)} />, [
-    selected,
-  ]);
+  usePageRightRail(
+    <TransactionsRail
+      transaction={selected}
+      onSelect={setSelected}
+      onClose={() => setSelected(null)}
+    />,
+    [selected],
+  );
 
   const size = Number(pageSize);
 
@@ -368,7 +373,7 @@ function TransactionSummary({
 
   return (
     <div className="space-y-5">
-      <div className="grid auto-rows-fr gap-4 md:grid-cols-3">
+      <div className="grid auto-rows-fr gap-4 @2xl:grid-cols-3">
         <SummaryMetricCard
           label={t("txn.totalReceived")}
           value={received}
@@ -443,7 +448,7 @@ function TransactionSummary({
             <p className="text-sm text-muted-foreground">{t("txn.netFlow")}</p>
             <p
               className={cn(
-                "mt-2 wrap-break-word font-mono text-2xl font-bold",
+                "mt-2 whitespace-nowrap font-mono text-xl font-bold",
                 netFlow >= 0 ? "text-wallet-incoming" : "text-wallet-outgoing",
               )}
             >
@@ -485,7 +490,7 @@ function SummaryMetricCard({
         <p className="text-sm text-muted-foreground">{label}</p>
         <p
           className={cn(
-            "mt-3 wrap-break-word font-mono text-2xl font-bold tracking-tight",
+            "mt-3 whitespace-nowrap font-mono text-xl font-bold tracking-tight",
             toneClass,
           )}
         >
@@ -684,7 +689,10 @@ function TransactionDetailsDialog({
             label={t("rail.paymentId")}
             value={transaction.paymentId ?? t("txn.notProvided")}
           />
-          <DetailRow label={t("rail.message")} value={transaction.message ?? t("txn.notProvided")} />
+          <DetailRow
+            label={t("rail.message")}
+            value={transaction.message ?? t("txn.notProvided")}
+          />
           <DetailRow
             label={t("txn.detailHash")}
             value={transaction.hash}

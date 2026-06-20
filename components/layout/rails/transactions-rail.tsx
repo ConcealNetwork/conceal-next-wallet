@@ -2,9 +2,11 @@
 
 import { ArrowLeft, CalendarClock, Hash, Receipt } from "lucide-react";
 import { RightRailHeader } from "@/components/layout/right-rail";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton } from "@/components/wallet/common";
 import { TransactionNote } from "@/components/wallet/transaction-note";
+import { useTransactions } from "@/lib/hooks";
 import {
   type TransactionStatus,
   formatHeightWithConfirmations,
@@ -20,18 +22,21 @@ import type { Transaction } from "@/lib/types";
 import { cn, truncateAddress } from "@/lib/utils";
 import { resolveUiTransactionType } from "@/lib/ui/transaction-kind";
 
-// Issue #122, stage 3 — the Transactions-page contextual rail. With no row
-// selected it shows a hint; selecting a row (>=1200px, where the rail is visible)
-// renders the transaction's detail here instead of the dialog (the page keeps the
-// dialog for narrow viewports). Fields mirror the detail dialog via the shared
-// transaction-display helpers; `Fee` from the mockup is omitted — the Transaction
-// type carries no fee, and a fabricated value would be worse than none.
+// Issue #122, stage 3 — the Transactions-page contextual rail. By default it
+// shows a compact recent-transactions list (it fetches its own data so it stays
+// live); clicking a row — here or in the main table — selects it and the rail
+// switches to that transaction's detail (>=1200px, where the rail is visible; the
+// page keeps the dialog for narrow viewports). Detail fields mirror the dialog via
+// the shared transaction-display helpers; `Fee` is omitted (the Transaction type
+// carries no fee, and a fabricated value would be worse than none).
 
 export function TransactionsRail({
   transaction,
+  onSelect,
   onClose,
 }: {
   transaction: Transaction | null;
+  onSelect: (transaction: Transaction) => void;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -41,24 +46,83 @@ export function TransactionsRail({
       {transaction ? (
         <TransactionDetail transaction={transaction} onClose={onClose} />
       ) : (
-        <EmptyDetail />
+        <TransactionList onSelect={onSelect} />
       )}
     </div>
   );
 }
 
-function EmptyDetail() {
+/** Default rail view: a tappable recent-transactions list. */
+function TransactionList({ onSelect }: { onSelect: (transaction: Transaction) => void }) {
   const { t } = useI18n();
+  const fmt = useFormatters();
+  const txs = useTransactions().data;
+  const recent = txs
+    ? [...txs]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 20)
+    : null;
+
+  if (recent === null) {
+    return (
+      <div className="mt-3.5 space-y-2">
+        {Array.from({ length: 6 }).map((_, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static fixed-length placeholder list
+          <Skeleton key={index} className="h-[52px] w-full rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (recent.length === 0) {
+    return (
+      <div className="mt-3.5 flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 px-5 py-12 text-center">
+        <span
+          className="grid size-10 place-items-center rounded-xl bg-secondary text-muted-foreground"
+          aria-hidden="true"
+        >
+          <Receipt className="size-5" />
+        </span>
+        <p className="text-[13px] font-medium text-foreground">{t("header.noRecentActivity")}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-3.5 flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 px-5 py-12 text-center">
-      <span
-        className="grid size-10 place-items-center rounded-xl bg-secondary text-muted-foreground"
-        aria-hidden="true"
-      >
-        <Receipt className="size-5" />
-      </span>
-      <p className="text-[13px] font-medium text-foreground">{t("rail.noTransactionSelected")}</p>
-      <p className="text-xs text-muted-foreground">{t("rail.noTransactionSelectedHint")}</p>
+    <div className="mt-1.5 flex flex-col">
+      {recent.map((transaction) => {
+        const meta = transactionMeta[resolveUiTransactionType(transaction)];
+        const Icon = meta.icon;
+        return (
+          <button
+            key={transaction.id}
+            type="button"
+            onClick={() => onSelect(transaction)}
+            className={cn(
+              "flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+          >
+            <span
+              className={cn(
+                "grid size-9 shrink-0 place-items-center rounded-lg",
+                meta.chipClassName,
+              )}
+              aria-hidden="true"
+            >
+              <Icon className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-medium text-foreground">{t(meta.labelKey)}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {fmt.timeAgo(transaction.timestamp)}
+              </p>
+            </div>
+            <p className={cn("shrink-0 font-mono text-[13px] font-semibold", meta.amountClassName)}>
+              <CcxAmount>{formatSignedAmount(transaction, fmt)}</CcxAmount>
+            </p>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -117,7 +181,12 @@ function TransactionDetail({
           {formatTimestamp(transaction.timestamp, fmt)}
         </DetailField>
         <DetailField label={t("rail.block")}>
-          {formatHeightWithConfirmations(transaction.blockHeight, transaction.confirmations, fmt, t)}
+          {formatHeightWithConfirmations(
+            transaction.blockHeight,
+            transaction.confirmations,
+            fmt,
+            t,
+          )}
         </DetailField>
         {transaction.paymentId ? (
           <DetailField label={t("rail.paymentId")} mono copyValue={transaction.paymentId}>

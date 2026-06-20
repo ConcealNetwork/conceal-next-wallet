@@ -1,8 +1,9 @@
 import { mockExportData, mockWalletInfo } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
 import type { DownloadWalletBackupResult, WalletService } from "@/lib/services/wallet.service";
-import type { WalletInfo, WalletSummary } from "@/lib/types";
+import type { CcxAmount, WalletInfo, WalletSummary } from "@/lib/types";
 import { backupDownloadFilename } from "@/lib/ui/download-json-file";
+import { ccxAmount } from "@/lib/utils";
 
 // Mock services are module singletons, so the imported view-only state lives
 // here. A view-only `importWallet` flips it on; any full import/create resets it.
@@ -10,11 +11,22 @@ let mockViewOnly = false;
 
 // --- multi-wallet mock state (#95) -----------------------------------------
 // A believable two-wallet registry, mutated immutably (spread, never in place).
-type MockWalletEntry = { id: string; label: string; address?: string };
+// Each wallet carries a distinct balance so the switcher can show per-wallet totals.
+type MockWalletEntry = { id: string; label: string; address?: string; balanceTotal: CcxAmount };
 
 const INITIAL_MOCK_WALLETS: readonly MockWalletEntry[] = [
-  { id: "default", label: "Main wallet", address: mockWalletInfo.address },
-  { id: "mock-savings", label: "Savings", address: mockExportData.address },
+  {
+    id: "default",
+    label: "Main wallet",
+    address: mockWalletInfo.address,
+    balanceTotal: mockWalletInfo.balanceTotal,
+  },
+  {
+    id: "mock-savings",
+    label: "Savings",
+    address: mockExportData.address,
+    balanceTotal: ccxAmount(4820.25),
+  },
 ];
 
 let mockWallets: readonly MockWalletEntry[] = INITIAL_MOCK_WALLETS;
@@ -133,6 +145,7 @@ export const mockWalletService: WalletService = {
       label: wallet.label,
       ...(wallet.address ? { address: wallet.address } : {}),
       isActive: wallet.id === mockActiveId,
+      balanceTotal: wallet.balanceTotal,
     }));
   },
   async switchWallet(id: string): Promise<WalletInfo | null> {

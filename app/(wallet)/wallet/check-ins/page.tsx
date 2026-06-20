@@ -10,7 +10,12 @@ import { Label } from "@/components/ui/label";
 import { useAddressBook, useMessages, useSendMessage, useWalletViewOnly } from "@/lib/hooks";
 import { useWalletSynced } from "@/lib/hooks/use-check-ins";
 import { useI18n } from "@/lib/i18n/i18n-provider";
-import { listWatchers, removeWatcher, saveWatcher, updateWatcher } from "@/lib/storage/check-ins-store";
+import {
+  listWatchers,
+  removeWatcher,
+  saveWatcher,
+  updateWatcher,
+} from "@/lib/storage/check-ins-store";
 import { formatCheckIn } from "@/lib/ui/check-in-message";
 import {
   checkInStatus,
@@ -64,6 +69,7 @@ export default function CheckInsPage() {
   const nowISO = new Date().toISOString();
 
   const contacts = addressBook.data ?? [];
+  const canAdd = contactId !== "" && Number(interval) > 0 && Number(grace) >= 0;
 
   function add() {
     // The address comes from a saved address-book entry — no re-validation needed;
@@ -147,10 +153,7 @@ export default function CheckInsPage() {
           </div>
         )}
 
-        <SectionCard
-          title={t("checkIns.watchTitle")}
-          description={t("checkIns.watchDescription")}
-        >
+        <SectionCard title={t("checkIns.watchTitle")} description={t("checkIns.watchDescription")}>
           <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
             <div className="space-y-2">
               <Label htmlFor="ci-contact">{t("checkIns.contactLabel")}</Label>
@@ -174,6 +177,8 @@ export default function CheckInsPage() {
                 id="ci-interval"
                 type="number"
                 inputMode="numeric"
+                min="1"
+                step="1"
                 value={interval}
                 onChange={(e) => setInterval(e.target.value)}
               />
@@ -184,11 +189,13 @@ export default function CheckInsPage() {
                 id="ci-grace"
                 type="number"
                 inputMode="numeric"
+                min="0"
+                step="1"
                 value={grace}
                 onChange={(e) => setGrace(e.target.value)}
               />
             </div>
-            <Button type="button" onClick={add}>
+            <Button type="button" onClick={add} disabled={!canAdd}>
               {t("checkIns.watch")}
             </Button>
           </div>
@@ -254,7 +261,8 @@ export default function CheckInsPage() {
                       >
                         {t("checkIns.sendCheckIn")}
                       </Button>
-                      {w.paused || (w.snoozedUntil && new Date(nowISO) < new Date(w.snoozedUntil)) ? (
+                      {w.paused ||
+                      (w.snoozedUntil && new Date(nowISO) < new Date(w.snoozedUntil)) ? (
                         <Button
                           type="button"
                           size="sm"
@@ -278,7 +286,11 @@ export default function CheckInsPage() {
                             onClick={() =>
                               patch(
                                 w.id,
-                                { snoozedUntil: new Date(Date.now() + SNOOZE_DAYS * 86_400_000).toISOString() },
+                                {
+                                  snoozedUntil: new Date(
+                                    Date.now() + SNOOZE_DAYS * 86_400_000,
+                                  ).toISOString(),
+                                },
                                 t("checkIns.snoozed", { label: w.label, days: SNOOZE_DAYS }),
                               )
                             }
@@ -290,7 +302,11 @@ export default function CheckInsPage() {
                             size="sm"
                             variant="outline"
                             onClick={() =>
-                              patch(w.id, { paused: true }, t("checkIns.paused", { label: w.label }))
+                              patch(
+                                w.id,
+                                { paused: true },
+                                t("checkIns.paused", { label: w.label }),
+                              )
                             }
                           >
                             {t("checkIns.pause")}

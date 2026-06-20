@@ -1,7 +1,9 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { type CSSProperties, useId, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NetworkRail } from "@/components/layout/rails/network-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { PageHeader } from "@/components/wallet/common";
 import { useNetworkStatus, useSmartNodes } from "@/lib/hooks";
 import { useNetworkTelemetry } from "@/lib/hooks/network-telemetry-provider";
@@ -33,6 +35,7 @@ export default function NetworkPage() {
   // Gate on pending (no data yet), not fetching: a background refetch must never
   // blank the live peer graph back to the blurred placeholder.
   const smartNodesLoading = smartNodesPending;
+  usePageRightRail(<NetworkRail />);
   const prefersReducedMotion = usePrefersReducedMotion();
   const animate = !prefersReducedMotion;
   const heightLabel = useCountUp(data?.height ?? 0, {
@@ -48,11 +51,11 @@ export default function NetworkPage() {
         <PageHeader title={t("network.title")} subtitle={t("network.subtitle")} />
         <div className="space-y-6">
           <Skeleton className="h-24 w-full rounded-xl" />
-          <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
+          <div className="grid gap-4 @4xl:grid-cols-[1.05fr_1fr]">
             <Skeleton className="h-56 rounded-xl" />
             <Skeleton className="h-56 rounded-xl" />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 @sm:grid-cols-2 @4xl:grid-cols-4">
             {TELEMETRY_SKELETON_KEYS.map((key) => (
               <Skeleton key={key} className="h-40 rounded-xl" />
             ))}
@@ -111,7 +114,7 @@ export default function NetworkPage() {
       </div>
 
       {/* Sync ring + peer constellation */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1.05fr_1fr]">
+      <div className="mt-6 grid gap-4 @4xl:grid-cols-[1.05fr_1fr]">
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 wallet-card flex flex-col items-center justify-center gap-4 p-6 [animation-delay:70ms]">
           <SyncRing
             pct={syncPct}
@@ -125,7 +128,9 @@ export default function NetworkPage() {
                 / {fmt.formatNumber(data.networkHeight)}
               </span>
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">{t("network.blockHeightNetworkTip")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("network.blockHeightNetworkTip")}
+            </p>
           </div>
         </div>
 
@@ -151,7 +156,7 @@ export default function NetworkPage() {
       </div>
 
       {/* Telemetry */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-4 @sm:grid-cols-2 @4xl:grid-cols-4">
         <ChartCard
           label={t("network.blockHeight")}
           value={heightLabel}
@@ -191,6 +196,10 @@ export default function NetworkPage() {
             />
           }
         />
+      </div>
+
+      <div className="mt-8 min-[1200px]:hidden">
+        <NetworkRail embedded />
       </div>
     </>
   );
@@ -256,6 +265,7 @@ function SyncRing({
         strokeWidth="12"
       />
       <circle
+        className="animate-donut-sweep motion-reduce:animate-none"
         cx="85"
         cy="85"
         r={radius}
@@ -266,6 +276,12 @@ function SyncRing({
         strokeDasharray={circumference}
         strokeDashoffset={offset}
         transform="rotate(-90 85 85)"
+        style={
+          {
+            "--donut-offset": String(offset),
+            "--donut-pct": String(circumference - offset),
+          } as CSSProperties
+        }
       />
       <text
         x="85"
@@ -604,10 +620,14 @@ function Sparkline({
         />
       ) : null}
       <path
+        className="animate-stroke-draw motion-reduce:animate-none"
         d={line}
         fill="none"
         stroke={color}
         strokeWidth={1.6}
+        pathLength={1}
+        strokeDasharray={1}
+        strokeDashoffset={0}
         vectorEffect="non-scaling-stroke"
       />
     </svg>
@@ -630,10 +650,14 @@ function MiniArea({ values, color }: { values: number[]; color: string }) {
       </defs>
       <path d={`${line} L100,40 L0,40 Z`} fill={`url(#${gradientId})`} />
       <path
+        className="animate-stroke-draw motion-reduce:animate-none"
         d={line}
         fill="none"
         stroke={color}
         strokeWidth={1.6}
+        pathLength={1}
+        strokeDasharray={1}
+        strokeDashoffset={0}
         vectorEffect="non-scaling-stroke"
       />
     </svg>

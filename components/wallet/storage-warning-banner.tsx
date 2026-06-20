@@ -120,26 +120,22 @@ export function StorageWarningBanner() {
               {requesting ? "Requesting…" : "Keep on this device"}
             </button>
           ) : null}
-          {data === "not-persisted" && !isStandalone
-            ? canInstall
-              ? (
-                <button
-                  type="button"
-                  onClick={() => void installApp()}
-                  disabled={installing}
-                  className="cursor-pointer font-semibold text-wallet-amber underline-offset-4 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {installing ? "Installing…" : "Install app"}
-                </button>
-              )
-              : isIOS
-                ? (
-                  <span className="text-muted-foreground">
-                    On iOS: Share → Add to Home Screen to keep your wallet.
-                  </span>
-                )
-                : null
-            : null}
+          {data === "not-persisted" && !isStandalone ? (
+            canInstall ? (
+              <button
+                type="button"
+                onClick={() => void installApp()}
+                disabled={installing}
+                className="cursor-pointer font-semibold text-wallet-amber underline-offset-4 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {installing ? "Installing…" : "Install app"}
+              </button>
+            ) : isIOS ? (
+              <span className="text-muted-foreground">
+                On iOS: Share → Add to Home Screen to keep your wallet.
+              </span>
+            ) : null
+          ) : null}
           <Link
             href="/wallet/export"
             className="inline-block font-semibold text-wallet-amber underline-offset-4 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AddressBookRail } from "@/components/layout/rails/address-book-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import { CopyButton, EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
 import {
@@ -16,6 +18,7 @@ import {
   useDeleteAddressEntry,
   useUpdateAddressEntry,
 } from "@/lib/hooks";
+import { useCreateDeepLink } from "@/lib/hooks/use-create-deeplink";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import { CONTACT_AVATARS, contactAvatarPath } from "@/lib/ui/contact-avatars";
@@ -40,6 +43,7 @@ export default function AddressBookPage() {
   const [paymentId, setPaymentId] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  usePageRightRail(<AddressBookRail />);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_KEY);
@@ -72,6 +76,9 @@ export default function AddressBookPage() {
     setOpen(true);
   }
 
+  // Sidebar "+" quick-create deep-link (?new=1) opens the add-contact dialog.
+  useCreateDeepLink(openCreate);
+
   function applyScannedDraft(draft: ScannedSendDraft) {
     setAddress(draft.address);
     if (draft.paymentId) {
@@ -95,6 +102,15 @@ export default function AddressBookPage() {
     }
     if (!addressIsValid(address)) {
       toast.error(t("addressBook.errAddressInvalid"));
+      return false;
+    }
+    const normalizedAddress = address.trim();
+    if (
+      (addressBook.data ?? []).some(
+        (entry) => entry.address === normalizedAddress && entry.id !== editingId,
+      )
+    ) {
+      toast.error(t("addressBook.errDuplicateAddress"));
       return false;
     }
     if (!paymentIdIsValid(paymentId)) {
@@ -124,7 +140,9 @@ export default function AddressBookPage() {
             resetForm();
           },
           onError: (error) => {
-            toast.error(error instanceof Error ? error.message : t("addressBook.toastUpdateFailed"));
+            toast.error(
+              error instanceof Error ? error.message : t("addressBook.toastUpdateFailed"),
+            );
           },
         },
       );
@@ -334,9 +352,7 @@ export default function AddressBookPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingId
-                ? t("addressBook.dialogEditTitle")
-                : t("addressBook.dialogCreateTitle")}
+              {editingId ? t("addressBook.dialogEditTitle") : t("addressBook.dialogCreateTitle")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -374,6 +390,7 @@ export default function AddressBookPage() {
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
                 placeholder={t("addressBook.labelPlaceholder")}
+                maxLength={60}
               />
             </div>
             <div className="space-y-2">
@@ -427,6 +444,10 @@ export default function AddressBookPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <div className="mt-8 min-[1200px]:hidden">
+        <AddressBookRail embedded />
+      </div>
     </>
   );
 }

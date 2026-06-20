@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
@@ -24,14 +23,10 @@ import {
   findAddressBookContactByAddress,
 } from "@/components/wallet/address-book-contact-picker";
 import { CcxAmount } from "@/components/wallet/ccx";
-import {
-  CopyButton,
-  PageHeader,
-  SectionCard,
-  ViewOnlyBadge,
-  WalletQrCode,
-} from "@/components/wallet/common";
+import { PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { SendReviewWarnings } from "@/components/wallet/send-review-warnings";
+import { SendRail } from "@/components/layout/rails/send-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import { MAX_MESSAGE_SIZE, walletNetworkScalars } from "@/lib/config/config";
@@ -39,12 +34,10 @@ import {
   useAddressBook,
   useMarketData,
   useSendTransaction,
-  useTransactions,
   useWalletInfo,
   useWalletSyncStatus,
   useWalletViewOnly,
 } from "@/lib/hooks";
-import { useCountUp } from "@/lib/hooks/use-count-up";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
@@ -56,7 +49,6 @@ import {
   ccxToNumber,
   formatCcx,
   formatUsd,
-  timeAgo,
   truncateAddress,
 } from "@/lib/utils";
 import { isSendToSelf } from "@/lib/validation/ccx";
@@ -97,13 +89,13 @@ type SendForm = z.infer<ReturnType<typeof makeSendSchema>>;
 
 export default function SendPage() {
   const { t } = useI18n();
+  usePageRightRail(<SendRail />);
   const sendSchema = useMemo(() => makeSendSchema(t), [t]);
   const wallet = useWalletInfo();
   const { isSyncing } = useWalletSyncStatus();
   const viewOnly = useWalletViewOnly();
   const addressBook = useAddressBook();
   const market = useMarketData();
-  const transactions = useTransactions();
   const send = useSendTransaction();
   const [review, setReview] = useState<SendForm | null>(null);
   const [selfSendFromLink, setSelfSendFromLink] = useState<SendForm | null>(null);
@@ -112,9 +104,6 @@ export default function SendPage() {
 
   const available = wallet.data ? ccxToNumber(wallet.data.available) : 0;
   const price = market.data?.price.value ?? 0;
-  const availableLabel = useCountUp(available, {
-    formatter: (value) => formatCcx(value, CCX_PRECISION_DECIMAL_DISPLAY),
-  });
 
   const form = useForm<SendForm>({
     resolver: zodResolver(sendSchema),
@@ -126,9 +115,6 @@ export default function SendPage() {
   const messageBytes = new TextEncoder().encode(message).length;
   const address = useWatch({ control: form.control, name: "address" }) || "";
   const sendToSelf = isSendToSelf(address, wallet.data?.address ?? "");
-  const recentSent = (transactions.data ?? [])
-    .filter((transaction) => transaction.type === "send")
-    .slice(0, 5);
 
   const reviewContactLabel = review
     ? (findAddressBookContactByAddress(addressBook.data ?? [], review.address)?.label ?? null)
@@ -224,7 +210,7 @@ export default function SendPage() {
       />
       <WalletSyncingBanner />
       <ViewOnlyBanner />
-      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+      <div className="mx-auto max-w-2xl">
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
           <SectionCard title={t("send.formTitle")} description={t("send.formDescription")}>
             <form
@@ -371,7 +357,15 @@ export default function SendPage() {
               <Button
                 type="submit"
                 className="w-full active:scale-[0.98] motion-reduce:active:scale-100"
-                disabled={send.isPending || sendToSelf || isSyncing || viewOnly}
+                disabled={
+                  send.isPending ||
+                  sendToSelf ||
+                  isSyncing ||
+                  viewOnly ||
+                  // Block before the review step when amount + fee overshoots the
+                  // balance, instead of letting it submit and fail at broadcast.
+                  (amount > 0 && amount + SEND_FEE > available)
+                }
                 title={viewOnly ? walletCopy.viewOnlySendDisabled : undefined}
               >
                 {t("send.reviewButton")}
@@ -383,62 +377,6 @@ export default function SendPage() {
               ) : null}
             </form>
           </SectionCard>
-        </div>
-
-        <div className="space-y-6">
-          <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
-            <SectionCard title={t("rail.available")} description={t("send.readyToSpend")}>
-              {wallet.data ? (
-                <div className="space-y-4">
-                  <div>
-                    <p className="font-mono text-2xl font-bold">{availableLabel}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {t("send.approxUsd", { usd: formatUsd(available * price) })}
-                    </p>
-                  </div>
-                  <p className="break-all rounded-xl bg-secondary p-3 text-xs text-muted-foreground">
-                    {wallet.data.address}
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <CopyButton value={wallet.data.address} label={t("send.copyAddress")} />
-                    <Button asChild variant="outline">
-                      <Link href="/wallet/receive">{t("send.openReceive")}</Link>
-                    </Button>
-                  </div>
-                  <WalletQrCode value={wallet.data.address} size={140} />
-                </div>
-              ) : null}
-            </SectionCard>
-          </div>
-
-          <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
-            <SectionCard title={t("send.recentlySent")} description={t("send.recentlySentDesc")}>
-              {recentSent.length > 0 ? (
-                <ul className="divide-y divide-border">
-                  {recentSent.map((transaction) => (
-                    <li
-                      key={transaction.id}
-                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-mono text-sm">
-                          {truncateAddress(transaction.address)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {timeAgo(transaction.timestamp)}
-                        </p>
-                      </div>
-                      <p className="font-mono text-sm font-semibold text-wallet-outgoing">
-                        −<CcxAmount>{formatCcx(transaction.amount)}</CcxAmount>
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">{t("send.noOutgoing")}</p>
-              )}
-            </SectionCard>
-          </div>
         </div>
       </div>
 
@@ -516,6 +454,11 @@ export default function SendPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Small-screen fallback: the rail column is hidden < 1200px, so surface
+          the balance + market summary inline. CSS-hidden above the breakpoint. */}
+      <div className="mt-8 min-[1200px]:hidden">
+        <SendRail embedded />
+      </div>
     </>
   );
 }

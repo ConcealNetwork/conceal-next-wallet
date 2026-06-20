@@ -373,6 +373,9 @@ export const realSdkWalletService: WalletService = {
   async listWallets(): Promise<WalletSummary[]> {
     await ensureSdkReady();
     const [metas, active] = await Promise.all([listWalletMetas(), activeWalletId()]);
+    // `balanceTotal` is intentionally omitted: non-active wallets are locked, so
+    // their balance isn't loaded. The switcher shows the active wallet's balance
+    // from the live `getWalletInfo` instead.
     return metas.map((meta) => ({
       id: meta.id,
       label: meta.label,

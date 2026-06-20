@@ -44,6 +44,11 @@ export default function ScheduledPage() {
   const [schedules, setSchedules] = useState<ScheduledPayment[]>(() => listSchedules());
   const [form, setForm] = useState(EMPTY_FORM);
   const nowISO = useMemo(() => new Date().toISOString(), []);
+  const canAdd =
+    form.label.trim() !== "" &&
+    addressIsValid(form.address.trim()) &&
+    Number(form.amount) > 0 &&
+    form.anchorDate !== "";
 
   function add() {
     if (!form.label.trim()) return toast.error(t("scheduled.errNameRequired"));
@@ -96,19 +101,17 @@ export default function ScheduledPage() {
 
   return (
     <>
-      <PageHeader title={t("nav.scheduled")} subtitle={t("scheduled.subtitle")} />
+      <PageHeader title={t("nav.reminders")} subtitle={t("scheduled.subtitle")} />
 
       <div className="space-y-6">
-        <SectionCard
-          title={t("scheduled.addTitle")}
-          description={t("scheduled.addDescription")}
-        >
+        <SectionCard title={t("scheduled.addTitle")} description={t("scheduled.addDescription")}>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="sched-label">{t("scheduled.nameLabel")}</Label>
               <Input
                 id="sched-label"
                 placeholder={t("scheduled.namePlaceholder")}
+                maxLength={60}
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
               />
@@ -119,6 +122,8 @@ export default function ScheduledPage() {
                 id="sched-amount"
                 type="number"
                 inputMode="decimal"
+                min="0"
+                step="0.000001"
                 placeholder={t("scheduled.amountPlaceholder")}
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
@@ -160,7 +165,7 @@ export default function ScheduledPage() {
             </div>
           </div>
           <div className="mt-4">
-            <Button type="button" onClick={add}>
+            <Button type="button" onClick={add} disabled={!canAdd}>
               {t("scheduled.addReminder")}
             </Button>
           </div>

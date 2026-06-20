@@ -66,7 +66,7 @@ export function useFormatters(): Formatters {
       locale: bcp47,
       formatCcx: (amount, decimals = CCX_HUMAIN_DECIMAL_DISPLAY, trimTrailingZeros = false) =>
         formatCcxBase(amount, decimals, trimTrailingZeros, bcp47),
-      formatUsd: (amount, decimals = 4) => formatUsdBase(amount, decimals, bcp47),
+      formatUsd: (amount, decimals = 2) => formatUsdBase(amount, decimals, bcp47),
       timeAgo: (date, now = new Date()) => timeAgoBase(date, now, bcp47),
       formatNumber: (value, options) => value.toLocaleString(bcp47, options),
       formatDate: (date, options) => new Intl.DateTimeFormat(bcp47, options).format(date),

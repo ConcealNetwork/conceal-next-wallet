@@ -47,13 +47,13 @@ describe("ticker preference", () => {
   it("formats amounts with the short ticker when enabled", async () => {
     await setTickerPreference(true);
     expect(getDisplayTicker()).toBe("₡");
-    expect(formatCcx(12.5)).toBe("12.50 ₡");
-    expect(stripTickerSuffix(formatCcx(12.5))).toBe("12.50");
+    expect(formatCcx(12.5)).toBe("12.500000 ₡");
+    expect(stripTickerSuffix(formatCcx(12.5))).toBe("12.500000");
   });
 
   it("defaults to CCX", () => {
     expect(getDisplayTicker()).toBe("CCX");
-    expect(formatCcx(12.5)).toBe("12.50 CCX");
+    expect(formatCcx(12.5)).toBe("12.500000 CCX");
   });
 
   it("persists to the canonical localStorage key the vault backs up", async () => {

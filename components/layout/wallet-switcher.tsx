@@ -4,11 +4,11 @@ import { Check, ChevronDown, ChevronsUpDown, Download, Plus } from "lucide-react
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useSwitchWalletFlow } from "@/components/wallet/open-wallet-form";
-import { useWallets } from "@/lib/hooks";
+import { useWalletInfo, useWallets } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
+import { useFormatters } from "@/lib/i18n/use-formatters";
 import type { WalletSummary } from "@/lib/types";
-import { truncateAddress } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { cn, truncateAddress } from "@/lib/utils";
 
 /** First grapheme of a label, uppercased — the avatar glyph (matches the mockup). */
 function initial(label: string): string {
@@ -16,27 +16,31 @@ function initial(label: string): string {
   return trimmed ? trimmed[0].toUpperCase() : "•";
 }
 
-/** A stable accent class per wallet, so each avatar gets a consistent colour. */
-const AVATAR_ACCENTS = [
-  "bg-gradient-to-br from-amber-300 to-amber-500 text-black",
-  "bg-gradient-to-br from-sky-300 to-blue-500 text-white",
-  "bg-gradient-to-br from-green-300 to-green-600 text-white",
-  "bg-gradient-to-br from-fuchsia-300 to-purple-500 text-white",
-] as const;
-
-function accentFor(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return AVATAR_ACCENTS[hash % AVATAR_ACCENTS.length];
-}
-
-export function WalletAvatar({ wallet, className }: { wallet: WalletSummary; className?: string }) {
+/**
+ * Conceal wallet avatar — the "Ceramic Keycap Tile" (design round 2). A matte,
+ * manufactured keycap with the wallet's initial debossed in brand orange; styling
+ * (incl. the dark/light-theme treatments) lives in the `.wallet-keycap` class in
+ * `app/globals.css`. CSS-only so it carries any initial; size/text from `className`.
+ *
+ * Square by default (sidebar footer, switcher dropdown, settings). The header
+ * switcher trigger passes `round` for a circular keycap so it reads as the
+ * primary, always-on-screen wallet marker.
+ */
+export function WalletAvatar({
+  wallet,
+  className,
+  round = false,
+}: {
+  wallet: WalletSummary;
+  className?: string;
+  round?: boolean;
+}) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "grid size-7 shrink-0 place-items-center rounded-lg text-xs font-bold",
-        accentFor(wallet.id),
+        "wallet-keycap grid size-7 shrink-0 place-items-center text-xs leading-none",
+        round && "wallet-keycap-round",
         className,
       )}
     >
@@ -71,6 +75,8 @@ export function WalletSwitcher({
   const { t } = useI18n();
   const router = useRouter();
   const { data: wallets } = useWallets();
+  const activeInfo = useWalletInfo();
+  const { formatCcx } = useFormatters();
   const switchWallet = useSwitchWalletFlow();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -117,6 +123,16 @@ export function WalletSwitcher({
 
   const switcherLabel = t("wallets.switcherLabel");
 
+  // The active wallet's balance comes from the live `getWalletInfo` (current in
+  // both modes); other wallets use the summary's balance (mock fills it; real
+  // mode leaves it undefined for locked wallets, so they show no balance).
+  function balanceFor(wallet: WalletSummary): string | null {
+    const amount = wallet.isActive
+      ? (activeInfo.data?.balanceTotal ?? wallet.balanceTotal)
+      : wallet.balanceTotal;
+    return amount ? formatCcx(amount) : null;
+  }
+
   const trigger =
     variant === "header" ? (
       <button
@@ -126,16 +142,16 @@ export function WalletSwitcher({
         aria-controls={open ? menuId : undefined}
         aria-label={switcherLabel}
         onClick={() => setOpen((value) => !value)}
-        className="flex max-w-[260px] cursor-pointer items-center gap-2 rounded-full border border-border bg-background/60 py-1 pr-2 pl-1.5 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex max-w-[360px] cursor-pointer items-center gap-2.5 rounded-full border border-border bg-background/60 py-1.5 pr-3 pl-2 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <WalletAvatar wallet={active} className="size-6 text-[11px]" />
+        <WalletAvatar round wallet={active} className="size-6 text-[11px]" />
         <span className="hidden min-w-0 sm:block">
           <span className="block truncate text-[13px] font-semibold leading-tight text-foreground">
             {active.label}
           </span>
-          {active.address ? (
+          {balanceFor(active) ? (
             <span className="block truncate font-mono text-[10.5px] leading-tight text-muted-foreground">
-              {truncateAddress(active.address, 6, 4)}
+              {balanceFor(active)}
             </span>
           ) : null}
         </span>
@@ -156,9 +172,9 @@ export function WalletSwitcher({
           <span className="block truncate text-sm font-semibold text-foreground">
             {active.label}
           </span>
-          {active.address ? (
+          {balanceFor(active) ? (
             <span className="block truncate font-mono text-[11px] text-muted-foreground">
-              {truncateAddress(active.address, 6, 4)}
+              {balanceFor(active)}
             </span>
           ) : null}
         </span>
@@ -203,9 +219,19 @@ export function WalletSwitcher({
                 wallet.isActive && "bg-secondary",
               )}
             >
-              <WalletAvatar wallet={wallet} />
-              <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-                {wallet.label}
+              <WalletAvatar wallet={wallet} className="size-10 text-sm" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-foreground">{wallet.label}</span>
+                {balanceFor(wallet) ? (
+                  <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                    {balanceFor(wallet)}
+                  </span>
+                ) : null}
+                {wallet.address ? (
+                  <span className="block truncate font-mono text-[10.5px] text-muted-foreground/70">
+                    {truncateAddress(wallet.address, 6, 4)}
+                  </span>
+                ) : null}
               </span>
               {wallet.isActive ? (
                 <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />

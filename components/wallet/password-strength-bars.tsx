@@ -46,6 +46,21 @@ export function walletPasswordStrength(password: string) {
   return WALLET_PASSWORD_HINTS.filter((hint) => hint.test(password)).length;
 }
 
+/** Hard floor + variety minimum a wallet-encryption password must clear to submit. */
+export const MIN_PASSWORD_LENGTH = 8;
+export const MIN_PASSWORD_STRENGTH = 3;
+
+/**
+ * Whether a password is strong enough to encrypt the wallet. Score alone is
+ * insufficient (a 3-char "Ab1" scores 3), so we also require a length floor.
+ */
+export function walletPasswordIsAcceptable(password: string): boolean {
+  return (
+    password.length >= MIN_PASSWORD_LENGTH &&
+    walletPasswordStrength(password) >= MIN_PASSWORD_STRENGTH
+  );
+}
+
 type PasswordStrengthBarsProps = {
   score: number;
   className?: string;

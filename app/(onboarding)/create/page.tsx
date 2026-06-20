@@ -15,7 +15,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
+import {
+  walletPasswordIsAcceptable,
+  WalletPasswordStrengthPanel,
+} from "@/components/wallet/password-strength-bars";
 import { SectionCard } from "@/components/wallet/common";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -37,7 +40,8 @@ export default function CreateWalletPage() {
   const [copied, setCopied] = useState(false);
 
   const passwordsMatch = password !== "" && password === confirmPassword;
-  const canSubmit = passwordsMatch && !loading;
+  const passwordStrongEnough = walletPasswordIsAcceptable(password);
+  const canSubmit = passwordsMatch && passwordStrongEnough && !loading;
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
@@ -117,6 +121,11 @@ export default function CreateWalletPage() {
               required
             />
             <WalletPasswordStrengthPanel password={password} />
+            {password.length > 0 && !passwordStrongEnough ? (
+              <p className="text-sm text-wallet-outgoing">
+                Use at least 8 characters with a mix of letters, numbers, or symbols.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">

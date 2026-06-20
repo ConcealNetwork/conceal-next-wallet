@@ -2,6 +2,8 @@
 
 import { ArrowDownLeft, ArrowUpRight, PiggyBank, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
+import { InsightsRail } from "@/components/layout/rails/insights-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { PageHeader, SectionCard, StatCard } from "@/components/wallet/common";
 import { useDeposits, useMarketData, useTransactions } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
@@ -35,6 +37,7 @@ export default function InsightsPage() {
   const sub = (atomic: number) => usdSubline(ccxToNumber({ atomic }), priceUsd) ?? "";
 
   const loading = transactions.isLoading || deposits.isLoading;
+  usePageRightRail(<InsightsRail />);
 
   return (
     <>
@@ -48,7 +51,7 @@ export default function InsightsPage() {
         </SectionCard>
       ) : (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 @sm:grid-cols-2 @4xl:grid-cols-4">
             <StatCard
               label={t("insights.totalReceived")}
               value={ccx(insights.totalReceivedAtomic)}
@@ -105,6 +108,10 @@ export default function InsightsPage() {
           <p className="text-xs text-muted-foreground">{t("insights.privacyNote")}</p>
         </div>
       )}
+
+      <div className="mt-8 min-[1200px]:hidden">
+        <InsightsRail embedded />
+      </div>
     </>
   );
 }

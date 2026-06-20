@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { COIN_UNIT_PLACES, DEPOSIT_MAX_TERM_MONTH, DEPOSIT_RATE_V3 } from "@/lib/config/config";
-import { InterestCalculator } from "@/lib/deposits/interest";
+import { computeDepositInterest, getDepositTierIndex } from "@/lib/deposits/interest-calc";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 
 const TIER_META = [
@@ -30,33 +30,6 @@ const TIER_META = [
 ] as const;
 
 const TIER_ANNUALISED = DEPOSIT_RATE_V3.map((base) => base + 11 * 0.001);
-
-function getTierIndex(ccx: number): number {
-  if (ccx >= 20000) return 2;
-  if (ccx >= 10000) return 1;
-  return 0;
-}
-
-function computeInterest(ccx: number, months: number) {
-  if (!Number.isFinite(ccx) || ccx <= 0 || !Number.isInteger(ccx)) {
-    return { interestCcx: 0, earPct: 0, eirPct: 0 };
-  }
-
-  const mCoin = 10 ** COIN_UNIT_PLACES;
-  const atomic = ccx * mCoin;
-  const termBlocks = months * 21900;
-  const lockHeight = 999999999;
-
-  const interestAtomic = InterestCalculator.calculateInterest(atomic, termBlocks, lockHeight);
-  const interestCcx = interestAtomic / mCoin;
-
-  const tierIdx = getTierIndex(ccx);
-  const base = DEPOSIT_RATE_V3[tierIdx];
-  const ear = base + (Math.min(months, 12) - 1) * 0.001;
-  const eir = (ear / 12) * months;
-
-  return { interestCcx, earPct: ear * 100, eirPct: eir * 100 };
-}
 
 export function InterestCalculatorDialog({
   open,
@@ -72,8 +45,8 @@ export function InterestCalculatorDialog({
   const ccx = Math.floor(Number(amount));
   const amountIsValid = Number.isFinite(ccx) && ccx >= 1;
   const months = Number(term) || 1;
-  const tierIdx = getTierIndex(amountIsValid ? ccx : 0);
-  const { interestCcx, earPct, eirPct } = computeInterest(amountIsValid ? ccx : 0, months);
+  const tierIdx = getDepositTierIndex(amountIsValid ? ccx : 0);
+  const { interestCcx, earPct, eirPct } = computeDepositInterest(amountIsValid ? ccx : 0, months);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

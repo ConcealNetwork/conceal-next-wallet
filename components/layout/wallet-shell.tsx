@@ -1,6 +1,5 @@
 "use client";
 
-import { PanelRightOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Footer } from "@/components/layout/footer";
 import { GlobalHeader } from "@/components/layout/global-header";
@@ -54,8 +53,9 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
  * registered content. Without content the main keeps its centered max-width
  * exactly as before. The rail is a fixed ~320px column visible only ≥ xl
  * (1280px); below xl it is hidden and main goes full width (stage 3 turns the
- * small-screen rail into a drawer). The collapse pin shrinks the column to a
- * narrow expand strip so the user can reclaim the width without leaving the page.
+ * small-screen rail into a drawer). The rail toggle in the global header
+ * collapses the column away fully, handing the width back to the main content.
+ * Like the left sidebar, the rail scrolls independently of the page body.
  */
 function WalletShellLayout({
   collapsed,
@@ -65,68 +65,48 @@ function WalletShellLayout({
   children: React.ReactNode;
 }) {
   const { content: rail, collapsed: railCollapsed } = useRightRailContent();
-  const hasRail = rail !== null;
+  const railOpen = rail !== null && !railCollapsed;
 
   return (
     <div className="flex min-h-screen flex-col text-foreground">
       <GlobalHeader />
       <Sidebar />
+      {/* The rail mirrors the left sidebar: a fixed, full-height, INDEPENDENT
+          column (header → bottom edge) rather than a flex child of <main>, so it
+          no longer couples to the content scroll or sits under the footer. <main>
+          clears it with right padding at the rail's ≥1200px breakpoint. */}
+      {railOpen ? (
+        <aside
+          aria-label="Context panel"
+          className="fixed bottom-0 right-0 top-14 z-30 w-[380px] overflow-y-auto border-l border-border/70 bg-[hsl(var(--chrome))] max-[1199px]:hidden"
+        >
+          <div className="px-7 pb-12 pt-8">{rail}</div>
+        </aside>
+      ) : null}
       <main
         className={cn(
           "flex min-h-0 flex-1 flex-col transition-[padding] duration-300 ease-in-out motion-reduce:transition-none",
           collapsed ? "lg:pl-[64px]" : "lg:pl-[260px]",
+          railOpen && "min-[1200px]:pr-[380px]",
         )}
       >
-        <div className="flex min-h-0 flex-1">
-          <div className="min-w-0 flex-1">
-            <div
-              className={cn(
-                "mx-auto w-full flex-1 px-4 py-8 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none sm:px-6 lg:px-8",
-                collapsed ? "max-w-[1360px]" : "max-w-[1200px]",
-              )}
-            >
-              <StorageWarningBanner />
-              {children}
-            </div>
+        <div className="min-w-0 flex-1">
+          <div
+            className={cn(
+              // `@container` so page grids can size to the ACTUAL content width
+              // (which shrinks when the right rail is open) via `@`-breakpoints,
+              // instead of the viewport — otherwise cards/charts smush when both
+              // the sidebar and rail are open.
+              "@container mx-auto w-full flex-1 px-4 py-8 transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none sm:px-6 lg:px-8",
+              collapsed ? "max-w-[1360px]" : "max-w-[1200px]",
+            )}
+          >
+            <StorageWarningBanner />
+            {children}
           </div>
-          {hasRail ? (
-            railCollapsed ? (
-              <RailCollapsedStrip />
-            ) : (
-              <aside
-                aria-label="Context panel"
-                className="w-[320px] shrink-0 overflow-y-auto border-l border-border/70 bg-[hsl(var(--chrome))] max-[1199px]:hidden"
-              >
-                <div className="px-7 pb-12 pt-8">{rail}</div>
-              </aside>
-            )
-          ) : null}
         </div>
         <Footer collapsed={collapsed} />
       </main>
     </div>
-  );
-}
-
-/** Narrow expand strip shown when the user collapses the rail column. */
-function RailCollapsedStrip() {
-  const { setCollapsed } = useRightRailContent();
-  return (
-    <aside
-      aria-label="Context panel"
-      className="w-12 shrink-0 border-l border-border/70 bg-[hsl(var(--chrome))] max-[1199px]:hidden"
-    >
-      <div className="flex justify-center pt-8">
-        <button
-          type="button"
-          onClick={() => setCollapsed(false)}
-          aria-label="Expand panel"
-          title="Expand panel"
-          className="grid size-8 cursor-pointer place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <PanelRightOpen className="size-4" aria-hidden="true" />
-        </button>
-      </div>
-    </aside>
   );
 }

@@ -43,6 +43,13 @@ export type WalletSummary = {
   address?: string;
   /** True for the currently-active wallet. */
   isActive: boolean;
+  /**
+   * Total balance, when known. The active wallet's balance always comes from
+   * `getWalletInfo` (live); this is for OTHER wallets in the switcher list. Mock
+   * mode fills it for every wallet; real mode leaves it undefined for non-active
+   * wallets (they're locked/encrypted and not loaded).
+   */
+  balanceTotal?: CcxAmount;
 };
 
 export type TransactionType =

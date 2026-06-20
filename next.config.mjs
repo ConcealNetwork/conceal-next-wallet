@@ -24,6 +24,20 @@ const nextConfig = {
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_PAGES_BASE_PATH: basePath,
   },
+  // Only consulted when running the webpack bundler (`next dev --webpack`) — used
+  // locally to dodge a Turbopack 16.2.9 idle-CPU spin. The Conceal crypto ships as
+  // a `.wasm` module, which webpack 5 leaves disabled by default. Turbopack (the
+  // default for `next dev`/`next build`) handles WASM natively and ignores this hook.
+  webpack: (config) => {
+    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    return config;
+  },
+  // Next 16 errors out of Turbopack (`next dev`/`next build`, the defaults) when a
+  // `webpack` config is present and no `turbopack` config is — it assumes an
+  // unmigrated webpack setup. The empty object opts into Turbopack's defaults and
+  // silences that error, so Turbopack keeps working alongside the opt-in
+  // `--webpack` hook above. Turbopack handles the `.wasm` crypto natively.
+  turbopack: {},
 };
 
 export default nextConfig;

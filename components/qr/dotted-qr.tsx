@@ -83,13 +83,18 @@ export function DottedQrCode({
   logoSrc,
   fgColor = "#171513",
   bgColor = "#ffffff",
+  className,
 }: {
   value: string;
   size?: number;
   logoSrc?: string;
   fgColor?: string;
   bgColor?: string;
+  /** When set, the SVG sizes via CSS (e.g. `h-auto w-full`) instead of fixed `size` px. */
+  className?: string;
 }) {
+  // With a className the consumer drives the size (responsive); otherwise fixed px.
+  const sizeProps = className ? { className } : { width: size, height: size };
   const layout = useMemo(() => {
     if (!value) return null;
     const qr = qrcode(0, "H");
@@ -142,13 +147,13 @@ export function DottedQrCode({
   }, [value]);
 
   if (!layout) {
-    return <svg width={size} height={size} role="img" aria-label="QR code" />;
+    return <svg {...sizeProps} role="img" aria-label="QR code" />;
   }
 
   const { n, finders, alignments, logoBox, darkDotsPath, lightDotsPath } = layout;
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} role="img" aria-label="QR code">
+    <svg {...sizeProps} viewBox={`0 0 ${n} ${n}`} role="img" aria-label="QR code">
       <rect width={n} height={n} fill={bgColor} />
       {logoSrc && (
         <image

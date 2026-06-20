@@ -16,10 +16,7 @@ import {
   type WalletTransaction,
 } from "conceal-wallet-sdk";
 import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
-import {
-  type PendingTxRecord,
-  readPendingRecords,
-} from "@/lib/services/real-sdk/pending-store";
+import { type PendingTxRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { CcxAmount, Deposit, Transaction, TransactionType, WalletInfo } from "@/lib/types";
