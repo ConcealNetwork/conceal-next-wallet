@@ -35,7 +35,7 @@ test("import a view-only wallet and verify spend actions are disabled", async ({
   // Deposits — create disabled, but the page (summary/list) still renders.
   await page.getByRole("link", { name: "Deposits", exact: true }).click();
   await expect(page.getByTestId("view-only-banner")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Create New Deposit" }).first()).toBeDisabled();
+  await expect(page.getByRole("button", { name: "New Deposit" }).first()).toBeDisabled();
 
   // Messages — New Message disabled, list still renders.
   await page.getByRole("link", { name: "Messages", exact: true }).click();

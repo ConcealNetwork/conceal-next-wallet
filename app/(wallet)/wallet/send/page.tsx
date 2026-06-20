@@ -354,18 +354,14 @@ export default function SendPage() {
                 </span>
               </div>
 
+              {/* An over-`available` amount is intentionally NOT blocked on this button —
+                  the Review step surfaces the locked-deposit shortfall warning, and an
+                  inline "Exceeds available balance" hint already shows above. Blocking
+                  here would hide that safety warning (see e2e/send-safety). */}
               <Button
                 type="submit"
                 className="w-full active:scale-[0.98] motion-reduce:active:scale-100"
-                disabled={
-                  send.isPending ||
-                  sendToSelf ||
-                  isSyncing ||
-                  viewOnly ||
-                  // Block before the review step when amount + fee overshoots the
-                  // balance, instead of letting it submit and fail at broadcast.
-                  (amount > 0 && amount + SEND_FEE > available)
-                }
+                disabled={send.isPending || sendToSelf || isSyncing || viewOnly}
                 title={viewOnly ? walletCopy.viewOnlySendDisabled : undefined}
               >
                 {t("send.reviewButton")}
