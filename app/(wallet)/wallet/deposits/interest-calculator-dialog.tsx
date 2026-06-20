@@ -43,7 +43,7 @@ export function InterestCalculatorDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useI18n();
-  const { formatCcx } = useFormatters();
+  const { formatCcx, formatNumber } = useFormatters();
   const [amount, setAmount] = useState("1000");
   const [term, setTerm] = useState("12");
 
@@ -84,7 +84,9 @@ export function InterestCalculatorDialog({
                 </thead>
                 <tbody>
                   {TIER_META.map((tier, idx) => {
-                    const fmt = (n: number) => formatCcx(n, 0);
+                    // Plain locale-grouped number (no ticker) — the pattern key
+                    // appends " CCX" once; formatCcx would double it.
+                    const fmt = (n: number) => formatNumber(n);
                     const threshold =
                       tier.kind === "under"
                         ? t("deposits.tierThresholdUnder", { amount: fmt(tier.a) })
@@ -120,7 +122,7 @@ export function InterestCalculatorDialog({
               </table>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              {t("deposits.forAmountPrefix", { amount: amountIsValid ? formatCcx(ccx) : "0" })}{" "}
+              {t("deposits.forAmountPrefix", { amount: amountIsValid ? formatNumber(ccx) : "0" })}{" "}
               <span className={TIER_META[tierIdx].color}>
                 {t("deposits.tierLabel", { n: tierIdx + 1 })}
               </span>
