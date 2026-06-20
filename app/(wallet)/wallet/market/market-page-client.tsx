@@ -12,6 +12,7 @@ import { usePageRightRail } from "@/components/layout/right-rail";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { queryKeys, useMarketData, useWalletInfo } from "@/lib/hooks";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { marketHistoryQueryOptions } from "@/lib/services/query-options";
 import { services } from "@/lib/services";
 import type { MarketData, MarketHistoryPoint, MarketTimeframe, WalletInfo } from "@/lib/types";
@@ -34,6 +35,7 @@ const YAxis = dynamic(() => import("recharts").then((mod) => mod.YAxis), { ssr: 
 const TIMEFRAMES: MarketTimeframe[] = ["24H", "7D", "30D", "90D"];
 
 export default function MarketPage() {
+  const { t } = useI18n();
   const [activeRange, setActiveRange] = useState<MarketTimeframe>("30D");
   const market = useMarketData();
   const wallet = useWalletInfo();
@@ -50,8 +52,8 @@ export default function MarketPage() {
   return (
     <>
       <PageHeader
-        title="Market Data"
-        subtitle="Conceal Network (CCX) price, range history, and market metrics"
+        title={t("market.title")}
+        subtitle={t("market.subtitle")}
         action={
           <Button
             type="button"
@@ -66,7 +68,7 @@ export default function MarketPage() {
               )}
               aria-hidden="true"
             />
-            {market.isFetching ? "Refreshing" : "Refresh"}
+            {market.isFetching ? t("market.refreshing") : t("market.refresh")}
           </Button>
         }
       />
@@ -81,8 +83,8 @@ export default function MarketPage() {
 
       <div className="mt-6 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
         <SectionCard
-          title="Price History"
-          description={`${activeRange} CCX / USD trend`}
+          title={t("market.priceHistory")}
+          description={t("market.priceTrend", { range: activeRange })}
           className="min-h-[470px]"
         >
           <div className="flex justify-start sm:justify-end">
@@ -99,8 +101,8 @@ export default function MarketPage() {
       </div>
 
       <div className="mt-8 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:140ms]">
-        <h2 className="text-lg font-semibold text-foreground">Market Metrics</h2>
-        <p className="mb-4 mt-1 text-sm text-muted-foreground">CCX market snapshot</p>
+        <h2 className="text-lg font-semibold text-foreground">{t("market.metrics")}</h2>
+        <p className="mb-4 mt-1 text-sm text-muted-foreground">{t("market.snapshot")}</p>
         {data ? <MarketStatsGrid market={data} /> : <StatsSkeleton />}
       </div>
 
@@ -112,6 +114,7 @@ export default function MarketPage() {
 }
 
 function PriceHero({ market, walletInfo }: { market: MarketData; walletInfo: WalletInfo }) {
+  const { t } = useI18n();
   const balance = ccxToNumber(walletInfo.balanceTotal);
   const holdingsUsd = balance * market.price.value;
   const priceLabel = useCountUp(market.price.value, {
@@ -136,12 +139,12 @@ function PriceHero({ market, walletInfo }: { market: MarketData; walletInfo: Wal
             <DeltaChip change={market.change24hPct} />
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            Your holdings:{" "}
+            {t("market.yourHoldings")}{" "}
             <span className="font-mono font-semibold text-foreground">
               <CcxAmount>{formatCcx(walletInfo.balanceTotal)}</CcxAmount>
             </span>{" "}
             <span aria-hidden="true">≈</span>
-            <span className="sr-only">approximately</span>{" "}
+            <span className="sr-only">{t("market.approximately")}</span>{" "}
             <span className="font-mono font-semibold text-foreground">{holdingsUsdLabel}</span>
           </p>
         </div>
@@ -153,7 +156,9 @@ function PriceHero({ market, walletInfo }: { market: MarketData; walletInfo: Wal
               : "border-wallet-outgoing/30 bg-wallet-outgoing/10 text-wallet-outgoing",
           )}
         >
-          <p className="font-medium">{isPositive ? "Trading above" : "Trading below"} yesterday</p>
+          <p className="font-medium">
+            {isPositive ? t("market.tradingAboveYesterday") : t("market.tradingBelowYesterday")}
+          </p>
           <p className="mt-1 font-mono text-lg font-semibold">{formatUsd(market.price.value, 4)}</p>
         </div>
       </div>
@@ -162,7 +167,9 @@ function PriceHero({ market, walletInfo }: { market: MarketData; walletInfo: Wal
 }
 
 function DeltaChip({ change }: { change: number }) {
+  const { t } = useI18n();
   const isPositive = change >= 0;
+  const pct = Math.abs(change).toFixed(2);
 
   return (
     <span
@@ -173,7 +180,7 @@ function DeltaChip({ change }: { change: number }) {
           ? "bg-wallet-incoming/10 text-wallet-incoming"
           : "bg-wallet-outgoing/10 text-wallet-outgoing",
       )}
-      aria-label={`CCX price ${isPositive ? "up" : "down"} ${Math.abs(change).toFixed(2)} percent over 24 hours`}
+      aria-label={isPositive ? t("market.priceUpAria", { pct }) : t("market.priceDownAria", { pct })}
     >
       <span aria-hidden="true">{isPositive ? "▲" : "▼"}</span>
       {isPositive ? "+" : "−"}
@@ -189,9 +196,10 @@ function TimeframeToggle({
   active: MarketTimeframe;
   onChange: (range: MarketTimeframe) => void;
 }) {
+  const { t } = useI18n();
   return (
     <fieldset className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
-      <legend className="sr-only">Price chart timeframe</legend>
+      <legend className="sr-only">{t("market.timeframeLegend")}</legend>
       {TIMEFRAMES.map((range) => (
         <button
           key={range}
@@ -212,6 +220,7 @@ function TimeframeToggle({
 }
 
 function PriceAreaChart({ data, range }: { data: MarketHistoryPoint[]; range: MarketTimeframe }) {
+  const { t } = useI18n();
   const prefersReducedMotion = usePrefersReducedMotion();
   const prices = useMemo(() => data.map((point) => point.price), [data]);
   const minPrice = Math.min(...prices);
@@ -221,7 +230,7 @@ function PriceAreaChart({ data, range }: { data: MarketHistoryPoint[]; range: Ma
   if (data.length === 0) {
     return (
       <div className="grid h-full place-items-center rounded-xl border border-dashed border-border bg-secondary/60 p-6 text-center text-sm text-muted-foreground">
-        No price history available for {range}.
+        {t("market.noHistory", { range })}
       </div>
     );
   }
@@ -229,7 +238,11 @@ function PriceAreaChart({ data, range }: { data: MarketHistoryPoint[]; range: Ma
   return (
     <>
       <p className="sr-only">
-        {range} CCX price chart from {formatUsd(minPrice, 4)} to {formatUsd(maxPrice, 4)}.
+        {t("market.chartSrSummary", {
+          range,
+          min: formatUsd(minPrice, 4),
+          max: formatUsd(maxPrice, 4),
+        })}
       </p>
       <ResponsiveContainer width="100%" height={390}>
         <AreaChart data={data} margin={{ top: 12, right: 8, bottom: 0, left: 0 }}>
@@ -265,7 +278,7 @@ function PriceAreaChart({ data, range }: { data: MarketHistoryPoint[]; range: Ma
               color: "hsl(var(--foreground))",
             }}
             labelStyle={{ color: "hsl(var(--muted-foreground))" }}
-            formatter={(value) => [formatUsd(Number(value), 4), "Price"]}
+            formatter={(value) => [formatUsd(Number(value), 4), t("market.price")]}
           />
           <Area
             type="monotone"
@@ -288,31 +301,32 @@ const TILE =
 const tileDelay = (index: number) => ({ animationDelay: `${180 + index * 40}ms` });
 
 function MarketStatsGrid({ market }: { market: MarketData }) {
+  const { t } = useI18n();
   return (
     <div className="grid auto-rows-fr gap-4 @sm:grid-cols-2 @4xl:grid-cols-3">
       <ChangeMetric market={market} index={0} />
       <RangeMetric market={market} index={1} />
       <ValueMetric
         index={2}
-        label="24h Volume"
+        label={t("market.volume24h")}
         value={market.volume24h.value}
         formatter={(v) => formatUsd(v, 0)}
-        detail="Trading volume"
+        detail={t("market.volumeDetail")}
       />
       <ValueMetric
         index={3}
-        label="Market Cap"
+        label={t("market.marketCap")}
         value={market.marketCap.value}
         formatter={(v) => formatUsd(v, 0)}
-        detail="Price × circulating supply"
+        detail={t("market.marketCapDetail")}
         tone="amber"
       />
       <ValueMetric
         index={4}
-        label="Circulating Supply"
+        label={t("market.circulatingSupply")}
         value={ccxToNumber(market.circulatingSupply)}
         formatter={(v) => formatCcx(v, 0)}
-        detail="Estimated CCX in market"
+        detail={t("market.supplyDetail")}
       />
       {market.ath ? <AthMetric market={market} index={5} /> : null}
     </div>
@@ -354,6 +368,7 @@ function ValueMetric({
 }
 
 function ChangeMetric({ market, index }: { market: MarketData; index: number }) {
+  const { t } = useI18n();
   const positive = market.change24hPct >= 0;
   const display = useCountUp(market.change24hPct, {
     formatter: (v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`,
@@ -362,7 +377,7 @@ function ChangeMetric({ market, index }: { market: MarketData; index: number }) 
   return (
     <div className={TILE} style={tileDelay(index)}>
       <div className="flex items-start justify-between">
-        <p className="text-sm text-muted-foreground">24h Change</p>
+        <p className="text-sm text-muted-foreground">{t("market.change24h")}</p>
         <span aria-hidden="true" className={cn("text-xs", toneClass)}>
           {positive ? "▲" : "▼"}
         </span>
@@ -409,21 +424,22 @@ function Sparkline({ values, positive }: { values: number[]; positive: boolean }
 }
 
 function RangeMetric({ market, index }: { market: MarketData; index: number }) {
+  const { t } = useI18n();
   const low = market.low24h.value;
   const high = market.high24h.value;
   const price = market.price.value;
   const pct = high > low ? Math.min(100, Math.max(0, ((price - low) / (high - low)) * 100)) : 50;
   return (
     <div className={TILE} style={tileDelay(index)}>
-      <p className="text-sm text-muted-foreground">24h Range</p>
+      <p className="text-sm text-muted-foreground">{t("market.range24h")}</p>
       <div>
         <p className="font-mono text-2xl font-bold tracking-tight">{formatUsd(price, 4)}</p>
-        <p className="mt-1 text-sm text-muted-foreground">Current price within 24h range</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("market.rangeDetail")}</p>
       </div>
       <div>
         <div
           role="progressbar"
-          aria-label="Price position within the 24h range"
+          aria-label={t("market.rangeAria")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(pct)}
@@ -445,6 +461,7 @@ function RangeMetric({ market, index }: { market: MarketData; index: number }) {
 }
 
 function AthMetric({ market, index }: { market: MarketData; index: number }) {
+  const { t } = useI18n();
   const ath = market.ath?.value ?? market.price.value;
   const price = market.price.value;
   const fromAth = ath > 0 ? ((price - ath) / ath) * 100 : 0;
@@ -452,12 +469,12 @@ function AthMetric({ market, index }: { market: MarketData; index: number }) {
   const display = useCountUp(ath, { formatter: (v) => formatUsd(v, 4) });
   return (
     <div className={TILE} style={tileDelay(index)}>
-      <p className="text-sm text-muted-foreground">All-Time High</p>
+      <p className="text-sm text-muted-foreground">{t("market.allTimeHigh")}</p>
       <p className="font-mono text-2xl font-bold tracking-tight text-primary">{display}</p>
       <div>
         <div
           role="progressbar"
-          aria-label="Current price as a percentage of the all-time high"
+          aria-label={t("market.athAria")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(pctOfAth)}
@@ -465,7 +482,9 @@ function AthMetric({ market, index }: { market: MarketData; index: number }) {
         >
           <div className="h-full rounded-full bg-primary" style={{ width: `${pctOfAth}%` }} />
         </div>
-        <p className="mt-2 text-sm text-wallet-outgoing">{fromAth.toFixed(1)}% from ATH</p>
+        <p className="mt-2 text-sm text-wallet-outgoing">
+          {t("market.fromAth", { pct: fromAth.toFixed(1) })}
+        </p>
       </div>
     </div>
   );

@@ -24,12 +24,13 @@ import { computeDepositInterest, getDepositTierIndex } from "@/lib/deposits/inte
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 
-// Thresholds stay as numeric data (locale-neutral); the "Tier N" labels are
-// localized at render via t("deposits.tierLabel", { n }).
+// Tier bounds are numeric so thresholds + "Tier N" labels render locale-aware:
+// the threshold string (e.g. "< 10,000 CCX") is formatted via formatCcx at render
+// so number grouping follows the active locale (de "10.000", not "10,000").
 const TIER_META = [
-  { threshold: "< 10,000 CCX", color: "text-primary" },
-  { threshold: "10,000 – 19,999 CCX", color: "text-wallet-deposit" },
-  { threshold: "≥ 20,000 CCX", color: "text-wallet-incoming" },
+  { kind: "under", a: 10000, color: "text-primary" },
+  { kind: "range", a: 10000, b: 19999, color: "text-wallet-deposit" },
+  { kind: "atLeast", a: 20000, color: "text-wallet-incoming" },
 ] as const;
 
 const TIER_ANNUALISED = DEPOSIT_RATE_V3.map((base) => base + 11 * 0.001);
@@ -82,25 +83,39 @@ export function InterestCalculatorDialog({
                   </tr>
                 </thead>
                 <tbody>
-                  {TIER_META.map((tier, idx) => (
-                    <tr
-                      key={tier.threshold}
-                      className={
-                        tierIdx === idx ? "font-semibold text-foreground" : "text-muted-foreground"
-                      }
-                    >
-                      <td className={`py-1.5 pr-3 ${tier.color}`}>
-                        {t("deposits.tierLabel", { n: idx + 1 })}
-                      </td>
-                      <td className="py-1.5 pr-3">{tier.threshold}</td>
-                      <td className="py-1.5 pr-3 text-right font-mono">
-                        {(DEPOSIT_RATE_V3[idx] * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-1.5 text-right font-mono">
-                        {(TIER_ANNUALISED[idx] * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
+                  {TIER_META.map((tier, idx) => {
+                    const fmt = (n: number) => formatCcx(n, 0);
+                    const threshold =
+                      tier.kind === "under"
+                        ? t("deposits.tierThresholdUnder", { amount: fmt(tier.a) })
+                        : tier.kind === "atLeast"
+                          ? t("deposits.tierThresholdAtLeast", { amount: fmt(tier.a) })
+                          : t("deposits.tierThresholdRange", {
+                              min: fmt(tier.a),
+                              max: fmt(tier.b),
+                            });
+                    return (
+                      <tr
+                        key={tier.kind}
+                        className={
+                          tierIdx === idx
+                            ? "font-semibold text-foreground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        <td className={`py-1.5 pr-3 ${tier.color}`}>
+                          {t("deposits.tierLabel", { n: idx + 1 })}
+                        </td>
+                        <td className="py-1.5 pr-3">{threshold}</td>
+                        <td className="py-1.5 pr-3 text-right font-mono">
+                          {(DEPOSIT_RATE_V3[idx] * 100).toFixed(1)}%
+                        </td>
+                        <td className="py-1.5 text-right font-mono">
+                          {(TIER_ANNUALISED[idx] * 100).toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

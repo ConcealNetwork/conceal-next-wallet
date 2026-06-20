@@ -147,7 +147,7 @@ export function DepositsRail({ embedded = false }: { embedded?: boolean }) {
               tone="amber"
             />
             <CalcCell
-              label={t("deposits.estInterestLower")}
+              label={t("deposits.estInterest")}
               value={calcValid ? formatCcx(interestCcx, COIN_UNIT_PLACES, true) : "—"}
               tone="incoming"
               ccx
