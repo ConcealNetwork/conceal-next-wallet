@@ -60,6 +60,9 @@ export function useCheckInAlerts(): void {
       void notify("Check-in overdue", {
         body: `${fresh.length} watched contact${fresh.length === 1 ? " is" : "s are"} overdue — you may want to reach out.`,
         tag: "ccx-check-ins",
+        // Scope-relative (no leading slash) so the SW notificationclick handler
+        // deep-links under any deploy base path.
+        data: { url: "wallet/check-ins" },
       });
     }
   }, []);
