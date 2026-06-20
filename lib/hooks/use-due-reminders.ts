@@ -40,6 +40,9 @@ export function useDuePaymentReminders(): void {
       void notify("Scheduled payment due", {
         body: `${fresh.length} reminder${fresh.length === 1 ? " is" : "s are"} due. Open the wallet to send.`,
         tag: "ccx-scheduled-payments",
+        // Scope-relative (no leading slash) so the SW notificationclick handler
+        // deep-links under any deploy base path.
+        data: { url: "wallet/scheduled" },
       });
     }
   }, []);
@@ -72,7 +75,6 @@ export function useDueReminderCount(): number {
     const recount = () => setCount(countDue(listSchedules(), new Date().toISOString()));
     recount();
     const timer = setInterval(recount, DUE_REMINDER_POLL_MS);
-    if (typeof document === "undefined") return () => clearInterval(timer);
     const onVisible = () => {
       if (document.visibilityState === "visible") recount();
     };

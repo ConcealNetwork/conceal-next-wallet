@@ -24,6 +24,11 @@ export function useSyncWakeLock(active: boolean): void {
     if (typeof navigator === "undefined" || !("wakeLock" in navigator)) return;
 
     let cancelled = false;
+    // Guards against overlapping requests: acquire() can be re-entered (active
+    // flip + visibilitychange firing close together) before the first in-flight
+    // request resolves; without this both would create independent sentinels and
+    // only the last would be stored/released — leaking the earlier lock.
+    let acquiring = false;
 
     const release = () => {
       const sentinel = sentinelRef.current;
@@ -32,9 +37,10 @@ export function useSyncWakeLock(active: boolean): void {
     };
 
     const acquire = async () => {
-      // Already holding one, no longer needed, or document hidden → skip.
-      if (sentinelRef.current || !active) return;
+      // Already holding one, mid-request, no longer needed, or document hidden → skip.
+      if (sentinelRef.current || acquiring || !active) return;
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      acquiring = true;
       try {
         const sentinel = await navigator.wakeLock.request("screen");
         // The effect may have torn down (sync finished / unmount) while the
@@ -51,6 +57,8 @@ export function useSyncWakeLock(active: boolean): void {
         });
       } catch {
         // Rejected (not focused / not permitted) — no-op, best-effort only.
+      } finally {
+        acquiring = false;
       }
     };
 
