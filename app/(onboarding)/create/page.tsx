@@ -2,7 +2,6 @@
 
 import { Eye, EyeOff, X } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,13 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  walletPasswordIsAcceptable,
-  WalletPasswordStrengthPanel,
-} from "@/components/wallet/password-strength-bars";
 import { SectionCard } from "@/components/wallet/common";
+import {
+  WalletPasswordStrengthPanel,
+  walletPasswordIsAcceptable,
+} from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 

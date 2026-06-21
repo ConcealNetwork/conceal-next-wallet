@@ -2,7 +2,6 @@
 
 import { Download, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { paymentCardFilename, paymentCardToPngBlob } from "@/lib/ui/payment-card-png";
 import { downloadQrPng } from "@/lib/ui/qr-png";
+import { toast } from "@/lib/ui/toast";
 
 // "Share payment request" — opens a branded card (QR + amount + address + mark)
 // rendered to a PNG. Doubles as a Present view (the modal shows the card large

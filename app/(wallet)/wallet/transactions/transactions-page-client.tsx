@@ -3,7 +3,8 @@
 import type { LucideIcon } from "lucide-react";
 import { CalendarClock, Download, Hash, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "@/lib/ui/toast";
+import { TransactionsRail } from "@/components/layout/rails/transactions-rail";
+import { usePageRightRail, useRightRailCollapse } from "@/components/layout/right-rail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,18 +31,16 @@ import {
   PageHeader,
   SectionCard,
 } from "@/components/wallet/common";
-import { TransactionsRail } from "@/components/layout/rails/transactions-rail";
-import { usePageRightRail, useRightRailCollapse } from "@/components/layout/right-rail";
-import { TransactionNote } from "@/components/wallet/transaction-note";
 import {
-  StatusPill,
   formatHeightWithConfirmations,
   formatSignedAmount,
   formatTimestamp,
   getTransactionStatus,
+  StatusPill,
   statusLabelKey,
   transactionMeta,
 } from "@/components/wallet/transaction-display";
+import { TransactionNote } from "@/components/wallet/transaction-note";
 import { useTransactions } from "@/lib/hooks";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
@@ -49,9 +48,10 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import type { Transaction } from "@/lib/types";
 import { downloadCsvFile, transactionCsvFilename } from "@/lib/ui/download-csv-file";
+import { toast } from "@/lib/ui/toast";
 import { transactionsToCsv } from "@/lib/ui/transaction-csv";
-import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber, cn, truncateAddress } from "@/lib/utils";
 import { resolveUiTransactionType } from "@/lib/ui/transaction-kind";
+import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber, cn, truncateAddress } from "@/lib/utils";
 
 // Tab identifiers stay English — they drive `transactionMatchesTab` and remain the
 // stable selector for e2e. Display strings resolve via `TAB_LABEL_KEYS` + t().

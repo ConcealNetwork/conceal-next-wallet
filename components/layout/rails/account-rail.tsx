@@ -1,12 +1,12 @@
 "use client";
 
-import { PiggyBank, QrCode, Repeat, Send } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { PiggyBank, QrCode, Repeat, Send } from "lucide-react";
 import Link from "next/link";
 import { RailMarketSection, RailSectionHeading } from "@/components/layout/rails/rail-parts";
 import { RightRailHeader } from "@/components/layout/right-rail";
-import { CcxAmount } from "@/components/wallet/ccx";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CcxAmount } from "@/components/wallet/ccx";
 import { useWalletInfo } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";

@@ -5,22 +5,22 @@ import { RightRailHeader } from "@/components/layout/right-rail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton } from "@/components/wallet/common";
-import { TransactionNote } from "@/components/wallet/transaction-note";
-import { useTransactions } from "@/lib/hooks";
 import {
-  type TransactionStatus,
   formatHeightWithConfirmations,
   formatSignedAmount,
   formatTimestamp,
   getTransactionStatus,
   StatusPill,
+  type TransactionStatus,
   transactionMeta,
 } from "@/components/wallet/transaction-display";
+import { TransactionNote } from "@/components/wallet/transaction-note";
+import { useTransactions } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import type { Transaction } from "@/lib/types";
-import { cn, truncateAddress } from "@/lib/utils";
 import { resolveUiTransactionType } from "@/lib/ui/transaction-kind";
+import { cn, truncateAddress } from "@/lib/utils";
 
 // Issue #122, stage 3 — the Transactions-page contextual rail. By default it
 // shows a compact recent-transactions list (it fetches its own data so it stays

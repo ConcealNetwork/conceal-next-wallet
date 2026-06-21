@@ -2,7 +2,6 @@
 
 import { Eye, FileDown, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +19,7 @@ import { useWalletViewOnly } from "@/lib/hooks";
 import { services } from "@/lib/services";
 import type { ExportWalletData } from "@/lib/services/wallet.service";
 import { backupDownloadFilename, downloadJsonFile } from "@/lib/ui/download-json-file";
+import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { formatWalletBackupMarkdown } from "@/lib/ui/wallet-export-backup";
 

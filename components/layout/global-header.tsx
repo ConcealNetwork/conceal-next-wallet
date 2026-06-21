@@ -8,8 +8,8 @@ import {
   Check,
   Combine,
   Languages,
-  type LucideIcon,
   Lock,
+  type LucideIcon,
   Mail,
   Monitor,
   Moon,
@@ -25,18 +25,18 @@ import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRightRailContent } from "@/components/layout/right-rail";
 import { SidebarContent } from "@/components/layout/sidebar";
+import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
 import { WalletSwitcher } from "@/components/layout/wallet-switcher";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
-import { LOCALES } from "@/lib/i18n/i18n";
-import { useFormatters } from "@/lib/i18n/use-formatters";
-import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useTransactions, useWalletSyncStatus } from "@/lib/hooks";
+import { LOCALES } from "@/lib/i18n/i18n";
+import { useI18n } from "@/lib/i18n/i18n-provider";
+import { useFormatters } from "@/lib/i18n/use-formatters";
+import type { TransactionType } from "@/lib/types";
 import { THEME_PREFERENCES, type ThemePreference } from "@/lib/ui/theme";
 import { useTheme } from "@/lib/ui/theme-provider";
-import type { TransactionType } from "@/lib/types";
 import { resolveUiTransactionType } from "@/lib/ui/transaction-kind";
 import { cn, truncateAddress, withBasePath } from "@/lib/utils";
 
@@ -470,13 +470,14 @@ function RailToggleButton() {
  * right (sync status, notifications, theme switch, right-rail toggle).
  */
 export function GlobalHeader() {
+  const { t } = useI18n();
   return (
     <header className="sticky top-0 z-40 grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border bg-card px-3 sm:gap-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <SidebarToggleButton />
         <Link
           href="/wallet/account"
-          aria-label="Conceal wallet"
+          aria-label={t("nav.brandAria")}
           className="flex shrink-0 items-center gap-2 rounded-md px-1 transition-opacity duration-200 hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           <img

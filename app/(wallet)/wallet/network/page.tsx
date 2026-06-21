@@ -1,9 +1,9 @@
 "use client";
 
 import { type CSSProperties, useId, useMemo } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { NetworkRail } from "@/components/layout/rails/network-rail";
 import { usePageRightRail } from "@/components/layout/right-rail";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/wallet/common";
 import { useNetworkStatus, useSmartNodes } from "@/lib/hooks";
 import { useNetworkTelemetry } from "@/lib/hooks/network-telemetry-provider";

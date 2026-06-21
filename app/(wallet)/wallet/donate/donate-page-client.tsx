@@ -2,18 +2,18 @@
 
 import { CreditCard, Heart, Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CopyButton, PageHeader, SectionCard, WalletQrCode } from "@/components/wallet/common";
-import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
   DONATION_CRYPTO_ADDRESSES,
   type DonationConfig,
   type DonationMethodKey,
 } from "@/lib/donation-config";
+import { useI18n } from "@/lib/i18n/i18n-provider";
+import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
 const PRESETS = [5, 15, 50, 100];

@@ -1,5 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/lib/i18n/i18n-provider";
+const renderI18n = (ui: Parameters<typeof render>[0]) =>
+  render(<I18nProvider>{ui}</I18nProvider>);
 
 // Capture what the form hands to the engine, and stub the session redirect.
 const importWallet = vi.fn();
@@ -36,7 +39,7 @@ describe("ImportKeysForm wizard", () => {
   });
 
   it("starts on the Type step with Full / View-only choice cards", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     expect(screen.getByRole("button", { name: /Full wallet/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /View-only/ })).toBeInTheDocument();
     // keys live on a later step
@@ -44,14 +47,14 @@ describe("ImportKeysForm wizard", () => {
   });
 
   it("full path: the Keys step shows Spend key, not Address", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     clickContinue(); // Full wallet is the default selection
     expect(screen.getByLabelText("Spend key")).toBeInTheDocument();
     expect(screen.queryByLabelText("Address")).not.toBeInTheDocument();
   });
 
   it("view-only path: the Keys step shows Address, not Spend key", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     fireEvent.click(screen.getByRole("button", { name: /View-only/ }));
     clickContinue();
     expect(screen.getByLabelText("Address")).toBeInTheDocument();
@@ -59,7 +62,7 @@ describe("ImportKeysForm wizard", () => {
   });
 
   it("keeps the view key behind an Advanced link in full mode", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     clickContinue(); // → Keys (full wallet)
     expect(screen.queryByLabelText("View key")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /separate view key/i }));
@@ -67,14 +70,14 @@ describe("ImportKeysForm wizard", () => {
   });
 
   it("always shows the view key in view-only mode (it can't be derived)", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     fireEvent.click(screen.getByRole("button", { name: /View-only/ }));
     clickContinue();
     expect(screen.getByLabelText("View key")).toBeInTheDocument();
   });
 
   it("view-only: Continue on Keys step needs only format-valid address and view key", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     fireEvent.click(screen.getByRole("button", { name: /View-only/ }));
     clickContinue();
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
@@ -87,7 +90,7 @@ describe("ImportKeysForm wizard", () => {
   });
 
   it("lets you click a completed step in the rail to jump back", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     clickContinue(); // → Keys
     fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
     clickContinue(); // → History
@@ -96,13 +99,13 @@ describe("ImportKeysForm wizard", () => {
   });
 
   it("does not let you jump ahead to an unreached step", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     expect(screen.queryByRole("button", { name: /Go to step 3/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Go to step 2/i })).not.toBeInTheDocument();
   });
 
   it("cannot advance past Keys until a valid 64-hex key is entered", () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     clickContinue(); // → Keys
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: "abc" } });
@@ -112,7 +115,7 @@ describe("ImportKeysForm wizard", () => {
   });
 
   it("derives and shows the address once a valid spend key is entered", async () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     clickContinue(); // → Keys
     fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
     await waitFor(() => expect(screen.getByText(/ccx7sampleADDR/)).toBeInTheDocument());
@@ -120,7 +123,7 @@ describe("ImportKeysForm wizard", () => {
   });
 
   it("walks the full flow and submits keys + password + chosen scan height", async () => {
-    render(<ImportKeysForm />);
+    renderI18n(<ImportKeysForm />);
     clickContinue(); // → Keys
     fireEvent.change(screen.getByLabelText("Spend key"), { target: { value: HEX64 } });
     clickContinue(); // → History

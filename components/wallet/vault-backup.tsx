@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { backupDownloadFilename, downloadJsonFile } from "@/lib/ui/download-json-file";
 import {
   buildVaultFile,
   openVaultFile,
@@ -21,6 +19,8 @@ import {
   restoreVaultData,
   type VaultFile,
 } from "@/lib/storage/vault";
+import { backupDownloadFilename, downloadJsonFile } from "@/lib/ui/download-json-file";
+import { toast } from "@/lib/ui/toast";
 
 /**
  * Settings control: export/import an encrypted backup of device-local data

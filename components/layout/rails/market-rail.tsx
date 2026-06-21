@@ -27,7 +27,11 @@ export function MarketRail({ embedded = false }: { embedded?: boolean }) {
         <div className="mt-3.5 rounded-xl border border-border/70 px-5">
           {market ? (
             <>
-              <RailStatRow first label={t("market.price")} value={formatUsd(market.price.value, 4)} />
+              <RailStatRow
+                first
+                label={t("market.price")}
+                value={formatUsd(market.price.value, 4)}
+              />
               <RailStatRow
                 label={t("market.change24h")}
                 value={<ChangeValue pct={market.change24hPct} />}

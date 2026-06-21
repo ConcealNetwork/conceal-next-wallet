@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useDeleteWallet, useRenameWallet, useWallets } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { WalletSummary } from "@/lib/types";
+import { toast } from "@/lib/ui/toast";
 import { truncateAddress } from "@/lib/utils";
 
 /**

@@ -4,6 +4,7 @@ import { Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
  *  it inline in the header. */
 export function BackNav({ className, sticky = false }: { className?: string; sticky?: boolean }) {
   const router = useRouter();
+  const { t } = useI18n();
   const { status, walletInfo } = useWalletSession();
   const sessionOpen = status === "open" || walletInfo !== null;
   const [canGoBack, setCanGoBack] = useState(false);
@@ -22,7 +24,11 @@ export function BackNav({ className, sticky = false }: { className?: string; sti
   }, []);
 
   const fallbackHref = sessionOpen ? "/wallet/account" : "/";
-  const label = canGoBack ? "Back" : sessionOpen ? "Back to wallet" : "Back to home";
+  const label = canGoBack
+    ? t("nav.back")
+    : sessionOpen
+      ? t("nav.backToWallet")
+      : t("nav.backToHome");
 
   function handleBack() {
     if (canGoBack) {

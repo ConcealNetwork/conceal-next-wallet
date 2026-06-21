@@ -2,7 +2,6 @@
 
 import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { ReceiveRail } from "@/components/layout/rails/receive-rail";
 import { usePageRightRail } from "@/components/layout/right-rail";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,7 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import { CoinUri } from "@/lib/ui/coin-uri";
 import { buildPaymentSendUrl } from "@/lib/ui/payment-link";
 import { downloadQrPng, qrPngFilename, qrToPngBlob } from "@/lib/ui/qr-png";
+import { toast } from "@/lib/ui/toast";
 import { cn, withBasePath } from "@/lib/utils";
 import { paymentIdIsValid } from "@/lib/validation/ccx";
 

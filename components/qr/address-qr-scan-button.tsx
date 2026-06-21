@@ -55,17 +55,15 @@ export function AddressQrScanButton({
         className={cn("text-muted-foreground hover:text-foreground", className)}
         onClick={() => setOpen(true)}
         disabled={disabled}
-        aria-label="Scan address QR code"
+        aria-label={t("qr.scanAddressAria")}
       >
         <Camera className="size-4" aria-hidden="true" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Scan QR code</DialogTitle>
-            <DialogDescription>
-              Point your camera at a CCX address or payment request QR.
-            </DialogDescription>
+            <DialogTitle>{t("qr.scanTitle")}</DialogTitle>
+            <DialogDescription>{t("qr.scanDescription")}</DialogDescription>
           </DialogHeader>
           <QrCameraScanner onDecode={handleDecode} onCancel={() => setOpen(false)} />
         </DialogContent>

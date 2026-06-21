@@ -2,11 +2,10 @@
 
 import { Heart } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/lib/ui/toast";
-import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { useAddressBook, useMessages, useSendMessage, useWalletViewOnly } from "@/lib/hooks";
 import { useWalletSynced } from "@/lib/hooks/use-check-ins";
 import { useI18n } from "@/lib/i18n/i18n-provider";
@@ -18,13 +17,14 @@ import {
 } from "@/lib/storage/check-ins-store";
 import { formatCheckIn } from "@/lib/ui/check-in-message";
 import {
-  checkInStatus,
   type CheckInStatus,
+  checkInStatus,
   daysSince,
   hasFreshCheckIn,
   lastReceivedForWatcher,
   type WatchedContact,
 } from "@/lib/ui/check-ins";
+import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
 const STATUS_META: Record<CheckInStatus, { labelKey: string; dot: string; text: string }> = {
