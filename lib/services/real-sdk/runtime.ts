@@ -616,6 +616,56 @@ export async function fetchSyncRange(
   }
 }
 
+/**
+ * True for a coinbase (miner-reward) transaction — the ONLY tx type that carries a `gen` input.
+ * Used to drop coinbases that were fetched ONLY as coverage markers (see {@link fetchVerifiedRange})
+ * before folding. SAFE-BY-CONSTRUCTION: a `gen` input never appears on a real (key/deposit-input)
+ * transaction, so this can only ever drop a coinbase — never a real tx. If a daemon ever shaped a
+ * coinbase differently this would return false and the coinbase would simply be scanned (a wasted
+ * no-op for a non-mining wallet), never a missed real tx.
+ */
+function isCoinbaseTx(rawTx: DaemonRawTransaction): boolean {
+  const inner = rawTx.transaction;
+  if (!isRecord(inner)) return false;
+  const vin = inner.vin;
+  if (!Array.isArray(vin) || vin.length !== 1) return false;
+  const input = vin[0];
+  return isRecord(input) && ("gen" in input || input.type === "ff");
+}
+
+/**
+ * Fetch the HALF-OPEN range `[start, end)` from an UNTRUSTED node and PROVE it returned every block
+ * — defends the multi-source path against a peer that is behind, load-balanced to a trailing
+ * backend, or truncating: such a peer answers `200 OK` with a short/empty body, which (with miner
+ * txs off) is indistinguishable from "no owned txs" and would otherwise advance `scannedHeight` past
+ * unseen blocks → silently missed funds (PR #177 review — Codex/Gemini/GLM).
+ *
+ * Forces `include_miner_txs` ON so EVERY block carries a coinbase = a universal coverage marker
+ * (independent of the wallet's own miner-tx preference), then asserts every height in `[start, end)`
+ * is present; a missing block throws, so {@link fetchRangeMultiSource}'s failover re-fetches that
+ * batch from another node (ultimately the authoritative home node). The coverage check uses only the
+ * `height` fields (shape-independent), so it is robust regardless of the coinbase encoding. Coinbase
+ * markers are then dropped before returning UNLESS the wallet actually scans miner txs (solo mining).
+ */
+export async function fetchVerifiedRange(
+  daemon: DaemonClient,
+  start: number,
+  end: number,
+  walletWantsMinerTxs: boolean,
+): Promise<DaemonRawTransaction[]> {
+  const raw = await fetchSyncRange(daemon, start, end, true);
+  const seen = new Set<number>();
+  for (const tx of raw) {
+    if (typeof tx.height === "number") seen.add(tx.height);
+  }
+  for (let h = start; h < end; h++) {
+    if (!seen.has(h)) {
+      throw new Error(`Node returned an incomplete range: block ${h} missing in [${start}, ${end}).`);
+    }
+  }
+  return walletWantsMinerTxs ? raw : raw.filter((tx) => !isCoinbaseTx(tx));
+}
+
 // One-warning-per-runtime for a multi-source bulk that failed and fell back to single-node (#92-style).
 const multiSourceWarned = new WeakSet<SdkRuntime>();
 
@@ -636,7 +686,9 @@ async function buildSyncSources(
   const home: FetchSource<DaemonRawTransaction> = {
     label: "home",
     height: homeHeight,
-    fetch: (start, end) => fetchSyncRange(rt.daemon, start, end, includeMinerTxs),
+    // Verify even the home node: explorer.conceal.network is itself load-balanced, so a single
+    // request can land on a trailing backend and answer short. Verification + failover make that safe.
+    fetch: (start, end) => fetchVerifiedRange(rt.daemon, start, end, includeMinerTxs),
   };
 
   let candidateUrls: string[];
@@ -658,7 +710,9 @@ async function buildSyncSources(
       label: probe.url,
       // rankNodes only returns probes with a non-null height.
       height: probe.height as number,
-      fetch: (start, end) => fetchSyncRange(daemon, start, end, includeMinerTxs),
+      // Untrusted pool peer — fetchVerifiedRange proves it returned every block (else it throws
+      // and the driver fails over to another node / home), closing the silent-skip hole.
+      fetch: (start, end) => fetchVerifiedRange(daemon, start, end, includeMinerTxs),
     };
   });
   return [home, ...peers];

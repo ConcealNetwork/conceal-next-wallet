@@ -136,10 +136,11 @@ describe("fetchRangeMultiSource", () => {
   it("never assigns a batch to a source that is behind it", async () => {
     const home = source("home", 1000);
     const behind = source("behind", 150); // only covers blocks < 150
-    await run([home, behind], 1, 401, 100);
+    const { folded } = await run([home, behind], 1, 401, 100);
     // Every range the behind-node was asked for ends at or below its height.
     expect(behind.calls.every(([, end]) => end <= behind.height)).toBe(true);
     // Full coverage still came through (home picked up the rest).
+    expect(folded).toEqual(Array.from({ length: 400 }, (_, i) => i + 1));
   });
 
   it("fails over to another source and still covers everything in order", async () => {

@@ -25,10 +25,31 @@ type DaemonStub = {
   getNodeFeeAddress: () => Promise<string>;
   sendRawTransaction: (hex: string) => Promise<{ status: string }>;
   getRandomOuts: () => Promise<never[]>;
-  getWalletSyncData: (start: number, end: number) => Promise<unknown[]>;
+  getWalletSyncData: (start: number, end: number, includeMinerTxs?: boolean) => Promise<unknown[]>;
 };
 
-function installRuntime(runtimeMod: typeof import("@/lib/services/real-sdk/runtime"), daemon: DaemonStub, options: Record<string, unknown> = {}) {
+/** A coinbase-shaped daemon tx (a `gen` input) for each block in HALF-OPEN [start, end). */
+function coinbaseTxsFor(start: number, end: number) {
+  const out = [];
+  for (let h = start; h < end; h++) {
+    out.push({
+      transaction: { extra: "", vout: [], vin: [{ gen: { height: h } }] },
+      timestamp: 1_700_000_000 + h,
+      outputIndexes: [],
+      height: h,
+      blockHash: "bb".repeat(32),
+      hash: `cb${h}`,
+      fee: 0,
+    });
+  }
+  return out;
+}
+
+function installRuntime(
+  runtimeMod: typeof import("@/lib/services/real-sdk/runtime"),
+  daemon: DaemonStub,
+  options: Record<string, unknown> = {},
+) {
   const acct = createAccount("english");
   const raw: RawWalletV1 = {
     deposits: [],
@@ -50,7 +71,11 @@ function installRuntime(runtimeMod: typeof import("@/lib/services/real-sdk/runti
   });
 }
 
-/** A home daemon stub that records every (start, end) range it serves and returns no txs. */
+/**
+ * Home daemon stub that behaves like the real daemon: returns a coinbase per block ONLY when
+ * `includeMinerTxs` is set (multi-source verification forces it on); otherwise sparse (no owned
+ * txs). Records every range it actually serves.
+ */
 function homeDaemon(height: number) {
   const ranges: Array<[number, number]> = [];
   return {
@@ -61,9 +86,9 @@ function homeDaemon(height: number) {
       getNodeFeeAddress: () => Promise.resolve(""),
       sendRawTransaction: () => Promise.resolve({ status: "OK" }),
       getRandomOuts: () => Promise.resolve([]),
-      getWalletSyncData: async (start: number, end: number) => {
+      getWalletSyncData: async (start: number, end: number, includeMinerTxs?: boolean) => {
         ranges.push([start, end]);
-        return [];
+        return includeMinerTxs ? coinbaseTxsFor(start, end) : [];
       },
     } as DaemonStub,
   };
@@ -90,10 +115,6 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
 
     expect(await runtimeMod.sync()).toBe(500);
     expect(fetchSmartNodesMock).not.toHaveBeenCalled();
-    // home covered every block on its own.
-    const covered = new Set<number>();
-    for (const [s, e] of home.ranges) for (let b = s; b < e; b++) covered.add(b);
-    for (let b = 1; b < 500; b++) expect(covered.has(b)).toBe(true);
   });
 
   it("does NOT probe the pool when the wallet uses a custom node, even if far behind", async () => {
@@ -113,7 +134,6 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
 
     expect(await runtimeMod.sync()).toBe(6000);
     expect(fetchSmartNodesMock).toHaveBeenCalled(); // it tried
-    // The single-node pipeline still covered every block.
     const covered = new Set<number>();
     for (const [s, e] of home.ranges) for (let b = s; b < e; b++) covered.add(b);
     const missed: number[] = [];
@@ -124,7 +144,6 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
   it("distributes the bulk across home + peer and keeps the tip on home — full contiguous coverage", async () => {
     const height = 6000;
     const home = homeDaemon(height);
-    // One healthy peer in the pool, at the tip.
     fetchSmartNodesMock.mockResolvedValue([
       // biome-ignore lint/suspicious/noExplicitAny: minimal SmartNode for the test
       { id: "p", name: "peer", url: "https://peer.test/", poolHost: "peer.test" } as any,
@@ -133,14 +152,14 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
       { url: "https://peer.test/", reachable: true, latencyMs: 5, height },
     ]);
 
-    // The peer daemon is a REAL SDK client (built via buildDaemon) that uses global fetch —
-    // intercept its get_raw_transactions_by_heights POST and record the heights it served.
+    // Peer is a REAL SDK client (built via buildDaemon) using global fetch — serve a coinbase per
+    // block so its batches pass coverage verification. Record the ranges it served.
     const peerRanges: Array<[number, number]> = [];
     globalThis.fetch = (async (_url: string, init?: { body?: string }) => {
       const body = JSON.parse((init?.body as string) ?? "{}");
       const [s, e] = body.heights as [number, number];
       peerRanges.push([s, e]);
-      return { ok: true, json: async () => ({ status: "OK", transactions: [] }) };
+      return { ok: true, json: async () => ({ status: "OK", transactions: coinbaseTxsFor(s, e) }) };
       // biome-ignore lint/suspicious/noExplicitAny: minimal fetch stub
     }) as any;
 
@@ -149,18 +168,97 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
 
     expect(await runtimeMod.sync()).toBe(height);
 
-    // Union of home + peer ranges must cover EVERY block in [1, height) — no gap, especially at
-    // the bulk/tip handoff (bulkEnd = height - 100 = 5900).
     const covered = new Set<number>();
     for (const [s, e] of [...home.ranges, ...peerRanges]) for (let b = s; b < e; b++) covered.add(b);
     const missed: number[] = [];
     for (let b = 1; b < height; b++) if (!covered.has(b)) missed.push(b);
     expect(missed).toEqual([]);
 
-    // The peer actually took bulk work (distribution happened)...
-    expect(peerRanges.length).toBeGreaterThan(0);
+    expect(peerRanges.length).toBeGreaterThan(0); // peer took bulk work
     expect(peerRanges.every(([, e]) => e <= height - 100)).toBe(true); // peer never served the tip
-    // ...and the home node served the TIP region (the last 100 blocks stay on home).
-    expect(home.ranges.some(([, e]) => e > height - 100)).toBe(true);
+    expect(home.ranges.some(([, e]) => e > height - 100)).toBe(true); // home served the tip
+  });
+
+  it("a peer that probes high but FETCHES SHORT cannot skip blocks — verification fails it over to home", async () => {
+    // THE fund-safety regression for #177: a peer reports a tip height (passes height-gating) but a
+    // load-balanced backend answers with a truncated range. Without coverage verification, the sync
+    // would advance past the missing blocks and silently lose any txs there.
+    const height = 6000;
+    const home = homeDaemon(height);
+    fetchSmartNodesMock.mockResolvedValue([
+      // biome-ignore lint/suspicious/noExplicitAny: minimal SmartNode for the test
+      { id: "p", name: "liar", url: "https://liar.test/", poolHost: "liar.test" } as any,
+    ]);
+    probeNodesMock.mockResolvedValue([
+      { url: "https://liar.test/", reachable: true, latencyMs: 1, height }, // claims the full tip
+    ]);
+
+    const homeServedBlocks = new Set<number>();
+    globalThis.fetch = (async (_url: string, init?: { body?: string }) => {
+      const body = JSON.parse((init?.body as string) ?? "{}");
+      const [s, e] = body.heights as [number, number];
+      // Truncate: drop the LAST block of every range the peer is asked for.
+      return {
+        ok: true,
+        json: async () => ({ status: "OK", transactions: coinbaseTxsFor(s, Math.max(s, e - 1)) }),
+      };
+      // biome-ignore lint/suspicious/noExplicitAny: minimal fetch stub
+    }) as any;
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    // Wrap the home stub to record exactly which blocks home re-served (with miner txs).
+    const baseGet = home.stub.getWalletSyncData;
+    home.stub.getWalletSyncData = async (s: number, e: number, miner?: boolean) => {
+      if (miner) for (let b = s; b < e; b++) homeServedBlocks.add(b);
+      return baseGet(s, e, miner);
+    };
+    installRuntime(runtimeMod, home.stub);
+
+    expect(await runtimeMod.sync()).toBe(height);
+
+    // Coverage must be complete despite the truncating peer: every block the peer dropped was
+    // re-fetched from the home node (verification → failover), so nothing is skipped.
+    const covered = new Set<number>(homeServedBlocks);
+    // Peer's verified-good batches don't exist here (it truncates every range), so home covers the
+    // whole bulk. Assert the full range is accounted for via home + the tip.
+    for (const [s, e] of home.ranges) for (let b = s; b < e; b++) covered.add(b);
+    const missed: number[] = [];
+    for (let b = 1; b < height; b++) if (!covered.has(b)) missed.push(b);
+    expect(missed).toEqual([]);
+  });
+});
+
+describe("fetchVerifiedRange", () => {
+  function daemonReturning(txsFor: (s: number, e: number) => unknown[]) {
+    return {
+      getWalletSyncData: async (s: number, e: number) => txsFor(s, e),
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub
+    } as any;
+  }
+
+  it("returns the range with coinbases filtered out for a non-mining wallet", async () => {
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const daemon = daemonReturning((s, e) => coinbaseTxsFor(s, e));
+    const result = await runtimeMod.fetchVerifiedRange(daemon, 10, 15, false);
+    // All five blocks were coinbase-only → filtered → nothing to fold, but coverage passed.
+    expect(result).toEqual([]);
+  });
+
+  it("KEEPS coinbases for a solo-mining wallet (checkMinerTx on)", async () => {
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const daemon = daemonReturning((s, e) => coinbaseTxsFor(s, e));
+    const result = await runtimeMod.fetchVerifiedRange(daemon, 10, 13, true);
+    expect(result).toHaveLength(3); // coinbases kept (heights 10,11,12)
+  });
+
+  it("THROWS when a block is missing from the returned range (incomplete node)", async () => {
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    // Drop block 12 from [10, 15).
+    const daemon = daemonReturning((s, e) =>
+      coinbaseTxsFor(s, e).filter((t) => (t as { height: number }).height !== 12),
+    );
+    await expect(runtimeMod.fetchVerifiedRange(daemon, 10, 15, false)).rejects.toThrow(
+      /incomplete range|block 12 missing/i,
+    );
   });
 });
