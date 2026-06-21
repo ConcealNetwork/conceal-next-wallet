@@ -6,7 +6,13 @@
  *
  * First observation of a wallet seeds the baseline WITHOUT a notice (we only announce
  * positive *changes*, never the opening balance). A balance DECREASE (an outbound spend on
- * that wallet) is never a notice. No React, no storage, no engine — fully unit-testable.
+ * that wallet) is never a notice. The "funds" notice is on the NET balance delta across the
+ * window, not a per-tx event (a receive-then-spend inside one window nets out — acceptable
+ * for a best-effort heads-up). No React, no storage, no engine — fully unit-testable.
+ *
+ * Baselines for wallets ABSENT from `statuses` are carried forward unchanged (not dropped),
+ * so a wallet that transiently failed to sync this round isn't re-seeded — funds that
+ * arrived during its outage are still announced once it reappears (#108 review — Codex).
  */
 import type { SecondaryWalletStatus } from "@/lib/types";
 
@@ -41,7 +47,9 @@ export function detectWalletChanges(
   statuses: readonly SecondaryWalletStatus[],
 ): DetectResult {
   const notices: WalletChangeNotice[] = [];
-  const next = new Map<string, WalletBaseline>();
+  // Start from the prior baseline so wallets missing from this round (a transient sync
+  // failure) keep their last-seen values instead of being re-seeded.
+  const next = new Map(prev);
 
   for (const status of statuses) {
     const balanceAtomic = Math.max(0, status.balanceTotal.atomic);

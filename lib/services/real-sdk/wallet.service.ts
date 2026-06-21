@@ -426,19 +426,24 @@ export const realSdkWalletService: WalletService = {
 
   async syncSecondaryWallets(): Promise<SecondaryWalletStatus[]> {
     await ensureSdkReady();
-    const runtimes = unlockedNonActiveRuntimes();
-    if (runtimes.length === 0) return [];
-    const metas = await listWalletMetas();
+    const entries = unlockedNonActiveRuntimes();
+    if (entries.length === 0) return [];
+    const [metas, active] = await Promise.all([listWalletMetas(), activeWalletId()]);
     const labelById = new Map(metas.map((meta) => [meta.id, meta.label]));
     const networkHeight = await safeNetworkHeight();
 
     const statuses: SecondaryWalletStatus[] = [];
-    for (const rt of runtimes) {
-      const id = rt.id ?? "";
+    for (const { id, runtime: rt } of entries) {
+      // The snapshot can go stale mid-loop: a wallet may have become active (it now syncs in
+      // the foreground — notifying for it would alert the wallet the user is viewing) or been
+      // locked/removed (its keys are gone; don't keep scanning it). Re-check the live state
+      // before AND after the scan (#108 review — GLM/Gemini/Codex).
+      if (id === active || !hasUnlockedRuntime(id)) continue;
       try {
         // Bound to THIS runtime (never `requireRuntime()`), so a foreground wallet switch
         // mid-loop can't redirect the scan into the wrong keyspace.
         await syncRuntime(rt);
+        if (!hasUnlockedRuntime(id)) continue; // locked during the scan — don't surface it
         statuses.push({
           id,
           label: labelById.get(id) ?? "",

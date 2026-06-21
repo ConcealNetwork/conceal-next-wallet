@@ -64,6 +64,18 @@ describe("detectWalletChanges", () => {
     expect(next.get("a")).toEqual({ balanceAtomic: 5, receivedCount: 0 });
     expect(next.get("b")).toEqual({ balanceAtomic: 9, receivedCount: 4 });
   });
+
+  it("preserves the baseline of a wallet absent this round (transient sync failure)", () => {
+    const prev = new Map<string, WalletBaseline>([
+      ["w1", { balanceAtomic: 1000, receivedCount: 0 }],
+      ["w2", { balanceAtomic: 50, receivedCount: 1 }],
+    ]);
+    // Only w1 reported this round; w2 transiently failed to sync. Its baseline must survive
+    // so funds that arrived during the outage are still announced when it reappears.
+    const { notices, next } = detectWalletChanges(prev, [status({ id: "w1" })]);
+    expect(notices).toEqual([]);
+    expect(next.get("w2")).toEqual({ balanceAtomic: 50, receivedCount: 1 });
+  });
 });
 
 describe("watch-other-wallets opt-in store", () => {

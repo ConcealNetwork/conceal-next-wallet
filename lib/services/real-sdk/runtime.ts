@@ -232,12 +232,13 @@ export function hasUnlockedRuntime(id: string): boolean {
 /**
  * Every UNLOCKED runtime that is NOT the active one — the wallets to background-sync for
  * cross-wallet notifications (#108). The active wallet syncs on its own (foreground poll),
- * so it's excluded here to avoid a redundant second scan.
+ * so it's excluded here to avoid a redundant second scan. The id is the authoritative
+ * registry key (the map key), not `rt.id` which may be unset for the default wallet.
  */
-export function unlockedNonActiveRuntimes(): SdkRuntime[] {
-  const result: SdkRuntime[] = [];
-  for (const [id, rt] of runtimes) {
-    if (id !== activeId) result.push(rt);
+export function unlockedNonActiveRuntimes(): { id: string; runtime: SdkRuntime }[] {
+  const result: { id: string; runtime: SdkRuntime }[] = [];
+  for (const [id, runtime] of runtimes) {
+    if (id !== activeId) result.push({ id, runtime });
   }
   return result;
 }
