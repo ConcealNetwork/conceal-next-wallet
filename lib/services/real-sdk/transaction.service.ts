@@ -12,6 +12,7 @@ import {
   withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
 import { addPendingRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
+import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
@@ -35,7 +36,12 @@ export const realSdkTransactionService: TransactionService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
-    return mapTransactions(rt.state, networkHeight, readPendingRecords(rt.raw));
+    return mapTransactions(
+      rt.state,
+      networkHeight,
+      readPendingRecords(rt.raw),
+      readIncomingPendingRecords(rt.raw),
+    );
   },
 
   async sendTransaction(input: SendTransactionInput): Promise<Transaction> {

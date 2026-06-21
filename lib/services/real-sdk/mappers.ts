@@ -16,9 +16,13 @@ import {
   type WalletTransaction,
 } from "conceal-wallet-sdk";
 import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
+import {
+  type IncomingPendingRecord,
+  incomingPendingAtomic,
+} from "@/lib/services/real-sdk/incoming-pending-store";
 import { type PendingTxRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
-import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { CcxAmount, Deposit, Transaction, TransactionType, WalletInfo } from "@/lib/types";
 
 const SECONDS_PER_DAY = 86_400;
@@ -70,23 +74,44 @@ export function mapPendingTransaction(record: PendingTxRecord): Transaction {
   };
 }
 
+/** Map an incoming-pending (mempool) record to a 0-conf RECEIVE row (#109). */
+export function mapIncomingPendingTransaction(record: IncomingPendingRecord): Transaction {
+  return {
+    id: record.hash,
+    hash: record.hash,
+    type: "receive",
+    amount: atomic(record.amountAtomic),
+    address: "",
+    timestamp: record.timestampIso,
+    blockHeight: 0,
+    confirmations: 0,
+    ...(record.paymentId ? { paymentId: record.paymentId } : {}),
+  };
+}
+
 /**
  * Map the wallet's transaction history (newest first) to UI transactions, with any
- * optimistic pending sends shown FIRST (0 confirmations) until the scanned tx of the
- * same hash supersedes them.
+ * optimistic pending sends AND owned incoming-pending (mempool) txs shown FIRST
+ * (0 confirmations) until the scanned tx of the same hash supersedes them (#96/#109).
  */
 export function mapTransactions(
   state: WalletState,
   networkHeight: number,
   pending: readonly PendingTxRecord[] = [],
+  incoming: readonly IncomingPendingRecord[] = [],
 ): Transaction[] {
   const scanned = getTransactions(state).map((tx) => mapTransaction(tx, networkHeight));
-  if (pending.length === 0) return scanned;
+  if (pending.length === 0 && incoming.length === 0) return scanned;
   const scannedHashes = new Set(scanned.map((tx) => tx.hash));
   const pendingTxs = pending
     .filter((record) => !scannedHashes.has(record.hash))
     .map(mapPendingTransaction);
-  return [...pendingTxs, ...scanned];
+  // Don't double-list a tx already shown as an optimistic outbound pending (self-send).
+  const pendingHashes = new Set(pendingTxs.map((tx) => tx.hash));
+  const incomingTxs = incoming
+    .filter((record) => !scannedHashes.has(record.hash) && !pendingHashes.has(record.hash))
+    .map(mapIncomingPendingTransaction);
+  return [...incomingTxs, ...pendingTxs, ...scanned];
 }
 
 /** Map one owned deposit to the UI {@link Deposit}. */
@@ -189,6 +214,12 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
     available: atomic(availableAtomic),
     dust: atomic(0),
     pending: atomic(pendingOut),
+    // Exclude live OUTBOUND-pending hashes: a self-send / withdrawal / deposit whose own
+    // change or returned outputs we own (and the pool reports) must not double-count funds
+    // already shown in the outbound `pending` total (#109 review — GLM-H1 / Gemini).
+    incomingPending: atomic(
+      incomingPendingAtomic(runtime.raw, new Set(livePending.map((record) => record.hash))),
+    ),
     lockedDeposits: atomic(lockedTotal + pendingLocked),
     withdrawable: atomic(withdrawable),
     creationHeight: Math.max(0, Number(runtime.raw.creationHeight ?? 0) || 0),
