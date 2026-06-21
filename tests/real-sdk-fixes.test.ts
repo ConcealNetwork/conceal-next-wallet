@@ -176,6 +176,8 @@ describe("sync publishes scannedHeight per batch (live progress)", () => {
       expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1]);
     }
     expect(seen.some((cursor) => cursor > 0 && cursor < networkHeight)).toBe(true);
+    // The cursor actually climbed through multiple distinct values, not 0-then-done.
+    expect(new Set(seen).size).toBeGreaterThanOrEqual(2);
   });
 });
 

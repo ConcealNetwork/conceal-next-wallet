@@ -560,10 +560,13 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   const fetchFrom = (from: number): { endBlock: number; data: Promise<DaemonRawTransaction[]> } => {
     const startBlock = from + 1;
     const endBlock = Math.min(startBlock + batchSize - 1, height);
-    return {
-      endBlock,
-      data: rt.daemon.getWalletSyncData(startBlock, endBlock, includeMinerTxs),
-    };
+    const data = rt.daemon.getWalletSyncData(startBlock, endBlock, includeMinerTxs);
+    // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
+    // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
+    // `unhandledrejection`. The real `await data` below still surfaces the error normally
+    // (#92/#109 review follow-up — Gemini/GLM).
+    void data.catch(() => {});
+    return { endBlock, data };
   };
 
   let pending = scanned < height ? fetchFrom(scanned) : null;
