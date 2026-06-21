@@ -15,6 +15,7 @@ import { useCheckInAlerts } from "@/lib/hooks/use-check-ins";
 import { useDuePaymentReminders } from "@/lib/hooks/use-due-reminders";
 import { useIdleLock } from "@/lib/hooks/use-idle-lock";
 import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-messages-since-open";
+import { useSecondaryWalletWatch } from "@/lib/hooks/use-secondary-wallet-watch";
 import { useSyncWakeLock } from "@/lib/hooks/use-sync-wake-lock";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { toast } from "@/lib/ui/toast";
@@ -27,6 +28,8 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   usePrefetchMessagesForBadge();
   useDuePaymentReminders();
   useCheckInAlerts();
+  // Background-sync + notify for funds/messages arriving on UNLOCKED non-active wallets.
+  useSecondaryWalletWatch();
   // Mirror actionable counts (overdue check-ins + due reminders) on the app icon.
   useAppBadge();
   // Keep the screen awake during long syncs so a scan doesn't stall on sleep.

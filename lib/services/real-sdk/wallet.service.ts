@@ -6,15 +6,8 @@ import {
   saveEncryptedWallet,
   userKeysFromPriv,
 } from "conceal-wallet-sdk";
-import {
-  buildFromMnemonic,
-  buildFromSpendKey,
-  buildNewWallet,
-  buildViewOnly,
-  type BuiltWallet,
-  mnemonicFromSpendKey,
-} from "@/lib/services/real-sdk/wallet-build";
 import { mapWalletInfo } from "@/lib/services/real-sdk/mappers";
+import { readReceivedRecords } from "@/lib/services/real-sdk/messages-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   activeWalletId,
@@ -23,7 +16,6 @@ import {
   disconnect as disconnectRuntime,
   friendlyMessage,
   getRuntime,
-  hasStoredWallet as runtimeHasStoredWallet,
   hasUnlockedRuntime,
   listWalletMetas,
   nodeUrlFromRaw,
@@ -32,10 +24,21 @@ import {
   removeWalletById,
   renameWallet as renameWalletRuntime,
   requireRuntime,
+  hasStoredWallet as runtimeHasStoredWallet,
   switchActiveWallet,
   sync,
+  syncRuntime,
+  unlockedNonActiveRuntimes,
   unlock as unlockRuntime,
 } from "@/lib/services/real-sdk/runtime";
+import {
+  type BuiltWallet,
+  buildFromMnemonic,
+  buildFromSpendKey,
+  buildNewWallet,
+  buildViewOnly,
+  mnemonicFromSpendKey,
+} from "@/lib/services/real-sdk/wallet-build";
 import { decodeWalletQr } from "@/lib/services/real-sdk/wallet-qr";
 import { getActiveWalletStorage } from "@/lib/services/real-sdk/wallets-index";
 import type {
@@ -46,7 +49,7 @@ import type {
   PreviewKeysInput,
   WalletService,
 } from "@/lib/services/wallet.service";
-import type { WalletInfo, WalletSummary } from "@/lib/types";
+import type { SecondaryWalletStatus, WalletInfo, WalletSummary } from "@/lib/types";
 import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 
 /** In-flight create draft (between `prepareCreateWallet` and `finalizeCreateWallet`). */
@@ -419,6 +422,34 @@ export const realSdkWalletService: WalletService = {
     await ensureSdkReady();
     await removeWalletById(id);
     createdMnemonic = null;
+  },
+
+  async syncSecondaryWallets(): Promise<SecondaryWalletStatus[]> {
+    await ensureSdkReady();
+    const runtimes = unlockedNonActiveRuntimes();
+    if (runtimes.length === 0) return [];
+    const metas = await listWalletMetas();
+    const labelById = new Map(metas.map((meta) => [meta.id, meta.label]));
+    const networkHeight = await safeNetworkHeight();
+
+    const statuses: SecondaryWalletStatus[] = [];
+    for (const rt of runtimes) {
+      const id = rt.id ?? "";
+      try {
+        // Bound to THIS runtime (never `requireRuntime()`), so a foreground wallet switch
+        // mid-loop can't redirect the scan into the wrong keyspace.
+        await syncRuntime(rt);
+        statuses.push({
+          id,
+          label: labelById.get(id) ?? "",
+          balanceTotal: mapWalletInfo(rt, networkHeight).balanceTotal,
+          receivedCount: readReceivedRecords(rt.raw).length,
+        });
+      } catch {
+        // Best-effort per wallet — one wallet's daemon error must not abort the others.
+      }
+    }
+    return statuses;
   },
 
   async disconnect() {

@@ -229,6 +229,19 @@ export function hasUnlockedRuntime(id: string): boolean {
   return runtimes.has(id);
 }
 
+/**
+ * Every UNLOCKED runtime that is NOT the active one — the wallets to background-sync for
+ * cross-wallet notifications (#108). The active wallet syncs on its own (foreground poll),
+ * so it's excluded here to avoid a redundant second scan.
+ */
+export function unlockedNonActiveRuntimes(): SdkRuntime[] {
+  const result: SdkRuntime[] = [];
+  for (const [id, rt] of runtimes) {
+    if (id !== activeId) result.push(rt);
+  }
+  return result;
+}
+
 /** Install or drop a runtime in the cache, keeping coordination state in sync. */
 function setRuntime(id: string, rt: SdkRuntime): void {
   runtimes.set(id, rt);
