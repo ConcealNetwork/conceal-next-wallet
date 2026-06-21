@@ -102,6 +102,7 @@ import {
   type DaemonRawTransaction,
   isRecord,
   type RawScanResult,
+  scanRawTransaction,
   toScanTransaction,
 } from "@/lib/services/real-sdk/scan";
 import { scanBatch, terminateScanPool } from "@/lib/services/real-sdk/scan-pool";
@@ -747,10 +748,10 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // extra re-scanned block mid-catch-up is harmless; `seedFloor` still pins the lower bound.
   const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
   let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS - 1);
-  // A DEEP catch-up (fresh import / long offline) — gates ONLY whether to engage the multi-source
-  // bulk phase (probing the pool isn't worth it for a small catch-up). Coverage VERIFICATION is NOT
-  // gated on this: the single-node pipeline always verifies (see `fetchFrom`), because a load-
-  // balanced node can answer short at any depth.
+  // A DEEP catch-up (fresh import / long offline). Gates ALL the heavy machinery — multi-source
+  // bulk fetch, coverage verification, AND the worker-pool scan — so an ordinary incremental poll
+  // (already-synced wallet) stays on the original LIGHT path (sparse fetch + in-thread scan, no
+  // miner-tx payload, no worker round-trip). The overhead only pays off on a long catch-up.
   const farBehind = height - scanned > FAR_BEHIND_THRESHOLD;
   const startState = rt.state;
   let state = rt.state;
@@ -857,21 +858,25 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // 200, 300, …) — a tx mined into a boundary block was never scanned → missing balance.
     // `endBlock + 1` past the tip is safely clamped by the daemon (no error). Upstream SDK has
     // the same off-by-one; reported separately.
-    // ALWAYS verify coverage: a node clamps a past-its-tip range to a short 200 OK (verified live),
-    // so a load-balanced home whose getHeight hit a fresh backend but whose fetch hits a TRAILING
-    // backend would answer short and silently skip blocks — at ANY catch-up depth, not just far
-    // behind (PR #177 review — Codex/Gemini/GLM). The coverage marker (a coinbase per block) makes
-    // the cost negligible on an idle poll (~RESCAN_LAG blocks) and is filtered before the fold.
-    // Fetch (verified) THEN scan the batch across the worker pool, so `data` resolves to PRE-SCANNED
-    // results. The prefetch therefore overlaps the next batch's fetch + parallel ECDH scan with this
-    // batch's (cheap, main-thread) apply — `scanBatch` falls back to an in-thread scan when no pool.
-    const data = fetchVerifiedRange(
-      rt.daemon,
-      startBlock,
-      endBlock + 1,
-      includeMinerTxs,
-      height,
-    ).then((rawTxs) => scanBatch(rawTxs, rt.account.keys));
+    // The HEAVY machinery — coverage verification (forces `include_miner_txs` for the per-block
+    // coverage marker) and the parallel worker-pool scan — engages ONLY on a deep catch-up
+    // (`farBehind`), where the payload/worker overhead is amortized and a mid-history truncation
+    // would be unrecoverable. An ordinary incremental poll (an already-synced wallet, the common
+    // case) takes the LIGHT path: a sparse `fetchSyncRange` (no miner-tx payload) + an in-thread
+    // scan (no worker round-trip for a tiny batch) — i.e. the original fast behavior. A transient
+    // tip truncation on the light path self-heals via the next poll's RESCAN_LAG window. Coverage
+    // verification: a node clamps a past-its-tip range to a short 200 OK, so a load-balanced home
+    // routed to a TRAILING backend could answer short — verification + failover catch that on the
+    // deep path; the ≤FAR_BEHIND_THRESHOLD light path accepts that rare risk for incremental speed.
+    // The scan folds into the prefetch promise so the next batch's fetch+scan overlaps this apply.
+    const fetched = farBehind
+      ? fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs, height)
+      : fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
+    const data = fetched.then((rawTxs) =>
+      farBehind
+        ? scanBatch(rawTxs, rt.account.keys)
+        : rawTxs.map((tx) => scanRawTransaction(tx, rt.account.keys)),
+    );
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
     // `unhandledrejection`. The real `await data` below still surfaces the error normally
