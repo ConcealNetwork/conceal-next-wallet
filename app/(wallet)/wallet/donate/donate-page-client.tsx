@@ -247,8 +247,8 @@ export function DonatePageClient({ fiatEnabled, enabledMethods }: DonationConfig
                     </div>
                   ))}
                 </div>
-                <div className="mx-auto rounded-2xl bg-white p-4">
-                  <WalletQrCode value={DONATION_CRYPTO_ADDRESSES[0].address} size={170} />
+                <div className="mx-auto w-full max-w-[240px]">
+                  <WalletQrCode value={DONATION_CRYPTO_ADDRESSES[0].address} fullWidth />
                 </div>
               </div>
             ) : (
