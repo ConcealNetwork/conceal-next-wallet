@@ -106,6 +106,7 @@ import {
   toScanTransaction,
 } from "@/lib/services/real-sdk/scan";
 import { scanBatch, terminateScanPool } from "@/lib/services/real-sdk/scan-pool";
+import { parallelSyncDisabled, syncTimingEnabled } from "@/lib/services/real-sdk/sync-flags";
 import {
   DEFAULT_WALLET_ID,
   getActiveWallet,
@@ -753,8 +754,17 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // (already-synced wallet) stays on the original LIGHT path (sparse fetch + in-thread scan, no
   // miner-tx payload, no worker round-trip). The overhead only pays off on a long catch-up.
   const farBehind = height - scanned > FAR_BEHIND_THRESHOLD;
+  // `useHeavyPath` is `farBehind` unless the parallel speed path is force-disabled via the
+  // `ccx-disable-parallel-sync` flag (a kill-switch to A/B the speed options against the light path).
+  const useHeavyPath = farBehind && !parallelSyncDisabled();
   const startState = rt.state;
   let state = rt.state;
+
+  // Diagnostic timing (opt-in via `ccx-sync-timing`): track how long the sync took + which path ran.
+  const syncStartedAt = Date.now();
+  const startScanned = scanned;
+  let batchCount = 0;
+  let multiSourceEngaged = false;
 
   // Our own outbound message txs already live in `sentMessages`; never reclassify
   // them as inbound. Build the received-message set keyed by tx hash for dedupe.
@@ -771,6 +781,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // climb during a long catch-up. Shared by the multi-source bulk phase and the single-node loop —
   // both deliver batches in ASCENDING block order, which the WalletState fold requires.
   const foldBatch = (scanResults: (RawScanResult | null)[], newScanned: number): void => {
+    batchCount += 1;
     for (const result of scanResults) {
       if (result === null) continue;
       state = applyScanResult(state, result);
@@ -808,12 +819,13 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // covers the ENTIRE remaining range from `scanned`. Block ranges are public, so distributing them
   // across nodes leaks nothing about ownership.
   const usingCustomNode = Boolean(rt.raw.options?.customNode);
-  if (!usingCustomNode && farBehind) {
+  if (!usingCustomNode && useHeavyPath) {
     const bulkEnd = height - MULTI_SOURCE_TIP_MARGIN; // half-open exclusive; the tip stays on home
     if (bulkEnd > scanned + 1) {
       try {
         const sources = await buildSyncSources(rt, height, includeMinerTxs);
         if (sources.length >= 2) {
+          multiSourceEngaged = true;
           await fetchRangeMultiSource<DaemonRawTransaction>({
             start: scanned + 1,
             end: bulkEnd,
@@ -869,11 +881,11 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // routed to a TRAILING backend could answer short — verification + failover catch that on the
     // deep path; the ≤FAR_BEHIND_THRESHOLD light path accepts that rare risk for incremental speed.
     // The scan folds into the prefetch promise so the next batch's fetch+scan overlaps this apply.
-    const fetched = farBehind
+    const fetched = useHeavyPath
       ? fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs, height)
       : fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
     const data = fetched.then((rawTxs) =>
-      farBehind
+      useHeavyPath
         ? scanBatch(rawTxs, rt.account.keys)
         : rawTxs.map((tx) => scanRawTransaction(tx, rt.account.keys)),
     );
@@ -973,6 +985,19 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
       queueDrainWarned.add(rt);
       console.warn("Outbound-queue drain failed (non-fatal, silenced):", error);
     }
+  }
+
+  // Diagnostic timing (opt-in): report how long this sync took + which path ran, so the speed
+  // options can be A/B'd on a real wallet (`ccx-sync-timing=1`; pair with `ccx-disable-parallel-sync`).
+  if (syncTimingEnabled()) {
+    const ms = Date.now() - syncStartedAt;
+    const blocks = scanned - startScanned;
+    const perSec = ms > 0 ? Math.round((blocks / ms) * 1000) : 0;
+    console.warn(
+      `[ccx-sync] ${blocks} blocks in ${ms}ms (${perSec}/s) · batches=${batchCount} · path=${
+        useHeavyPath ? "parallel" : "light"
+      } · multiSource=${multiSourceEngaged}`,
+    );
   }
 
   return height;
