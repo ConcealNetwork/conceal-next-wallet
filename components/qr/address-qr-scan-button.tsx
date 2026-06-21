@@ -5,7 +5,7 @@
 
 import { Camera } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/lib/ui/toast";
+import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,11 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
   parseScannedSendPayload,
   type ScannedSendDraft,
 } from "@/lib/ui/parse-scanned-send-payload";
+import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
 /** Camera trigger for address fields — visible on small screens only (sm:hidden). */
@@ -31,17 +32,18 @@ export function AddressQrScanButton({
   className?: string;
   disabled?: boolean;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   function handleDecode(payload: string) {
     const draft = parseScannedSendPayload(payload);
     if (!draft?.address.trim()) {
-      toast.error("Could not read that QR code.");
+      toast.error(t("toast.qrUnreadable"));
       return;
     }
     onScan(draft);
     setOpen(false);
-    toast.success("QR code scanned.");
+    toast.success(t("toast.qrScanned"));
   }
 
   return (

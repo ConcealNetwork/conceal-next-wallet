@@ -3,7 +3,6 @@
 import { Check, Fingerprint } from "lucide-react";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,10 +28,12 @@ import {
   unlockWithPasskey,
 } from "@/lib/auth/webauthn-prf";
 import { env } from "@/lib/env";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import type { WalletSummary } from "@/lib/types";
 import { getSafeNextPath } from "@/lib/ui/payment-link";
+import { toast } from "@/lib/ui/toast";
 import { truncateAddress } from "@/lib/utils";
 
 const DEFAULT_WALLET_ID = "default";
@@ -82,6 +83,7 @@ export function UnlockWalletProvider({
   defaultRedirect = "/wallet/account",
   autoOpenFromNext = true,
 }: UnlockWalletProviderProps) {
+  const { t } = useI18n();
   const { openSession } = useWalletSession();
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [noWalletDialogOpen, setNoWalletDialogOpen] = useState(false);
@@ -150,7 +152,7 @@ export function UnlockWalletProvider({
             walletId,
           );
           setEnrolled(true);
-          toast.success("Passkey unlock enabled for this device.");
+          toast.success(t("toast.passkeyEnabled"));
         } catch (error) {
           // A user cancel is silent; a real failure (e.g. no PRF) explains itself.
           if (!(error instanceof PasskeyError) || error.code !== "cancelled") {
@@ -201,7 +203,7 @@ export function UnlockWalletProvider({
       // re-imported elsewhere) — the enrollment is stale, so drop it.
       clearPasskeyEnrollment(walletId);
       setEnrolled(false);
-      toast.error("Passkey unlock is out of date — unlock with your password to re-enable it.");
+      toast.error(t("toast.passkeyOutOfDate"));
     } finally {
       setLoading(false);
     }
