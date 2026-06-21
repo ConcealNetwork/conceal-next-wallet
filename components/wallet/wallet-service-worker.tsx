@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { publicAssetPath } from "@/lib/conceal/asset-path";
 import { env } from "@/lib/env";
 import { useI18n } from "@/lib/i18n/i18n-provider";

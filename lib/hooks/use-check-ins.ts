@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { useMessages, useWalletInfo } from "@/lib/hooks";
 import { canNotify, isOptedIn, notify, selectNewKeys } from "@/lib/notifications/notify";
 import { listWatchers } from "@/lib/storage/check-ins-store";

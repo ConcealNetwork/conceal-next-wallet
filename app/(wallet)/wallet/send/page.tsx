@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { z } from "zod";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import { Button } from "@/components/ui/button";

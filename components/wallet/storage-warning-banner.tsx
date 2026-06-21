@@ -4,7 +4,7 @@ import { DatabaseBackup, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { useInstallPrompt } from "@/lib/hooks/use-install-prompt";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQueryClient } from "@/lib/hooks/query-provider";
