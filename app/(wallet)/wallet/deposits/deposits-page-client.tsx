@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { type CSSProperties, useEffect, useId, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

@@ -2,7 +2,7 @@
 
 import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { ReceiveRail } from "@/components/layout/rails/receive-rail";
 import { usePageRightRail } from "@/components/layout/right-rail";
 import { Button } from "@/components/ui/button";

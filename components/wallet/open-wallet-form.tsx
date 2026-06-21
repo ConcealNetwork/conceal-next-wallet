@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { useOpenWalletContext } from "@/components/wallet/unlock-wallet-provider";
 import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
 import { clearPasskeyEnrollment } from "@/lib/auth/biometric-store";

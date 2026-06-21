@@ -3,7 +3,7 @@
 import { Eye, FileKey, KeyRound, type LucideIcon, QrCode, Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

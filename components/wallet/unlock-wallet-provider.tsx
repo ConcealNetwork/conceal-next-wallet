@@ -3,7 +3,7 @@
 import { Check, Fingerprint } from "lucide-react";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

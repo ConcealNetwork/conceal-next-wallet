@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

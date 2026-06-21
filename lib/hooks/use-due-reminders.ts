@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { canNotify, isOptedIn, notify, selectNewKeys } from "@/lib/notifications/notify";
 import { listSchedules } from "@/lib/storage/scheduled-payments-store";
 import { countDue, dueInstanceKeys } from "@/lib/ui/scheduled-payments";

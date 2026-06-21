@@ -3,7 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CalendarClock, Download, Hash, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

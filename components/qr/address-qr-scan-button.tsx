@@ -5,7 +5,7 @@
 
 import { Camera } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

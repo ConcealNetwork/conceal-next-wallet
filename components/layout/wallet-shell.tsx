@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "sonner";
+import { toast } from "@/lib/ui/toast";
 import { Footer } from "@/components/layout/footer";
 import { GlobalHeader } from "@/components/layout/global-header";
 import { RightRailProvider, useRightRailContent } from "@/components/layout/right-rail";
