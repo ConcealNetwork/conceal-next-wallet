@@ -198,7 +198,11 @@ export function WalletSwitcher({
           aria-label={switcherLabel}
           className={
             variant === "header"
-              ? "absolute left-0 top-full z-50 mt-1.5 w-[260px] rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
+              ? // Centred under the (header-centred) trigger and clamped to the viewport so the
+                // panel never runs off-screen on mobile, where the trigger collapses to just the
+                // avatar near the centre of the bar and a left-anchored 260px panel overflowed
+                // the right edge (#122 follow-up).
+                "absolute left-1/2 top-full z-50 mt-1.5 w-[260px] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
               : "absolute right-3 left-3 z-50 mt-1.5 rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
           }
         >
