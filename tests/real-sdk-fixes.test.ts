@@ -140,7 +140,8 @@ describe("sync publishes scannedHeight per batch (live progress)", () => {
       getRandomOuts: () => Promise.resolve([]),
       getWalletSyncData: async () => {
         // The cursor visible to a concurrent reader (the polled getWalletInfo) at the
-        // moment each batch is fetched — should climb across batches.
+        // moment each batch is fetched. With the pipelined loop the next batch prefetches
+        // before the current one's publish, so this lags by one batch but still climbs.
         seen.push(runtimeMod.getRuntime()?.state.scannedHeight ?? -1);
         return [];
       },
@@ -165,12 +166,18 @@ describe("sync publishes scannedHeight per batch (live progress)", () => {
     const final = await runtimeMod.sync();
     expect(final).toBe(networkHeight);
     expect(runtimeMod.getRuntime()?.state.scannedHeight).toBe(networkHeight);
-    // Several batches ran, and each saw a strictly higher published cursor than the
-    // previous — progress is committed per batch, not only when the whole scan ends.
+    // Several batches ran with a non-decreasing published cursor, and at least one fetch
+    // observed a PARTIAL cursor (0 < height < tip) — progress is committed per batch, not
+    // only when the whole scan ends. (Sync is pipelined: the next batch prefetches before
+    // the current batch's publish, so the cursor seen at fetch-time lags by one batch — it
+    // still climbs incrementally rather than jumping straight to the final height.)
     expect(seen.length).toBeGreaterThanOrEqual(3);
     for (let i = 1; i < seen.length; i += 1) {
-      expect(seen[i]).toBeGreaterThan(seen[i - 1]);
+      expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1]);
     }
+    expect(seen.some((cursor) => cursor > 0 && cursor < networkHeight)).toBe(true);
+    // The cursor actually climbed through multiple distinct values, not 0-then-done.
+    expect(new Set(seen).size).toBeGreaterThanOrEqual(2);
   });
 });
 
