@@ -8,6 +8,7 @@ import {
   transactions as txns,
 } from "conceal-wallet-sdk";
 import { afterEach, describe, expect, it } from "vitest";
+import { coinbaseTxsFor } from "./test-helpers";
 
 /**
  * Regression coverage for the migration-review fixes (node env — the conceal-lib-js
@@ -86,13 +87,13 @@ describe("sync concurrency guard (review #2)", () => {
       getNodeFeeAddress: () => Promise.resolve(""),
       sendRawTransaction: () => Promise.resolve({ status: "OK" }),
       getRandomOuts: () => Promise.resolve([]),
-      getWalletSyncData: async () => {
+      getWalletSyncData: async (start: number, end: number) => {
         activeScans += 1;
         maxConcurrent = Math.max(maxConcurrent, activeScans);
         syncDataCalls += 1;
         await new Promise((resolve) => setTimeout(resolve, 10));
         activeScans -= 1;
-        return [];
+        return coinbaseTxsFor(start, end);
       },
     };
 
@@ -139,7 +140,7 @@ describe("sync fetches contiguous block ranges (boundary-gap regression)", () =>
       getRandomOuts: () => Promise.resolve([]),
       getWalletSyncData: async (start: number, end: number) => {
         calls.push([start, end]);
-        return [];
+        return coinbaseTxsFor(start, end);
       },
     };
 
@@ -206,7 +207,7 @@ describe("sync re-scan window covers a full lag depth at the tip (count-overshoo
       getRandomOuts: () => Promise.resolve([]),
       getWalletSyncData: async (start: number, end: number) => {
         calls.push([start, end]);
-        return [];
+        return coinbaseTxsFor(start, end);
       },
     };
 
@@ -260,7 +261,7 @@ describe("sync fetch is resilient to over-cap batches (split + retry)", () => {
       getWalletSyncData: async (start: number, end: number) => {
         if (end - start > CAP) throw new Error("range too large (simulated daemon cap)");
         ok.push([start, end]);
-        return [];
+        return coinbaseTxsFor(start, end);
       },
     };
 
@@ -366,12 +367,12 @@ describe("sync publishes scannedHeight per batch (live progress)", () => {
       getNodeFeeAddress: () => Promise.resolve(""),
       sendRawTransaction: () => Promise.resolve({ status: "OK" }),
       getRandomOuts: () => Promise.resolve([]),
-      getWalletSyncData: async () => {
+      getWalletSyncData: async (start: number, end: number) => {
         // The cursor visible to a concurrent reader (the polled getWalletInfo) at the
         // moment each batch is fetched. With the pipelined loop the next batch prefetches
         // before the current one's publish, so this lags by one batch but still climbs.
         seen.push(runtimeMod.getRuntime()?.state.scannedHeight ?? -1);
-        return [];
+        return coinbaseTxsFor(start, end);
       },
     };
     runtimeMod._setRuntimeForTest({

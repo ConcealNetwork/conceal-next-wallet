@@ -9,6 +9,7 @@ import {
   transactions as txns,
 } from "conceal-wallet-sdk";
 import { afterEach, describe, expect, it } from "vitest";
+import { coinbaseTxsFor } from "./test-helpers";
 
 /**
  * End-to-end inbound-message parity: build a genuine A→B message transaction via the
@@ -124,11 +125,12 @@ describe("real-sdk inbound message reconstruction", () => {
       sendRawTransaction: () => Promise.resolve({ status: "OK" }),
       getRandomOuts: () => Promise.resolve([]),
       getWalletSyncData: (start: number, end: number) =>
-        Promise.resolve(
-          start <= networkHeight && end >= networkHeight
+        Promise.resolve([
+          ...coinbaseTxsFor(start, end),
+          ...(start <= networkHeight && end >= networkHeight
             ? [toDaemonRawTransaction(built, networkHeight, 1_700_000_000)]
-            : [],
-        ),
+            : []),
+        ]),
     };
 
     const bobRaw: RawWalletV1 = {
@@ -208,11 +210,12 @@ describe("real-sdk inbound message reconstruction", () => {
       sendRawTransaction: () => Promise.resolve({ status: "OK" }),
       getRandomOuts: () => Promise.resolve([]),
       getWalletSyncData: (start: number, end: number) =>
-        Promise.resolve(
-          start <= networkHeight && end >= networkHeight
+        Promise.resolve([
+          ...coinbaseTxsFor(start, end),
+          ...(start <= networkHeight && end >= networkHeight
             ? [toDaemonRawTransaction(built, networkHeight, 1_700_000_500)]
-            : [],
-        ),
+            : []),
+        ]),
     };
     const bobRaw: RawWalletV1 = {
       deposits: [],
@@ -273,7 +276,7 @@ describe("real-sdk pending tx + balance hold (#96)", () => {
             })),
           })),
         ),
-      getWalletSyncData: () => Promise.resolve([]), // spend not mined during this test
+      getWalletSyncData: (start: number, end: number) => Promise.resolve(coinbaseTxsFor(start, end)), // spend not mined during this test
     };
 
     const runtimeMod = await import("@/lib/services/real-sdk/runtime");
@@ -370,11 +373,12 @@ describe("real-sdk sync re-scan window (#98)", () => {
       sendRawTransaction: () => Promise.resolve({ status: "OK" }),
       getRandomOuts: () => Promise.resolve([]),
       getWalletSyncData: (start: number, end: number) =>
-        Promise.resolve(
-          start <= TX_HEIGHT && end >= TX_HEIGHT
+        Promise.resolve([
+          ...coinbaseTxsFor(start, end),
+          ...(start <= TX_HEIGHT && end >= TX_HEIGHT
             ? [toDaemonRawTransaction(built, TX_HEIGHT, 1_700_000_900)]
-            : [],
-        ),
+            : []),
+        ]),
     };
 
     const runtimeMod = await import("@/lib/services/real-sdk/runtime");
@@ -442,7 +446,7 @@ describe("real-sdk sendTransaction with a message (#97)", () => {
             })),
           })),
         ),
-      getWalletSyncData: () => Promise.resolve([]),
+      getWalletSyncData: (start: number, end: number) => Promise.resolve(coinbaseTxsFor(start, end)),
     };
     const aliceRaw: RawWalletV1 = {
       deposits: [],

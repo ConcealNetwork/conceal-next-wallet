@@ -6,6 +6,7 @@ import {
   type StorageAdapter,
 } from "conceal-wallet-sdk";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { coinbaseTxsFor } from "./test-helpers";
 
 /**
  * Smooth wallet switching (feat/smooth-wallet-switch): the runtime caches every
@@ -91,10 +92,10 @@ describe("smooth-switch runtime — cross-wallet persist isolation", () => {
       getNodeFeeAddress: () => Promise.resolve(""),
       sendRawTransaction: () => Promise.resolve({ status: "OK" }),
       getRandomOuts: () => Promise.resolve([]),
-      getWalletSyncData: async () => {
+      getWalletSyncData: async (start: number, end: number) => {
         // Hold the scan open until the test releases it (after the active switch).
         await scanGate;
-        return [];
+        return coinbaseTxsFor(start, end);
       },
     };
 
