@@ -5,13 +5,16 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AutoSendToggle } from "@/components/wallet/auto-send-toggle";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
+import { useWallets, useWalletViewOnly } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
   listSchedules,
   markSchedulePaid,
   removeSchedule,
   saveSchedule,
+  setScheduleAutoSend,
 } from "@/lib/storage/scheduled-payments-store";
 import {
   CADENCES,
@@ -41,6 +44,8 @@ const CADENCE_LABEL_KEYS: Record<Cadence, string> = {
 export default function ScheduledPage() {
   const { t } = useI18n();
   const router = useRouter();
+  const viewOnly = useWalletViewOnly();
+  const activeWalletId = useWallets().data?.find((w) => w.isActive)?.id;
   const [schedules, setSchedules] = useState<ScheduledPayment[]>(() => listSchedules());
   const [form, setForm] = useState(EMPTY_FORM);
   const nowISO = useMemo(() => new Date().toISOString(), []);
@@ -94,6 +99,16 @@ export default function ScheduledPage() {
       setSchedules(removeSchedule(id));
     } catch {
       toast.error(t("scheduled.errRemoveFailed"));
+    }
+  }
+
+  function setAutoSend(id: string, on: boolean) {
+    try {
+      // Stamp the active wallet on arm so the engine only ever pays it from THIS wallet.
+      setSchedules(setScheduleAutoSend(id, on, on ? activeWalletId : undefined));
+      toast.success(on ? t("scheduled.autoSendArmedToast") : t("scheduled.autoSendDisarmedToast"));
+    } catch {
+      toast.error(t("scheduled.errUpdateFailed"));
     }
   }
 
@@ -189,6 +204,11 @@ export default function ScheduledPage() {
                             {t("scheduled.due")}
                           </span>
                         )}
+                        {s.autoSend && (
+                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
+                            {t("scheduled.autoSendArmedBadge")}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {t("scheduled.itemDetail", {
@@ -198,7 +218,13 @@ export default function ScheduledPage() {
                         })}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <AutoSendToggle
+                        schedule={s}
+                        disabled={viewOnly}
+                        onArm={() => setAutoSend(s.id, true)}
+                        onDisarm={() => setAutoSend(s.id, false)}
+                      />
                       <Button type="button" size="sm" onClick={() => sendNow(s)}>
                         {t("scheduled.sendNow")}
                       </Button>
