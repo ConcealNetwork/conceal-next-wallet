@@ -133,11 +133,11 @@ interface DaemonRandomOutsForAmount {
 const SDK_STATE_FIELD = "sdkWalletState";
 
 /**
- * Re-scan this many blocks below the last scanned height on every sync. A daemon can
- * return a block range via `getWalletSyncData` BEFORE it has indexed a tx that was just
- * mined into one of those blocks; without re-scanning, `scannedHeight` advances past it
- * and the tx is dropped until a manual full rescan (#98). Folding is idempotent, so
- * re-scanning recent blocks every sync is safe and also covers small chain reorgs.
+ * Re-scan this many trailing blocks on every sync. A daemon can return a block range via
+ * `getWalletSyncData` BEFORE it has indexed a tx that was just mined into one of those
+ * blocks; without re-scanning, `scannedHeight` advances past it and the tx is dropped until
+ * a manual full rescan (#98). Folding is idempotent, so re-scanning recent blocks every sync
+ * is safe and also covers small chain reorgs.
  */
 const RESCAN_LAG_BLOCKS = 10;
 
@@ -539,8 +539,14 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   const includeMinerTxs = Boolean(rt.raw.options?.checkMinerTx);
   // Resume from a re-scan window below the last scanned height (see RESCAN_LAG_BLOCKS),
   // floored at the wallet's seed/creation height so we never scan pre-existence blocks.
+  // The extra `- 1` absorbs `scannedHeight`'s COUNT-vs-index overshoot: at the tip the sync
+  // advances `scannedHeight` to `height` (the block COUNT, one past the highest real block
+  // index `height - 1`, for a 100%-sync UI), so `scannedHeight - RESCAN_LAG_BLOCKS` alone would
+  // re-cover only `RESCAN_LAG_BLOCKS - 1` real blocks there and a tx late-indexed exactly
+  // `RESCAN_LAG_BLOCKS` back could be missed (Codex review). Folding is idempotent, so the one
+  // extra re-scanned block mid-catch-up is harmless; `seedFloor` still pins the lower bound.
   const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
-  let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS);
+  let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS - 1);
   const startState = rt.state;
   let state = rt.state;
 
@@ -560,7 +566,16 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   const fetchFrom = (from: number): { endBlock: number; data: Promise<DaemonRawTransaction[]> } => {
     const startBlock = from + 1;
     const endBlock = Math.min(startBlock + batchSize - 1, height);
-    const data = rt.daemon.getWalletSyncData(startBlock, endBlock, includeMinerTxs);
+    // The daemon's `get_raw_transactions_by_heights` range is HALF-OPEN `[start, end)` —
+    // it returns blocks `start .. end-1`, EXCLUDING the upper bound (verified against a live
+    // node: `heights:[100,101]` → only block 100; `[200,300]` → 200..299). `endBlock` here is
+    // the INCLUSIVE last block we want this batch to cover, so we pass `endBlock + 1` as the
+    // exclusive upper bound. Passing `endBlock` (the pre-fix behavior, mirrored from the SDK's
+    // own `createWalletSync`) silently dropped block `endBlock` at EVERY batch boundary (100,
+    // 200, 300, …) — a tx mined into a boundary block was never scanned → missing balance.
+    // `endBlock + 1` past the tip is safely clamped by the daemon (no error). Upstream SDK has
+    // the same off-by-one; reported separately.
+    const data = rt.daemon.getWalletSyncData(startBlock, endBlock + 1, includeMinerTxs);
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
     // `unhandledrejection`. The real `await data` below still surfaces the error normally
