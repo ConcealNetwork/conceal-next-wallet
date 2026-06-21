@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { PasskeySetting } from "@/components/wallet/biometric-setting";
 import { PageHeader } from "@/components/wallet/common";
 import { LanguageSetting } from "@/components/wallet/language-setting";
+import { NodeSelector } from "@/components/wallet/node-selector";
 import { usePanicWipe, useWalletDelete } from "@/components/wallet/open-wallet-form";
 import { PanicWipeDialog } from "@/components/wallet/panic-wipe-dialog";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
@@ -585,6 +586,30 @@ export default function SettingsPage() {
                     )}
                   </div>
                 </Row>
+                {!isMock ? (
+                  <div className="border-t border-border py-4">
+                    <NodeSelector
+                      activeNodeUrl={current.nodeUrl}
+                      busy={updateSettings.isPending}
+                      onUseNode={(url) =>
+                        applyNodeConnection(
+                          { useCustomNode: true, nodeUrl: url },
+                          t("settings.toastCustomNodeConnected"),
+                        )
+                      }
+                      onUseFastest={(url) => {
+                        if (!url) {
+                          toast.error(t("nodeSelector.toastNoneReachable"));
+                          return;
+                        }
+                        applyNodeConnection(
+                          { useCustomNode: true, nodeUrl: url },
+                          t("nodeSelector.toastFastest"),
+                        );
+                      }}
+                    />
+                  </div>
+                ) : null}
               </Section>
             )}
 

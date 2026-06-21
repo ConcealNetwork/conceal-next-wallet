@@ -348,7 +348,12 @@ export function useNetworkStatus() {
   });
 }
 
-/** Smart-node pool list for the Network page only — one fetch per visit, no background refresh. */
+/**
+ * Smart-node pool list (Network page + Settings node selector) — one fetch per visit, no
+ * background refresh. The query key carries `activeNodeUrl` only to re-stamp `isActive`, so
+ * keep the previous list as placeholder across a node switch — otherwise the consumer (the
+ * node selector) would briefly see `undefined` and the card would flash out then back in.
+ */
 export function useSmartNodes(activeNodeUrl: string | undefined) {
   return useQuery({
     queryKey: [...queryKeys.network, "smart-nodes", activeNodeUrl] as const,
@@ -357,6 +362,7 @@ export function useSmartNodes(activeNodeUrl: string | undefined) {
       return fetchSmartNodes(activeNodeUrl);
     },
     enabled: Boolean(activeNodeUrl),
+    placeholderData: (previous) => previous,
     ...smartNodesQueryOptions,
   });
 }
