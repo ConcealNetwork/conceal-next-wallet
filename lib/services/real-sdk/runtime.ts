@@ -738,12 +738,10 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // extra re-scanned block mid-catch-up is harmless; `seedFloor` still pins the lower bound.
   const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
   let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS - 1);
-  // A DEEP catch-up (fresh import / long offline). Drives BOTH the multi-source bulk phase AND
-  // coverage-VERIFICATION of the single-node pipeline: during a deep sync a truncated/short response
-  // from a (load-balanced) node would skip blocks deep in history that the tip re-scan window can
-  // never recover — so far-behind single-node fetches are verified too. Normal incremental polls
-  // stay sparse/unverified (no miner-tx payload); a transient tip truncation there self-heals via
-  // RESCAN_LAG_BLOCKS on the next poll (PR #177 review — Codex/Gemini).
+  // A DEEP catch-up (fresh import / long offline) — gates ONLY whether to engage the multi-source
+  // bulk phase (probing the pool isn't worth it for a small catch-up). Coverage VERIFICATION is NOT
+  // gated on this: the single-node pipeline always verifies (see `fetchFrom`), because a load-
+  // balanced node can answer short at any depth.
   const farBehind = height - scanned > FAR_BEHIND_THRESHOLD;
   const startState = rt.state;
   let state = rt.state;
@@ -844,12 +842,12 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // 200, 300, …) — a tx mined into a boundary block was never scanned → missing balance.
     // `endBlock + 1` past the tip is safely clamped by the daemon (no error). Upstream SDK has
     // the same off-by-one; reported separately.
-    // On a deep catch-up, VERIFY coverage (a load-balanced home can answer short from a trailing
-    // backend, skipping blocks deep in history); on incremental polls, the cheap sparse fetch (a
-    // tip truncation self-heals via the next poll's RESCAN_LAG window).
-    const data = farBehind
-      ? fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs)
-      : fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
+    // ALWAYS verify coverage: a node clamps a past-its-tip range to a short 200 OK (verified live),
+    // so a load-balanced home whose getHeight hit a fresh backend but whose fetch hits a TRAILING
+    // backend would answer short and silently skip blocks — at ANY catch-up depth, not just far
+    // behind (PR #177 review — Codex/Gemini/GLM). The coverage marker (a coinbase per block) makes
+    // the cost negligible on an idle poll (~RESCAN_LAG blocks) and is filtered before the fold.
+    const data = fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
     // `unhandledrejection`. The real `await data` below still surfaces the error normally
