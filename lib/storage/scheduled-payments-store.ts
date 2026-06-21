@@ -19,7 +19,8 @@ function isScheduledPayment(value: unknown): value is ScheduledPayment {
     typeof s.amount === "string" &&
     typeof s.anchorDate === "string" &&
     isCadence(s.cadence) &&
-    (s.snoozedUntil === undefined || typeof s.snoozedUntil === "string")
+    (s.snoozedUntil === undefined || typeof s.snoozedUntil === "string") &&
+    (s.autoSend === undefined || typeof s.autoSend === "boolean")
   );
 }
 
@@ -69,6 +70,13 @@ export function markSchedulePaid(id: string, at: string): ScheduledPayment[] {
  */
 export function snoozeSchedule(id: string, until: string | undefined): ScheduledPayment[] {
   const next = listSchedules().map((s) => (s.id === id ? { ...s, snoozedUntil: until } : s));
+  persist(next);
+  return next;
+}
+
+/** Arm/disarm a schedule's auto-send (#92 phase 2). Returns the new list. */
+export function setScheduleAutoSend(id: string, autoSend: boolean): ScheduledPayment[] {
+  const next = listSchedules().map((s) => (s.id === id ? { ...s, autoSend } : s));
   persist(next);
   return next;
 }

@@ -1,8 +1,9 @@
 /**
- * Recurring payment *reminders* — pure scheduling logic. This is a reminder
- * system only: it never moves funds. "Send now" pre-fills the send form, where
- * the user unlocks and confirms as usual. Keys are never persisted, so there is
- * deliberately no autopay.
+ * Recurring payment scheduling — pure logic. By default a schedule is a *reminder*
+ * (it never moves funds; "Send now" pre-fills the send form). A schedule the user
+ * explicitly ARMS (`autoSend`, #92 phase 2) additionally auto-sends when due — but
+ * only while the wallet is open + unlocked (keys are never persisted), with a
+ * one-time consent at arming and no per-fire prompt.
  */
 
 export type Cadence = "weekly" | "monthly" | "quarterly" | "yearly";
@@ -27,6 +28,12 @@ export interface ScheduledPayment {
    * check-in watchers). Optional and additive — absent means "not snoozed".
    */
   snoozedUntil?: string;
+  /**
+   * When true (#92 phase 2), this schedule AUTO-SENDS its payment when due — set
+   * only after an explicit one-time consent. Absent/false = reminder-only. Auto-send
+   * fires only while the wallet is open + unlocked.
+   */
+  autoSend?: boolean;
 }
 
 const CADENCE_LABELS: Record<Cadence, string> = {
@@ -177,4 +184,16 @@ export function dueInstanceKey(
 /** The set of due-instance keys for the schedules that are currently due. */
 export function dueInstanceKeys(schedules: readonly ScheduledPayment[], nowISO: string): string[] {
   return schedules.filter((s) => isDue(s, nowISO)).map((s) => dueInstanceKey(s));
+}
+
+/**
+ * Schedules that should AUTO-SEND right now (#92 phase 2): armed (`autoSend`) AND due
+ * (which already excludes snoozed). The engine advances each (marks paid) BEFORE sending,
+ * so a re-tick or reload can't re-fire the same instance. Pure — no funds move here.
+ */
+export function schedulesToAutoSend(
+  schedules: readonly ScheduledPayment[],
+  nowISO: string,
+): ScheduledPayment[] {
+  return schedules.filter((s) => s.autoSend === true && isDue(s, nowISO));
 }
