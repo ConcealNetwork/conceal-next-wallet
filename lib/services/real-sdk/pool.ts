@@ -27,17 +27,19 @@ export function scanPoolForOwned(
 ): IncomingPendingRecord[] {
   const max = options.maxScan ?? MAX_POOL_SCAN;
   const records: IncomingPendingRecord[] = [];
+  const seen = new Set<string>();
 
   for (const raw of poolTxs.slice(0, max)) {
-    if (!raw.hash) continue;
-    const scanTx = toScanTransaction(raw);
-    if (!scanTx) continue;
+    if (!raw.hash || seen.has(raw.hash)) continue; // skip no-hash + duplicate pool entries
 
     let owned: OwnedOutput[];
     try {
+      // BOTH the daemon→scan bridge and the scan run inside the try: a malformed pool tx
+      // that crashes `toScanTransaction` must skip only that tx, not abort the whole poll.
+      const scanTx = toScanTransaction(raw);
+      if (!scanTx) continue;
       owned = scanOutputs(scanTx, keys);
     } catch {
-      // A single malformed pool tx must not abort the whole poll.
       continue;
     }
     if (owned.length === 0) continue;
@@ -46,6 +48,7 @@ export function scanPoolForOwned(
     if (!Number.isFinite(amountAtomic) || amountAtomic <= 0) continue;
 
     const tsMs = Number.isFinite(raw.timestamp) && raw.timestamp > 0 ? raw.timestamp * 1000 : nowMs;
+    seen.add(raw.hash);
     records.push({
       hash: raw.hash,
       amountAtomic,

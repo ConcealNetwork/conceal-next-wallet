@@ -7,6 +7,7 @@ import {
   reconcileIncomingPending,
   withIncomingPendingRecords,
 } from "@/lib/services/real-sdk/incoming-pending-store";
+import { mapTransactions } from "@/lib/services/real-sdk/mappers";
 import { PENDING_TTL_MS } from "@/lib/services/real-sdk/pending-store";
 import { scanPoolForOwned } from "@/lib/services/real-sdk/pool";
 
@@ -40,10 +41,15 @@ describe("incoming-pending store", () => {
     expect(incomingPendingAtomic(raw)).toBe(500_250);
   });
 
-  it("skips corrupt / non-positive records on read", () => {
+  it("skips corrupt / non-positive / timestamp-less records on read", () => {
     const raw = {
       ...baseRaw(),
-      incomingPendingTransactions: [rec(), { hash: "x", amountAtomic: 0 }, { nope: 1 }],
+      incomingPendingTransactions: [
+        rec(),
+        { hash: "x", amountAtomic: 0 }, // non-positive
+        { nope: 1 }, // wrong shape
+        { hash: "y", amountAtomic: 100 }, // missing timestampIso → could never TTL-expire
+      ],
     };
     expect(readIncomingPendingRecords(raw).map((r) => r.hash)).toEqual(["h1"]);
   });
@@ -137,5 +143,86 @@ describe("scanPoolForOwned", () => {
     const owned = (() => [{ amount: 100 } as OwnedOutput]) as never;
     const txs = Array.from({ length: 5 }, (_, i) => poolTx(`h${i}`));
     expect(scanPoolForOwned(txs, toScan, owned, keys, T0_MS, { maxScan: 2 })).toHaveLength(2);
+  });
+
+  it("survives toScanTransaction itself throwing (skips only that tx)", () => {
+    const owned = (() => [{ amount: 100 } as OwnedOutput]) as never;
+    let calls = 0;
+    const flakyToScan = (() => {
+      calls += 1;
+      if (calls === 1) throw new Error("bad parse");
+      return { extra: "01", vout: [] } as unknown as RawTransaction;
+    }) as never;
+    const records = scanPoolForOwned([poolTx("a"), poolTx("b")], flakyToScan, owned, keys, T0_MS);
+    expect(records.map((r) => r.hash)).toEqual(["b"]);
+  });
+
+  it("dedupes duplicate pool entries by hash", () => {
+    const owned = (() => [{ amount: 100 } as OwnedOutput]) as never;
+    const records = scanPoolForOwned([poolTx("a"), poolTx("a")], toScan, owned, keys, T0_MS);
+    expect(records.map((r) => r.hash)).toEqual(["a"]);
+  });
+});
+
+describe("incomingPendingAtomic exclude (self-send guard)", () => {
+  it("excludes outbound-pending hashes from the pending-in total", () => {
+    const raw = withIncomingPendingRecords(baseRaw(), [
+      rec({ hash: "incoming", amountAtomic: 1000 }),
+      rec({ hash: "selfsend", amountAtomic: 500 }),
+    ]);
+    expect(incomingPendingAtomic(raw)).toBe(1500);
+    expect(incomingPendingAtomic(raw, new Set(["selfsend"]))).toBe(1000);
+  });
+});
+
+describe("reconcileIncomingPending — review fixes", () => {
+  it("preserves a payment id the prior record carried across a re-scan", () => {
+    const current = [rec({ paymentId: "pid-1" })];
+    const scanned = [rec()]; // fresh scan has no paymentId
+    const next = reconcileIncomingPending(current, scanned, stateWithTxHashes([]), T0_MS + 1000);
+    expect(next[0].paymentId).toBe("pid-1");
+  });
+
+  it("expires a survivor whose timestamp is unparseable (NaN age)", () => {
+    const next = reconcileIncomingPending(
+      [rec({ timestampIso: "not-a-date" })],
+      [],
+      stateWithTxHashes([]),
+      T0_MS,
+    );
+    expect(next).toEqual([]);
+  });
+
+  it("returns the same ref when only the pool ORDER changed", () => {
+    const current = [rec({ hash: "a" }), rec({ hash: "b", amountAtomic: 99 })];
+    const reordered = [rec({ hash: "b", amountAtomic: 99 }), rec({ hash: "a" })];
+    const next = reconcileIncomingPending(current, reordered, stateWithTxHashes([]), T0_MS + 1000);
+    expect(next).toBe(current);
+  });
+});
+
+describe("mapTransactions — incoming/self-send dedup", () => {
+  const emptyState = { transactions: [] } as unknown as WalletState;
+
+  it("shows an owned mempool tx as a 0-conf receive row", () => {
+    const rows = mapTransactions(emptyState, 100, [], [rec({ hash: "in1", amountAtomic: 700 })]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ hash: "in1", type: "receive", confirmations: 0 });
+  });
+
+  it("does not double-list a self-send present in both pending and incoming (send wins)", () => {
+    const pending = [
+      {
+        hash: "self",
+        amountAtomic: 200,
+        timestampIso: T0_ISO,
+        address: "addr",
+        spentKeyImages: [],
+      },
+    ];
+    const incoming = [rec({ hash: "self", amountAtomic: 50 })];
+    const rows = mapTransactions(emptyState, 100, pending, incoming);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].type).toBe("send");
   });
 });

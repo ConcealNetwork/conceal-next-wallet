@@ -16,13 +16,13 @@ import {
   type WalletTransaction,
 } from "conceal-wallet-sdk";
 import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
-import { type PendingTxRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import {
   type IncomingPendingRecord,
   incomingPendingAtomic,
 } from "@/lib/services/real-sdk/incoming-pending-store";
+import { type PendingTxRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
-import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { CcxAmount, Deposit, Transaction, TransactionType, WalletInfo } from "@/lib/types";
 
 const SECONDS_PER_DAY = 86_400;
@@ -214,7 +214,12 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
     available: atomic(availableAtomic),
     dust: atomic(0),
     pending: atomic(pendingOut),
-    incomingPending: atomic(incomingPendingAtomic(runtime.raw)),
+    // Exclude live OUTBOUND-pending hashes: a self-send / withdrawal / deposit whose own
+    // change or returned outputs we own (and the pool reports) must not double-count funds
+    // already shown in the outbound `pending` total (#109 review — GLM-H1 / Gemini).
+    incomingPending: atomic(
+      incomingPendingAtomic(runtime.raw, new Set(livePending.map((record) => record.hash))),
+    ),
     lockedDeposits: atomic(lockedTotal + pendingLocked),
     withdrawable: atomic(withdrawable),
     creationHeight: Math.max(0, Number(runtime.raw.creationHeight ?? 0) || 0),

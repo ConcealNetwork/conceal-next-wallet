@@ -62,33 +62,34 @@ import {
   openStoredWallet,
   type RawDepositInput,
   type RawWalletV1,
+  type StorageAdapter,
   saveStoredWallet,
   serializeWalletState,
   transactions as txns,
-  type StorageAdapter,
   type UserKeys,
   type WalletKeys,
   type WalletState,
 } from "conceal-wallet-sdk";
 import { DEFAULT_DAEMON_NODES } from "@/lib/config/config";
 import {
-  reconstructReceivedMessage,
+  type IncomingPendingRecord,
+  readIncomingPendingRecords,
+  reconcileIncomingPending,
+  withIncomingPendingRecords,
+} from "@/lib/services/real-sdk/incoming-pending-store";
+import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
+import {
   readReceivedRecords,
   readSentRecords,
+  reconstructReceivedMessage,
   type SdkMessageRecord,
   withReceivedRecords,
 } from "@/lib/services/real-sdk/messages-store";
-import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 import {
   prunePendingRecords,
   readPendingRecords,
   withPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
-import {
-  readIncomingPendingRecords,
-  reconcileIncomingPending,
-  withIncomingPendingRecords,
-} from "@/lib/services/real-sdk/incoming-pending-store";
 import { scanPoolForOwned } from "@/lib/services/real-sdk/pool";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
@@ -508,6 +509,10 @@ async function runSyncChain(rt: SdkRuntime, coord: RuntimeCoordination): Promise
  * the user switches the active wallet mid-scan. Not called concurrently for the same
  * wallet — {@link syncRuntime} serializes all callers onto it.
  */
+// Runtimes whose mempool-pool RPC has already failed once — used to warn a single time
+// per runtime instead of on every background poll when a daemon lacks the pool RPC (#109).
+const poolScanWarned = new WeakSet<SdkRuntime>();
+
 async function syncOnce(rt: SdkRuntime): Promise<number> {
   // Await WASM crypto init before scanTransactionOutputsAndDeposits / ring math.
   await ensureSdkReady();
@@ -592,38 +597,48 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     }
   }
 
-  // Incoming pending (#109): scan the daemon mempool for outputs owned by THIS wallet
-  // so a payment addressed to us shows (0-conf row + "pending in" balance) before it
-  // mines, reconciled by hash once it does. Best-effort — a daemon without the pool RPC,
-  // or any fetch/scan error, must never break the mined sync above.
-  let incomingChanged = false;
-  try {
-    const poolTxs = await rt.daemon.getTransactionsPool();
-    const scannedIncoming = scanPoolForOwned(
-      poolTxs,
-      toScanTransaction,
-      txns.scanTransactionOutputs,
-      rt.account.keys,
-      Date.now(),
-    );
-    const beforeIncoming = readIncomingPendingRecords(rt.raw);
-    const nextIncoming = reconcileIncomingPending(
-      beforeIncoming,
-      scannedIncoming,
-      rt.state,
-      Date.now(),
-    );
-    if (nextIncoming !== beforeIncoming) {
-      rt.raw = withIncomingPendingRecords(rt.raw, nextIncoming);
-      incomingChanged = true;
-    }
-  } catch (error) {
-    console.warn("Incoming-pending pool scan failed (non-fatal):", error);
-  }
-
-  if (stateChanged || receivedChanged || pendingChanged || incomingChanged) {
+  if (stateChanged || receivedChanged || pendingChanged) {
+    // Persist the mined-block results FIRST, before the optional mempool poll: a slow (or
+    // hanging) pool RPC must never delay or block the durable write of freshly-mined state
+    // (#109 review — GLM-M1 / Codex-1).
     await persistRuntime(rt);
   }
+
+  // Incoming pending (#109): scan the daemon mempool for outputs owned by THIS wallet so a
+  // payment addressed to us shows (0-conf row + "pending in" balance) before it mines,
+  // reconciled by hash once it does. The pool FETCH is best-effort — a daemon without the
+  // RPC, or any fetch/scan error, must never break the mined sync above — but the RECONCILE
+  // runs regardless of fetch success, so mined / TTL-expired entries are still dropped when
+  // the pool is transiently unreachable (#109 review — Codex-2). One clock for the pass.
+  const nowMs = Date.now();
+  let scannedIncoming: IncomingPendingRecord[] = [];
+  try {
+    const poolTxs = await rt.daemon.getTransactionsPool();
+    // The wallet may have been locked/torn down during the await — re-check before scanning.
+    if (rt.account) {
+      scannedIncoming = scanPoolForOwned(
+        poolTxs,
+        toScanTransaction,
+        txns.scanTransactionOutputs,
+        rt.account.keys,
+        nowMs,
+      );
+    }
+  } catch (error) {
+    // Warn once per runtime — a daemon lacking the pool RPC would otherwise log on every
+    // poll (#109 review — GLM-H2 / Gemini / Codex-4).
+    if (!poolScanWarned.has(rt)) {
+      poolScanWarned.add(rt);
+      console.warn("Incoming-pending pool scan unavailable (non-fatal, silenced):", error);
+    }
+  }
+  const beforeIncoming = readIncomingPendingRecords(rt.raw);
+  const nextIncoming = reconcileIncomingPending(beforeIncoming, scannedIncoming, rt.state, nowMs);
+  if (nextIncoming !== beforeIncoming) {
+    rt.raw = withIncomingPendingRecords(rt.raw, nextIncoming);
+    await persistRuntime(rt);
+  }
+
   return height;
 }
 
