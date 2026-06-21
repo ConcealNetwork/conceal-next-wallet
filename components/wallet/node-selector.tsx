@@ -33,18 +33,35 @@ export function NodeSelector({
   const { data: nodes } = useSmartNodes(activeNodeUrl);
   const [probes, setProbes] = useState<Record<string, NodeProbe>>({});
   const [probing, setProbing] = useState(false);
+  const probeNonce = useRef(0);
   const activeHost = nodeUrlToPoolHost(activeNodeUrl);
 
-  const runProbe = useCallback(async (urls: string[]) => {
-    if (urls.length === 0) return;
+  // Probe `urls` and RETURN the fresh results (also committing them to state for the latest
+  // generation). Returning lets "Use fastest" rank a fresh probe rather than stale cache.
+  const runProbe = useCallback(async (urls: string[]): Promise<NodeProbe[]> => {
+    if (urls.length === 0) return [];
+    // Discard a slower in-flight probe if a newer one supersedes it (#174 review).
+    const nonce = (probeNonce.current += 1);
     setProbing(true);
     try {
       const results = await probeNodes(urls);
-      setProbes(Object.fromEntries(results.map((p) => [p.url, p])));
+      if (probeNonce.current === nonce) {
+        setProbes(Object.fromEntries(results.map((p) => [p.url, p])));
+      }
+      return results;
+    } catch {
+      return []; // probeNodes never throws in practice; swallow so probing always resets
     } finally {
-      setProbing(false);
+      if (probeNonce.current === nonce) setProbing(false);
     }
   }, []);
+
+  // "Use fastest" RE-PROBES on click, then picks from the fresh result — never from a cached
+  // probe that may have gone stale/unreachable since (#174 review — Codex).
+  const handleUseFastest = useCallback(async () => {
+    const fresh = await runProbe((nodes ?? []).map((n) => n.url));
+    onUseFastest(fastestNodeUrl(fresh));
+  }, [nodes, runProbe, onUseFastest]);
 
   // Probe once the pool loads, and whenever its membership changes.
   const urlsKey = (nodes ?? []).map((n) => n.url).join("|");
@@ -81,7 +98,7 @@ export function NodeSelector({
             type="button"
             size="sm"
             disabled={busy || probing}
-            onClick={() => onUseFastest(fastestNodeUrl(Object.values(probes)))}
+            onClick={() => void handleUseFastest()}
             className="gap-1.5"
           >
             <Zap className="size-3.5" aria-hidden="true" />
@@ -119,7 +136,10 @@ export function NodeSelector({
                 type="button"
                 variant="ghost"
                 size="sm"
-                disabled={busy || isActive}
+                // Don't let the user pin to a node the latest probe found unreachable — the
+                // apply path only checks URL format, so it'd silently switch + toast success
+                // (#174 review — GLM/Codex).
+                disabled={busy || isActive || probe?.reachable === false}
                 onClick={() => onUseNode(node.url)}
               >
                 {t("nodeSelector.use")}

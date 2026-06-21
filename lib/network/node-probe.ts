@@ -43,20 +43,32 @@ export async function probeNodes(
 }
 
 /**
- * Healthy probes (reachable + tip within `lagThreshold` of the best height), sorted fastest
- * first. Pure. A node with no successful height never ranks. Empty when none qualify.
+ * The chain-tip reference for staleness. With 3+ nodes use the SECOND-highest tip, so a
+ * single buggy/compromised node reporting an inflated height can't define the reference and
+ * flip every honest node to "stale" (#174 review — GLM/Gemini). With 1–2 nodes there's no
+ * outlier to discard, so trust the max (which correctly excludes a node that's behind).
+ */
+function referenceHeight(heights: readonly number[]): number {
+  if (heights.length === 0) return 0;
+  const descending = [...heights].sort((a, b) => b - a);
+  return descending.length >= 3 ? descending[1] : descending[0];
+}
+
+/**
+ * Healthy probes (reachable + tip within `lagThreshold` of the reference height — see
+ * {@link referenceHeight}), sorted fastest first. Pure. A node with no height never ranks.
  */
 export function rankNodes(
   probes: readonly NodeProbe[],
   lagThreshold: number = NODE_LAG_WARN_BLOCKS,
 ): NodeProbe[] {
-  const bestHeight = Math.max(0, ...probes.map((p) => p.height ?? 0));
-  return probes
-    .filter(
-      (p): p is NodeProbe & { latencyMs: number; height: number } =>
-        p.reachable && p.latencyMs !== null && p.height !== null,
-    )
-    .filter((p) => p.height >= bestHeight - lagThreshold)
+  const healthy = probes.filter(
+    (p): p is NodeProbe & { latencyMs: number; height: number } =>
+      p.reachable && p.latencyMs !== null && p.height !== null,
+  );
+  const reference = referenceHeight(healthy.map((p) => p.height));
+  return healthy
+    .filter((p) => p.height >= reference - lagThreshold)
     .sort((a, b) => a.latencyMs - b.latencyMs);
 }
 
