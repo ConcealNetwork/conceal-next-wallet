@@ -43,10 +43,13 @@ export const toast = Object.assign(base, {
     sonner.info(message, withDuration("info", options)),
   warning: (message: Message, options?: Options): ToastId =>
     sonner.warning(message, withDuration("warning", options)),
-  // Pass-throughs (no duration override): keep the full sonner surface available.
+  // Pass-throughs (no duration override): keep the full sonner surface available
+  // so this is a genuine drop-in (incl. getHistory/getToasts).
   message: sonner.message,
   loading: sonner.loading,
   promise: sonner.promise,
   custom: sonner.custom,
   dismiss: sonner.dismiss,
+  getHistory: sonner.getHistory,
+  getToasts: sonner.getToasts,
 });
