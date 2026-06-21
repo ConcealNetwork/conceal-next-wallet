@@ -5,6 +5,7 @@ import {
   REMOTE_NODE_FEE_ATOMIC,
   WALLET_DONATION_ADDRESS,
 } from "@/lib/config/config";
+import type { MessageService, SendMessageInput } from "@/lib/services/message.service";
 import {
   createSentMessageRecord,
   readReceivedRecords,
@@ -24,9 +25,8 @@ import {
   fetchDecoys,
   MIXIN,
   ownKeys,
-  unspentOutputs,
+  selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
-import type { MessageService, SendMessageInput } from "@/lib/services/message.service";
 import { assertCanSpend } from "@/lib/services/view-only";
 import type { Message } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -84,7 +84,7 @@ export const realSdkMessageService: MessageService = {
       }
     }
 
-    const outputs = unspentOutputs(rt);
+    const outputs = await selectableOutputs(rt);
     const decoys = await fetchDecoys(rt, outputs);
     const built = txns.buildMessageTransaction({
       keys: rt.account.keys,

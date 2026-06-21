@@ -13,12 +13,19 @@ import {
   DEFAULT_MIXIN,
   decodeAddress,
   getUnspentOutputs,
+  type OutboundQueueState,
   type OwnedOutput,
   type transactions as txns,
 } from "conceal-wallet-sdk";
 import { COIN_FEE_ATOMIC } from "@/lib/config/config";
+import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
-import { decoysFromDaemon, persist, type SdkRuntime, sync } from "@/lib/services/real-sdk/runtime";
+import {
+  decoysFromDaemon,
+  persistRuntime,
+  type SdkRuntime,
+  syncRuntime,
+} from "@/lib/services/real-sdk/runtime";
 
 /** Local aliases for types that live inside the SDK's `transactions` namespace. */
 type BuiltTransaction = txns.BuiltTransaction;
@@ -68,6 +75,54 @@ export function unspentOutputs(runtime: SdkRuntime): OwnedOutput[] {
 }
 
 /**
+ * Spendable outputs with BOTH the optimistic-pending (#96) and the durable-queue (#92)
+ * reservations removed, so a new send never selects an input already committed to a queued
+ * (not-yet-mined) broadcast. The queue is the durable source of truth for reservations; the
+ * pending-store overlaps for the common send path but the two stay consistent (same tx →
+ * same key images).
+ */
+export async function selectableOutputs(runtime: SdkRuntime): Promise<OwnedOutput[]> {
+  const reserved = await queueForRuntime(runtime).reservedKeyImages();
+  const outputs = unspentOutputs(runtime);
+  return reserved.size === 0 ? outputs : outputs.filter((out) => !reserved.has(out.keyImage));
+}
+
+/**
+ * Durable send (#92): persist the built+signed tx into the outbound queue BEFORE any
+ * network I/O (idempotent on hash), then attempt an immediate broadcast. A transient
+ * failure leaves the entry `pending` for the sync-tick drainer to retry — the payment is
+ * never lost to a dropped connection. Returns the post-drain lifecycle state
+ * (`broadcast` = relayed, `pending` = queued for retry, `failed` = rejected/expired).
+ */
+export async function enqueueAndBroadcast(
+  runtime: SdkRuntime,
+  built: BuiltTransaction,
+  opts: { label?: string; notBefore?: number; ttlUnixSeconds?: number } = {},
+): Promise<OutboundQueueState> {
+  const queue = queueForRuntime(runtime);
+  // Record the tx private key (export / message-decryption parity) and persist the wallet
+  // blob FIRST, bound to THIS runtime (#92 review — Codex/GLM #4): if persistence fails it
+  // throws BEFORE anything is enqueued/broadcast, so there's nothing to double-send on retry.
+  recordTxPrivateKey(runtime, built);
+  await persistRuntime(runtime);
+  await queue.enqueue(built, opts);
+  let state: OutboundQueueState = "pending";
+  try {
+    const results = await queue.drainOnce();
+    state = results.find((result) => result.hash === built.hash)?.state ?? "pending";
+  } catch {
+    // Transient network error — the entry stays `pending` and the sync drainer retries.
+  }
+  // Re-sync (bound to this runtime) so a freshly-broadcast tx lands in the wallet's history.
+  try {
+    await syncRuntime(runtime);
+  } catch {
+    // Non-fatal: the next refresh reconciles state.
+  }
+  return state;
+}
+
+/**
  * Fetch `MIXIN + 1` decoy outputs for every distinct amount in `outputs`. Returns
  * `[]` when there are no outputs (the caller's build will then fail its own
  * insufficient-funds check with a clear message).
@@ -96,10 +151,10 @@ export async function broadcast(runtime: SdkRuntime, built: BuiltTransaction): P
   }
   // Record the tx private key for later (export / message decryption parity).
   recordTxPrivateKey(runtime, built);
-  await persist();
+  await persistRuntime(runtime);
   // Re-sync so the freshly-broadcast transaction lands in the wallet's history.
   try {
-    await sync();
+    await syncRuntime(runtime);
   } catch {
     // A post-broadcast sync failure is non-fatal — the tx is already relayed and
     // the next refresh will reconcile state.

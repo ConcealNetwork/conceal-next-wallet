@@ -5,28 +5,37 @@ import {
   REMOTE_NODE_FEE_ATOMIC,
   WALLET_DONATION_ADDRESS,
 } from "@/lib/config/config";
-import { mapTransaction, mapTransactions } from "@/lib/services/real-sdk/mappers";
+import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
+import {
+  mapQueuedTransaction,
+  mapTransaction,
+  mapTransactions,
+} from "@/lib/services/real-sdk/mappers";
 import {
   createSentMessageRecord,
   readSentRecords,
   withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
-import { addPendingRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
-import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
-import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
+import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import {
-  broadcast,
+  addPendingRecord,
+  readPendingRecords,
+  withPendingRecords,
+} from "@/lib/services/real-sdk/pending-store";
+import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
+import { persist, persistRuntime, requireRuntime } from "@/lib/services/real-sdk/runtime";
+import {
   decodeRecipient,
+  enqueueAndBroadcast,
   FEE_ATOMIC,
   fetchDecoys,
   MIXIN,
   ownKeys,
-  unspentOutputs,
+  selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
 import type { SendTransactionInput, TransactionService } from "@/lib/services/transaction.service";
 import { assertCanSpend } from "@/lib/services/view-only";
-import type { Transaction } from "@/lib/types";
+import type { QueuedTransaction, Transaction } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 
 const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
@@ -90,7 +99,7 @@ export const realSdkTransactionService: TransactionService = {
       throw new Error("Amount exceeds available balance.");
     }
 
-    const outputs = unspentOutputs(rt);
+    const outputs = await selectableOutputs(rt);
     const decoys = await fetchDecoys(rt, outputs);
 
     // A transfer that carries a message is built as a message tx so the encrypted body
@@ -123,7 +132,16 @@ export const realSdkTransactionService: TransactionService = {
           mixin: MIXIN,
         });
 
-    await broadcast(rt, built);
+    // Durable broadcast (#92): the tx is persisted in the outbound queue BEFORE any network
+    // I/O, so a dropped connection can't lose it. A `failed` state means the daemon rejected
+    // the relay (e.g. a stale input) — surface that as an error; `broadcast`/`pending` both
+    // mean the payment is safely committed (pending = queued for the drainer to retry).
+    const broadcastState = await enqueueAndBroadcast(rt, built, {
+      label: `Send ${input.amount} CCX`,
+    });
+    if (broadcastState === "failed") {
+      throw new Error("The network rejected this transaction. Your balance is unchanged.");
+    }
 
     // Optimistic pending entry (show the outgoing tx + hold the balance until it mines,
     // and lock its inputs against re-selection) plus, if present, the sender's message
@@ -181,6 +199,38 @@ export const realSdkTransactionService: TransactionService = {
       paymentId: input.paymentId,
       message: input.message,
     };
+  },
+
+  async listQueuedTransactions(): Promise<QueuedTransaction[]> {
+    await ensureSdkReady();
+    const rt = requireRuntime();
+    const entries = await queueForRuntime(rt).list();
+    return entries.map(mapQueuedTransaction);
+  },
+
+  async cancelQueuedTransaction(id: string): Promise<boolean> {
+    await ensureSdkReady();
+    const rt = requireRuntime();
+    const queue = queueForRuntime(rt);
+    // `cancel` frees a still-PENDING entry's reserved inputs. A "broadcast" entry is LIVE on
+    // the network — removing it would free its inputs while the tx can still mine, inviting a
+    // double-spend — so it must NOT be removed; only a "failed" entry can be dismissed, and an
+    // unknown id is a no-op (#92 review — Gemini/Codex/GLM #2/#5).
+    const cancelled = await queue.cancel(id);
+    if (!cancelled) {
+      const entry = (await queue.list()).find((e) => e.id === id);
+      if (!entry || entry.state === "broadcast") return false;
+      await queue.remove(id); // dismiss a failed entry
+    }
+    // Cancelling/dismissing also clears the matching optimistic-pending row + balance hold.
+    // The queue id IS the tx hash (SDK guarantees `entry.id === entry.hash`).
+    const pending = readPendingRecords(rt.raw);
+    const remaining = pending.filter((record) => record.hash !== id);
+    if (remaining.length !== pending.length) {
+      rt.raw = withPendingRecords(rt.raw, remaining);
+      await persistRuntime(rt);
+    }
+    return true;
   },
 };
 

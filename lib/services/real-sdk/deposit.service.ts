@@ -12,6 +12,13 @@ import {
   transactions as txns,
 } from "conceal-wallet-sdk";
 import { COIN_UNIT_PLACES } from "@/lib/config/config";
+import type {
+  CreateDepositInput,
+  DepositConstraints,
+  DepositService,
+  PreviewCreateDepositInput,
+  WithdrawDepositInput,
+} from "@/lib/services/deposit.service";
 import { deriveApr, mapDeposit, mapDeposits } from "@/lib/services/real-sdk/mappers";
 import {
   addPendingRecord,
@@ -24,15 +31,8 @@ import {
   fetchDecoys,
   MIXIN,
   ownKeys,
-  unspentOutputs,
+  selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
-import type {
-  CreateDepositInput,
-  DepositConstraints,
-  DepositService,
-  PreviewCreateDepositInput,
-  WithdrawDepositInput,
-} from "@/lib/services/deposit.service";
 import { assertCanSpend } from "@/lib/services/view-only";
 import type { Deposit, Transaction } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -109,7 +109,7 @@ export const realSdkDepositService: DepositService = {
       throw new Error("Not enough unlocked balance for deposit and network fee.");
     }
 
-    const outputs = unspentOutputs(rt);
+    const outputs = await selectableOutputs(rt);
     const decoys = await fetchDecoys(rt, outputs);
     const built = txns.buildDepositTransaction({
       keys: rt.account.keys,

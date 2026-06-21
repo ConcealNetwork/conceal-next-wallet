@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provider";
 import { env } from "@/lib/env";
-import { services } from "@/lib/services";
+import { queryKeys } from "@/lib/hooks/query-keys";
+import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provider";
+import { sortMessagesNewestFirst } from "@/lib/messages/conversations";
 import { fetchSmartNodes } from "@/lib/network/smart-nodes";
+import { services } from "@/lib/services";
+import type { AddressEntryInput } from "@/lib/services/address-book.service";
+import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
+import type { SendMessageInput } from "@/lib/services/message.service";
 import {
   marketQueryOptions,
   messagesQueryOptions,
@@ -12,14 +17,9 @@ import {
   optimizationStatusQueryOptions,
   smartNodesQueryOptions,
 } from "@/lib/services/query-options";
-import type { AddressEntryInput } from "@/lib/services/address-book.service";
-import type { CreateDepositInput, WithdrawDepositInput } from "@/lib/services/deposit.service";
-import type { SendMessageInput } from "@/lib/services/message.service";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
-import type { Message, WalletInfo, WalletSettings, WalletSummary } from "@/lib/types";
-import { sortMessagesNewestFirst } from "@/lib/messages/conversations";
-import { queryKeys } from "@/lib/hooks/query-keys";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import type { Message, WalletInfo, WalletSettings, WalletSummary } from "@/lib/types";
 import { isWalletSyncing, walletSyncPercent } from "@/lib/ui/wallet-sync";
 
 export { queryKeys };
@@ -166,6 +166,28 @@ export function useTransactions() {
 export function useSendTransaction() {
   return useMutation({
     mutationFn: (input: SendTransactionInput) => services.transactions.sendTransaction(input),
+  });
+}
+
+/** Durable outbound queue (#92). Polls so retry/mine transitions surface without a refresh. */
+export function useQueuedTransactions() {
+  return useQuery({
+    queryKey: queryKeys.queuedTransactions,
+    queryFn: () => services.transactions.listQueuedTransactions(),
+    refetchInterval: 8000,
+  });
+}
+
+export function useCancelQueuedTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.transactions.cancelQueuedTransaction(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
+      // Cancelling a pending entry frees its reserved inputs + clears its optimistic row.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+    },
   });
 }
 

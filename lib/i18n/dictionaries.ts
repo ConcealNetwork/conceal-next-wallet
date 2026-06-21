@@ -184,6 +184,16 @@ const en: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Unlock with Touch ID / Windows Hello, a security key, or your phone — on this device",
   "settings.notifications": "Enable notifications",
+  "queue.title": "Pending broadcasts",
+  "queue.description":
+    "Transactions saved for delivery. They retry automatically until they confirm.",
+  "queue.statePending": "Queued",
+  "queue.stateBroadcast": "Sent",
+  "queue.stateFailed": "Failed",
+  "queue.cancel": "Cancel",
+  "queue.dismiss": "Dismiss",
+  "queue.toastRemoved": "Removed from the queue.",
+  "queue.toastRemoveError": "Couldn't remove this transaction.",
   "settings.watchWallets": "Watch other wallets",
   "settings.watchWalletsDescription":
     "Background-sync your other unlocked wallets and notify you when funds or messages arrive in them.",
@@ -1115,6 +1125,16 @@ const es: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Desbloquea con Touch ID / Windows Hello, una llave de seguridad o tu teléfono, en este dispositivo",
   "settings.notifications": "Activar notificaciones",
+  "queue.title": "Difusiones pendientes",
+  "queue.description":
+    "Transacciones guardadas para enviar. Se reintentan automáticamente hasta confirmarse.",
+  "queue.statePending": "En cola",
+  "queue.stateBroadcast": "Enviada",
+  "queue.stateFailed": "Fallida",
+  "queue.cancel": "Cancelar",
+  "queue.dismiss": "Descartar",
+  "queue.toastRemoved": "Eliminada de la cola.",
+  "queue.toastRemoveError": "No se pudo eliminar esta transacción.",
   "settings.watchWallets": "Vigilar otras carteras",
   "settings.watchWalletsDescription":
     "Sincroniza en segundo plano tus otras carteras desbloqueadas y te avisa cuando reciben fondos o mensajes.",
@@ -2059,6 +2079,16 @@ const fr: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Déverrouillez avec Touch ID / Windows Hello, une clé de sécurité ou votre téléphone, sur cet appareil",
   "settings.notifications": "Activer les notifications",
+  "queue.title": "Diffusions en attente",
+  "queue.description":
+    "Transactions enregistrées pour envoi. Elles sont réessayées automatiquement jusqu'à confirmation.",
+  "queue.statePending": "En file",
+  "queue.stateBroadcast": "Envoyée",
+  "queue.stateFailed": "Échec",
+  "queue.cancel": "Annuler",
+  "queue.dismiss": "Ignorer",
+  "queue.toastRemoved": "Retirée de la file.",
+  "queue.toastRemoveError": "Impossible de retirer cette transaction.",
   "settings.watchWallets": "Surveiller les autres portefeuilles",
   "settings.watchWalletsDescription":
     "Synchronise en arrière-plan vos autres portefeuilles déverrouillés et vous prévient lorsqu'ils reçoivent des fonds ou des messages.",
@@ -3012,6 +3042,16 @@ const de: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Entsperre mit Touch ID / Windows Hello, einem Sicherheitsschlüssel oder deinem Telefon – auf diesem Gerät",
   "settings.notifications": "Benachrichtigungen aktivieren",
+  "queue.title": "Ausstehende Übertragungen",
+  "queue.description":
+    "Zur Zustellung gespeicherte Transaktionen. Sie werden automatisch wiederholt, bis sie bestätigt sind.",
+  "queue.statePending": "In Warteschlange",
+  "queue.stateBroadcast": "Gesendet",
+  "queue.stateFailed": "Fehlgeschlagen",
+  "queue.cancel": "Abbrechen",
+  "queue.dismiss": "Verwerfen",
+  "queue.toastRemoved": "Aus der Warteschlange entfernt.",
+  "queue.toastRemoveError": "Diese Transaktion konnte nicht entfernt werden.",
   "settings.watchWallets": "Andere Wallets überwachen",
   "settings.watchWalletsDescription":
     "Synchronisiert deine anderen entsperrten Wallets im Hintergrund und benachrichtigt dich, wenn dort Gelder oder Nachrichten eingehen.",
@@ -3960,6 +4000,16 @@ const it: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Sblocca con Touch ID / Windows Hello, una chiave di sicurezza o il tuo telefono, su questo dispositivo",
   "settings.notifications": "Abilita le notifiche",
+  "queue.title": "Trasmissioni in sospeso",
+  "queue.description":
+    "Transazioni salvate per l'invio. Vengono riprovate automaticamente fino alla conferma.",
+  "queue.statePending": "In coda",
+  "queue.stateBroadcast": "Inviata",
+  "queue.stateFailed": "Non riuscita",
+  "queue.cancel": "Annulla",
+  "queue.dismiss": "Ignora",
+  "queue.toastRemoved": "Rimossa dalla coda.",
+  "queue.toastRemoveError": "Impossibile rimuovere questa transazione.",
   "settings.watchWallets": "Monitora altri portafogli",
   "settings.watchWalletsDescription":
     "Sincronizza in background gli altri portafogli sbloccati e ti avvisa quando ricevono fondi o messaggi.",
@@ -4906,6 +4956,16 @@ const pt: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Desbloqueie com Touch ID / Windows Hello, uma chave de segurança ou seu telefone, neste dispositivo",
   "settings.notifications": "Ativar notificações",
+  "queue.title": "Transmissões pendentes",
+  "queue.description":
+    "Transações guardadas para envio. São repetidas automaticamente até serem confirmadas.",
+  "queue.statePending": "Em fila",
+  "queue.stateBroadcast": "Enviada",
+  "queue.stateFailed": "Falhou",
+  "queue.cancel": "Cancelar",
+  "queue.dismiss": "Dispensar",
+  "queue.toastRemoved": "Removida da fila.",
+  "queue.toastRemoveError": "Não foi possível remover esta transação.",
   "settings.watchWallets": "Monitorar outras carteiras",
   "settings.watchWalletsDescription":
     "Sincroniza em segundo plano as suas outras carteiras desbloqueadas e avisa quando recebem fundos ou mensagens.",
@@ -5845,6 +5905,16 @@ const ru: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Разблокируйте с помощью Touch ID / Windows Hello, ключа безопасности или телефона — на этом устройстве",
   "settings.notifications": "Включить уведомления",
+  "queue.title": "Ожидающие отправки",
+  "queue.description":
+    "Транзакции, сохранённые для отправки. Повторяются автоматически до подтверждения.",
+  "queue.statePending": "В очереди",
+  "queue.stateBroadcast": "Отправлена",
+  "queue.stateFailed": "Ошибка",
+  "queue.cancel": "Отменить",
+  "queue.dismiss": "Убрать",
+  "queue.toastRemoved": "Удалено из очереди.",
+  "queue.toastRemoveError": "Не удалось удалить эту транзакцию.",
   "settings.watchWallets": "Следить за другими кошельками",
   "settings.watchWalletsDescription":
     "Фоновая синхронизация других разблокированных кошельков и уведомления о поступлении средств или сообщений.",
@@ -6780,6 +6850,15 @@ const zh: Dictionary = {
   "settings.passkeyUnlockDescription":
     "在本设备上使用 Touch ID / Windows Hello、安全密钥或手机解锁",
   "settings.notifications": "启用通知",
+  "queue.title": "待广播交易",
+  "queue.description": "已保存待发送的交易。它们会自动重试直到确认。",
+  "queue.statePending": "排队中",
+  "queue.stateBroadcast": "已发送",
+  "queue.stateFailed": "失败",
+  "queue.cancel": "取消",
+  "queue.dismiss": "忽略",
+  "queue.toastRemoved": "已从队列中移除。",
+  "queue.toastRemoveError": "无法移除此交易。",
   "settings.watchWallets": "监视其他钱包",
   "settings.watchWalletsDescription":
     "在后台同步您其他已解锁的钱包，并在它们收到资金或消息时通知您。",
@@ -7683,6 +7762,15 @@ const ja: Dictionary = {
   "settings.passkeyUnlockDescription":
     "このデバイスで Touch ID / Windows Hello、セキュリティキー、またはスマートフォンを使ってロックを解除します",
   "settings.notifications": "通知を有効にする",
+  "queue.title": "送信待ちのブロードキャスト",
+  "queue.description": "送信用に保存された取引。確認されるまで自動的に再試行されます。",
+  "queue.statePending": "待機中",
+  "queue.stateBroadcast": "送信済み",
+  "queue.stateFailed": "失敗",
+  "queue.cancel": "キャンセル",
+  "queue.dismiss": "消去",
+  "queue.toastRemoved": "キューから削除しました。",
+  "queue.toastRemoveError": "この取引を削除できませんでした。",
   "settings.watchWallets": "他のウォレットを監視",
   "settings.watchWalletsDescription":
     "ロック解除済みの他のウォレットをバックグラウンドで同期し、入金やメッセージが届いたら通知します。",
@@ -8610,6 +8698,15 @@ const ko: Dictionary = {
   "settings.passkeyUnlockDescription":
     "이 기기에서 Touch ID / Windows Hello, 보안 키 또는 휴대폰으로 잠금을 해제하세요",
   "settings.notifications": "알림 사용",
+  "queue.title": "대기 중인 브로드캐스트",
+  "queue.description": "전송을 위해 저장된 거래. 확인될 때까지 자동으로 재시도됩니다.",
+  "queue.statePending": "대기 중",
+  "queue.stateBroadcast": "전송됨",
+  "queue.stateFailed": "실패",
+  "queue.cancel": "취소",
+  "queue.dismiss": "닫기",
+  "queue.toastRemoved": "대기열에서 제거되었습니다.",
+  "queue.toastRemoveError": "이 거래를 제거할 수 없습니다.",
   "settings.watchWallets": "다른 지갑 모니터링",
   "settings.watchWalletsDescription":
     "잠금 해제된 다른 지갑을 백그라운드에서 동기화하고 자금이나 메시지가 도착하면 알립니다.",
