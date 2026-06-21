@@ -71,6 +71,12 @@ import {
   type WalletState,
 } from "conceal-wallet-sdk";
 import { DEFAULT_DAEMON_NODES } from "@/lib/config/config";
+import { probeNodes, rankNodes } from "@/lib/network/node-probe";
+import { fetchSmartNodes, nodeUrlToPoolHost } from "@/lib/network/smart-nodes";
+import {
+  type FetchSource,
+  fetchRangeMultiSource,
+} from "@/lib/services/real-sdk/multi-source-fetch";
 import {
   type IncomingPendingRecord,
   readIncomingPendingRecords,
@@ -160,6 +166,24 @@ const SYNC_BATCH_BLOCKS = 250;
  * floor (a single block over the cap is a true daemon limit and then legitimately propagates).
  */
 const MAX_FETCH_SPLIT_DEPTH = 8;
+
+/**
+ * Multi-source parallel fetch (Phase 2) engages only when the wallet is at least this many blocks
+ * behind the tip — a deep catch-up (fresh import / long offline) where parallel download across
+ * nodes pays off. Normal incremental polls stay single-node (no pool probe, no overhead).
+ */
+const FAR_BEHIND_THRESHOLD = 2000;
+
+/**
+ * Blocks at the chain TIP always fetched from the HOME node only, never distributed. Keeps the
+ * volatile, reorg-prone tip on the authoritative node and — being well above {@link
+ * NODE_LAG_WARN_BLOCKS} (5) — guarantees every healthy peer (within that lag of the tip) covers
+ * the entire distributed bulk range.
+ */
+const MULTI_SOURCE_TIP_MARGIN = 100;
+
+/** Cap on nodes used per multi-source bulk sync (home + peers) — bounds load + concurrency. */
+const MAX_SYNC_SOURCES = 4;
 
 /** A live, unlocked SDK wallet runtime. */
 export interface SdkRuntime {
@@ -592,6 +616,54 @@ export async function fetchSyncRange(
   }
 }
 
+// One-warning-per-runtime for a multi-source bulk that failed and fell back to single-node (#92-style).
+const multiSourceWarned = new WeakSet<SdkRuntime>();
+
+/**
+ * Build the set of {@link FetchSource}s for a multi-source bulk sync: the HOME node first (the
+ * authoritative failover that covers the whole range), followed by up to {@link MAX_SYNC_SOURCES}-1
+ * of the FASTEST healthy peers from the curated public pool. Each source carries its probed tip so
+ * the driver only assigns it batches it actually has. Best-effort: a pool/probe failure yields just
+ * the home node (the caller then skips multi-source and uses the single-node pipeline). Engine-free
+ * deps (`fetchSmartNodes`/`probeNodes`) keep this off the mock path.
+ */
+async function buildSyncSources(
+  rt: SdkRuntime,
+  homeHeight: number,
+  includeMinerTxs: boolean,
+): Promise<FetchSource<DaemonRawTransaction>[]> {
+  const homeUrl = nodeUrlFromRaw(rt.raw);
+  const home: FetchSource<DaemonRawTransaction> = {
+    label: "home",
+    height: homeHeight,
+    fetch: (start, end) => fetchSyncRange(rt.daemon, start, end, includeMinerTxs),
+  };
+
+  let candidateUrls: string[];
+  try {
+    const pool = await fetchSmartNodes(homeUrl);
+    const homeHost = nodeUrlToPoolHost(homeUrl);
+    candidateUrls = pool.map((node) => node.url).filter((url) => nodeUrlToPoolHost(url) !== homeHost);
+  } catch {
+    return [home]; // no pool → home only; caller skips multi-source
+  }
+  if (candidateUrls.length === 0) return [home];
+
+  // Probe peers (latency + tip), keep the healthy ones (reachable + within node-lag of the tip),
+  // fastest first, and cap how many we actually fan out to.
+  const healthy = rankNodes(await probeNodes(candidateUrls)).slice(0, MAX_SYNC_SOURCES - 1);
+  const peers = healthy.map((probe): FetchSource<DaemonRawTransaction> => {
+    const daemon = buildDaemon(probe.url);
+    return {
+      label: probe.url,
+      // rankNodes only returns probes with a non-null height.
+      height: probe.height as number,
+      fetch: (start, end) => fetchSyncRange(daemon, start, end, includeMinerTxs),
+    };
+  });
+  return [home, ...peers];
+}
+
 async function syncOnce(rt: SdkRuntime): Promise<number> {
   // Await WASM crypto init before scanTransactionOutputsAndDeposits / ring math.
   await ensureSdkReady();
@@ -620,11 +692,82 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   );
   let receivedChanged = false;
 
-  // Pipeline the daemon fetch with the WASM fold: prefetch the NEXT block range while
-  // folding the current one, so the round-trip (latency-dominant on remote nodes) overlaps
-  // the scan instead of running serially. Wall-clock drops from ~sum(Σfetch + Σfold) toward
-  // ~max(Σfetch, Σfold). Folding + the state publish stay strictly sequential (one batch at
-  // a time on the main thread); only the network fetch is overlapped.
+  // Fold one batch's raw txs into the running state: scan each for owned outputs/deposits/spends,
+  // reconstruct any inbound message (deduped by hash), advance the cursor to `newScanned`, and
+  // publish progress in-memory (never backwards) so a concurrent getWalletInfo sees the height
+  // climb during a long catch-up. Shared by the multi-source bulk phase and the single-node loop —
+  // both deliver batches in ASCENDING block order, which the WalletState fold requires.
+  const foldBatch = (rawTransactions: DaemonRawTransaction[], newScanned: number): void => {
+    for (const rawTx of rawTransactions) {
+      const folded = foldTransaction(state, rawTx, rt.account.keys);
+      state = folded.state;
+
+      // Reconstruct any inbound message from this tx's `extra` (deduped by hash).
+      if (folded.scanTx !== null) {
+        const txHash = typeof folded.scanTx.hash === "string" ? folded.scanTx.hash : "";
+        if (txHash && !received.has(txHash)) {
+          const inbound = reconstructReceivedMessage(folded.scanTx, rt.account.keys, {
+            sentHashes,
+            timestamp: rawTx.timestamp,
+          });
+          if (inbound !== null) {
+            received.set(inbound.id, inbound);
+            receivedChanged = true;
+          }
+        }
+      }
+    }
+    scanned = newScanned;
+    // Publish progress after each batch (never backwards), but ONLY when something changed — the
+    // cursor advanced or a tx folded — so an idle at-tip re-scan never allocates a new state or
+    // triggers a persist (no per-poll write churn). In-memory only; the encrypted persist is once below.
+    const cursorAdvanced = scanned > rt.state.scannedHeight;
+    const foldedThisBatch = state !== rt.state;
+    if (cursorAdvanced || foldedThisBatch) {
+      state = { ...state, scannedHeight: Math.max(rt.state.scannedHeight, scanned) };
+      rt.state = state;
+    }
+  };
+
+  // Phase 2 — DEEP CATCH-UP acceleration: when far behind the tip (fresh import / long offline),
+  // fetch the historical BULK across several pool nodes IN PARALLEL, keeping the volatile TIP on the
+  // home node. Engages ONLY past FAR_BEHIND_THRESHOLD and only for a default (public-pool) node — a
+  // user on a custom node keeps all traffic on their chosen node. Fully best-effort: any probe/fetch
+  // failure (or fewer than two usable nodes) falls through to the single-node pipeline below, which
+  // covers the ENTIRE remaining range from `scanned`. Block ranges are public, so distributing them
+  // across nodes leaks nothing about ownership.
+  const usingCustomNode = Boolean(rt.raw.options?.customNode);
+  if (!usingCustomNode && height - scanned > FAR_BEHIND_THRESHOLD) {
+    const bulkEnd = height - MULTI_SOURCE_TIP_MARGIN; // half-open exclusive; the tip stays on home
+    if (bulkEnd > scanned + 1) {
+      try {
+        const sources = await buildSyncSources(rt, height, includeMinerTxs);
+        if (sources.length >= 2) {
+          await fetchRangeMultiSource<DaemonRawTransaction>({
+            start: scanned + 1,
+            end: bulkEnd,
+            batchSize,
+            sources,
+            // Batches arrive ascending; fold each, advancing the cursor to its last (inclusive) block.
+            onBatch: (items, _batchStart, batchEnd) => foldBatch(items, batchEnd - 1),
+          });
+        }
+      } catch (error) {
+        // Non-fatal: the single-node pipeline below resumes from wherever the bulk got to.
+        if (!multiSourceWarned.has(rt)) {
+          multiSourceWarned.add(rt);
+          console.warn("Multi-source bulk sync failed (falling back to single node):", error);
+        }
+      }
+    }
+  }
+
+  // Pipeline the daemon fetch with the WASM fold: prefetch the NEXT block range while folding the
+  // current one, so the round-trip (latency-dominant on remote nodes) overlaps the scan instead of
+  // running serially. Wall-clock drops from ~sum(Σfetch + Σfold) toward ~max(Σfetch, Σfold). Folding
+  // + the state publish stay strictly sequential (one batch at a time on the main thread); only the
+  // network fetch is overlapped. Covers the whole range when multi-source is skipped, and the TIP
+  // that multi-source deliberately left on the home node.
   const fetchFrom = (from: number): { endBlock: number; data: Promise<DaemonRawTransaction[]> } => {
     const startBlock = from + 1;
     const endBlock = Math.min(startBlock + batchSize - 1, height);
@@ -652,39 +795,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     const rawTransactions = await data;
     // Kick off the next range's fetch BEFORE folding, so it downloads during the scan.
     pending = endBlock < height ? fetchFrom(endBlock) : null;
-    for (const rawTx of rawTransactions) {
-      const folded = foldTransaction(state, rawTx, rt.account.keys);
-      state = folded.state;
-
-      // Reconstruct any inbound message from this tx's `extra` (deduped by hash).
-      if (folded.scanTx !== null) {
-        const txHash = typeof folded.scanTx.hash === "string" ? folded.scanTx.hash : "";
-        if (txHash && !received.has(txHash)) {
-          const inbound = reconstructReceivedMessage(folded.scanTx, rt.account.keys, {
-            sentHashes,
-            timestamp: rawTx.timestamp,
-          });
-          if (inbound !== null) {
-            received.set(inbound.id, inbound);
-            receivedChanged = true;
-          }
-        }
-      }
-    }
-    scanned = endBlock;
-    // Publish progress after each batch (never backwards) so a concurrent read — the
-    // polled getWalletInfo — sees `currentHeight` climb block-by-block during a long
-    // initial scan or a height-reset re-scan, instead of jumping only when the whole
-    // catch-up finishes. In-memory only; the encrypted persist still happens once below.
-    // BUT only when something actually changed this batch — the cursor advanced, or a
-    // tx folded — so an idle at-tip re-scan (the lag window with no new tx) never
-    // allocates a new state and never triggers a persist (no per-poll write churn).
-    const cursorAdvanced = scanned > rt.state.scannedHeight;
-    const foldedThisBatch = state !== rt.state;
-    if (cursorAdvanced || foldedThisBatch) {
-      state = { ...state, scannedHeight: Math.max(rt.state.scannedHeight, scanned) };
-      rt.state = state;
-    }
+    foldBatch(rawTransactions, endBlock);
   }
 
   // The per-batch publish advances rt.state only on real change, so `rt.state !==
