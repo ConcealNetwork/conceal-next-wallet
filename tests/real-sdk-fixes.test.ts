@@ -245,10 +245,119 @@ describe("sync re-scan window covers a full lag depth at the tip (count-overshoo
   });
 });
 
+describe("sync fetch is resilient to over-cap batches (split + retry)", () => {
+  it("splits a batch that exceeds the daemon range cap and still covers every block", async () => {
+    const acct = createAccount("english");
+    const networkHeight = 250; // one 250-block batch that must split under the cap
+    const CAP = 100; // daemon rejects any range wider than CAP blocks (simulates the real cap)
+    const ok: Array<[number, number]> = [];
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(networkHeight),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: async (start: number, end: number) => {
+        if (end - start > CAP) throw new Error("range too large (simulated daemon cap)");
+        ok.push([start, end]);
+        return [];
+      },
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    runtimeMod._setRuntimeForTest({
+      account: acct,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+        creationHeight: 0,
+      },
+      state: { ...createWalletState(acct), scannedHeight: 0 },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    expect(await runtimeMod.sync()).toBe(networkHeight);
+
+    // Every block is still covered despite the cap — the over-cap batch split into pieces.
+    const covered = new Set<number>();
+    for (const [start, end] of ok) for (let b = start; b < end; b++) covered.add(b);
+    const missed: number[] = [];
+    for (let b = 1; b < networkHeight; b++) if (!covered.has(b)) missed.push(b);
+    expect(missed).toEqual([]);
+    expect(ok.length).toBeGreaterThanOrEqual(2); // it actually split
+    expect(ok.every(([s, e]) => e - s <= CAP)).toBe(true); // every served range obeys the cap
+    expect(runtimeMod.getRuntime()?.state.scannedHeight).toBe(networkHeight);
+  });
+
+  it("propagates the error when even a single-block fetch keeps failing (node down)", async () => {
+    const acct = createAccount("english");
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(50),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: async () => {
+        throw new Error("ECONNREFUSED (simulated node down)");
+      },
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    runtimeMod._setRuntimeForTest({
+      account: acct,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+        creationHeight: 0,
+      },
+      state: { ...createWalletState(acct), scannedHeight: 0 },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    // A genuinely-unreachable node must NOT look like a clean sync — the error propagates so the
+    // next poll retries from scannedHeight (which stays put), rather than silently skipping blocks.
+    await expect(runtimeMod.sync()).rejects.toThrow(/ECONNREFUSED|node down/i);
+  });
+
+  it("fetchSyncRange splits an over-cap range and returns blocks in strict ascending order", async () => {
+    const CAP = 30; // force several levels of splitting of the 250-block range
+    const daemon = {
+      getWalletSyncData: async (start: number, end: number) => {
+        if (end - start > CAP) throw new Error("over cap");
+        // One entry per block, tagged with its height (transaction:null = empty slot).
+        const out: Array<{ height: number; hash: string; transaction: null }> = [];
+        for (let h = start; h < end; h++) out.push({ height: h, hash: `h${h}`, transaction: null });
+        return out;
+      },
+    };
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+    const txs = await runtimeMod.fetchSyncRange(daemon as any, 1, 251, false);
+    const heights = (txs as Array<{ height: number }>).map((t) => t.height);
+    // The split-and-concat covers the full half-open range [1, 251) exactly, strictly ascending —
+    // the ordering that foldTransaction's sequential state machine depends on.
+    expect(heights).toEqual(Array.from({ length: 250 }, (_, i) => i + 1));
+  });
+});
+
 describe("sync publishes scannedHeight per batch (live progress)", () => {
   it("advances rt.state.scannedHeight between batches, not only at the end", async () => {
     const acct = createAccount("english");
-    const networkHeight = 350; // > 3 batches of 100
+    const networkHeight = 800; // > 3 batches of SYNC_BATCH_BLOCKS (250)
     const runtimeMod = await import("@/lib/services/real-sdk/runtime");
     const seen: number[] = [];
     const daemon: DaemonStub = {
