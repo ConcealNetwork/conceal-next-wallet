@@ -64,12 +64,15 @@ vi.mock("@/lib/auth/webauthn-prf", () => {
 vi.mock("@/lib/ui/payment-link", () => ({ getSafeNextPath: () => undefined }));
 
 import { NavOpenWalletButton, OpenWalletProvider } from "@/components/landing/landing-actions";
+import { I18nProvider } from "@/lib/i18n/i18n-provider";
 
 function openUnlockDialog() {
   render(
-    <OpenWalletProvider>
-      <NavOpenWalletButton />
-    </OpenWalletProvider>,
+    <I18nProvider>
+      <OpenWalletProvider>
+        <NavOpenWalletButton />
+      </OpenWalletProvider>
+    </I18nProvider>,
   );
   fireEvent.click(screen.getAllByRole("button", { name: "Open Wallet" })[0]);
 }

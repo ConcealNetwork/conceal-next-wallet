@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
 import {
   addPasskeyCredential,
   clearPasskeyEnrollment,
@@ -28,9 +28,10 @@ import {
   PasskeyError,
   signalPasskeyRemoved,
 } from "@/lib/auth/webauthn-prf";
-import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { toast } from "@/lib/ui/toast";
 
 /**
  * Settings control for passkey unlock. Lists the authenticators registered on
@@ -39,6 +40,7 @@ import { useWalletSession } from "@/lib/session/wallet-session";
  * first). Renders nothing when WebAuthn is unavailable.
  */
 export function PasskeySetting() {
+  const { t } = useI18n();
   const [available, setAvailable] = useState(false);
   const [enrollment, setEnrollment] = useState<PasskeyEnrollment | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -84,7 +86,7 @@ export function PasskeySetting() {
     // Best-effort: ask the OS/provider to prune its copy of the removed passkey.
     void signalPasskeyRemoved(credentialId);
     refresh();
-    toast.success("Passkey removed.");
+    toast.success(t("toast.passkeyRemoved"));
   }
 
   function removeAll() {
@@ -93,7 +95,7 @@ export function PasskeySetting() {
     clearPasskeyEnrollment(walletId);
     ids.forEach((id) => void signalPasskeyRemoved(id));
     refresh();
-    toast.success("Passkey unlock disabled.");
+    toast.success(t("toast.passkeyDisabled"));
   }
 
   function startRename(credentialId: string, label: string) {
@@ -215,6 +217,7 @@ function AddPasskeyDialog({
   onOpenChange: (open: boolean) => void;
   onAdded: () => void;
 }) {
+  const { t } = useI18n();
   const { walletInfo } = useWalletSession();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -232,20 +235,20 @@ function AddPasskeyDialog({
       // (which the address-mismatch self-heal couldn't later drop).
       const address = walletInfo?.address;
       if (!address) {
-        toast.error("Wallet session expired — reopen your wallet to add a passkey.");
+        toast.error(t("toast.passkeySessionExpired"));
         return;
       }
       // Confirm the password before encrypting it under the new credential — a
       // typo would otherwise enroll an unusable passkey.
       if (!(await services.wallet.verifyPassword(password))) {
-        toast.error("That password doesn't match this wallet.");
+        toast.error(t("toast.passkeyWrongPassword"));
         return;
       }
       const walletId = await getActiveWalletId();
       const current = getPasskeyEnrollment(walletId);
       const credential = await enrollPasskeyCredential(password, current?.credentials ?? []);
       savePasskeyEnrollment(addPasskeyCredential(current, credential, address), walletId);
-      toast.success("Passkey added.");
+      toast.success(t("toast.passkeyAdded"));
       onAdded();
       onOpenChange(false);
       setPassword("");

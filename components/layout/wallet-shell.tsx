@@ -1,6 +1,5 @@
 "use client";
 
-import { toast } from "@/lib/ui/toast";
 import { Footer } from "@/components/layout/footer";
 import { GlobalHeader } from "@/components/layout/global-header";
 import { RightRailProvider, useRightRailContent } from "@/components/layout/right-rail";
@@ -17,9 +16,12 @@ import { useDuePaymentReminders } from "@/lib/hooks/use-due-reminders";
 import { useIdleLock } from "@/lib/hooks/use-idle-lock";
 import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-messages-since-open";
 import { useSyncWakeLock } from "@/lib/hooks/use-sync-wake-lock";
+import { useI18n } from "@/lib/i18n/i18n-provider";
+import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
 export function WalletShell({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
   const { collapsed } = useSidebarCollapse();
   useWalletLiveSync();
   usePrefetchMessagesForBadge();
@@ -35,7 +37,7 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   const autoLockMinutes = useWalletSettings().data?.autoLockMinutes ?? 0;
   const disconnect = useWalletDisconnect();
   useIdleLock(autoLockMinutes * 60_000, () => {
-    toast.info("Locked due to inactivity.");
+    toast.info(t("toast.lockedInactivity"));
     disconnect();
   });
 

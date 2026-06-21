@@ -3,8 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { toast } from "@/lib/ui/toast";
 import { z } from "zod";
+import { SendRail } from "@/components/layout/rails/send-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,8 +26,6 @@ import {
 import { CcxAmount } from "@/components/wallet/ccx";
 import { PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { SendReviewWarnings } from "@/components/wallet/send-review-warnings";
-import { SendRail } from "@/components/layout/rails/send-rail";
-import { usePageRightRail } from "@/components/layout/right-rail";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import { MAX_MESSAGE_SIZE, walletNetworkScalars } from "@/lib/config/config";
@@ -43,6 +42,7 @@ import type { AddressEntry } from "@/lib/types";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
 import { deriveSendWarnings } from "@/lib/ui/send-review-warnings";
+import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import {
   CCX_PRECISION_DECIMAL_DISPLAY,
@@ -161,9 +161,9 @@ export default function SendPage() {
       setSelfSendFromLink(values);
     } else {
       setReview(values);
-      toast.success("Payment request loaded — confirm to send.");
+      toast.success(t("toast.paymentRequestLoaded"));
     }
-  }, [form, paymentLinkApplied, wallet.data?.address, viewOnly]);
+  }, [form, paymentLinkApplied, wallet.data?.address, viewOnly, t]);
 
   function pickContact(entry: AddressEntry | null) {
     setSelectedContactId(entry?.id ?? null);
