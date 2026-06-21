@@ -145,8 +145,8 @@ export default function ReceivePage() {
                 {address}
               </p>
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-                <div className="flex shrink-0 flex-col items-center gap-3 sm:w-48">
-                  <WalletQrCode value={paymentUri} size={150} logoSrc={qrLogo} />
+                <div className="mx-auto flex w-full max-w-[280px] shrink-0 flex-col items-center gap-3 sm:mx-0 sm:w-48 sm:max-w-none">
+                  <WalletQrCode value={paymentUri} fullWidth logoSrc={qrLogo} />
                   <div className="flex items-center gap-2">
                     {QR_LOGOS.map((logo) => (
                       <button
