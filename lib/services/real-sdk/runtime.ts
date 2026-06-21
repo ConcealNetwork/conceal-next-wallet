@@ -85,6 +85,7 @@ import {
   type SdkMessageRecord,
   withReceivedRecords,
 } from "@/lib/services/real-sdk/messages-store";
+import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import {
   prunePendingRecords,
   readPendingRecords,
@@ -526,6 +527,8 @@ async function runSyncChain(rt: SdkRuntime, coord: RuntimeCoordination): Promise
 // Runtimes whose mempool-pool RPC has already failed once — used to warn a single time
 // per runtime instead of on every background poll when a daemon lacks the pool RPC (#109).
 const poolScanWarned = new WeakSet<SdkRuntime>();
+// Same one-warning-per-runtime treatment for the durable outbound-queue drainer (#92).
+const queueDrainWarned = new WeakSet<SdkRuntime>();
 
 async function syncOnce(rt: SdkRuntime): Promise<number> {
   // Await WASM crypto init before scanTransactionOutputsAndDeposits / ring math.
@@ -651,6 +654,26 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   if (nextIncoming !== beforeIncoming) {
     rt.raw = withIncomingPendingRecords(rt.raw, nextIncoming);
     await persistRuntime(rt);
+  }
+
+  // Durable outbound queue (#92): retry any due broadcasts (a send that hit a transient
+  // network error stays queued until it relays), then drop entries whose tx has now mined
+  // into state. Best-effort and on its own persisted namespace — never blocks mined sync.
+  try {
+    const queue = queueForRuntime(rt);
+    await queue.drainOnce();
+    const entries = await queue.list();
+    if (entries.length > 0) {
+      const minedHashes = new Set(rt.state.transactions.map((tx) => tx.hash));
+      for (const entry of entries) {
+        if (minedHashes.has(entry.hash)) await queue.remove(entry.id);
+      }
+    }
+  } catch (error) {
+    if (!queueDrainWarned.has(rt)) {
+      queueDrainWarned.add(rt);
+      console.warn("Outbound-queue drain failed (non-fatal, silenced):", error);
+    }
   }
 
   return height;

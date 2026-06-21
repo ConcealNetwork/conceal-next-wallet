@@ -3,6 +3,8 @@ export const queryKeys = {
   /** Multi-wallet registry list (#95). */
   wallets: ["wallets"] as const,
   transactions: ["transactions"] as const,
+  /** Durable outbound-broadcast queue (#92). */
+  queuedTransactions: ["queued-transactions"] as const,
   market: ["market"] as const,
   messages: ["messages"] as const,
   deposits: ["deposits"] as const,

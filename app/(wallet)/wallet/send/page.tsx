@@ -25,6 +25,7 @@ import {
 } from "@/components/wallet/address-book-contact-picker";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
+import { OutboundQueueCard } from "@/components/wallet/outbound-queue-card";
 import { SendReviewWarnings } from "@/components/wallet/send-review-warnings";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
@@ -210,7 +211,8 @@ export default function SendPage() {
       />
       <WalletSyncingBanner />
       <ViewOnlyBanner />
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl space-y-5">
+        <OutboundQueueCard />
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
           <SectionCard title={t("send.formTitle")} description={t("send.formDescription")}>
             <form

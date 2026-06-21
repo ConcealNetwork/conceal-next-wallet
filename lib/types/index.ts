@@ -56,6 +56,30 @@ export type WalletSummary = {
   balanceTotal?: CcxAmount;
 };
 
+/** Lifecycle of a durable outbound-queue entry (#92), mirrored from the SDK. */
+export type QueuedBroadcastState = "pending" | "broadcast" | "failed";
+
+/** Why a queued broadcast failed (only set when state === "failed"). */
+export type QueuedBroadcastFailReason = "rejected" | "expired" | "conflict";
+
+/** A built+signed transaction persisted in the durable outbound queue (#92). */
+export type QueuedTransaction = {
+  /** Queue id — equal to the tx hash. */
+  id: string;
+  hash: string;
+  state: QueuedBroadcastState;
+  /** Transient-error attempts so far. */
+  attempts: number;
+  /** Wall-clock ms when first enqueued. */
+  enqueuedAt: number;
+  /** Human-readable label (e.g. "Send to Alice"), when set. */
+  label?: string;
+  /** Last broadcast error, when any. */
+  lastError?: string;
+  /** Present once failed. */
+  failedReason?: QueuedBroadcastFailReason;
+};
+
 /**
  * Live status of an UNLOCKED non-active wallet after a background sync (#108). Used to
  * detect funds/messages arriving on a wallet the user isn't currently viewing, so a
