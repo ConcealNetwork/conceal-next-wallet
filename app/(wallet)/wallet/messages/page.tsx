@@ -2,7 +2,6 @@
 
 import { ArrowLeft, Cog, Heart, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +48,7 @@ import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { AddressEntry, Message } from "@/lib/types";
 import { parseCheckIn } from "@/lib/ui/check-in-message";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
+import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, truncateAddress } from "@/lib/utils";
 import {

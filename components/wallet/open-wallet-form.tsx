@@ -1,6 +1,5 @@
 "use client";
 
-import { toast } from "@/lib/ui/toast";
 import { useOpenWalletContext } from "@/components/wallet/unlock-wallet-provider";
 import { getActiveWalletId } from "@/lib/auth/active-wallet-id";
 import { clearPasskeyEnrollment } from "@/lib/auth/biometric-store";
@@ -11,6 +10,7 @@ import { useWalletSession } from "@/lib/session/wallet-session";
 import { clearAllGoals, goalsStore } from "@/lib/storage/goals-store";
 import { clearAllTxNotes } from "@/lib/storage/tx-notes";
 import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
+import { toast } from "@/lib/ui/toast";
 
 // The unlock UI (password + biometric enroll/unlock + multi-wallet picker) lives in
 // the shared `UnlockWalletProvider` (components/wallet/unlock-wallet-provider.tsx),

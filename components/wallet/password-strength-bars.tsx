@@ -1,35 +1,38 @@
+"use client";
+
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 
 export const PASSWORD_STRENGTH_LEVELS = [
-  { label: "Too short", className: "bg-wallet-outgoing" },
-  { label: "Weak", className: "bg-wallet-outgoing" },
-  { label: "Fair", className: "bg-primary" },
-  { label: "Good", className: "bg-primary" },
-  { label: "Strong", className: "bg-wallet-incoming" },
-  { label: "Strong", className: "bg-wallet-incoming" },
+  { labelKey: "password.strengthTooShort", className: "bg-wallet-outgoing" },
+  { labelKey: "password.strengthWeak", className: "bg-wallet-outgoing" },
+  { labelKey: "password.strengthFair", className: "bg-primary" },
+  { labelKey: "password.strengthGood", className: "bg-primary" },
+  { labelKey: "password.strengthStrong", className: "bg-wallet-incoming" },
+  { labelKey: "password.strengthStrong", className: "bg-wallet-incoming" },
 ] as const;
 
 export const WALLET_PASSWORD_HINTS = [
   {
     id: "length",
-    label: "More than 15 characters",
+    labelKey: "password.req15",
     test: (password: string) => password.length > 15,
   },
   {
     id: "mixed",
-    label: "Upper and lower case letters",
+    labelKey: "password.reqMixedCase",
     test: (password: string) => /[A-Z]/.test(password) && /[a-z]/.test(password),
   },
   {
     id: "letter",
-    label: "At least one letter",
+    labelKey: "password.reqLetter",
     test: (password: string) => /[A-Za-z]/.test(password),
   },
-  { id: "digit", label: "At least one digit", test: (password: string) => /\d/.test(password) },
+  { id: "digit", labelKey: "password.reqDigit", test: (password: string) => /\d/.test(password) },
   {
     id: "symbol",
-    label: "At least one symbol",
+    labelKey: "password.reqSymbol",
     test: (password: string) => /[^A-Za-z0-9]/.test(password),
   },
 ] as const;
@@ -67,6 +70,7 @@ type PasswordStrengthBarsProps = {
 };
 
 export function PasswordStrengthBars({ score, className }: PasswordStrengthBarsProps) {
+  const { t } = useI18n();
   const level = PASSWORD_STRENGTH_LEVELS[Math.min(Math.max(score, 0), 5)];
 
   return (
@@ -82,7 +86,9 @@ export function PasswordStrengthBars({ score, className }: PasswordStrengthBarsP
           />
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">Strength: {level.label}</p>
+      <p className="text-xs text-muted-foreground">
+        {t("password.strengthLabel", { value: t(level.labelKey) })}
+      </p>
     </div>
   );
 }
@@ -96,6 +102,7 @@ export function WalletPasswordStrengthPanel({
   password,
   showDisclaimer = true,
 }: WalletPasswordStrengthPanelProps) {
+  const { t } = useI18n();
   if (password.length === 0) {
     return null;
   }
@@ -114,7 +121,7 @@ export function WalletPasswordStrengthPanel({
               className={cn("flex items-center gap-2", met && "text-wallet-incoming")}
             >
               <span aria-hidden>{met ? "✓" : "○"}</span>
-              {hint.label}
+              {t(hint.labelKey)}
             </li>
           );
         })}

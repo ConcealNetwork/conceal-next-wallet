@@ -3,18 +3,18 @@
 import { RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import { useQuery } from "@/lib/hooks/query-provider";
+import { MarketRail } from "@/components/layout/rails/market-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { MarketRail } from "@/components/layout/rails/market-rail";
-import { usePageRightRail } from "@/components/layout/right-rail";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { queryKeys, useMarketData, useWalletInfo } from "@/lib/hooks";
+import { useQuery } from "@/lib/hooks/query-provider";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
 import { useI18n } from "@/lib/i18n/i18n-provider";
-import { marketHistoryQueryOptions } from "@/lib/services/query-options";
 import { services } from "@/lib/services";
+import { marketHistoryQueryOptions } from "@/lib/services/query-options";
 import type { MarketData, MarketHistoryPoint, MarketTimeframe, WalletInfo } from "@/lib/types";
 import { CHART_DRAW_MS, CHART_EASING } from "@/lib/ui/animation";
 import { ccxToNumber, cn, formatCcx, formatUsd } from "@/lib/utils";
@@ -180,7 +180,9 @@ function DeltaChip({ change }: { change: number }) {
           ? "bg-wallet-incoming/10 text-wallet-incoming"
           : "bg-wallet-outgoing/10 text-wallet-outgoing",
       )}
-      aria-label={isPositive ? t("market.priceUpAria", { pct }) : t("market.priceDownAria", { pct })}
+      aria-label={
+        isPositive ? t("market.priceUpAria", { pct }) : t("market.priceDownAria", { pct })
+      }
     >
       <span aria-hidden="true">{isPositive ? "▲" : "▼"}</span>
       {isPositive ? "+" : "−"}

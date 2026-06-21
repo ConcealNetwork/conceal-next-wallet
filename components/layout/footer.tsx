@@ -1,19 +1,24 @@
+"use client";
+
 import Link from "next/link";
 
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { cn } from "@/lib/utils";
 
 type FooterLink = {
   href: string;
-  label: string;
+  /** i18n key for the label; falls back to `label` (brand strings stay literal). */
+  labelKey?: string;
+  label?: string;
   external?: boolean;
 };
 
 const footerLinks: FooterLink[] = [
-  { href: "/terms", label: "Terms of Use" },
-  { href: "/privacy", label: "Privacy Policy" },
-  { href: "/support", label: "Support" },
-  { href: "/wallet/donate", label: "Donate" },
-  { href: "/wallet/network", label: "Network Stats" },
+  { href: "/terms", labelKey: "footer.terms" },
+  { href: "/privacy", labelKey: "footer.privacy" },
+  { href: "/support", labelKey: "footer.support" },
+  { href: "/wallet/donate", labelKey: "footer.donate" },
+  { href: "/wallet/network", labelKey: "footer.networkStats" },
   { href: "https://github.com/ConcealNetwork", label: "GitHub", external: true },
 ];
 
@@ -29,6 +34,7 @@ export function Footer({
    *  bar and align to the page column so it reads as part of the page. */
   inline?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <footer
       className={cn(
@@ -47,8 +53,9 @@ export function Footer({
       >
         <p>© 2018–2026 Conceal.Network</p>
         <nav className="flex flex-wrap gap-x-5 gap-y-2">
-          {footerLinks.map((link) =>
-            link.external ? (
+          {footerLinks.map((link) => {
+            const text = link.labelKey ? t(link.labelKey) : link.label;
+            return link.external ? (
               <a
                 key={link.href}
                 href={link.href}
@@ -56,14 +63,14 @@ export function Footer({
                 rel="noopener noreferrer"
                 className={linkClassName}
               >
-                {link.label}
+                {text}
               </a>
             ) : (
               <Link key={link.href} href={link.href} className={linkClassName}>
-                {link.label}
+                {text}
               </Link>
-            ),
-          )}
+            );
+          })}
         </nav>
       </div>
     </footer>

@@ -1,6 +1,5 @@
 "use client";
 
-import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -9,6 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ContactAvatar } from "@/components/wallet/contact-avatar";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import { cn, truncateAddress } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ export function AddressBookContactPicker({
   selectThreshold = DEFAULT_SELECT_THRESHOLD,
   className,
 }: AddressBookContactPickerProps) {
+  const { t } = useI18n();
   if (contacts.length === 0) return null;
 
   const useSelect = contacts.length > selectThreshold;
@@ -46,7 +48,7 @@ export function AddressBookContactPicker({
   if (useSelect) {
     return (
       <div className={cn("space-y-2", className)}>
-        <Label className="text-xs text-muted-foreground">Saved contacts</Label>
+        <Label className="text-xs text-muted-foreground">{t("addressBook.savedContacts")}</Label>
         <Select
           value={selectedId ?? undefined}
           onValueChange={(value) => {
@@ -54,8 +56,8 @@ export function AddressBookContactPicker({
             onSelect(entry ?? null);
           }}
         >
-          <SelectTrigger aria-label="Choose from address book">
-            <SelectValue placeholder="Choose from address book…" />
+          <SelectTrigger aria-label={t("addressBook.pickerAria")}>
+            <SelectValue placeholder={t("addressBook.pickerPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {contacts.map((entry) => (
@@ -77,11 +79,11 @@ export function AddressBookContactPicker({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <Label className="text-xs text-muted-foreground">Saved contacts</Label>
+      <Label className="text-xs text-muted-foreground">{t("addressBook.savedContacts")}</Label>
       <div
         className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
         role="listbox"
-        aria-label="Saved contacts"
+        aria-label={t("addressBook.savedContacts")}
       >
         {contacts.map((entry) => {
           const selected = selectedId === entry.id;

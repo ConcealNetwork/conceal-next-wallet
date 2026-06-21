@@ -72,6 +72,7 @@ function WalletShellLayout({
   collapsed: boolean;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const { content: rail, collapsed: railCollapsed } = useRightRailContent();
   const railOpen = rail !== null && !railCollapsed;
 
@@ -85,7 +86,7 @@ function WalletShellLayout({
           clears it with right padding at the rail's ≥1200px breakpoint. */}
       {railOpen ? (
         <aside
-          aria-label="Context panel"
+          aria-label={t("shell.contextPanelAria")}
           className="fixed bottom-0 right-0 top-14 z-30 w-[380px] overflow-y-auto border-l border-border/70 bg-[hsl(var(--chrome))] max-[1199px]:hidden"
         >
           <div className="px-7 pb-12 pt-8">{rail}</div>

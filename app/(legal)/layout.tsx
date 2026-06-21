@@ -1,5 +1,5 @@
-import { LegalBackNav } from "@/components/legal/legal-back-nav";
 import { Footer } from "@/components/layout/footer";
+import { LegalBackNav } from "@/components/legal/legal-back-nav";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (

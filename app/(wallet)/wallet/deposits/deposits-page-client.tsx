@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { type CSSProperties, useEffect, useId, useMemo, useState } from "react";
-import { toast } from "@/lib/ui/toast";
+import { DepositsRail } from "@/components/layout/rails/deposits-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,8 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DepositsRail } from "@/components/layout/rails/deposits-rail";
-import { usePageRightRail } from "@/components/layout/right-rail";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { EmptyState, PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
@@ -64,6 +63,7 @@ import {
 } from "@/lib/services/deposit.service";
 import type { Deposit } from "@/lib/types";
 import { CHART_DRAW_MS, CHART_EASING } from "@/lib/ui/animation";
+import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxToNumber, cn, truncateAddress, usdSubline } from "@/lib/utils";
 import { InterestCalculatorDialog } from "./interest-calculator-dialog";

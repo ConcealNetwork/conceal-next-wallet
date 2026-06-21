@@ -2,16 +2,15 @@
 
 import { ArrowLeftRight, LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "@/lib/ui/toast";
+import { AddressBookRail } from "@/components/layout/rails/address-book-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AddressBookRail } from "@/components/layout/rails/address-book-rail";
-import { usePageRightRail } from "@/components/layout/right-rail";
-import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import { CopyButton, EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
+import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import {
   useAddressBook,
   useCreateAddressEntry,
@@ -23,8 +22,9 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import { CONTACT_AVATARS, contactAvatarPath } from "@/lib/ui/contact-avatars";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
-import { addressIsValid, generatePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
+import { toast } from "@/lib/ui/toast";
 import { cn, truncateAddress, withBasePath } from "@/lib/utils";
+import { addressIsValid, generatePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
 
 type View = "cards" | "table";
 const VIEW_KEY = "conceal-address-view";

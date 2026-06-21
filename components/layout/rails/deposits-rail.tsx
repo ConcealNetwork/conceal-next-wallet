@@ -25,7 +25,7 @@ import { useDeposits } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
 import type { Deposit } from "@/lib/types";
-import { cn, ccxToNumber } from "@/lib/utils";
+import { ccxToNumber, cn } from "@/lib/utils";
 
 // Deposits-page contextual rail (#122): the earnings summary (total locked,
 // blended APR, projected interest, next maturity) pulled out of the dense main

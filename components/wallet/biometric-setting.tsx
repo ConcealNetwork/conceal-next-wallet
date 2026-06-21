@@ -133,12 +133,12 @@ export function PasskeySetting() {
                   <Input
                     value={editLabel}
                     onChange={(event) => setEditLabel(event.target.value)}
-                    aria-label="Passkey name"
+                    aria-label={t("settings.passkeyNameAria")}
                     autoFocus
                     className="h-8"
                   />
                   <Button type="submit" variant="ghost" size="sm">
-                    Save
+                    {t("action.save")}
                   </Button>
                   <Button
                     type="button"
@@ -146,7 +146,7 @@ export function PasskeySetting() {
                     size="sm"
                     onClick={() => setEditingId(null)}
                   >
-                    Cancel
+                    {t("action.cancel")}
                   </Button>
                 </form>
               ) : (
@@ -160,7 +160,7 @@ export function PasskeySetting() {
                       </span>
                     ) : null}
                     {credential.discoverable ? (
-                      <span className="text-muted-foreground">{" · synced"}</span>
+                      <span className="text-muted-foreground">{` · ${t("settings.passkeySynced")}`}</span>
                     ) : null}
                   </span>
                   <div className="flex shrink-0 gap-1">
@@ -169,18 +169,18 @@ export function PasskeySetting() {
                       variant="ghost"
                       size="sm"
                       onClick={() => startRename(credential.credentialId, credential.label)}
-                      aria-label={`Rename ${credential.label}`}
+                      aria-label={t("settings.passkeyRenameAria", { label: credential.label })}
                     >
-                      Rename
+                      {t("settings.passkeyRename")}
                     </Button>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => remove(credential.credentialId)}
-                      aria-label={`Remove ${credential.label}`}
+                      aria-label={t("settings.passkeyRemoveAria", { label: credential.label })}
                     >
-                      Remove
+                      {t("settings.passkeyRemove")}
                     </Button>
                   </div>
                 </>
@@ -189,18 +189,16 @@ export function PasskeySetting() {
           ))}
         </ul>
       ) : (
-        <span className="text-sm text-muted-foreground">
-          No passkeys yet — add one below, or enable it next time you unlock with your password.
-        </span>
+        <span className="text-sm text-muted-foreground">{t("settings.passkeyEmpty")}</span>
       )}
       <div className="flex justify-end gap-2">
         {credentials.length > 0 ? (
           <Button type="button" variant="ghost" size="sm" onClick={removeAll}>
-            Disable all
+            {t("settings.passkeyDisableAll")}
           </Button>
         ) : null}
         <Button type="button" variant="outline" size="sm" onClick={() => setAddOpen(true)}>
-          Add a passkey
+          {t("settings.passkeyAdd")}
         </Button>
       </div>
       <AddPasskeyDialog open={addOpen} onOpenChange={setAddOpen} onAdded={refresh} />
@@ -265,7 +263,7 @@ function AddPasskeyDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a passkey</DialogTitle>
+          <DialogTitle>{t("settings.passkeyAdd")}</DialogTitle>
           <DialogDescription>
             Confirm your wallet password, then approve the passkey prompt (Touch ID, a security key,
             or your phone).
@@ -279,7 +277,7 @@ function AddPasskeyDialog({
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="add-passkey-password">Password</Label>
+            <Label htmlFor="add-passkey-password">{t("settings.passkeyPassword")}</Label>
             <Input
               id="add-passkey-password"
               type="password"
@@ -291,10 +289,10 @@ function AddPasskeyDialog({
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("action.cancel")}
             </Button>
             <Button type="submit" disabled={loading || !password}>
-              {loading ? "Adding…" : "Add passkey"}
+              {loading ? t("settings.passkeyAdding") : t("settings.passkeyAddSubmit")}
             </Button>
           </DialogFooter>
         </form>

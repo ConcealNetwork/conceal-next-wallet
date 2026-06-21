@@ -3,7 +3,6 @@
 import { Eye, FileKey, KeyRound, type LucideIcon, QrCode, Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,8 +17,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  walletPasswordIsAcceptable,
   WalletPasswordStrengthPanel,
+  walletPasswordIsAcceptable,
 } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
@@ -34,6 +33,7 @@ import {
   MNEMONIC_IMPORT_LANGUAGES,
   type MnemonicImportLanguageKey,
 } from "@/lib/ui/mnemonic-import-languages";
+import { toast } from "@/lib/ui/toast";
 import { importFieldsRequired, walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 import { addressIsValid, privateKeyIsValid } from "@/lib/validation/ccx";

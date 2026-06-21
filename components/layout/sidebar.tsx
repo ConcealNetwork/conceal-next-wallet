@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   BookOpen,
@@ -20,7 +21,6 @@ import {
   Target,
   WalletCards,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavMessageBadge } from "@/components/layout/nav-message-badge";
@@ -41,11 +41,11 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
 import { useWallets } from "@/lib/hooks";
+import { useOverdueCheckInCount } from "@/lib/hooks/use-check-ins";
 import {
   useAcknowledgeMessagesSinceOpen,
   useNewMessagesSinceOpen,
 } from "@/lib/hooks/use-new-messages-since-open";
-import { useOverdueCheckInCount } from "@/lib/hooks/use-check-ins";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
@@ -261,16 +261,16 @@ function DisconnectButton({ collapsed }: { collapsed: boolean }) {
       </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Disconnect wallet?</AlertDialogTitle>
+          <AlertDialogTitle>{t("sidebar.disconnectTitle")}</AlertDialogTitle>
           <AlertDialogDescription>{walletCopy.disconnectConfirm}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("action.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={disconnect}
           >
-            Disconnect
+            {t("action.disconnect")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

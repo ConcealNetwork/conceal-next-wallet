@@ -1,5 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/lib/i18n/i18n-provider";
+const renderI18n = (ui: Parameters<typeof render>[0]) =>
+  render(<I18nProvider>{ui}</I18nProvider>);
 
 // Capture what each form hands to the engine, and stub the session redirect.
 const importWallet = vi.fn();
@@ -47,7 +50,7 @@ describe("import forms", () => {
 
   describe("ImportMnemonicForm", () => {
     it("keeps submit disabled until a 12+ word phrase and matching passwords", () => {
-      render(<ImportMnemonicForm />);
+      renderI18n(<ImportMnemonicForm />);
       expect(submit()).toBeDisabled();
       fireEvent.change(screen.getByLabelText("Recovery phrase"), {
         target: { value: "too few words" },
@@ -62,7 +65,7 @@ describe("import forms", () => {
     });
 
     it("flags mismatched passwords and blocks submit", () => {
-      render(<ImportMnemonicForm />);
+      renderI18n(<ImportMnemonicForm />);
       fireEvent.change(screen.getByLabelText("Recovery phrase"), { target: { value: MNEMONIC } });
       fireEvent.change(screen.getByLabelText("Encryption password"), {
         target: { value: PASSWORD },
@@ -75,7 +78,7 @@ describe("import forms", () => {
     });
 
     it("submits a trimmed mnemonic with the chosen language and scan height", async () => {
-      render(<ImportMnemonicForm />);
+      renderI18n(<ImportMnemonicForm />);
       fireEvent.change(screen.getByLabelText("Recovery phrase"), {
         target: { value: `  ${MNEMONIC}  ` },
       });
@@ -98,7 +101,7 @@ describe("import forms", () => {
 
   describe("ImportQrForm", () => {
     it("keeps submit disabled until a payload is present, then imports via qr", async () => {
-      render(<ImportQrForm />);
+      renderI18n(<ImportQrForm />);
       expect(submit()).toBeDisabled();
       fireEvent.change(screen.getByLabelText("QR payload"), {
         target: { value: `conceal.ccx7${"a".repeat(94)}?spend_key=${"b".repeat(64)}` },
@@ -121,7 +124,7 @@ describe("import forms", () => {
       decodeQrFromFile.mockResolvedValue(
         `conceal.ccx7${"c".repeat(94)}?spend_key=${"d".repeat(64)}`,
       );
-      render(<ImportQrForm />);
+      renderI18n(<ImportQrForm />);
       const file = new File([new Uint8Array([1, 2, 3])], "wallet-qr.png", { type: "image/png" });
       fireEvent.change(screen.getByLabelText("Or upload a QR image"), {
         target: { files: [file] },
@@ -138,7 +141,7 @@ describe("import forms", () => {
 
   describe("ImportFileForm", () => {
     it("keeps submit disabled until a valid JSON file is selected", async () => {
-      render(<ImportFileForm />);
+      renderI18n(<ImportFileForm />);
       expect(submit()).toBeDisabled();
       const file = new File(['{"version":1}'], "wallet.json", { type: "application/json" });
       fireEvent.change(screen.getByLabelText("JSON backup file"), { target: { files: [file] } });

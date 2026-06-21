@@ -2,12 +2,12 @@
 
 import { NotebookPen } from "lucide-react";
 import { useId, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTxNote } from "@/lib/hooks/use-tx-note";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { MAX_TX_NOTE_LENGTH } from "@/lib/storage/tx-note-format";
+import { toast } from "@/lib/ui/toast";
 
 /**
  * Private, device-local note attached to a transaction (by hash). Read view by
@@ -44,19 +44,19 @@ export function TransactionNote({ hash }: { hash: string }) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <NotebookPen className="size-4" aria-hidden="true" />
-          <span>Note</span>
+          <span>{t("txNote.note")}</span>
         </div>
-        <span className="text-xs text-muted-foreground">Stored only on this device</span>
+        <span className="text-xs text-muted-foreground">{t("txNote.localOnly")}</span>
       </div>
 
       {editing ? (
         <div className="mt-3 space-y-2">
           <Textarea
             id={fieldId}
-            aria-label="Transaction note"
+            aria-label={t("txNote.aria")}
             value={draft}
             maxLength={MAX_TX_NOTE_LENGTH}
-            placeholder="Add a private note for this transaction…"
+            placeholder={t("txNote.placeholder")}
             onChange={(event) => setDraft(event.target.value)}
             autoFocus
           />
@@ -72,10 +72,10 @@ export function TransactionNote({ hash }: { hash: string }) {
                 onClick={() => setEditing(false)}
                 disabled={isSaving}
               >
-                Cancel
+                {t("action.cancel")}
               </Button>
               <Button type="button" size="sm" onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Saving…" : "Save"}
+                {isSaving ? t("action.saving") : t("action.save")}
               </Button>
             </div>
           </div>
@@ -83,7 +83,7 @@ export function TransactionNote({ hash }: { hash: string }) {
       ) : (
         <div className="mt-2">
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading note…</p>
+            <p className="text-sm text-muted-foreground">{t("txNote.loading")}</p>
           ) : note ? (
             <div className="flex items-start justify-between gap-3">
               <p className="min-w-0 whitespace-pre-wrap break-words text-sm text-foreground">

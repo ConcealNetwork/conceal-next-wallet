@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useWalletSession } from "@/lib/session/wallet-session";
 
 function RouteLoading({ label }: { label: string }) {
@@ -23,6 +24,7 @@ function RouteLoading({ label }: { label: string }) {
 }
 
 export function WalletGuard({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const { status, walletInfo, isHydrated } = useWalletSession();
@@ -39,13 +41,14 @@ export function WalletGuard({ children }: { children: React.ReactNode }) {
   }, [isHydrated, pathname, router, sessionOpen]);
 
   if (!isHydrated || !sessionOpen) {
-    return <RouteLoading label="Loading wallet..." />;
+    return <RouteLoading label={t("common.loadingWallet")} />;
   }
 
   return children;
 }
 
 export function OnboardingGuard({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
   const { status, isHydrated } = useWalletSession();
@@ -65,7 +68,7 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
   }, [isHydrated, pathname, router, status]);
 
   if (!isHydrated) {
-    return <RouteLoading label="Loading..." />;
+    return <RouteLoading label={t("common.loading")} />;
   }
 
   return children;

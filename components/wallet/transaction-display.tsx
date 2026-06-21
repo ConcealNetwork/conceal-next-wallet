@@ -12,8 +12,8 @@ import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { Formatters } from "@/lib/i18n/use-formatters";
 import type { Transaction, TransactionType } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/ui/transaction-kind";
+import { cn } from "@/lib/utils";
 
 // `t` resolves an i18n key against the active locale; matches useI18n().t.
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
