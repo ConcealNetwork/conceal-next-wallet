@@ -141,6 +141,26 @@ const SDK_STATE_FIELD = "sdkWalletState";
  */
 const RESCAN_LAG_BLOCKS = 10;
 
+/**
+ * Blocks fetched per sync batch. Larger batches cut the per-batch round-trip COUNT — the dominant
+ * deep-sync cost on a remote node (latency × number of requests). The daemon caps a single
+ * `get_raw_transactions_by_heights` range by BOTH height span AND tx payload (a live node served
+ * 1000 blocks but reset at 1500+, and the cap shrinks as tx density rises), so this can't go
+ * arbitrarily high. 250 stays comfortably under the cap on typical chains (~2.5× fewer requests
+ * than the old 100); {@link fetchSyncRange} transparently splits any batch that still exceeds the
+ * cap on an unusually dense region, so raising this never aborts a sync.
+ */
+const SYNC_BATCH_BLOCKS = 250;
+
+/**
+ * Max times {@link fetchSyncRange} halves a failing range before giving up (bounds retry fan-out
+ * on a down node to a leftmost spine of `depth + 1` requests). 8 lets the default {@link
+ * SYNC_BATCH_BLOCKS} (250) split all the way down to a SINGLE block (`ceil(log2(250)) = 8`), so an
+ * extreme payload spike can be isolated to one block rather than aborting the sync at a ~15-block
+ * floor (a single block over the cap is a true daemon limit and then legitimately propagates).
+ */
+const MAX_FETCH_SPLIT_DEPTH = 8;
+
 /** A live, unlocked SDK wallet runtime. */
 export interface SdkRuntime {
   /**
@@ -530,11 +550,53 @@ const poolScanWarned = new WeakSet<SdkRuntime>();
 // Same one-warning-per-runtime treatment for the durable outbound-queue drainer (#92).
 const queueDrainWarned = new WeakSet<SdkRuntime>();
 
+/**
+ * Fetch the HALF-OPEN block range `[start, end)` from the daemon, splitting into halves and
+ * concatenating on a fetch failure — so a single over-cap request (a dense region exceeding the
+ * daemon's range/payload limit, or a transient blip) splits and recovers instead of aborting the
+ * whole sync. Returns the txs for the FULL requested range in ascending order, so callers keep a
+ * DETERMINISTIC `endBlock` (the pipeline math is unaffected by an internal split). Bottoms out at a
+ * single block (or {@link MAX_FETCH_SPLIT_DEPTH}): if even that fails the error propagates — the
+ * node is genuinely unreachable, not merely over-cap — and the sync retries from `scannedHeight`
+ * on the next poll.
+ *
+ * Relies on the daemon ERRORING (connection reset / non-OK status) when a range exceeds its cap —
+ * verified on a live node and in the SDK client (an HTTP-not-ok response and a non-OK JSON status
+ * both throw). It does NOT defend against a hypothetical node that returns `200 OK` with SILENTLY
+ * TRUNCATED blocks: with miner-txs off an empty batch is valid, so a short response is
+ * indistinguishable from "no owned txs" and cannot be detected from the payload (this is a
+ * pre-existing property of the sparse sync response, not introduced here).
+ *
+ * Exported for direct unit testing of the split/ordering behavior.
+ */
+export async function fetchSyncRange(
+  daemon: DaemonClient,
+  start: number,
+  end: number,
+  includeMinerTxs: boolean,
+  depth = 0,
+): Promise<DaemonRawTransaction[]> {
+  try {
+    return await daemon.getWalletSyncData(start, end, includeMinerTxs);
+  } catch (error) {
+    // Intentionally broad: a non-retryable error (e.g. a malformed-response throw) simply
+    // propagates after a bounded amount of wasted split-and-retry — never silently swallowed.
+    const span = end - start;
+    if (span <= 1 || depth >= MAX_FETCH_SPLIT_DEPTH) throw error;
+    const mid = start + Math.floor(span / 2);
+    // `left` (lower heights) before `right` keeps the concatenation ascending — the daemon returns
+    // each sub-range ascending, so the merged result stays in block order for the sequential fold.
+    const left = await fetchSyncRange(daemon, start, mid, includeMinerTxs, depth + 1);
+    const right = await fetchSyncRange(daemon, mid, end, includeMinerTxs, depth + 1);
+    return left.concat(right);
+  }
+}
+
 async function syncOnce(rt: SdkRuntime): Promise<number> {
   // Await WASM crypto init before scanTransactionOutputsAndDeposits / ring math.
   await ensureSdkReady();
   const height = await rt.daemon.getHeight();
-  const batchSize = 100;
+  const batchSize = SYNC_BATCH_BLOCKS;
   // Coinbase (miner) outputs are scanned only when the wallet opts in (solo mining).
   const includeMinerTxs = Boolean(rt.raw.options?.checkMinerTx);
   // Resume from a re-scan window below the last scanned height (see RESCAN_LAG_BLOCKS),
@@ -575,7 +637,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // 200, 300, …) — a tx mined into a boundary block was never scanned → missing balance.
     // `endBlock + 1` past the tip is safely clamped by the daemon (no error). Upstream SDK has
     // the same off-by-one; reported separately.
-    const data = rt.daemon.getWalletSyncData(startBlock, endBlock + 1, includeMinerTxs);
+    const data = fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
     // `unhandledrejection`. The real `await data` below still surfaces the error normally
