@@ -1,4 +1,4 @@
-import type { WalletInfo, WalletSummary } from "@/lib/types";
+import type { SecondaryWalletStatus, WalletInfo, WalletSummary } from "@/lib/types";
 
 export type { WalletSummary };
 
@@ -118,4 +118,12 @@ export interface WalletService {
   renameWallet(id: string, label: string): Promise<void>;
   /** Delete a wallet by id (erases its keyspace + drops it from the registry). */
   deleteWallet(id: string): Promise<void>;
+  /**
+   * Background-sync every UNLOCKED non-active wallet and report its mined balance +
+   * received-message count, so the UI can detect funds/messages arriving on a wallet the
+   * user isn't viewing and fire a cross-wallet notification (#108). Best-effort per
+   * wallet. Real mode returns one entry per unlocked non-active wallet; mock mode returns
+   * `[]` (no real background sync).
+   */
+  syncSecondaryWallets(): Promise<SecondaryWalletStatus[]>;
 }

@@ -56,6 +56,21 @@ export type WalletSummary = {
   balanceTotal?: CcxAmount;
 };
 
+/**
+ * Live status of an UNLOCKED non-active wallet after a background sync (#108). Used to
+ * detect funds/messages arriving on a wallet the user isn't currently viewing, so a
+ * cross-wallet notification can fire. Real mode reports one entry per unlocked non-active
+ * wallet; mock mode returns none (no real background sync).
+ */
+export type SecondaryWalletStatus = {
+  id: string;
+  label: string;
+  /** Mined balance — an INCREASE since the last observation means funds arrived. */
+  balanceTotal: CcxAmount;
+  /** Count of reconstructed received-message records — an INCREASE means a new message. */
+  receivedCount: number;
+};
+
 export type TransactionType =
   | "receive"
   | "send"

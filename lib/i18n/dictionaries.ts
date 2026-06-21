@@ -184,6 +184,12 @@ const en: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Unlock with Touch ID / Windows Hello, a security key, or your phone — on this device",
   "settings.notifications": "Enable notifications",
+  "settings.watchWallets": "Watch other wallets",
+  "settings.watchWalletsDescription":
+    "Background-sync your other unlocked wallets and notify you when funds or messages arrive in them.",
+  "settings.watchWalletsAriaLabel": "Toggle watching other wallets",
+  "settings.toastWatchWalletsEnabled": "Now watching your other unlocked wallets.",
+  "settings.toastWatchWalletsDisabled": "Stopped watching other wallets.",
   "settings.notificationsDescription":
     "Get OS notifications for due payment reminders and overdue check-ins, in addition to in-app toasts. Opt-in — nothing is sent automatically.",
   "settings.notificationsAriaLabel": "Enable notifications",
@@ -1109,6 +1115,12 @@ const es: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Desbloquea con Touch ID / Windows Hello, una llave de seguridad o tu teléfono, en este dispositivo",
   "settings.notifications": "Activar notificaciones",
+  "settings.watchWallets": "Vigilar otras carteras",
+  "settings.watchWalletsDescription":
+    "Sincroniza en segundo plano tus otras carteras desbloqueadas y te avisa cuando reciben fondos o mensajes.",
+  "settings.watchWalletsAriaLabel": "Alternar vigilancia de otras carteras",
+  "settings.toastWatchWalletsEnabled": "Ahora se vigilan tus otras carteras desbloqueadas.",
+  "settings.toastWatchWalletsDisabled": "Se dejó de vigilar otras carteras.",
   "settings.notificationsDescription":
     "Recibe notificaciones del sistema para recordatorios de pago vencidos y verificaciones pendientes, además de los avisos dentro de la app. Es opcional: no se envía nada automáticamente.",
   "settings.notificationsAriaLabel": "Activar notificaciones",
@@ -2047,6 +2059,13 @@ const fr: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Déverrouillez avec Touch ID / Windows Hello, une clé de sécurité ou votre téléphone, sur cet appareil",
   "settings.notifications": "Activer les notifications",
+  "settings.watchWallets": "Surveiller les autres portefeuilles",
+  "settings.watchWalletsDescription":
+    "Synchronise en arrière-plan vos autres portefeuilles déverrouillés et vous prévient lorsqu'ils reçoivent des fonds ou des messages.",
+  "settings.watchWalletsAriaLabel": "Activer la surveillance des autres portefeuilles",
+  "settings.toastWatchWalletsEnabled":
+    "Surveillance de vos autres portefeuilles déverrouillés activée.",
+  "settings.toastWatchWalletsDisabled": "Surveillance des autres portefeuilles désactivée.",
   "settings.notificationsDescription":
     "Recevez des notifications système pour les rappels de paiement échus et les vérifications en retard, en plus des messages dans l'application. Sur option : rien n'est envoyé automatiquement.",
   "settings.notificationsAriaLabel": "Activer les notifications",
@@ -2993,6 +3012,12 @@ const de: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Entsperre mit Touch ID / Windows Hello, einem Sicherheitsschlüssel oder deinem Telefon – auf diesem Gerät",
   "settings.notifications": "Benachrichtigungen aktivieren",
+  "settings.watchWallets": "Andere Wallets überwachen",
+  "settings.watchWalletsDescription":
+    "Synchronisiert deine anderen entsperrten Wallets im Hintergrund und benachrichtigt dich, wenn dort Gelder oder Nachrichten eingehen.",
+  "settings.watchWalletsAriaLabel": "Überwachung anderer Wallets umschalten",
+  "settings.toastWatchWalletsEnabled": "Deine anderen entsperrten Wallets werden jetzt überwacht.",
+  "settings.toastWatchWalletsDisabled": "Überwachung anderer Wallets beendet.",
   "settings.notificationsDescription":
     "Erhalte Systembenachrichtigungen für fällige Zahlungserinnerungen und überfällige Check-ins, zusätzlich zu In-App-Hinweisen. Opt-in – es wird nichts automatisch gesendet.",
   "settings.notificationsAriaLabel": "Benachrichtigungen aktivieren",
@@ -3935,6 +3960,12 @@ const it: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Sblocca con Touch ID / Windows Hello, una chiave di sicurezza o il tuo telefono, su questo dispositivo",
   "settings.notifications": "Abilita le notifiche",
+  "settings.watchWallets": "Monitora altri portafogli",
+  "settings.watchWalletsDescription":
+    "Sincronizza in background gli altri portafogli sbloccati e ti avvisa quando ricevono fondi o messaggi.",
+  "settings.watchWalletsAriaLabel": "Attiva/disattiva il monitoraggio di altri portafogli",
+  "settings.toastWatchWalletsEnabled": "Ora monitoriamo i tuoi altri portafogli sbloccati.",
+  "settings.toastWatchWalletsDisabled": "Monitoraggio di altri portafogli interrotto.",
   "settings.notificationsDescription":
     "Ricevi notifiche di sistema per i promemoria di pagamento scaduti e i controlli in ritardo, oltre agli avvisi nell'app. Facoltativo: non viene inviato nulla automaticamente.",
   "settings.notificationsAriaLabel": "Abilita le notifiche",
@@ -4875,6 +4906,12 @@ const pt: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Desbloqueie com Touch ID / Windows Hello, uma chave de segurança ou seu telefone, neste dispositivo",
   "settings.notifications": "Ativar notificações",
+  "settings.watchWallets": "Monitorar outras carteiras",
+  "settings.watchWalletsDescription":
+    "Sincroniza em segundo plano as suas outras carteiras desbloqueadas e avisa quando recebem fundos ou mensagens.",
+  "settings.watchWalletsAriaLabel": "Alternar monitoramento de outras carteiras",
+  "settings.toastWatchWalletsEnabled": "Agora monitorando as suas outras carteiras desbloqueadas.",
+  "settings.toastWatchWalletsDisabled": "Monitoramento de outras carteiras interrompido.",
   "settings.notificationsDescription":
     "Receba notificações do sistema para lembretes de pagamento vencidos e verificações atrasadas, além dos avisos no aplicativo. Opcional: nada é enviado automaticamente.",
   "settings.notificationsAriaLabel": "Ativar notificações",
@@ -5808,6 +5845,13 @@ const ru: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Разблокируйте с помощью Touch ID / Windows Hello, ключа безопасности или телефона — на этом устройстве",
   "settings.notifications": "Включить уведомления",
+  "settings.watchWallets": "Следить за другими кошельками",
+  "settings.watchWalletsDescription":
+    "Фоновая синхронизация других разблокированных кошельков и уведомления о поступлении средств или сообщений.",
+  "settings.watchWalletsAriaLabel": "Переключить слежение за другими кошельками",
+  "settings.toastWatchWalletsEnabled":
+    "Теперь отслеживаются ваши другие разблокированные кошельки.",
+  "settings.toastWatchWalletsDisabled": "Слежение за другими кошельками отключено.",
   "settings.notificationsDescription":
     "Получайте системные уведомления о просроченных напоминаниях об оплате и просроченных проверках — в дополнение к уведомлениям внутри приложения. По желанию: ничего не отправляется автоматически.",
   "settings.notificationsAriaLabel": "Включить уведомления",
@@ -6736,6 +6780,12 @@ const zh: Dictionary = {
   "settings.passkeyUnlockDescription":
     "在本设备上使用 Touch ID / Windows Hello、安全密钥或手机解锁",
   "settings.notifications": "启用通知",
+  "settings.watchWallets": "监视其他钱包",
+  "settings.watchWalletsDescription":
+    "在后台同步您其他已解锁的钱包，并在它们收到资金或消息时通知您。",
+  "settings.watchWalletsAriaLabel": "切换监视其他钱包",
+  "settings.toastWatchWalletsEnabled": "正在监视您其他已解锁的钱包。",
+  "settings.toastWatchWalletsDisabled": "已停止监视其他钱包。",
   "settings.notificationsDescription":
     "除应用内提示外，还可接收到期付款提醒和逾期签到的系统通知。需主动开启——不会自动发送任何内容。",
   "settings.notificationsAriaLabel": "启用通知",
@@ -7633,6 +7683,12 @@ const ja: Dictionary = {
   "settings.passkeyUnlockDescription":
     "このデバイスで Touch ID / Windows Hello、セキュリティキー、またはスマートフォンを使ってロックを解除します",
   "settings.notifications": "通知を有効にする",
+  "settings.watchWallets": "他のウォレットを監視",
+  "settings.watchWalletsDescription":
+    "ロック解除済みの他のウォレットをバックグラウンドで同期し、入金やメッセージが届いたら通知します。",
+  "settings.watchWalletsAriaLabel": "他のウォレットの監視を切り替え",
+  "settings.toastWatchWalletsEnabled": "ロック解除済みの他のウォレットの監視を開始しました。",
+  "settings.toastWatchWalletsDisabled": "他のウォレットの監視を停止しました。",
   "settings.notificationsDescription":
     "アプリ内のトーストに加えて、支払いリマインダーの期限切れや確認の遅延についてOS通知を受け取ります。任意設定で、自動送信は行われません。",
   "settings.notificationsAriaLabel": "通知を有効にする",
@@ -8554,6 +8610,12 @@ const ko: Dictionary = {
   "settings.passkeyUnlockDescription":
     "이 기기에서 Touch ID / Windows Hello, 보안 키 또는 휴대폰으로 잠금을 해제하세요",
   "settings.notifications": "알림 사용",
+  "settings.watchWallets": "다른 지갑 모니터링",
+  "settings.watchWalletsDescription":
+    "잠금 해제된 다른 지갑을 백그라운드에서 동기화하고 자금이나 메시지가 도착하면 알립니다.",
+  "settings.watchWalletsAriaLabel": "다른 지갑 모니터링 전환",
+  "settings.toastWatchWalletsEnabled": "잠금 해제된 다른 지갑을 모니터링합니다.",
+  "settings.toastWatchWalletsDisabled": "다른 지갑 모니터링을 중지했습니다.",
   "settings.notificationsDescription":
     "앱 내 토스트 외에도 기한이 지난 결제 알림과 지연된 체크인에 대한 OS 알림을 받습니다. 선택 사항이며 자동으로 전송되는 것은 없습니다.",
   "settings.notificationsAriaLabel": "알림 사용",

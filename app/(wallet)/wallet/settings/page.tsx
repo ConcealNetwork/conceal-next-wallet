@@ -47,6 +47,10 @@ import {
   requestNotificationPermission,
   setOptedIn,
 } from "@/lib/notifications/notify";
+import {
+  isWatchOtherWalletsEnabled,
+  setWatchOtherWalletsEnabled,
+} from "@/lib/notifications/watch-wallets";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
 import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
@@ -185,6 +189,37 @@ function NotificationsSetting() {
       />
       <p className="text-right text-xs text-muted-foreground">{stateLabel}</p>
     </div>
+  );
+}
+
+/**
+ * Opt into background-syncing the user's OTHER unlocked wallets so funds/messages arriving
+ * there fire a notification (#108). Device-local; off by default (it's a battery/network
+ * tradeoff — N wallets = N scan loops). Notifications still require the opt-in above.
+ */
+function WatchOtherWalletsSetting() {
+  const { t } = useI18n();
+  // Start "false" to match SSR (localStorage is client-only); hydrate on mount.
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    setEnabled(isWatchOtherWalletsEnabled());
+  }, []);
+
+  function handleToggle(checked: boolean) {
+    setWatchOtherWalletsEnabled(checked);
+    setEnabled(checked);
+    toast.success(
+      checked ? t("settings.toastWatchWalletsEnabled") : t("settings.toastWatchWalletsDisabled"),
+    );
+  }
+
+  return (
+    <Switch
+      checked={enabled}
+      onCheckedChange={handleToggle}
+      aria-label={t("settings.watchWalletsAriaLabel")}
+    />
   );
 }
 
@@ -418,6 +453,14 @@ export default function SettingsPage() {
               >
                 <NotificationsSetting />
               </Row>
+              {!isMock ? (
+                <Row
+                  label={t("settings.watchWallets")}
+                  description={t("settings.watchWalletsDescription")}
+                >
+                  <WatchOtherWalletsSetting />
+                </Row>
+              ) : null}
               <Row label={t("settings.ticker")} description={t("settings.tickerDescription")}>
                 <select
                   className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"

@@ -174,4 +174,8 @@ export const mockWalletService: WalletService = {
       mockActiveId = mockWallets[0]?.id ?? "default";
     }
   },
+  async syncSecondaryWallets() {
+    // Mock mode has no real per-wallet background sync — nothing to watch (#108).
+    return [];
+  },
 };
