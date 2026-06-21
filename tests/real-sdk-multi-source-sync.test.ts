@@ -179,6 +179,25 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
     expect(home.ranges.some(([, e]) => e > height - 100)).toBe(true); // home served the tip
   });
 
+  it("single-node DEEP sync verifies coverage too — a truncating home throws (no silent skip)", async () => {
+    // The residual hole flagged in #177 re-review: the single-node pipeline (custom node, or the
+    // multi-source fallback/tip) also trusts a load-balanced home. Far-behind single-node fetches
+    // are now verified, so a home that drops a block answers loud (sync rejects + retries) instead
+    // of silently advancing the cursor past it.
+    const height = 6000; // far behind → single-node path now verifies
+    const home = homeDaemon(height);
+    const base = home.stub.getWalletSyncData;
+    home.stub.getWalletSyncData = async (s: number, e: number, miner?: boolean) => {
+      const txs = (await base(s, e, miner)) as Array<{ height: number }>;
+      // Drop the last block of every verified (miner-txs) range the home serves.
+      return miner ? txs.filter((t) => t.height !== e - 1) : txs;
+    };
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    installRuntime(runtimeMod, home.stub, { customNode: true, nodeUrl: "https://my.node/" });
+
+    await expect(runtimeMod.sync()).rejects.toThrow(/incomplete range/i);
+  });
+
   it("a peer that probes high but FETCHES SHORT cannot skip blocks — verification fails it over to home", async () => {
     // THE fund-safety regression for #177: a peer reports a tip height (passes height-gating) but a
     // load-balanced backend answers with a truncated range. Without coverage verification, the sync

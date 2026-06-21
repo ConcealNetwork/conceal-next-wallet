@@ -658,7 +658,10 @@ export async function fetchVerifiedRange(
   for (const tx of raw) {
     if (typeof tx.height === "number") seen.add(tx.height);
   }
-  for (let h = start; h < end; h++) {
+  // Block 0 (genesis) has no coinbase and the SDK normalizes `startBlock === 0 → 1`, so it's never
+  // servable — start the coverage assertion at block 1 to avoid a false "block 0 missing" throw
+  // (the live multi-source/tip paths always pass start ≥ 1; this only hardens the exported fn).
+  for (let h = Math.max(start, 1); h < end; h++) {
     if (!seen.has(h)) {
       throw new Error(`Node returned an incomplete range: block ${h} missing in [${start}, ${end}).`);
     }
@@ -735,6 +738,13 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // extra re-scanned block mid-catch-up is harmless; `seedFloor` still pins the lower bound.
   const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
   let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS - 1);
+  // A DEEP catch-up (fresh import / long offline). Drives BOTH the multi-source bulk phase AND
+  // coverage-VERIFICATION of the single-node pipeline: during a deep sync a truncated/short response
+  // from a (load-balanced) node would skip blocks deep in history that the tip re-scan window can
+  // never recover — so far-behind single-node fetches are verified too. Normal incremental polls
+  // stay sparse/unverified (no miner-tx payload); a transient tip truncation there self-heals via
+  // RESCAN_LAG_BLOCKS on the next poll (PR #177 review — Codex/Gemini).
+  const farBehind = height - scanned > FAR_BEHIND_THRESHOLD;
   const startState = rt.state;
   let state = rt.state;
 
@@ -791,7 +801,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // covers the ENTIRE remaining range from `scanned`. Block ranges are public, so distributing them
   // across nodes leaks nothing about ownership.
   const usingCustomNode = Boolean(rt.raw.options?.customNode);
-  if (!usingCustomNode && height - scanned > FAR_BEHIND_THRESHOLD) {
+  if (!usingCustomNode && farBehind) {
     const bulkEnd = height - MULTI_SOURCE_TIP_MARGIN; // half-open exclusive; the tip stays on home
     if (bulkEnd > scanned + 1) {
       try {
@@ -834,7 +844,12 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // 200, 300, …) — a tx mined into a boundary block was never scanned → missing balance.
     // `endBlock + 1` past the tip is safely clamped by the daemon (no error). Upstream SDK has
     // the same off-by-one; reported separately.
-    const data = fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
+    // On a deep catch-up, VERIFY coverage (a load-balanced home can answer short from a trailing
+    // backend, skipping blocks deep in history); on incremental polls, the cheap sparse fetch (a
+    // tip truncation self-heals via the next poll's RESCAN_LAG window).
+    const data = farBehind
+      ? fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs)
+      : fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
     // `unhandledrejection`. The real `await data` below still surfaces the error normally
