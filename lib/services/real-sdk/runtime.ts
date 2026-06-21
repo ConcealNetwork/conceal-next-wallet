@@ -552,14 +552,26 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   );
   let receivedChanged = false;
 
-  while (scanned < height) {
-    const startBlock = scanned + 1;
+  // Pipeline the daemon fetch with the WASM fold: prefetch the NEXT block range while
+  // folding the current one, so the round-trip (latency-dominant on remote nodes) overlaps
+  // the scan instead of running serially. Wall-clock drops from ~sum(Σfetch + Σfold) toward
+  // ~max(Σfetch, Σfold). Folding + the state publish stay strictly sequential (one batch at
+  // a time on the main thread); only the network fetch is overlapped.
+  const fetchFrom = (from: number): { endBlock: number; data: Promise<DaemonRawTransaction[]> } => {
+    const startBlock = from + 1;
     const endBlock = Math.min(startBlock + batchSize - 1, height);
-    const rawTransactions = await rt.daemon.getWalletSyncData(
-      startBlock,
+    return {
       endBlock,
-      includeMinerTxs,
-    );
+      data: rt.daemon.getWalletSyncData(startBlock, endBlock, includeMinerTxs),
+    };
+  };
+
+  let pending = scanned < height ? fetchFrom(scanned) : null;
+  while (pending) {
+    const { endBlock, data } = pending;
+    const rawTransactions = await data;
+    // Kick off the next range's fetch BEFORE folding, so it downloads during the scan.
+    pending = endBlock < height ? fetchFrom(endBlock) : null;
     for (const rawTx of rawTransactions) {
       const folded = foldTransaction(state, rawTx, rt.account.keys);
       state = folded.state;
