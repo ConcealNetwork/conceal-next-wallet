@@ -88,7 +88,9 @@ function homeDaemon(height: number) {
       getRandomOuts: () => Promise.resolve([]),
       getWalletSyncData: async (start: number, end: number, includeMinerTxs?: boolean) => {
         ranges.push([start, end]);
-        return includeMinerTxs ? coinbaseTxsFor(start, end) : [];
+        // Clamp at the chain height like the real daemon — block `height` (the count) does not
+        // exist, so a healthy node never returns it. This makes the tip-batch coverage cap real.
+        return includeMinerTxs ? coinbaseTxsFor(start, Math.min(end, height)) : [];
       },
     } as DaemonStub,
   };
@@ -115,6 +117,36 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
 
     expect(await runtimeMod.sync()).toBe(500);
     expect(fetchSmartNodesMock).not.toHaveBeenCalled();
+  });
+
+  it("idle-at-tip sync completes (does not wedge) when the home clamps the past-tip request", async () => {
+    // Liveness guard: the tip batch passes end = height + 1, but block `height` (the count) never
+    // exists — a real (clamping) daemon won't return it. The coverage cap must not require it, or
+    // every sync would throw at the tip. Here the wallet is already at the tip; one idle poll.
+    const height = 500;
+    const home = homeDaemon(height); // clamps at height (no block 500)
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const acct = createAccount("english");
+    runtimeMod._setRuntimeForTest({
+      account: acct,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+        creationHeight: 0,
+      },
+      state: { ...createWalletState(acct), scannedHeight: height }, // caught up to the tip
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: home.stub as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    // Must resolve cleanly (a missing block `height` would throw "incomplete range" and wedge).
+    expect(await runtimeMod.sync()).toBe(height);
   });
 
   it("does NOT probe the pool when the wallet uses a custom node, even if far behind", async () => {
@@ -159,7 +191,10 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
       const body = JSON.parse((init?.body as string) ?? "{}");
       const [s, e] = body.heights as [number, number];
       peerRanges.push([s, e]);
-      return { ok: true, json: async () => ({ status: "OK", transactions: coinbaseTxsFor(s, e) }) };
+      return {
+        ok: true,
+        json: async () => ({ status: "OK", transactions: coinbaseTxsFor(s, Math.min(e, height)) }),
+      };
       // biome-ignore lint/suspicious/noExplicitAny: minimal fetch stub
     }) as any;
 
@@ -258,7 +293,7 @@ describe("fetchVerifiedRange", () => {
   it("returns the range with coinbases filtered out for a non-mining wallet", async () => {
     const runtimeMod = await import("@/lib/services/real-sdk/runtime");
     const daemon = daemonReturning((s, e) => coinbaseTxsFor(s, e));
-    const result = await runtimeMod.fetchVerifiedRange(daemon, 10, 15, false);
+    const result = await runtimeMod.fetchVerifiedRange(daemon, 10, 15, false, 1000);
     // All five blocks were coinbase-only → filtered → nothing to fold, but coverage passed.
     expect(result).toEqual([]);
   });
@@ -266,7 +301,7 @@ describe("fetchVerifiedRange", () => {
   it("KEEPS coinbases for a solo-mining wallet (checkMinerTx on)", async () => {
     const runtimeMod = await import("@/lib/services/real-sdk/runtime");
     const daemon = daemonReturning((s, e) => coinbaseTxsFor(s, e));
-    const result = await runtimeMod.fetchVerifiedRange(daemon, 10, 13, true);
+    const result = await runtimeMod.fetchVerifiedRange(daemon, 10, 13, true, 1000);
     expect(result).toHaveLength(3); // coinbases kept (heights 10,11,12)
   });
 
@@ -276,7 +311,7 @@ describe("fetchVerifiedRange", () => {
     const daemon = daemonReturning((s, e) =>
       coinbaseTxsFor(s, e).filter((t) => (t as { height: number }).height !== 12),
     );
-    await expect(runtimeMod.fetchVerifiedRange(daemon, 10, 15, false)).rejects.toThrow(
+    await expect(runtimeMod.fetchVerifiedRange(daemon, 10, 15, false, 1000)).rejects.toThrow(
       /incomplete range|block 12 missing/i,
     );
   });

@@ -652,18 +652,26 @@ export async function fetchVerifiedRange(
   start: number,
   end: number,
   walletWantsMinerTxs: boolean,
+  chainHeight: number,
 ): Promise<DaemonRawTransaction[]> {
   const raw = await fetchSyncRange(daemon, start, end, true);
   const seen = new Set<number>();
   for (const tx of raw) {
     if (typeof tx.height === "number") seen.add(tx.height);
   }
-  // Block 0 (genesis) has no coinbase and the SDK normalizes `startBlock === 0 → 1`, so it's never
-  // servable — start the coverage assertion at block 1 to avoid a false "block 0 missing" throw
-  // (the live multi-source/tip paths always pass start ≥ 1; this only hardens the exported fn).
-  for (let h = Math.max(start, 1); h < end; h++) {
+  // Require every EXISTING block in the range. `chainHeight` is a block COUNT, so the highest real
+  // block is `chainHeight - 1`; the daemon clamps a past-tip upper bound (verified live), and the
+  // tip batch legitimately passes `end = endBlock + 1 = chainHeight + 1`. So cap the assertion at
+  // `min(end, chainHeight)` — block `chainHeight` (and beyond) never exists, so requiring it would
+  // wedge every sync at the tip. Block 0 (genesis) has no coinbase and the SDK normalizes start
+  // 0→1, so start at block 1. A node BEHIND the observed `chainHeight` still returns fewer blocks
+  // than `[start, min(end, chainHeight))` → throws → the truncating/trailing-backend detection holds.
+  const required = Math.min(end, chainHeight);
+  for (let h = Math.max(start, 1); h < required; h++) {
     if (!seen.has(h)) {
-      throw new Error(`Node returned an incomplete range: block ${h} missing in [${start}, ${end}).`);
+      throw new Error(
+        `Node returned an incomplete range: block ${h} missing in [${start}, ${required}).`,
+      );
     }
   }
   return walletWantsMinerTxs ? raw : raw.filter((tx) => !isCoinbaseTx(tx));
@@ -691,7 +699,7 @@ async function buildSyncSources(
     height: homeHeight,
     // Verify even the home node: explorer.conceal.network is itself load-balanced, so a single
     // request can land on a trailing backend and answer short. Verification + failover make that safe.
-    fetch: (start, end) => fetchVerifiedRange(rt.daemon, start, end, includeMinerTxs),
+    fetch: (start, end) => fetchVerifiedRange(rt.daemon, start, end, includeMinerTxs, homeHeight),
   };
 
   let candidateUrls: string[];
@@ -714,8 +722,9 @@ async function buildSyncSources(
       // rankNodes only returns probes with a non-null height.
       height: probe.height as number,
       // Untrusted pool peer — fetchVerifiedRange proves it returned every block (else it throws
-      // and the driver fails over to another node / home), closing the silent-skip hole.
-      fetch: (start, end) => fetchVerifiedRange(daemon, start, end, includeMinerTxs),
+      // and the driver fails over to another node / home), closing the silent-skip hole. Cap the
+      // coverage requirement at the HOME node's height (the authoritative tip we're syncing to).
+      fetch: (start, end) => fetchVerifiedRange(daemon, start, end, includeMinerTxs, homeHeight),
     };
   });
   return [home, ...peers];
@@ -847,7 +856,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // backend would answer short and silently skip blocks — at ANY catch-up depth, not just far
     // behind (PR #177 review — Codex/Gemini/GLM). The coverage marker (a coinbase per block) makes
     // the cost negligible on an idle poll (~RESCAN_LAG blocks) and is filtered before the fold.
-    const data = fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
+    const data = fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs, height);
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
     // `unhandledrejection`. The real `await data` below still surfaces the error normally
