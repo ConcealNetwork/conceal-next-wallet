@@ -55,15 +55,19 @@ export function OutboundQueueCard() {
                   <p className="mt-0.5 text-xs text-muted-foreground">{entry.hash.slice(0, 16)}…</p>
                 )}
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={cancel.isPending}
-                onClick={() => handleCancel(entry)}
-              >
-                {entry.state === "failed" ? t("queue.dismiss") : t("queue.cancel")}
-              </Button>
+              {/* A "broadcast" entry is live on the network — it can't be cancelled (that
+                  would free its inputs while the tx can still mine), so offer no control. */}
+              {entry.state !== "broadcast" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={cancel.isPending}
+                  onClick={() => handleCancel(entry)}
+                >
+                  {entry.state === "failed" ? t("queue.dismiss") : t("queue.cancel")}
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>

@@ -23,7 +23,7 @@ import {
   withPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
+import { persist, persistRuntime, requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
   decodeRecipient,
   enqueueAndBroadcast,
@@ -212,17 +212,23 @@ export const realSdkTransactionService: TransactionService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     const queue = queueForRuntime(rt);
-    // `cancel` removes a still-PENDING entry (frees its reserved inputs); for a non-pending
-    // entry (a failed broadcast the user wants to dismiss) fall back to `remove`.
+    // `cancel` frees a still-PENDING entry's reserved inputs. A "broadcast" entry is LIVE on
+    // the network — removing it would free its inputs while the tx can still mine, inviting a
+    // double-spend — so it must NOT be removed; only a "failed" entry can be dismissed, and an
+    // unknown id is a no-op (#92 review — Gemini/Codex/GLM #2/#5).
     const cancelled = await queue.cancel(id);
-    if (!cancelled) await queue.remove(id);
-    // Drop the matching optimistic-pending record so the UI row + balance hold clear too
-    // (the queue id IS the tx hash).
+    if (!cancelled) {
+      const entry = (await queue.list()).find((e) => e.id === id);
+      if (!entry || entry.state === "broadcast") return false;
+      await queue.remove(id); // dismiss a failed entry
+    }
+    // Cancelling/dismissing also clears the matching optimistic-pending row + balance hold.
+    // The queue id IS the tx hash (SDK guarantees `entry.id === entry.hash`).
     const pending = readPendingRecords(rt.raw);
     const remaining = pending.filter((record) => record.hash !== id);
     if (remaining.length !== pending.length) {
       rt.raw = withPendingRecords(rt.raw, remaining);
-      await persist();
+      await persistRuntime(rt);
     }
     return true;
   },

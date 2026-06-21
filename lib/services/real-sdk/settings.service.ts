@@ -18,7 +18,7 @@ import {
   fetchDecoys,
   MIXIN,
   ownKeys,
-  unspentOutputs,
+  selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
 import type { SettingsService } from "@/lib/services/settings.service";
 import { assertCanSpend } from "@/lib/services/view-only";
@@ -143,7 +143,7 @@ export const realSdkSettingsService: SettingsService = {
     const blockchainHeight = await rt.daemon.getHeight();
     const balance = getBalance(rt.state);
     const status = isOptimizationNeeded({
-      unspentOutputs: unspentOutputs(rt),
+      unspentOutputs: await selectableOutputs(rt),
       balance: balance.spendable,
       blockchainHeight,
     });
@@ -157,7 +157,7 @@ export const realSdkSettingsService: SettingsService = {
 
     const blockchainHeight = await rt.daemon.getHeight();
     const balance = getBalance(rt.state);
-    const outputs = unspentOutputs(rt);
+    const outputs = await selectableOutputs(rt);
 
     const status = isOptimizationNeeded({
       unspentOutputs: outputs,

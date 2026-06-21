@@ -20,7 +20,12 @@ import {
 import { COIN_FEE_ATOMIC } from "@/lib/config/config";
 import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
-import { decoysFromDaemon, persist, type SdkRuntime, sync } from "@/lib/services/real-sdk/runtime";
+import {
+  decoysFromDaemon,
+  persistRuntime,
+  type SdkRuntime,
+  syncRuntime,
+} from "@/lib/services/real-sdk/runtime";
 
 /** Local aliases for types that live inside the SDK's `transactions` namespace. */
 type BuiltTransaction = txns.BuiltTransaction;
@@ -95,11 +100,12 @@ export async function enqueueAndBroadcast(
   opts: { label?: string; notBefore?: number; ttlUnixSeconds?: number } = {},
 ): Promise<OutboundQueueState> {
   const queue = queueForRuntime(runtime);
-  // Record the tx private key (export / message-decryption parity) BEFORE persisting.
+  // Record the tx private key (export / message-decryption parity) and persist the wallet
+  // blob FIRST, bound to THIS runtime (#92 review — Codex/GLM #4): if persistence fails it
+  // throws BEFORE anything is enqueued/broadcast, so there's nothing to double-send on retry.
   recordTxPrivateKey(runtime, built);
+  await persistRuntime(runtime);
   await queue.enqueue(built, opts);
-  await persist(); // durably store the tx key in the wallet blob (the queue self-persists)
-
   let state: OutboundQueueState = "pending";
   try {
     const results = await queue.drainOnce();
@@ -107,9 +113,9 @@ export async function enqueueAndBroadcast(
   } catch {
     // Transient network error — the entry stays `pending` and the sync drainer retries.
   }
-  // Re-sync so a freshly-broadcast tx lands in the wallet's history.
+  // Re-sync (bound to this runtime) so a freshly-broadcast tx lands in the wallet's history.
   try {
-    await sync();
+    await syncRuntime(runtime);
   } catch {
     // Non-fatal: the next refresh reconciles state.
   }
@@ -145,10 +151,10 @@ export async function broadcast(runtime: SdkRuntime, built: BuiltTransaction): P
   }
   // Record the tx private key for later (export / message decryption parity).
   recordTxPrivateKey(runtime, built);
-  await persist();
+  await persistRuntime(runtime);
   // Re-sync so the freshly-broadcast transaction lands in the wallet's history.
   try {
-    await sync();
+    await syncRuntime(runtime);
   } catch {
     // A post-broadcast sync failure is non-fatal — the tx is already relayed and
     // the next refresh will reconcile state.
