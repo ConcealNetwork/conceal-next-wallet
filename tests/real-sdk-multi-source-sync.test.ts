@@ -149,6 +149,32 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
     expect(await runtimeMod.sync()).toBe(height);
   });
 
+  it("incremental (not-far-behind) sync uses the LIGHT path — no forced miner-txs", async () => {
+    // Regression guard: an already-synced wallet's polls must NOT force include_miner_txs (the
+    // coverage marker). Forcing it on every poll fetched a coinbase per block + ran the worker
+    // pool for tiny batches — slower than the original sparse path. Heavy machinery is far-behind only.
+    const minerFlags: boolean[] = [];
+    const height = 300; // < FAR_BEHIND_THRESHOLD (2000)
+    const daemon: DaemonStub = {
+      nodeUrl: "https://explorer.conceal.network/daemon/",
+      getHeight: () => Promise.resolve(height),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: async (_s: number, _e: number, includeMinerTxs?: boolean) => {
+        minerFlags.push(Boolean(includeMinerTxs));
+        return []; // sparse — the light path
+      },
+    };
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    installRuntime(runtimeMod, daemon);
+
+    expect(await runtimeMod.sync()).toBe(height);
+    expect(fetchSmartNodesMock).not.toHaveBeenCalled(); // no multi-source
+    expect(minerFlags.length).toBeGreaterThan(0);
+    expect(minerFlags.every((flag) => flag === false)).toBe(true); // never forced miner-txs
+  });
+
   it("does NOT probe the pool when the wallet uses a custom node, even if far behind", async () => {
     const home = homeDaemon(6000);
     const runtimeMod = await import("@/lib/services/real-sdk/runtime");
