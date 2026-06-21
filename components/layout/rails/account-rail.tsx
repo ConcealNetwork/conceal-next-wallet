@@ -45,6 +45,7 @@ function HoldingsSection() {
   const { t } = useI18n();
   const info = wallet.data;
 
+  const incomingPending = info?.incomingPending ? ccxToNumber(info.incomingPending) : 0;
   const holdings: Holding[] = info
     ? [
         {
@@ -53,6 +54,18 @@ function HoldingsSection() {
           note: t("rail.availableNote"),
           barClassName: "bg-primary",
         },
+        // Owned mempool funds not yet mined (#109) — shown only when present so the
+        // steady-state holdings list keeps its four rows.
+        ...(incomingPending > 0
+          ? [
+              {
+                label: t("rail.incomingPending"),
+                value: incomingPending,
+                note: t("rail.incomingPendingNote"),
+                barClassName: "bg-wallet-incoming",
+              },
+            ]
+          : []),
         {
           label: t("rail.locked"),
           value: ccxToNumber(info.lockedDeposits),
