@@ -126,6 +126,125 @@ describe("sync concurrency guard (review #2)", () => {
   });
 });
 
+describe("sync fetches contiguous block ranges (boundary-gap regression)", () => {
+  it("covers every block — no gap at batch boundaries (end-exclusive daemon range)", async () => {
+    const acct = createAccount("english");
+    const networkHeight = 250; // spans 3 batches of 100 → boundaries at blocks 100, 200
+    const calls: Array<[number, number]> = [];
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(networkHeight),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: async (start: number, end: number) => {
+        calls.push([start, end]);
+        return [];
+      },
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    runtimeMod._setRuntimeForTest({
+      account: acct,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+        creationHeight: 0,
+      },
+      state: { ...createWalletState(acct), scannedHeight: 0 },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    await runtimeMod.sync();
+
+    // The daemon's `get_raw_transactions_by_heights` range is HALF-OPEN `[start, end)`.
+    // Reconstruct exactly which blocks the sync fetched and assert NO block in
+    // `[1, networkHeight)` is skipped — especially boundary blocks 100 and 200, which the
+    // pre-fix loop (passing an inclusive `endBlock` to a half-open RPC) silently dropped.
+    const covered = new Set<number>();
+    for (const [start, end] of calls) {
+      for (let h = start; h < end; h++) covered.add(h);
+    }
+    // Cover every block through the top batch's reach (the final batch fetches up to and
+    // including `networkHeight` via the clamped half-open `[201, 251)`), so the assertion
+    // also pins the very-last-batch boundary, not just the interior 100/200 ones.
+    const missed: number[] = [];
+    for (let h = 1; h <= networkHeight; h++) if (!covered.has(h)) missed.push(h);
+    expect(missed).toEqual([]);
+    expect(covered.has(100)).toBe(true);
+    expect(covered.has(200)).toBe(true);
+    expect(covered.has(networkHeight)).toBe(true);
+
+    // Each batch is contiguous with the previous (start_n === end_{n-1}) — no overlap, no gap.
+    const ordered = [...calls].sort((a, b) => a[0] - b[0]);
+    for (let i = 1; i < ordered.length; i++) {
+      expect(ordered[i][0]).toBe(ordered[i - 1][1]);
+    }
+  });
+});
+
+describe("sync re-scan window covers a full lag depth at the tip (count-overshoot regression)", () => {
+  it("re-scans the last 10 real blocks even when scannedHeight is count-based (== height)", async () => {
+    const acct = createAccount("english");
+    // At the tip the sync advances scannedHeight to `height` (block COUNT, one past the top
+    // real block index height-1). A tx late-indexed exactly RESCAN_LAG_BLOCKS (10) blocks back
+    // must still fall inside the re-scan window.
+    const height = 100;
+    const calls: Array<[number, number]> = [];
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(height),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: async (start: number, end: number) => {
+        calls.push([start, end]);
+        return [];
+      },
+    };
+
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    runtimeMod._setRuntimeForTest({
+      account: acct,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+        creationHeight: 0,
+      },
+      // Already synced to the tip, with scannedHeight at the COUNT (height), not height-1.
+      state: { ...createWalletState(acct), scannedHeight: height },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    await runtimeMod.sync();
+
+    const covered = new Set<number>();
+    for (const [start, end] of calls) {
+      for (let h = start; h < end; h++) covered.add(h);
+    }
+    // The top real block is height-1 (99); the 10th block back is height-10 (90). Both — and
+    // every block between — must be re-scanned. Pre-fix the window started at height-9 (91),
+    // leaving block 90 (height-10) permanently unscanned for a late-indexed tx.
+    for (let h = height - 10; h <= height - 1; h++) {
+      expect(covered.has(h)).toBe(true);
+    }
+  });
+});
+
 describe("sync publishes scannedHeight per batch (live progress)", () => {
   it("advances rt.state.scannedHeight between batches, not only at the end", async () => {
     const acct = createAccount("english");
