@@ -84,6 +84,12 @@ import {
   readPendingRecords,
   withPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
+import {
+  readIncomingPendingRecords,
+  reconcileIncomingPending,
+  withIncomingPendingRecords,
+} from "@/lib/services/real-sdk/incoming-pending-store";
+import { scanPoolForOwned } from "@/lib/services/real-sdk/pool";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   DEFAULT_WALLET_ID,
@@ -586,7 +592,36 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     }
   }
 
-  if (stateChanged || receivedChanged || pendingChanged) {
+  // Incoming pending (#109): scan the daemon mempool for outputs owned by THIS wallet
+  // so a payment addressed to us shows (0-conf row + "pending in" balance) before it
+  // mines, reconciled by hash once it does. Best-effort — a daemon without the pool RPC,
+  // or any fetch/scan error, must never break the mined sync above.
+  let incomingChanged = false;
+  try {
+    const poolTxs = await rt.daemon.getTransactionsPool();
+    const scannedIncoming = scanPoolForOwned(
+      poolTxs,
+      toScanTransaction,
+      txns.scanTransactionOutputs,
+      rt.account.keys,
+      Date.now(),
+    );
+    const beforeIncoming = readIncomingPendingRecords(rt.raw);
+    const nextIncoming = reconcileIncomingPending(
+      beforeIncoming,
+      scannedIncoming,
+      rt.state,
+      Date.now(),
+    );
+    if (nextIncoming !== beforeIncoming) {
+      rt.raw = withIncomingPendingRecords(rt.raw, nextIncoming);
+      incomingChanged = true;
+    }
+  } catch (error) {
+    console.warn("Incoming-pending pool scan failed (non-fatal):", error);
+  }
+
+  if (stateChanged || receivedChanged || pendingChanged || incomingChanged) {
     await persistRuntime(rt);
   }
   return height;

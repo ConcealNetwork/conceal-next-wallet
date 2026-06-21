@@ -15,6 +15,10 @@ export type WalletInfo = {
   available: CcxAmount;
   dust: CcxAmount;
   pending: CcxAmount;
+  /** Unconfirmed funds addressed to us still in the mempool (#109). Display-only — NOT
+   *  in `balanceTotal`/`available` (not yet spendable); shown as a separate "pending in"
+   *  bucket. Absent/0 when none or the daemon has no pool RPC. */
+  incomingPending?: CcxAmount;
   lockedDeposits: CcxAmount;
   withdrawable: CcxAmount;
   trends?: Partial<
