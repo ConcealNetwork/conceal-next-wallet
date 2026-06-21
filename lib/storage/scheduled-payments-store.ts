@@ -1,4 +1,4 @@
-import { isCadence, type ScheduledPayment } from "@/lib/ui/scheduled-payments";
+import { isCadence, isDue, type ScheduledPayment } from "@/lib/ui/scheduled-payments";
 
 /**
  * Device-local persistence for recurring payment reminders. Pure UI metadata —
@@ -20,7 +20,8 @@ function isScheduledPayment(value: unknown): value is ScheduledPayment {
     typeof s.anchorDate === "string" &&
     isCadence(s.cadence) &&
     (s.snoozedUntil === undefined || typeof s.snoozedUntil === "string") &&
-    (s.autoSend === undefined || typeof s.autoSend === "boolean")
+    (s.autoSend === undefined || typeof s.autoSend === "boolean") &&
+    (s.autoSendWalletId === undefined || typeof s.autoSendWalletId === "string")
   );
 }
 
@@ -74,9 +75,34 @@ export function snoozeSchedule(id: string, until: string | undefined): Scheduled
   return next;
 }
 
-/** Arm/disarm a schedule's auto-send (#92 phase 2). Returns the new list. */
-export function setScheduleAutoSend(id: string, autoSend: boolean): ScheduledPayment[] {
-  const next = listSchedules().map((s) => (s.id === id ? { ...s, autoSend } : s));
+/**
+ * Arm/disarm a schedule's auto-send (#92 phase 2). When arming, stamp the wallet id the
+ * schedule belongs to so the engine only auto-sends it from THAT wallet (never the wrong
+ * active wallet). Disarming clears the stamp. Returns the new list.
+ */
+export function setScheduleAutoSend(
+  id: string,
+  autoSend: boolean,
+  walletId?: string,
+): ScheduledPayment[] {
+  const next = listSchedules().map((s) =>
+    s.id === id ? { ...s, autoSend, autoSendWalletId: autoSend ? walletId : undefined } : s,
+  );
   persist(next);
   return next;
+}
+
+/**
+ * Atomically advance a schedule IF it's still due right now (compare-and-swap against the
+ * freshest localStorage), returning whether it fired. The auto-send engine calls this
+ * IMMEDIATELY before sending: re-reading + re-checking here (rather than trusting the array
+ * it iterated) closes the stale-iteration window, and combined with the engine's cross-tab
+ * Web Lock makes a given due instance fire at most once (#92 phase-2 review).
+ */
+export function markSchedulePaidIfDue(id: string, at: string): boolean {
+  const list = listSchedules();
+  const schedule = list.find((s) => s.id === id);
+  if (!schedule || !isDue(schedule, at)) return false;
+  persist(list.map((s) => (s.id === id ? { ...s, lastPaidAt: at, snoozedUntil: undefined } : s)));
+  return true;
 }

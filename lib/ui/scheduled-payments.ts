@@ -34,6 +34,12 @@ export interface ScheduledPayment {
    * fires only while the wallet is open + unlocked.
    */
   autoSend?: boolean;
+  /**
+   * The wallet id this schedule was armed on (stamped at consent). The engine only
+   * auto-sends it from THIS wallet, so a different active wallet never pays it by mistake.
+   * Absent = legacy/any (pre-stamp); the engine then uses the active wallet.
+   */
+  autoSendWalletId?: string;
 }
 
 const CADENCE_LABELS: Record<Cadence, string> = {
@@ -187,13 +193,21 @@ export function dueInstanceKeys(schedules: readonly ScheduledPayment[], nowISO: 
 }
 
 /**
- * Schedules that should AUTO-SEND right now (#92 phase 2): armed (`autoSend`) AND due
- * (which already excludes snoozed). The engine advances each (marks paid) BEFORE sending,
- * so a re-tick or reload can't re-fire the same instance. Pure — no funds move here.
+ * Schedules that should AUTO-SEND right now (#92 phase 2): armed (`autoSend`) AND due (which
+ * already excludes snoozed) AND belonging to the ACTIVE wallet — a schedule stamped for a
+ * different wallet never fires from the wrong one (an unstamped/legacy schedule matches the
+ * active wallet). The engine advances each (marks paid) BEFORE sending, so a re-tick or
+ * reload can't re-fire the same instance. Pure — no funds move here.
  */
 export function schedulesToAutoSend(
   schedules: readonly ScheduledPayment[],
   nowISO: string,
+  activeWalletId?: string,
 ): ScheduledPayment[] {
-  return schedules.filter((s) => s.autoSend === true && isDue(s, nowISO));
+  return schedules.filter(
+    (s) =>
+      s.autoSend === true &&
+      isDue(s, nowISO) &&
+      (s.autoSendWalletId === undefined || s.autoSendWalletId === activeWalletId),
+  );
 }

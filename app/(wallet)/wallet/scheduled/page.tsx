@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutoSendToggle } from "@/components/wallet/auto-send-toggle";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
-import { useWalletViewOnly } from "@/lib/hooks";
+import { useWallets, useWalletViewOnly } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
   listSchedules,
@@ -45,6 +45,7 @@ export default function ScheduledPage() {
   const { t } = useI18n();
   const router = useRouter();
   const viewOnly = useWalletViewOnly();
+  const activeWalletId = useWallets().data?.find((w) => w.isActive)?.id;
   const [schedules, setSchedules] = useState<ScheduledPayment[]>(() => listSchedules());
   const [form, setForm] = useState(EMPTY_FORM);
   const nowISO = useMemo(() => new Date().toISOString(), []);
@@ -103,7 +104,8 @@ export default function ScheduledPage() {
 
   function setAutoSend(id: string, on: boolean) {
     try {
-      setSchedules(setScheduleAutoSend(id, on));
+      // Stamp the active wallet on arm so the engine only ever pays it from THIS wallet.
+      setSchedules(setScheduleAutoSend(id, on, on ? activeWalletId : undefined));
       toast.success(on ? t("scheduled.autoSendArmedToast") : t("scheduled.autoSendDisarmedToast"));
     } catch {
       toast.error(t("scheduled.errUpdateFailed"));
