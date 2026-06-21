@@ -70,6 +70,7 @@ import {
   type WalletState,
 } from "conceal-wallet-sdk";
 import { DEFAULT_DAEMON_NODES } from "@/lib/config/config";
+import { readPreferredNode } from "@/lib/network/node-preference";
 import { probeNodes, rankNodes } from "@/lib/network/node-probe";
 import { fetchSmartNodes, nodeUrlToPoolHost } from "@/lib/network/smart-nodes";
 import {
@@ -344,8 +345,15 @@ export function defaultNodeUrl(): string {
 /** Resolve the effective node URL from a wallet's persisted options. */
 export function nodeUrlFromRaw(raw: RawWalletV1): string {
   const options = raw.options;
+  // An explicit per-wallet custom node (encrypted settings) is the most specific choice — it wins.
   if (options?.customNode && typeof options.nodeUrl === "string" && options.nodeUrl.trim()) {
     return options.nodeUrl;
+  }
+  // Else honor the device-local node the user picked on the open screen (persisted, shared across
+  // wallets on this device); falls back to the default node when unset.
+  const preferred = readPreferredNode();
+  if (preferred) {
+    return preferred;
   }
   return defaultNodeUrl();
 }

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UnlockNodePicker } from "@/components/wallet/unlock-node-picker";
 import {
   addPasskeyCredential,
   clearPasskeyEnrollment,
@@ -386,6 +387,7 @@ export function UnlockWalletProvider({
                 </label>
               ) : null}
             </div>
+            <UnlockNodePicker />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setUnlockDialogOpen(false)}>
                 Cancel
