@@ -350,7 +350,7 @@ describe("sync fetch is resilient to over-cap batches (split + retry)", () => {
     const txs = await runtimeMod.fetchSyncRange(daemon as any, 1, 251, false);
     const heights = (txs as Array<{ height: number }>).map((t) => t.height);
     // The split-and-concat covers the full half-open range [1, 251) exactly, strictly ascending —
-    // the ordering that foldTransaction's sequential state machine depends on.
+    // the ordering that foldBatch's sequential state machine depends on.
     expect(heights).toEqual(Array.from({ length: 250 }, (_, i) => i + 1));
   });
 });

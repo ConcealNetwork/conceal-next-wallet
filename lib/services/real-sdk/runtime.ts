@@ -60,7 +60,6 @@ import {
   encodeAddress,
   findWithdrawnDepositIndexes,
   openStoredWallet,
-  type RawDepositInput,
   type RawWalletV1,
   type StorageAdapter,
   saveStoredWallet,
@@ -100,6 +99,13 @@ import {
 import { scanPoolForOwned } from "@/lib/services/real-sdk/pool";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
+  type DaemonRawTransaction,
+  isRecord,
+  type RawScanResult,
+  toScanTransaction,
+} from "@/lib/services/real-sdk/scan";
+import { scanBatch, terminateScanPool } from "@/lib/services/real-sdk/scan-pool";
+import {
   DEFAULT_WALLET_ID,
   getActiveWallet,
   getActiveWalletStorage,
@@ -113,19 +119,10 @@ import {
 } from "@/lib/services/real-sdk/wallets-index";
 
 /**
- * The SDK's daemon-result types (`DaemonRawTransaction`, `DaemonRandomOutsForAmount`)
- * are not exported, so the minimal public shapes we consume are mirrored here from
- * `conceal-wallet-sdk/src/daemon.ts`.
+ * The SDK's daemon-result types are not exported, so the minimal public shapes we consume are
+ * mirrored from `conceal-wallet-sdk/src/daemon.ts`. `DaemonRawTransaction` now lives in `./scan`
+ * (shared with the scan worker); the random-outs shapes stay here.
  */
-interface DaemonRawTransaction {
-  transaction: unknown;
-  timestamp: number;
-  outputIndexes: number[];
-  height: number;
-  blockHash: string;
-  hash: string;
-  fee: number;
-}
 interface DaemonRandomOut {
   globalIndex: number;
   publicKey: string;
@@ -298,6 +295,9 @@ function clearAllRuntimes(): void {
   runtimes.clear();
   coordination.clear();
   activeId = null;
+  // Free the scan worker pool too — a lock should release its WASM/worker resources (the workers
+  // receive keys per request but never persist them; terminating drops them either way).
+  terminateScanPool();
 }
 
 /** Test-only: install a runtime directly (bypassing unlock/storage), or clear all. */
@@ -763,28 +763,27 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   );
   let receivedChanged = false;
 
-  // Fold one batch's raw txs into the running state: scan each for owned outputs/deposits/spends,
-  // reconstruct any inbound message (deduped by hash), advance the cursor to `newScanned`, and
-  // publish progress in-memory (never backwards) so a concurrent getWalletInfo sees the height
+  // Apply one batch's PRE-SCANNED results into the running state: the per-tx ECDH scan already ran
+  // (in-thread or across the worker pool, see `scanBatch`); here we only do the state-dependent
+  // APPLY + inbound-message reconstruction (deduped by hash), advance the cursor to `newScanned`,
+  // and publish progress in-memory (never backwards) so a concurrent getWalletInfo sees the height
   // climb during a long catch-up. Shared by the multi-source bulk phase and the single-node loop —
   // both deliver batches in ASCENDING block order, which the WalletState fold requires.
-  const foldBatch = (rawTransactions: DaemonRawTransaction[], newScanned: number): void => {
-    for (const rawTx of rawTransactions) {
-      const folded = foldTransaction(state, rawTx, rt.account.keys);
-      state = folded.state;
+  const foldBatch = (scanResults: (RawScanResult | null)[], newScanned: number): void => {
+    for (const result of scanResults) {
+      if (result === null) continue;
+      state = applyScanResult(state, result);
 
       // Reconstruct any inbound message from this tx's `extra` (deduped by hash).
-      if (folded.scanTx !== null) {
-        const txHash = typeof folded.scanTx.hash === "string" ? folded.scanTx.hash : "";
-        if (txHash && !received.has(txHash)) {
-          const inbound = reconstructReceivedMessage(folded.scanTx, rt.account.keys, {
-            sentHashes,
-            timestamp: rawTx.timestamp,
-          });
-          if (inbound !== null) {
-            received.set(inbound.id, inbound);
-            receivedChanged = true;
-          }
+      const txHash = typeof result.scanTx.hash === "string" ? result.scanTx.hash : "";
+      if (txHash && !received.has(txHash)) {
+        const inbound = reconstructReceivedMessage(result.scanTx, rt.account.keys, {
+          sentHashes,
+          timestamp: result.timestamp,
+        });
+        if (inbound !== null) {
+          received.set(inbound.id, inbound);
+          receivedChanged = true;
         }
       }
     }
@@ -819,8 +818,13 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
             end: bulkEnd,
             batchSize,
             sources,
-            // Batches arrive ascending; fold each, advancing the cursor to its last (inclusive) block.
-            onBatch: (items, _batchStart, batchEnd) => foldBatch(items, batchEnd - 1),
+            // Batches arrive ascending; scan each across the worker pool, then apply, advancing the
+            // cursor to its last (inclusive) block. onBatch is awaited sequentially by the driver, so
+            // applies stay strictly ordered even though scans run in parallel.
+            onBatch: async (items, _batchStart, batchEnd) => {
+              const results = await scanBatch(items, rt.account.keys);
+              foldBatch(results, batchEnd - 1);
+            },
           });
         }
       } catch (error) {
@@ -839,7 +843,9 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // + the state publish stay strictly sequential (one batch at a time on the main thread); only the
   // network fetch is overlapped. Covers the whole range when multi-source is skipped, and the TIP
   // that multi-source deliberately left on the home node.
-  const fetchFrom = (from: number): { endBlock: number; data: Promise<DaemonRawTransaction[]> } => {
+  const fetchFrom = (
+    from: number,
+  ): { endBlock: number; data: Promise<(RawScanResult | null)[]> } => {
     const startBlock = from + 1;
     const endBlock = Math.min(startBlock + batchSize - 1, height);
     // The daemon's `get_raw_transactions_by_heights` range is HALF-OPEN `[start, end)` —
@@ -856,7 +862,16 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // backend would answer short and silently skip blocks — at ANY catch-up depth, not just far
     // behind (PR #177 review — Codex/Gemini/GLM). The coverage marker (a coinbase per block) makes
     // the cost negligible on an idle poll (~RESCAN_LAG blocks) and is filtered before the fold.
-    const data = fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs, height);
+    // Fetch (verified) THEN scan the batch across the worker pool, so `data` resolves to PRE-SCANNED
+    // results. The prefetch therefore overlaps the next batch's fetch + parallel ECDH scan with this
+    // batch's (cheap, main-thread) apply — `scanBatch` falls back to an in-thread scan when no pool.
+    const data = fetchVerifiedRange(
+      rt.daemon,
+      startBlock,
+      endBlock + 1,
+      includeMinerTxs,
+      height,
+    ).then((rawTxs) => scanBatch(rawTxs, rt.account.keys));
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
     // `unhandledrejection`. The real `await data` below still surfaces the error normally
@@ -868,10 +883,10 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   let pending = scanned < height ? fetchFrom(scanned) : null;
   while (pending) {
     const { endBlock, data } = pending;
-    const rawTransactions = await data;
-    // Kick off the next range's fetch BEFORE folding, so it downloads during the scan.
+    const scanResults = await data;
+    // Kick off the next range's fetch + scan BEFORE applying, so it runs during the apply.
     pending = endBlock < height ? fetchFrom(endBlock) : null;
-    foldBatch(rawTransactions, endBlock);
+    foldBatch(scanResults, endBlock);
   }
 
   // The per-batch publish advances rt.state only on real change, so `rt.state !==
@@ -959,27 +974,14 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
 }
 
 /**
- * Fold one raw daemon transaction into `state` (scan outputs/deposits + spends),
- * returning the new state and the parsed scan transaction (for message recovery).
- * `scanTx` is `null` when the daemon slot has no usable `extra`/`vout`.
+ * Apply a pre-computed {@link RawScanResult} (the parallelizable per-tx scan, from {@link
+ * scanRawTransaction} — run in-thread OR offloaded to the scan worker pool) into `state`. This is
+ * the STATE-DEPENDENT half of folding (`findWithdrawnDepositIndexes` reads `state.deposits`), so it
+ * stays strictly sequential on the main thread. Returns the same `state` ref unchanged when the tx
+ * touches the wallet in no way (lets callers detect "nothing folded").
  */
-function foldTransaction(
-  state: WalletState,
-  rawTx: DaemonRawTransaction,
-  keys: WalletKeys,
-): { state: WalletState; scanTx: txns.RawTransaction | null } {
-  const inner = rawTx.transaction;
-  if (!inner || typeof inner !== "object") return { state, scanTx: null };
-
-  const scanTx = toScanTransaction(rawTx);
-  if (scanTx === null) return { state, scanTx: null };
-
-  const { outputs: ownedOutputs, deposits: ownedDeposits } = txns.scanTransactionOutputsAndDeposits(
-    scanTx,
-    keys,
-  );
-  const inputKeyImages = extractInputKeyImages(inner);
-  const depositInputs = extractDepositInputs(inner);
+function applyScanResult(state: WalletState, result: RawScanResult): WalletState {
+  const { scanTx, ownedOutputs, ownedDeposits, inputKeyImages, depositInputs, timestamp } = result;
   const candidateDeposits =
     ownedDeposits.length > 0 ? [...state.deposits, ...ownedDeposits] : state.deposits;
   const withdrawnIndexes = findWithdrawnDepositIndexes(depositInputs, candidateDeposits);
@@ -990,128 +992,19 @@ function foldTransaction(
     ownedDeposits.length === 0 &&
     withdrawnIndexes.length === 0
   ) {
-    return { state, scanTx };
+    return state;
   }
 
   let next = applyScannedTransaction(
     state,
-    { hash: scanTx.hash, height: scanTx.height, timestamp: rawTx.timestamp },
+    { hash: scanTx.hash, height: scanTx.height, timestamp },
     ownedOutputs,
     inputKeyImages,
   );
   if (ownedDeposits.length > 0 || withdrawnIndexes.length > 0) {
     next = applyScannedDeposits(next, ownedDeposits, withdrawnIndexes);
   }
-  return { state: next, scanTx };
-}
-
-// The SDK does not export `toScanTransaction`/`extractInputKeyImages`/
-// `extractDepositInputs` (they are sync-internal), so the daemon→scan bridge is
-// reproduced here against the documented daemon shapes. Folding itself reuses the
-// SDK's exported `applyScannedTransaction`/`applyScannedDeposits`.
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** Daemon `transaction` → the SDK scanner's {@link txns.RawTransaction}, or `null`. */
-function toScanTransaction(rawTx: DaemonRawTransaction): txns.RawTransaction | null {
-  const inner = rawTx.transaction;
-  if (!isRecord(inner)) return null;
-
-  const extra = normalizeExtra(inner.extra);
-  if (extra === null) return null;
-  const vout = normalizeVout(inner.vout);
-  if (vout === null) return null;
-
-  return {
-    extra,
-    vout,
-    ...(rawTx.outputIndexes.length > 0 ? { outputIndexes: rawTx.outputIndexes } : {}),
-    ...(rawTx.hash ? { hash: rawTx.hash } : {}),
-    ...(typeof rawTx.height === "number" ? { height: rawTx.height } : {}),
-  };
-}
-
-function normalizeExtra(extra: unknown): string | null {
-  if (typeof extra === "string") return extra;
-  if (Array.isArray(extra)) {
-    let hex = "";
-    for (const byte of extra) {
-      if (typeof byte !== "number" || byte < 0 || byte > 255) return null;
-      hex += byte.toString(16).padStart(2, "0");
-    }
-    return hex;
-  }
-  return null;
-}
-
-function normalizeVout(vout: unknown): txns.RawTransactionOutput[] | null {
-  if (!Array.isArray(vout)) return null;
-  const outputs: txns.RawTransactionOutput[] = [];
-  for (const out of vout) {
-    if (!isRecord(out)) return null;
-    const target = out.target;
-    if (!isRecord(target)) return null;
-    const type = target.type;
-    const data = target.data;
-    if (typeof type !== "string" || !isRecord(data)) return null;
-    outputs.push({
-      amount: typeof out.amount === "number" ? out.amount : 0,
-      target: {
-        type,
-        data: {
-          ...(typeof data.key === "string" ? { key: data.key } : {}),
-          ...(Array.isArray(data.keys)
-            ? { keys: data.keys.filter((k): k is string => typeof k === "string") }
-            : {}),
-          ...(typeof data.term === "number" ? { term: data.term } : {}),
-        },
-      },
-    });
-  }
-  return outputs;
-}
-
-function extractInputKeyImages(transaction: unknown): string[] {
-  if (!isRecord(transaction)) return [];
-  const vin = transaction.vin;
-  if (!Array.isArray(vin)) return [];
-  const keyImages: string[] = [];
-  for (const input of vin) {
-    if (!isRecord(input)) continue;
-    const direct = input.k_image;
-    if (typeof direct === "string" && direct.length > 0) {
-      keyImages.push(direct);
-      continue;
-    }
-    const value = input.value;
-    if (isRecord(value) && typeof value.k_image === "string" && value.k_image.length > 0) {
-      keyImages.push(value.k_image);
-    }
-  }
-  return keyImages;
-}
-
-function extractDepositInputs(transaction: unknown): RawDepositInput[] {
-  if (!isRecord(transaction)) return [];
-  const vin = transaction.vin;
-  if (!Array.isArray(vin)) return [];
-  const deposits: RawDepositInput[] = [];
-  for (const input of vin) {
-    if (!isRecord(input)) continue;
-    const source = isRecord(input.value) ? input.value : input;
-    const type = input.type ?? source.type;
-    if (type !== "input_to_deposit_key" && type !== "03") continue;
-    const outputIndex = source.outputIndex;
-    const term = source.term;
-    deposits.push({
-      type: "input_to_deposit_key",
-      ...(typeof outputIndex === "number" ? { outputIndex } : {}),
-      ...(typeof term === "number" ? { term } : {}),
-    });
-  }
-  return deposits;
+  return next;
 }
 
 /** Decoys returned by the daemon are already the {@link DecoySet} shape. */
