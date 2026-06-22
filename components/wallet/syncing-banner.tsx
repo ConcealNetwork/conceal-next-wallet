@@ -1,8 +1,10 @@
 "use client";
 
 import { useWalletSyncStatus } from "@/lib/hooks";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 
 export function WalletSyncingBanner({ hint }: { hint?: string }) {
+  const { t } = useI18n();
   const { isSyncing, info, syncPct } = useWalletSyncStatus();
   if (!isSyncing || !info) return null;
 
@@ -17,8 +19,11 @@ export function WalletSyncingBanner({ hint }: { hint?: string }) {
         <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
       </span>
       <span>
-        Syncing blockchain… block {info.currentHeight.toLocaleString()} /{" "}
-        {info.networkHeight.toLocaleString()} ({syncPct}%)
+        {t("syncBanner.line", {
+          current: info.currentHeight.toLocaleString(),
+          network: info.networkHeight.toLocaleString(),
+          pct: syncPct,
+        })}
         {hint ? ` — ${hint}` : null}
       </span>
     </div>

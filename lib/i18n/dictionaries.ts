@@ -559,6 +559,7 @@ const en: Dictionary = {
   "receive.qrSaveError": "Failed to save QR code.",
   // Network page (#84)
   "network.title": "Network",
+  "syncBanner.line": "Syncing blockchain… block {current} / {network} ({pct}%)",
   "network.subtitle": "Node connection and network status",
   "network.connectedSynced": "Connected & synced",
   "network.uptime": "Uptime",
@@ -1521,6 +1522,7 @@ const es: Dictionary = {
   "receive.qrSaveError": "No se pudo guardar el código QR.",
   // Network page (#84)
   "network.title": "Red",
+  "syncBanner.line": "Sincronizando blockchain… bloque {current} / {network} ({pct}%)",
   "network.subtitle": "Conexión del nodo y estado de la red",
   "network.connectedSynced": "Conectado y sincronizado",
   "network.uptime": "Tiempo activo",
@@ -2496,6 +2498,7 @@ const fr: Dictionary = {
   "receive.qrSaveError": "Échec de l'enregistrement du code QR.",
   // Network page (#84)
   "network.title": "Réseau",
+  "syncBanner.line": "Synchronisation de la blockchain… bloc {current} / {network} ({pct}%)",
   "network.subtitle": "Connexion du nœud et état du réseau",
   "network.connectedSynced": "Connecté et synchronisé",
   "network.uptime": "Disponibilité",
@@ -3476,6 +3479,7 @@ const de: Dictionary = {
   "receive.qrSaveError": "QR-Code konnte nicht gespeichert werden.",
   // Network page (#84)
   "network.title": "Netzwerk",
+  "syncBanner.line": "Blockchain wird synchronisiert… Block {current} / {network} ({pct}%)",
   "network.subtitle": "Knotenverbindung und Netzwerkstatus",
   "network.connectedSynced": "Verbunden & synchronisiert",
   "network.uptime": "Betriebszeit",
@@ -4450,6 +4454,7 @@ const it: Dictionary = {
   "receive.qrSaveError": "Impossibile salvare il codice QR.",
   // Network page (#84)
   "network.title": "Rete",
+  "syncBanner.line": "Sincronizzazione della blockchain… blocco {current} / {network} ({pct}%)",
   "network.subtitle": "Connessione del nodo e stato della rete",
   "network.connectedSynced": "Connesso e sincronizzato",
   "network.uptime": "Tempo di attività",
@@ -5421,6 +5426,7 @@ const pt: Dictionary = {
   "receive.qrSaveError": "Falha ao salvar o código QR.",
   // Network page (#84)
   "network.title": "Rede",
+  "syncBanner.line": "Sincronizando blockchain… bloco {current} / {network} ({pct}%)",
   "network.subtitle": "Conexão do nó e status da rede",
   "network.connectedSynced": "Conectado e sincronizado",
   "network.uptime": "Tempo ativo",
@@ -6389,6 +6395,7 @@ const ru: Dictionary = {
   "receive.qrSaveError": "Не удалось сохранить QR-код.",
   // Network page (#84)
   "network.title": "Сеть",
+  "syncBanner.line": "Синхронизация блокчейна… блок {current} / {network} ({pct}%)",
   "network.subtitle": "Подключение к узлу и состояние сети",
   "network.connectedSynced": "Подключено и синхронизировано",
   "network.uptime": "Время работы",
@@ -7337,6 +7344,7 @@ const zh: Dictionary = {
   "receive.qrSaveError": "保存二维码失败。",
   // Network page (#84)
   "network.title": "网络",
+  "syncBanner.line": "正在同步区块链… 区块 {current} / {network}（{pct}%）",
   "network.subtitle": "节点连接和网络状态",
   "network.connectedSynced": "已连接并同步",
   "network.uptime": "运行时间",
@@ -8277,6 +8285,7 @@ const ja: Dictionary = {
   "receive.qrSaveError": "QR コードの保存に失敗しました。",
   // Network page (#84)
   "network.title": "ネットワーク",
+  "syncBanner.line": "ブロックチェーンを同期中… ブロック {current} / {network}（{pct}%）",
   "network.subtitle": "ノード接続とネットワークの状態",
   "network.connectedSynced": "接続済み・同期済み",
   "network.uptime": "稼働時間",
@@ -9231,6 +9240,7 @@ const ko: Dictionary = {
   "receive.qrSaveError": "QR 코드 저장에 실패했습니다.",
   // Network page (#84)
   "network.title": "네트워크",
+  "syncBanner.line": "블록체인 동기화 중… 블록 {current} / {network} ({pct}%)",
   "network.subtitle": "노드 연결 및 네트워크 상태",
   "network.connectedSynced": "연결됨 및 동기화됨",
   "network.uptime": "가동 시간",
