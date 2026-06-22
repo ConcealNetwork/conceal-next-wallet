@@ -65,10 +65,11 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
 /**
  * Reads the registered rail content and lays out [main | rail] when a page has
  * registered content. Without content the main keeps its centered max-width
- * exactly as before. The rail is a fixed ~320px column visible only ≥ xl
- * (1280px); below xl it is hidden and main goes full width (stage 3 turns the
- * small-screen rail into a drawer). The rail toggle in the global header
- * collapses the column away fully, handing the width back to the main content.
+ * exactly as before. The rail is a fixed ~380px column visible only ≥ 1200px;
+ * below that it is hidden and main goes full width while pages surface a
+ * `min-[1200px]:hidden` embedded fallback in the body. The rail toggle in the
+ * global header collapses the column away fully, handing the width back to the
+ * main content.
  * Like the left sidebar, the rail scrolls independently of the page body.
  */
 function WalletShellLayout({
