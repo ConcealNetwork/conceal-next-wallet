@@ -13,7 +13,11 @@ export function triggerBlobDownload(filename: string, blob: Blob): void {
   anchor.download = filename;
   anchor.style.display = "none";
   document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
+  try {
+    anchor.click();
+  } finally {
+    // Guarantee the transient anchor is removed even if click() throws (CodeRabbit review).
+    document.body.removeChild(anchor);
+  }
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
