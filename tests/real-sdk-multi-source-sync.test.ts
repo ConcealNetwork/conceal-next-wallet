@@ -230,7 +230,8 @@ describe("syncOnce multi-source wiring (Phase 2)", () => {
     expect(await runtimeMod.sync()).toBe(height);
 
     const covered = new Set<number>();
-    for (const [s, e] of [...home.ranges, ...peerRanges]) for (let b = s; b < e; b++) covered.add(b);
+    for (const [s, e] of [...home.ranges, ...peerRanges])
+      for (let b = s; b < e; b++) covered.add(b);
     const missed: number[] = [];
     for (let b = 1; b < height; b++) if (!covered.has(b)) missed.push(b);
     expect(missed).toEqual([]);

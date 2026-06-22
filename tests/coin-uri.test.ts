@@ -35,26 +35,17 @@ describe("CoinUri.decodeTx", () => {
 });
 
 describe("CoinUri.encodeTx", () => {
-  // Upstream conceal-web-wallet dropped the 'conceal:' prefix from tx URIs
-  // ("the char ':' was creating scanning issue"), so both v1 and v3 now emit a
-  // bare address — otherwise our QRs may fail to scan in the legacy wallet.
-  it("v3 (default) emits a bare address — no conceal: prefix", () => {
-    const encoded = CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v3");
+  // Encode with no prefix to maximize compatibility (readable by regular camera QR
+  // readers). Scanning still decodes conceal:/conceal./bare in-app.
+  it("emits a bare address — no conceal: prefix", () => {
+    const encoded = CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello");
     expect(encoded).toBe(`${ADDRESS}${QUERY}`);
     expect(encoded.startsWith(COIN_URI_PREFIX)).toBe(false);
     expect(encoded.startsWith(ADDRESS)).toBe(true);
   });
 
-  it("v1 omits prefix", () => {
-    expect(CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v1")).toBe(`${ADDRESS}${QUERY}`);
-  });
-
-  it("default version (no arg) also emits a bare address", () => {
-    expect(CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello")).toBe(`${ADDRESS}${QUERY}`);
-  });
-
   it("round-trips a freshly-encoded bare URI through decodeTx", () => {
-    const encoded = CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello", "v3");
+    const encoded = CoinUri.encodeTx(ADDRESS, "pid", "5", null, "hello");
     expect(CoinUri.decodeTx(encoded)).toEqual({
       address: ADDRESS,
       paymentId: "pid",

@@ -45,8 +45,6 @@ export type PaymentLinkInput = {
   message?: string;
   /** Recipient name / label — parity with the QR/CoinUri `recipient_name`/`label`. */
   label?: string;
-  /** v1 web-wallet hash URL (`#!send?…`); otherwise v3 app route. */
-  v1: boolean;
   origin?: string;
 };
 
@@ -59,7 +57,7 @@ export function getSafeNextPath(search?: string): string | undefined {
   return raw;
 }
 
-/** v3: `/base/wallet/send?address&amount…` — v1: `/#!send?address&amount&txDesc…` */
+/** `/wallet/send?address&amount…` on the current app (respects `NEXT_PUBLIC_BASE_PATH`). */
 export function buildPaymentSendUrl(input: PaymentLinkInput): string {
   const origin = input.origin ?? (typeof window !== "undefined" ? window.location.origin : "");
   const params = new URLSearchParams();
@@ -67,15 +65,9 @@ export function buildPaymentSendUrl(input: PaymentLinkInput): string {
   params.set("amount", input.amount);
   if (input.paymentId?.trim()) params.set("paymentId", input.paymentId.trim());
   if (input.message?.trim()) {
-    const message = input.message.trim();
-    if (input.v1) params.set("txDesc", message);
-    else params.set("message", encodePaymentMessage(message));
+    params.set("message", encodePaymentMessage(input.message.trim()));
   }
   if (input.label?.trim()) params.set("label", input.label.trim());
-
-  if (input.v1) {
-    return `${origin}/#!send?${params.toString()}`;
-  }
 
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   return `${origin}${basePath}/wallet/send?${params.toString()}`;

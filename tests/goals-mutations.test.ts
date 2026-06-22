@@ -20,8 +20,19 @@ function makeGoal(): Goal {
 
 describe("buildGoal / buildContribution", () => {
   it("builds a valid active goal and rejects bad input", () => {
-    const g = buildGoal({ name: "  Trip  ", target: "5000", deadline: "2026-12-31", icon: "plane" }, NOW, "g1");
-    expect(g).toMatchObject({ id: "g1", name: "Trip", target: "5000000000", status: "active", deadline: "2026-12-31", icon: "plane" });
+    const g = buildGoal(
+      { name: "  Trip  ", target: "5000", deadline: "2026-12-31", icon: "plane" },
+      NOW,
+      "g1",
+    );
+    expect(g).toMatchObject({
+      id: "g1",
+      name: "Trip",
+      target: "5000000000",
+      status: "active",
+      deadline: "2026-12-31",
+      icon: "plane",
+    });
     expect(g?.contributions).toEqual([]);
     expect(buildGoal({ name: "", target: "5000" }, NOW)).toBeNull();
     expect(buildGoal({ name: "x", target: "0" }, NOW)).toBeNull();

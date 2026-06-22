@@ -94,12 +94,20 @@ function reconcile(goal: Goal, now: Date): Goal {
 }
 
 /** Append a contribution and reconcile achieve/reopen. */
-export function addContribution(goal: Goal, contribution: GoalContribution, now: Date = new Date()): Goal {
+export function addContribution(
+  goal: Goal,
+  contribution: GoalContribution,
+  now: Date = new Date(),
+): Goal {
   return reconcile({ ...goal, contributions: [...goal.contributions, contribution] }, now);
 }
 
 /** Remove a contribution by id and reconcile (may reopen an achieved goal). */
-export function removeContribution(goal: Goal, contributionId: string, now: Date = new Date()): Goal {
+export function removeContribution(
+  goal: Goal,
+  contributionId: string,
+  now: Date = new Date(),
+): Goal {
   return reconcile(
     { ...goal, contributions: goal.contributions.filter((c) => c.id !== contributionId) },
     now,
@@ -125,7 +133,11 @@ export function editContribution(
 }
 
 /** Apply an edit to a goal's own fields (name/target/deadline/icon/color); reconcile. */
-export function editGoal(goal: Goal, input: Partial<NewGoalInput>, now: Date = new Date()): Goal | null {
+export function editGoal(
+  goal: Goal,
+  input: Partial<NewGoalInput>,
+  now: Date = new Date(),
+): Goal | null {
   const patch: Partial<Goal> = {};
   if (input.name !== undefined) {
     const name = sanitizeGoalName(input.name);

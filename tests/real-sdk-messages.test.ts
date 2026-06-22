@@ -276,7 +276,8 @@ describe("real-sdk pending tx + balance hold (#96)", () => {
             })),
           })),
         ),
-      getWalletSyncData: (start: number, end: number) => Promise.resolve(coinbaseTxsFor(start, end)), // spend not mined during this test
+      getWalletSyncData: (start: number, end: number) =>
+        Promise.resolve(coinbaseTxsFor(start, end)), // spend not mined during this test
     };
 
     const runtimeMod = await import("@/lib/services/real-sdk/runtime");
@@ -446,7 +447,8 @@ describe("real-sdk sendTransaction with a message (#97)", () => {
             })),
           })),
         ),
-      getWalletSyncData: (start: number, end: number) => Promise.resolve(coinbaseTxsFor(start, end)),
+      getWalletSyncData: (start: number, end: number) =>
+        Promise.resolve(coinbaseTxsFor(start, end)),
     };
     const aliceRaw: RawWalletV1 = {
       deposits: [],

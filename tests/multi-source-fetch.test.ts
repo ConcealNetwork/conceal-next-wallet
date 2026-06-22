@@ -90,7 +90,9 @@ describe("sourcesForBatch", () => {
     }
   });
   it("rotates the primary across batches so load is spread (home is not starved)", () => {
-    const primaries = [0, 1, 2, 3].map((i) => sourcesForBatch({ start: 0, end: 100 }, i, [home, fast])[0]);
+    const primaries = [0, 1, 2, 3].map(
+      (i) => sourcesForBatch({ start: 0, end: 100 }, i, [home, fast])[0],
+    );
     // Over consecutive batches the primary alternates — both nodes get work.
     expect(primaries).toContain(home);
     expect(primaries).toContain(fast);
