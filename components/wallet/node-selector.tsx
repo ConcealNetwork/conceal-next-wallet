@@ -41,7 +41,8 @@ export function NodeSelector({
   const runProbe = useCallback(async (urls: string[]): Promise<NodeProbe[]> => {
     if (urls.length === 0) return [];
     // Discard a slower in-flight probe if a newer one supersedes it (#174 review).
-    const nonce = (probeNonce.current += 1);
+    probeNonce.current += 1;
+    const nonce = probeNonce.current;
     setProbing(true);
     try {
       const results = await probeNodes(urls);

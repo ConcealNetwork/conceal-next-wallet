@@ -4,13 +4,12 @@ import { buildPaymentSendUrl, parsePaymentSendDraft } from "@/lib/ui/payment-lin
 const ADDRESS = `ccx7${"a".repeat(94)}`;
 
 describe("buildPaymentSendUrl", () => {
-  it("builds v3 send route with query params", () => {
+  it("builds /wallet/send route with query params", () => {
     const url = buildPaymentSendUrl({
       address: ADDRESS,
       amount: "10",
       paymentId: "abc",
       message: "hi",
-      v1: false,
       origin: "https://wallet.example",
     });
     expect(url).toBe(
@@ -18,28 +17,14 @@ describe("buildPaymentSendUrl", () => {
     );
   });
 
-  it("leaves v3 message out when empty", () => {
+  it("leaves message out when empty", () => {
     const url = buildPaymentSendUrl({
       address: ADDRESS,
       amount: "10",
-      v1: false,
       origin: "https://wallet.example",
     });
     expect(url).toBe(
       `https://wallet.example/wallet/send?address=${encodeURIComponent(ADDRESS)}&amount=10`,
-    );
-  });
-
-  it("builds v1 hash send URL with txDesc", () => {
-    const url = buildPaymentSendUrl({
-      address: ADDRESS,
-      amount: "5",
-      message: "note",
-      v1: true,
-      origin: "https://wallet.example",
-    });
-    expect(url).toBe(
-      `https://wallet.example/#!send?address=${encodeURIComponent(ADDRESS)}&amount=5&txDesc=note`,
     );
   });
 
@@ -48,7 +33,6 @@ describe("buildPaymentSendUrl", () => {
       address: ADDRESS,
       amount: "10",
       label: "Acme Corp",
-      v1: false,
       origin: "https://wallet.example",
     });
     expect(url).toBe(
@@ -61,7 +45,6 @@ describe("buildPaymentSendUrl", () => {
       address: ADDRESS,
       amount: "10",
       label: "   ",
-      v1: false,
       origin: "https://wallet.example",
     });
     expect(url).toBe(
@@ -71,7 +54,7 @@ describe("buildPaymentSendUrl", () => {
 });
 
 describe("parsePaymentSendDraft", () => {
-  it("reads v3 query params", () => {
+  it("reads query params", () => {
     const params = new URLSearchParams({
       address: ADDRESS,
       amount: "12.5",
@@ -86,7 +69,7 @@ describe("parsePaymentSendDraft", () => {
     });
   });
 
-  it("reads v3 encoded message", () => {
+  it("reads encoded message", () => {
     const params = new URLSearchParams({
       address: ADDRESS,
       amount: "12.5",
@@ -99,7 +82,7 @@ describe("parsePaymentSendDraft", () => {
     });
   });
 
-  it("reads v1 txDesc alias", () => {
+  it("reads legacy txDesc alias (back-compat)", () => {
     const params = new URLSearchParams({
       address: ADDRESS,
       amount: "3",
@@ -191,7 +174,6 @@ describe("buildPaymentSendUrl → parsePaymentSendDraft round-trip", () => {
       paymentId: "pid",
       message: "hello there",
       label: "Acme Corp",
-      v1: false,
       origin: "https://wallet.example",
     });
     const search = url.slice(url.indexOf("?"));

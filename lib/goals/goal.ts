@@ -178,6 +178,7 @@ export function isGoal(value: unknown): value is Goal {
     typeof g.createdAt === "string" &&
     (g.achievedAt === undefined || typeof g.achievedAt === "string") &&
     (g.linkedDepositIds === undefined ||
-      (Array.isArray(g.linkedDepositIds) && g.linkedDepositIds.every((id) => typeof id === "string")))
+      (Array.isArray(g.linkedDepositIds) &&
+        g.linkedDepositIds.every((id) => typeof id === "string")))
   );
 }

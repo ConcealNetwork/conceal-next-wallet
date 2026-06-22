@@ -7,7 +7,6 @@ import { usePageRightRail } from "@/components/layout/right-rail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CopyButton,
@@ -52,7 +51,6 @@ export default function ReceivePage() {
   const [paymentId, setPaymentId] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [message, setMessage] = useState("");
-  const [v1Link, setV1Link] = useState(false);
   const [qrLogo, setQrLogo] = useState<(typeof QR_LOGOS)[number]["src"]>(QR_LOGOS[0].src);
 
   const address = wallet.data?.address ?? "";
@@ -71,9 +69,8 @@ export default function ReceivePage() {
   const messageTooLong = messageBytes > MAX_MESSAGE_SIZE;
   const paymentUri = useMemo(() => {
     if (!address) return "";
-    // CoinUri.encodeTx emits a bare address (no `conceal:` prefix) regardless of
-    // version — upstream dropped the prefix to fix QR scanning — so the QR itself
-    // does not vary with `v1Link`. v1 only changes the shareable payment LINK below.
+    // Encode with no prefix to maximize compatibility (readable by regular camera QR
+    // readers). Scanning still decodes conceal:/conceal./bare in-app.
     return CoinUri.encodeTx(
       address,
       paymentIdValid ? paymentId || null : null,
@@ -90,7 +87,6 @@ export default function ReceivePage() {
       paymentId: paymentIdValid ? paymentId : "",
       message: messageTooLong ? "" : message,
       label: recipientName,
-      v1: v1Link,
     });
   }, [
     address,
@@ -101,7 +97,6 @@ export default function ReceivePage() {
     paymentId,
     paymentIdValid,
     recipientName,
-    v1Link,
   ]);
   const qrDescription = hasRequest
     ? amountForUri
@@ -268,9 +263,7 @@ export default function ReceivePage() {
           </SectionCard>
         </div>
 
-        {/* The generated payment link lives in its own card below — it only
-            exists once an amount is set, so it stays out of the build-the-request
-            card above. v1 toggles the legacy `/#!send` link format (QR is unaffected). */}
+        {/* Payment link card — `/wallet/send?…` on this app (shown once an amount is set). */}
         {hasPaymentLink ? (
           <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100 [animation-delay:70ms]">
             <SectionCard title={t("receive.paymentLink")}>
@@ -278,20 +271,7 @@ export default function ReceivePage() {
                 <p className="break-all rounded-xl border border-border bg-secondary p-4 font-mono text-sm text-foreground">
                   {paymentPageUrl}
                 </p>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <CopyButton value={paymentPageUrl} label={t("receive.copyPaymentLink")} />
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="v1-link"
-                      checked={v1Link}
-                      onCheckedChange={setV1Link}
-                      aria-label={t("receive.v1Label")}
-                    />
-                    <Label htmlFor="v1-link" className="cursor-pointer text-sm font-normal">
-                      {t("receive.v1Label")}
-                    </Label>
-                  </div>
-                </div>
+                <CopyButton value={paymentPageUrl} label={t("receive.copyPaymentLink")} />
               </div>
             </SectionCard>
           </div>

@@ -722,7 +722,9 @@ async function buildSyncSources(
   try {
     const pool = await fetchSmartNodes(homeUrl);
     const homeHost = nodeUrlToPoolHost(homeUrl);
-    candidateUrls = pool.map((node) => node.url).filter((url) => nodeUrlToPoolHost(url) !== homeHost);
+    candidateUrls = pool
+      .map((node) => node.url)
+      .filter((url) => nodeUrlToPoolHost(url) !== homeHost);
   } catch {
     return [home]; // no pool → home only; caller skips multi-source
   }

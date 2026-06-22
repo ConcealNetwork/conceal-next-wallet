@@ -6,9 +6,13 @@
 import qrcode from "qrcode-generator";
 import { useMemo } from "react";
 
-/** Dot diameter as a fraction of a module: π/4 × 0.62² ≈ 30% of the square's
- *  ink surface, per design. Level-H error correction absorbs the loss. */
-const DOT_DIAMETER = 0.62;
+/** Conceal-brand facet tilt (degrees) — rotated squares instead of circles. */
+export const LOZENGE_ANGLE_DEG = 22;
+/** Side length as a fraction of one module; sized so the axis-aligned extent matches
+ *  the old 0.62-diameter dots (corners stay inside the cell at Level H). */
+const LOZENGE_RAD = (LOZENGE_ANGLE_DEG * Math.PI) / 180;
+export const LOZENGE_SIDE =
+  0.62 / (Math.abs(Math.cos(LOZENGE_RAD)) + Math.abs(Math.sin(LOZENGE_RAD)));
 /** Underlying logo side as a fraction of the QR side. */
 const LOGO_RATIO = 0.85;
 const FINDER = 7;
@@ -62,17 +66,43 @@ function overlaps(a: Box, b: Box): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-function circlePath(cx: number, cy: number, r: number): string {
-  const d = r * 2;
-  return `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${d} 0a${r} ${r} 0 1 0 ${-d} 0`;
+function lozengePath(cx: number, cy: number, side: number, angleDeg: number): string {
+  const half = side / 2;
+  const rad = (angleDeg * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const corners: [number, number][] = [
+    [-half, -half],
+    [half, -half],
+    [half, half],
+    [-half, half],
+  ];
+  const [x0, y0] = rotateCorner(corners[0][0], corners[0][1], cx, cy, cos, sin);
+  let path = `M${x0} ${y0}`;
+  for (let i = 1; i < corners.length; i++) {
+    const [x, y] = rotateCorner(corners[i][0], corners[i][1], cx, cy, cos, sin);
+    path += `L${x} ${y}`;
+  }
+  return `${path}Z`;
+}
+
+function rotateCorner(
+  x: number,
+  y: number,
+  cx: number,
+  cy: number,
+  cos: number,
+  sin: number,
+): [number, number] {
+  return [cx + x * cos - y * sin, cy + x * sin + y * cos];
 }
 
 /**
- * A "dotted" QR code layered bottom-to-top, GIMP style:
+ * A branded QR code layered bottom-to-top, GIMP style:
  *   1. the underlying logo, centred at 85% of the QR side (no excavation);
- *   2. a white-dot canvas — one white dot per light module — restoring the
+ *   2. a white lozenge canvas — one white lozenge per light module — restoring the
  *      light cells on top of the artwork;
- *   3. black dots for the dark modules (same size as the white ones), with the
+ *   3. dark lozenges for the dark modules (same size/angle as the white ones), with the
  *      three finder corners and the alignment patterns kept as solid squares.
  * All coordinates are in module units (viewBox 0..moduleCount), so the SVG
  * scales losslessly.
@@ -130,27 +160,26 @@ export function DottedQrCode({
       ...alignments.map(({ cx, cy }) => ({ x: cx - 2, y: cy - 2, w: 5, h: 5 })),
     ];
 
-    const radius = DOT_DIAMETER / 2;
-    let darkDotsPath = "";
-    let lightDotsPath = "";
+    let darkLozengesPath = "";
+    let lightLozengesPath = "";
     for (let row = 0; row < n; row++) {
       for (let col = 0; col < n; col++) {
         const cell: Box = { x: col, y: row, w: 1, h: 1 };
         if (reserved.some((box) => overlaps(cell, box))) continue;
-        const dot = circlePath(col + 0.5, row + 0.5, radius);
-        if (qr.isDark(row, col)) darkDotsPath += dot;
-        else lightDotsPath += dot;
+        const lozenge = lozengePath(col + 0.5, row + 0.5, LOZENGE_SIDE, LOZENGE_ANGLE_DEG);
+        if (qr.isDark(row, col)) darkLozengesPath += lozenge;
+        else lightLozengesPath += lozenge;
       }
     }
 
-    return { n, finders, alignments, logoBox, darkDotsPath, lightDotsPath };
+    return { n, finders, alignments, logoBox, darkLozengesPath, lightLozengesPath };
   }, [value]);
 
   if (!layout) {
     return <svg {...sizeProps} role="img" aria-label="QR code" />;
   }
 
-  const { n, finders, alignments, logoBox, darkDotsPath, lightDotsPath } = layout;
+  const { n, finders, alignments, logoBox, darkLozengesPath, lightLozengesPath } = layout;
 
   return (
     <svg {...sizeProps} viewBox={`0 0 ${n} ${n}`} role="img" aria-label="QR code">
@@ -165,8 +194,8 @@ export function DottedQrCode({
           preserveAspectRatio="xMidYMid meet"
         />
       )}
-      <path d={lightDotsPath} fill={bgColor} />
-      <path d={darkDotsPath} fill={fgColor} />
+      <path d={lightLozengesPath} fill={bgColor} />
+      <path d={darkLozengesPath} fill={fgColor} />
       {finders.map((finder) => (
         <g key={`${finder.x}-${finder.y}`}>
           <rect x={finder.x} y={finder.y} width={7} height={7} fill={fgColor} />

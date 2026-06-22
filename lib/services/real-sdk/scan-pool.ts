@@ -80,7 +80,8 @@ function failPool(): void {
   workers = null;
   const inflight = [...pending.values()];
   pending.clear();
-  for (const entry of inflight) entry.reject(new Error("scan worker pool error — falling back in-thread"));
+  for (const entry of inflight)
+    entry.reject(new Error("scan worker pool error — falling back in-thread"));
 }
 
 /** Lazily create the worker pool. Returns null when workers are unavailable (opt-out / SSR / blocked). */
