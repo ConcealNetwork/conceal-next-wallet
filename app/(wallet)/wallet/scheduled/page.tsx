@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { AutoSendToggle } from "@/components/wallet/auto-send-toggle";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { useWallets, useWalletViewOnly } from "@/lib/hooks";
+import { focusCreateField, useCreateDeepLink } from "@/lib/hooks/use-create-deeplink";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
   listSchedules,
@@ -49,6 +50,8 @@ export default function ScheduledPage() {
   const [schedules, setSchedules] = useState<ScheduledPayment[]>(() => listSchedules());
   const [form, setForm] = useState(EMPTY_FORM);
   const nowISO = useMemo(() => new Date().toISOString(), []);
+  // The sidebar "+" quick-create deep-links here with ?new=1 — scroll to + focus the add form.
+  useCreateDeepLink(() => focusCreateField("sched-label"));
   const canAdd =
     form.label.trim() !== "" &&
     addressIsValid(form.address.trim()) &&

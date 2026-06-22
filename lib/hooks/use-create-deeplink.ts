@@ -34,3 +34,15 @@ export function useCreateDeepLink(onCreate: () => void) {
     );
   }, [newParam, pathname, searchParams]);
 }
+
+/**
+ * Scroll a create-form field into view and focus it — the inline-form equivalent of opening a
+ * create dialog. For pages whose "create flow" is an on-page add form (Scheduled, Check-ins)
+ * rather than a modal.
+ */
+export function focusCreateField(id: string): void {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.focus({ preventScroll: true });
+}
