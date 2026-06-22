@@ -96,4 +96,12 @@ describe("mock services", () => {
     expect(optimizationStatus.unspentOutputs).toBeGreaterThan(0);
     expect(rescanned.ok).toBe(true);
   });
+
+  // #193: the mock must mirror the real SDK's error contract — throw on an unknown id rather
+  // than silently returning the wrong message (which would patch the wrong row's read state).
+  it("markRead rejects an unknown message id (matches the real SDK contract)", async () => {
+    await expect(services.messages.markRead("does-not-exist")).rejects.toThrow(
+      "Message not found.",
+    );
+  });
 });
