@@ -15,6 +15,7 @@ import {
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import { formatNodeVersion } from "@/lib/network/format-node-version";
+import { Sparkline } from "@/components/ui/sparkline";
 import { formatHashrate } from "@/lib/ui/format-hashrate";
 import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
 import type { SmartNode } from "@/lib/types";
@@ -192,8 +193,14 @@ export default function NetworkPage() {
           chart={
             <Sparkline
               values={blockTimeSeries}
-              color="hsl(var(--chart-2))"
+              stroke="hsl(var(--chart-2))"
               baseline={BLOCK_TARGET_SECONDS}
+              width={100}
+              height={40}
+              padding={4}
+              strokeWidth={1.6}
+              className="h-12 w-full"
+              emptyClassName="h-12"
             />
           }
         />
@@ -589,50 +596,6 @@ function chartPoints(values: number[]) {
   const span = max - min || 1;
   const stepX = 100 / (values.length - 1);
   return values.map((value, index) => [index * stepX, 36 - ((value - min) / span) * 32] as const);
-}
-
-function Sparkline({
-  values,
-  color,
-  baseline,
-}: {
-  values: number[];
-  color: string;
-  baseline?: number;
-}) {
-  if (values.length < 2) return <div className="h-12" />;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const line = chartPoints(values)
-    .map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`)
-    .join(" ");
-  const baselineY = baseline !== undefined ? 36 - ((baseline - min) / span) * 32 : null;
-  return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-12 w-full" aria-hidden="true">
-      {baselineY !== null ? (
-        <line
-          x1="0"
-          y1={baselineY}
-          x2="100"
-          y2={baselineY}
-          stroke="hsl(var(--border))"
-          strokeDasharray="3 4"
-        />
-      ) : null}
-      <path
-        className="animate-stroke-draw motion-reduce:animate-none"
-        d={line}
-        fill="none"
-        stroke={color}
-        strokeWidth={1.6}
-        pathLength={1}
-        strokeDasharray={1}
-        strokeDashoffset={0}
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
 }
 
 function MiniArea({ values, color }: { values: number[]; color: string }) {

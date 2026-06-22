@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sparkline } from "@/components/ui/sparkline";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
@@ -138,9 +139,13 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
               <span aria-hidden="true">▲</span>
               {changeLabel}
             </span>
-            <BalanceSparkline
+            <Sparkline
               values={wallet.trends?.balanceTotal?.trend ?? []}
-              className="mt-3 h-[50px] w-full sm:w-60"
+              className="mt-3 block h-[50px] w-full text-primary sm:w-60"
+              width={240}
+              height={50}
+              padding={5}
+              area
             />
           </div>
         </div>
@@ -227,49 +232,6 @@ export function BalanceHeroSkeleton() {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function BalanceSparkline({ values, className }: { values: number[]; className?: string }) {
-  // No flat-line placeholder: with <2 points there's no real trend to draw, so
-  // render nothing (matches the market/rail sparklines).
-  if (values.length < 2) return null;
-  const width = 240;
-  const height = 50;
-  const trend = values;
-  const min = Math.min(...trend);
-  const max = Math.max(...trend);
-  const range = max - min || 1;
-  const step = width / (trend.length - 1);
-  const points = trend
-    .map((value, index) => {
-      const x = index * step;
-      const y = height - ((value - min) / range) * (height - 10) - 5;
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
-  const areaPoints = `0,${height} ${points} ${width},${height}`;
-
-  return (
-    <svg
-      aria-hidden="true"
-      className={cn("block text-primary", className)}
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-    >
-      <polygon points={areaPoints} fill="hsl(var(--primary) / 0.08)" />
-      <polyline
-        className="animate-stroke-draw motion-reduce:animate-none"
-        points={points}
-        fill="none"
-        pathLength={1}
-        stroke="currentColor"
-        strokeDasharray={1}
-        strokeDashoffset={0}
-        strokeWidth="2"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
   );
 }
 

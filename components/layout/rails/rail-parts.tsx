@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { LineChart } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sparkline } from "@/components/ui/sparkline";
 import { useMarketData } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
@@ -84,50 +85,6 @@ function MarketChangeBadge({ pct }: { pct: number }) {
 }
 
 /** Raw SVG sparkline over the market price history the hook already provides. */
-function MarketSparkline({ values, className }: { values: number[]; className?: string }) {
-  const width = 280;
-  const height = 52;
-  if (values.length < 2) {
-    return null;
-  }
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const step = width / (values.length - 1);
-  const points = values
-    .map((value, index) => {
-      const x = index * step;
-      const y = height - ((value - min) / range) * (height - 8) - 4;
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
-  const areaPoints = `0,${height} ${points} ${width},${height}`;
-
-  return (
-    <svg
-      aria-hidden="true"
-      className={cn("block text-wallet-incoming", className)}
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-    >
-      <polygon points={areaPoints} fill="hsl(160 84% 39% / 0.1)" />
-      <polyline
-        className="animate-stroke-draw motion-reduce:animate-none"
-        points={points}
-        fill="none"
-        pathLength={1}
-        stroke="currentColor"
-        strokeDasharray={1}
-        strokeDashoffset={0}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-}
-
 /** Market card: CCX/USD price + 24h change + sparkline + a "view full market" link. */
 export function RailMarketSection({ first = true }: { first?: boolean }) {
   const market = useMarketData();
@@ -150,9 +107,16 @@ export function RailMarketSection({ first = true }: { first?: boolean }) {
               </span>
               <MarketChangeBadge pct={data.change24hPct} />
             </div>
-            <MarketSparkline
+            <Sparkline
               values={data.history.map((point) => point.price)}
-              className="mt-4 h-[52px] w-full"
+              className="mt-4 block h-[52px] w-full text-wallet-incoming"
+              width={280}
+              height={52}
+              padding={4}
+              strokeWidth={2.5}
+              roundCaps
+              area
+              areaFill="hsl(160 84% 39% / 0.1)"
             />
           </>
         ) : (

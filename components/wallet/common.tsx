@@ -4,6 +4,7 @@ import { Check, Clipboard, EyeOff, Inbox } from "lucide-react";
 import { cloneElement, isValidElement, useState } from "react";
 import { DottedQrCode } from "@/components/qr/dotted-qr";
 import { Button } from "@/components/ui/button";
+import { Sparkline } from "@/components/ui/sparkline";
 import {
   Card,
   CardAction,
@@ -154,52 +155,19 @@ export function StatCard({
             )
           )}
         </div>
-        {hasTrend && <InlineSparkline values={trend} className="mt-4" />}
+        {hasTrend && (
+          <Sparkline
+            values={trend}
+            className="mt-4 h-10 w-full text-primary"
+            width={260}
+            height={40}
+            padding={3}
+            area
+            animateArea
+          />
+        )}
       </CardContent>
     </Card>
-  );
-}
-
-function InlineSparkline({ values, className }: { values: number[]; className?: string }) {
-  const width = 260;
-  const height = 40;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const step = width / (values.length - 1);
-  const points = values
-    .map((value, index) => {
-      const x = index * step;
-      const y = height - ((value - min) / range) * (height - 6) - 3;
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
-  const areaPoints = `0,${height} ${points} ${width},${height}`;
-
-  return (
-    <svg
-      aria-hidden="true"
-      className={cn("h-10 w-full text-primary", className)}
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-    >
-      <polygon
-        className="animate-fade-in motion-reduce:animate-none motion-reduce:opacity-100"
-        points={areaPoints}
-        fill="hsl(var(--primary) / 0.08)"
-      />
-      <polyline
-        className="animate-stroke-draw motion-reduce:animate-none"
-        points={points}
-        fill="none"
-        pathLength={1}
-        stroke="currentColor"
-        strokeDasharray={1}
-        strokeDashoffset={0}
-        strokeWidth="2"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
   );
 }
 
