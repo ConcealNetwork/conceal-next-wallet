@@ -1,4 +1,4 @@
-import { qrModuleMatrix } from "./qr-png";
+import { qrModuleMatrix, sanitizePngLabel } from "./qr-png";
 
 // Renders a branded, shareable "payment request" card to a PNG — the richer
 // counterpart to qr-png.ts (which exports the bare QR). Drawn entirely with
@@ -173,11 +173,5 @@ export function paymentCardToPngBlob(options: PaymentCardOptions): Promise<Blob>
 
 /** Filename like `conceal-request-ccx7abcd.png`. */
 export function paymentCardFilename(label: string): string {
-  const cleaned = label
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 16)
-    .replace(/-+$/, "");
-  return `conceal-request${cleaned ? `-${cleaned}` : ""}.png`;
+  return sanitizePngLabel(label, "conceal-request");
 }

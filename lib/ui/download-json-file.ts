@@ -1,3 +1,5 @@
+import { triggerBlobDownload } from "@/lib/ui/download-blob";
+
 /** Safe filename stem for wallet backup downloads (no path or extension). */
 export function sanitizeBackupFilename(name: string): string {
   const trimmed = name.trim() || "wallet";
@@ -11,19 +13,6 @@ export function backupDownloadFilename(name: string): string {
 }
 
 export function downloadJsonFile(filename: string, data: unknown): void {
-  if (typeof window === "undefined") {
-    throw new Error("Download is only available in the browser.");
-  }
-
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = backupDownloadFilename(filename);
-  anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  // Defer revocation — revoking synchronously cancels the download in WebKit/Safari.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  triggerBlobDownload(backupDownloadFilename(filename), blob);
 }

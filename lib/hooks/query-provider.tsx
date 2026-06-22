@@ -9,7 +9,9 @@ import {
 } from "@tanstack/react-query";
 import { useState } from "react";
 
-export { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient };
+// Re-export only the hooks consumed through this module; QueryClient/QueryClientProvider are
+// used internally here (and imported from @tanstack/react-query directly by tests).
+export { useMutation, useQuery, useQueryClient };
 
 export function WalletQueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(

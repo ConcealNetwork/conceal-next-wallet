@@ -16,7 +16,7 @@ export type MessageConversation = {
 };
 
 /** PID that identifies inbound messages in a thread (paymentIdFrom / sent paymentIdTo). */
-export function inboundPaymentId(
+function inboundPaymentId(
   message: Pick<Message, "direction" | "paymentIdFrom" | "paymentIdTo">,
 ): string | null {
   if (message.direction === "received") {
@@ -25,7 +25,7 @@ export function inboundPaymentId(
   return normalizePaymentId(message.paymentIdTo ?? undefined) || null;
 }
 
-export function findContactForMessage(
+function findContactForMessage(
   addressBook: AddressEntry[],
   message: Message,
 ): AddressEntry | undefined {
@@ -80,7 +80,7 @@ export function findContactForMessages(
   return undefined;
 }
 
-export function resolveConversationMatchFromMessage(
+function resolveConversationMatchFromMessage(
   selected: Message,
   addressBook: AddressEntry[],
 ): { sentToAddress: string | null; receivePaymentId: string | null } {
@@ -101,7 +101,7 @@ export function resolveConversationMatchFromMessage(
 }
 
 /** Messages in the same thread as `selected` (sent→address + received→paymentIdFrom). */
-export function filterConversationMessages(
+function filterConversationMessages(
   selected: Message,
   all: Message[],
   addressBook: AddressEntry[],

@@ -16,9 +16,6 @@ import { ccxAmount, usdAmount } from "@/lib/utils";
 export const MOCK_ADDRESS =
   "ccx7QbH7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3m00000000000000000";
 
-/** @deprecated Alias for MOCK_ADDRESS — kept for callers that used the padded export form. */
-export const MOCK_EXPORT_ADDRESS = MOCK_ADDRESS;
-
 export const mockWalletInfo: WalletInfo = {
   address: MOCK_ADDRESS,
   viewOnly: false,
@@ -362,7 +359,7 @@ export const mockSettings: WalletSettings = {
 };
 
 export const mockExportData = {
-  address: MOCK_EXPORT_ADDRESS,
+  address: MOCK_ADDRESS,
   mnemonic:
     "mock amber orbit velvet zero carbon river lunar basic sample wallet conceal never real crypto placeholder safe display only",
   spendKey: "mock-spend-key-placeholder-not-real-".padEnd(98, "x"),

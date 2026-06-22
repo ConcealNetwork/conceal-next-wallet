@@ -8,7 +8,6 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { Deposit, MarketData, WalletInfo } from "@/lib/types";
 import { TickerBadge } from "@/lib/ui/ticker-preference-provider";
 import {
-  CCX_HUMAIN_DECIMAL_DISPLAY,
   CCX_PRECISION_DECIMAL_DISPLAY,
   ccxToNumber,
   cn,
@@ -189,7 +188,7 @@ export function BalanceHero({ wallet, market, deposits }: BalanceHeroProps) {
                 )}
               >
                 {stripTickerSuffix(
-                  formatCcx(segment.value, segment.valueDecimals ?? CCX_HUMAIN_DECIMAL_DISPLAY),
+                  formatCcx(segment.value, segment.valueDecimals ?? CCX_PRECISION_DECIMAL_DISPLAY),
                 )}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{segment.note}</p>

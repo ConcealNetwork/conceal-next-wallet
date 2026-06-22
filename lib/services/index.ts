@@ -4,7 +4,7 @@ import type { WalletServices } from "@/lib/services/types";
 
 let cachedRealServices: WalletServices | null = null;
 
-export function getWalletServices(): WalletServices {
+function getWalletServices(): WalletServices {
   if (env.useMockWallet) {
     return mockServices;
   }

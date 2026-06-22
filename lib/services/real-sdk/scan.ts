@@ -111,7 +111,7 @@ function normalizeVout(vout: unknown): txns.RawTransactionOutput[] | null {
   return outputs;
 }
 
-export function extractInputKeyImages(transaction: unknown): string[] {
+function extractInputKeyImages(transaction: unknown): string[] {
   if (!isRecord(transaction)) return [];
   const vin = transaction.vin;
   if (!Array.isArray(vin)) return [];
@@ -131,7 +131,7 @@ export function extractInputKeyImages(transaction: unknown): string[] {
   return keyImages;
 }
 
-export function extractDepositInputs(transaction: unknown): RawDepositInput[] {
+function extractDepositInputs(transaction: unknown): RawDepositInput[] {
   if (!isRecord(transaction)) return [];
   const vin = transaction.vin;
   if (!Array.isArray(vin)) return [];

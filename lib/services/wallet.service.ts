@@ -1,7 +1,5 @@
 import type { SecondaryWalletStatus, WalletInfo, WalletSummary } from "@/lib/types";
 
-export type { WalletSummary };
-
 export type FinalizeCreateWalletInput = {
   password: string;
   /** Optional wallet label (multi-wallet #95); defaults applied by the engine. */

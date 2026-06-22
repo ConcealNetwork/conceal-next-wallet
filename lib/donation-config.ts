@@ -14,34 +14,10 @@ export const DONATION_CRYPTO_ADDRESSES = [
   },
 ] as const;
 
-export const DONATION_METHOD_KEYS = ["crypto", "paypal", "apple", "visa"] as const;
+// Internal source for the DonationMethodKey type (the type is the public surface).
+const DONATION_METHOD_KEYS = ["crypto", "paypal", "apple", "visa"] as const;
 
 export type DonationMethodKey = (typeof DONATION_METHOD_KEYS)[number];
-
-export const DONATION_METHOD_LABELS: Record<
-  DonationMethodKey,
-  "Cryptocurrency" | "Credit/Debit Card" | "PayPal" | "Apple Pay"
-> = {
-  crypto: "Cryptocurrency",
-  visa: "Credit/Debit Card",
-  paypal: "PayPal",
-  apple: "Apple Pay",
-};
-
-/** SectionCard description when exactly one payment method is enabled. */
-export const DONATION_SOLE_METHOD_DESCRIPTIONS: Record<DonationMethodKey, string> = {
-  crypto: "Donate using cryptocurrency",
-  visa: "Donate using credit card",
-  paypal: "Donate using PayPal",
-  apple: "Donate using Apple Pay",
-};
-
-export function getDonationMethodsDescription(enabledMethods: DonationMethodKey[]): string {
-  if (enabledMethods.length === 1) {
-    return DONATION_SOLE_METHOD_DESCRIPTIONS[enabledMethods[0]];
-  }
-  return "Multiple ways to show your support";
-}
 
 const METHOD_ALIASES: Record<string, DonationMethodKey> = {
   crypto: "crypto",

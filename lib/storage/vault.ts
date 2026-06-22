@@ -9,10 +9,10 @@ import { decryptVault, type EncryptedVault, encryptVault } from "@/lib/storage/v
  * (device/credential-bound), and per-wallet engine settings.
  */
 
-export const VAULT_VERSION = 1;
+const VAULT_VERSION = 1;
 
 /** Safe-to-migrate UI preferences (localStorage). Allowlist — never a blind dump. */
-export const VAULT_PREF_KEYS = ["useShortTicker", "ccx-theme", "ccx-locale"] as const;
+const VAULT_PREF_KEYS = ["useShortTicker", "ccx-theme", "ccx-locale"] as const;
 
 export interface VaultData {
   version: number;
@@ -51,7 +51,7 @@ function writePrefs(prefs: Record<string, string>): number {
 }
 
 /** Snapshot the current device-local data. `exportedAt` is supplied by the caller. */
-export async function collectVaultData(exportedAt: string): Promise<VaultData> {
+async function collectVaultData(exportedAt: string): Promise<VaultData> {
   return {
     version: VAULT_VERSION,
     exportedAt,

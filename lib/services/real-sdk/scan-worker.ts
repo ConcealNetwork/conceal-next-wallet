@@ -13,7 +13,7 @@ import {
   scanRawTransaction,
 } from "@/lib/services/real-sdk/scan";
 
-export interface ScanRequest {
+interface ScanRequest {
   id: number;
   rawTxs: DaemonRawTransaction[];
   keys: WalletKeys;

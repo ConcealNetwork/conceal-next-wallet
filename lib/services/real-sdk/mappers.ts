@@ -17,7 +17,6 @@ import {
   type WalletTransaction,
 } from "conceal-wallet-sdk";
 import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
-import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import {
   type IncomingPendingRecord,
   incomingPendingAtomic,
@@ -248,9 +247,4 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
     currentHeight: state.scannedHeight,
     networkHeight,
   };
-}
-
-/** Stable thread key for a recipient + payment id (shared with the mock/UI). */
-export function threadKeyFor(address: string, paymentId?: string): string {
-  return buildMessageThreadKey(address, paymentId);
 }

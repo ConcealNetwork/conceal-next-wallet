@@ -9,11 +9,11 @@ import {
 import type { Transaction as UiTransaction, TransactionType } from "@/lib/types";
 
 /** Sent message envelope: self node (10100) or remote node (+ fee → 11100) atomic. */
-export function isSentMessageAmount(amount: number): boolean {
+function isSentMessageAmount(amount: number): boolean {
   return amount === SENT_MESSAGE_AMOUNT_SELF_ATOMIC || amount === SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC;
 }
 
-export function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amount">): boolean {
+function isUiMessageIn(transaction: Pick<UiTransaction, "message" | "amount">): boolean {
   if (!transaction.message) return false;
   return Math.abs(transaction.amount.atomic) === MESSAGE_TX_AMOUNT_ATOMIC;
 }
