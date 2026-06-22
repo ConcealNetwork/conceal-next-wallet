@@ -7,6 +7,7 @@ import { MarketRail } from "@/components/layout/rails/market-rail";
 import { usePageRightRail } from "@/components/layout/right-rail";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sparkline } from "@/components/ui/sparkline";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { queryKeys, useMarketData, useWalletInfo } from "@/lib/hooks";
@@ -385,43 +386,15 @@ function ChangeMetric({ market, index }: { market: MarketData; index: number }) 
         </span>
       </div>
       <p className={cn("font-mono text-2xl font-bold tracking-tight", toneClass)}>{display}</p>
-      <Sparkline values={market.history.map((point) => point.price)} positive={positive} />
-    </div>
-  );
-}
-
-function Sparkline({ values, positive }: { values: number[]; positive: boolean }) {
-  if (values.length < 2) return <div className="h-9" />;
-  const width = 240;
-  const height = 36;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const step = width / (values.length - 1);
-  const points = values
-    .map(
-      (value, index) =>
-        `${(index * step).toFixed(1)},${(height - ((value - min) / range) * (height - 4) - 2).toFixed(1)}`,
-    )
-    .join(" ");
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      className={cn("h-9 w-full", positive ? "text-wallet-incoming" : "text-wallet-outgoing")}
-    >
-      <polyline
-        className="animate-stroke-draw motion-reduce:animate-none"
-        points={points}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeDasharray={1}
-        pathLength={1}
-        vectorEffect="non-scaling-stroke"
+      <Sparkline
+        values={market.history.map((point) => point.price)}
+        width={240}
+        height={36}
+        padding={2}
+        className={cn("h-9 w-full", positive ? "text-wallet-incoming" : "text-wallet-outgoing")}
+        emptyClassName="h-9"
       />
-    </svg>
+    </div>
   );
 }
 
