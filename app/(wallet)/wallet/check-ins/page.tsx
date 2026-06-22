@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { useAddressBook, useMessages, useSendMessage, useWalletViewOnly } from "@/lib/hooks";
+import { focusCreateField, useCreateDeepLink } from "@/lib/hooks/use-create-deeplink";
 import { useWalletSynced } from "@/lib/hooks/use-check-ins";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
@@ -64,6 +65,8 @@ export default function CheckInsPage() {
   const [contactId, setContactId] = useState("");
   const [interval, setInterval] = useState("14");
   const [grace, setGrace] = useState("7");
+  // The sidebar "+" quick-create deep-links here with ?new=1 — scroll to + focus the add form.
+  useCreateDeepLink(() => focusCreateField("ci-contact"));
   // Fresh each render (not memoized) so statuses stay accurate if the page is
   // left open. Cheap — a handful of watchers over an in-memory message list.
   const nowISO = new Date().toISOString();
