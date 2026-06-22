@@ -18,8 +18,10 @@ function fakeLocalStorage() {
 
 beforeEach(async () => {
   vi.stubGlobal("localStorage", fakeLocalStorage()); // Node's real localStorage global is read-only
-  const { setPreferredNode } = await import("@/lib/network/node-preference");
+  vi.stubGlobal("sessionStorage", fakeLocalStorage()); // the auto-node slot lives in sessionStorage
+  const { setPreferredNode, setAutoNode } = await import("@/lib/network/node-preference");
   setPreferredNode(null); // reset the module's in-memory cache between tests
+  setAutoNode(null);
 });
 
 afterEach(() => {
@@ -46,10 +48,27 @@ describe("preferred-node store", () => {
   });
 });
 
+describe("auto-node store", () => {
+  it("set / read / clear persists to localStorage", async () => {
+    const { setAutoNode, readAutoNode } = await import("@/lib/network/node-preference");
+    expect(readAutoNode()).toBeNull();
+    setAutoNode("https://fast.node/");
+    expect(readAutoNode()).toBe("https://fast.node/");
+    setAutoNode(null);
+    expect(readAutoNode()).toBeNull();
+  });
+
+  it("treats blank/whitespace as unset", async () => {
+    const { setAutoNode, readAutoNode } = await import("@/lib/network/node-preference");
+    setAutoNode("   ");
+    expect(readAutoNode()).toBeNull();
+  });
+});
+
 describe("nodeUrlFromRaw precedence", () => {
-  it("custom node > device-local preferred > default", async () => {
+  it("custom node > device-local preferred > auto-fastest > default", async () => {
     const { nodeUrlFromRaw, defaultNodeUrl } = await import("@/lib/services/real-sdk/runtime");
-    const { setPreferredNode } = await import("@/lib/network/node-preference");
+    const { setPreferredNode, setAutoNode } = await import("@/lib/network/node-preference");
     // biome-ignore lint/suspicious/noExplicitAny: minimal raw blob for the test
     const base: any = {
       deposits: [],
@@ -63,11 +82,15 @@ describe("nodeUrlFromRaw precedence", () => {
     // Nothing set → default node.
     expect(nodeUrlFromRaw(base)).toBe(defaultNodeUrl());
 
-    // Device-local preferred node is honored.
+    // The auto-probed fastest node is used when nothing more specific is set.
+    setAutoNode("https://auto.node/");
+    expect(nodeUrlFromRaw(base)).toBe("https://auto.node/");
+
+    // An explicit device-local pick wins over the auto-fastest node.
     setPreferredNode("https://preferred.node/");
     expect(nodeUrlFromRaw(base)).toBe("https://preferred.node/");
 
-    // An explicit per-wallet custom node still wins over the device-local preference.
+    // A per-wallet custom node still wins over everything.
     const custom = { ...base, options: { customNode: true, nodeUrl: "https://custom.node/" } };
     expect(nodeUrlFromRaw(custom)).toBe("https://custom.node/");
   });
