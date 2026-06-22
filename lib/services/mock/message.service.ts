@@ -33,7 +33,13 @@ export const mockMessageService: MessageService = {
   },
   async markRead(id) {
     await mockDelay();
-    const message = mockMessages.find((entry) => entry.id === id) ?? mockMessages[0];
+    // Match the real SDK's error contract (real-sdk/message.service.ts) — throw on an
+    // unknown id rather than silently returning the wrong message (which would patch the
+    // wrong row's read-state in the query cache).
+    const message = mockMessages.find((entry) => entry.id === id);
+    if (!message) {
+      throw new Error("Message not found.");
+    }
     return { ...clone(message), unread: false };
   },
 };

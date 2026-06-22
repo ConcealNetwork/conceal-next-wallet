@@ -494,7 +494,7 @@ export function GlobalHeader() {
         </Link>
       </div>
       <div className="flex justify-center">
-        <WalletSwitcher variant="header" />
+        <WalletSwitcher />
       </div>
       <div className="flex items-center justify-end gap-1">
         <SyncStatusPill />

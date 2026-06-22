@@ -6,7 +6,7 @@ import { RightRailHeader } from "@/components/layout/right-rail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton, WalletQrCode } from "@/components/wallet/common";
-import { walletNetworkScalars } from "@/lib/config/config";
+import { SEND_FEE_CCX as SEND_FEE } from "@/lib/config/config";
 import { useMarketData, useTransactions, useWalletInfo } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
@@ -15,9 +15,6 @@ import { ccxToNumber, cn, truncateAddress, usdSubline } from "@/lib/utils";
 // Send-page contextual rail (#122). The Send page is just the form now; this rail
 // carries the supporting context that used to crowd the page: spendable balance,
 // your receive address (copy + QR), recently-sent history, and the network fee.
-const SEND_FEE =
-  walletNetworkScalars.coinFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces +
-  walletNetworkScalars.remoteNodeFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
 
 export function SendRail({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();

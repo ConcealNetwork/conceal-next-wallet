@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { COIN_UNIT_PLACES, DEPOSIT_MAX_TERM_MONTH } from "@/lib/config/config";
+import { COIN_UNIT_PLACES } from "@/lib/config/config";
+import { DEPOSIT_DURATION_OPTIONS } from "@/lib/services/deposit.service";
 import { computeDepositInterest } from "@/lib/deposits/interest-calc";
 import { useDeposits } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
@@ -127,7 +128,7 @@ export function DepositsRail({ embedded = false }: { embedded?: boolean }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: DEPOSIT_MAX_TERM_MONTH }, (_, i) => i + 1).map((m) => (
+                {DEPOSIT_DURATION_OPTIONS.map((m) => (
                   <SelectItem key={m} value={String(m)}>
                     {t(m === 1 ? "deposits.monthsValueOne" : "deposits.monthsValue", { count: m })}
                   </SelectItem>

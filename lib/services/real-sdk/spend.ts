@@ -13,11 +13,12 @@ import {
   DEFAULT_MIXIN,
   decodeAddress,
   getUnspentOutputs,
+  isValidAddress,
   type OutboundQueueState,
   type OwnedOutput,
   type transactions as txns,
 } from "conceal-wallet-sdk";
-import { COIN_FEE_ATOMIC } from "@/lib/config/config";
+import { COIN_FEE_ATOMIC, WALLET_DONATION_ADDRESS } from "@/lib/config/config";
 import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
 import {
@@ -53,6 +54,26 @@ export function decodeRecipient(address: string): DecodedRecipient {
     viewPublicKey: decoded.viewPublicKey,
     ...(decoded.paymentId ? { paymentId: decoded.paymentId } : {}),
   };
+}
+
+/** The node's advertised fee address, or `""` when it charges none / on error. */
+export async function safeNodeFeeAddress(daemon: {
+  getNodeFeeAddress(): Promise<string>;
+}): Promise<string> {
+  try {
+    return await daemon.getNodeFeeAddress();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Decode the node's fee address; fall back to the donation address when the
+ * (untrusted) node returns an undecodable string — bounds a bad node to the fee.
+ */
+export function decodeFeeRecipient(feeAddress: string): DecodedRecipient {
+  const target = isValidAddress(feeAddress) ? feeAddress : WALLET_DONATION_ADDRESS;
+  return decodeRecipient(target);
 }
 
 /** The wallet's own decoded keys (change / self destination). */
