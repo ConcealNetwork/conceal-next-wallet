@@ -160,7 +160,10 @@ export const realSdkWalletService: WalletService = {
     pendingDraft = null;
     createdMnemonic = draft.mnemonic ?? null;
     await adopt({ raw: draft.raw, keys: draft.keys, password: input.password, label: input.label });
-    return syncedInfo();
+    // A new wallet is seeded at ~the current tip, so there's little to catch up (just a brief banner
+    // if the tip advanced while the user was on the create screen) — return instantly from seeded
+    // state rather than awaiting a sync (consistent with import/open; never blocks).
+    return openedInfo();
   },
 
   async abortCreateWallet() {
@@ -224,7 +227,10 @@ export const realSdkWalletService: WalletService = {
           password: input.password,
           label: input.label,
         });
-        return syncedInfo();
+        // Land in the wallet IMMEDIATELY from the adopted (seeded) state; the shell's live-sync
+        // closes the gap to the tip in the background (WalletSyncingBanner). Awaiting a full
+        // `syncedInfo()` here froze the import on "Importing…" for the entire mainnet catch-up.
+        return openedInfo();
       } catch (error) {
         throw toFriendlyImportError(error);
       }
@@ -274,7 +280,9 @@ export const realSdkWalletService: WalletService = {
         password: input.password,
         label: input.label,
       });
-      return syncedInfo();
+      // Land in the wallet immediately; the background live-sync catches up from the creation
+      // height (mnemonic/keys/qr start with zero balance + a syncing banner, not a frozen screen).
+      return openedInfo();
     } catch (error) {
       throw toFriendlyImportError(error);
     }
