@@ -121,7 +121,7 @@ export function SettingsRail({ embedded = false }: { embedded?: boolean }) {
       <div className="px-1">
         <PostureRow
           icon={KeyRound}
-          label={t("settings.passkeyTitle")}
+          label={t("settings.passkeyUnlock")}
           value={passkey ? t("settings.postureOn") : t("settings.postureOff")}
           tone={passkey ? "ok" : "warn"}
           first
