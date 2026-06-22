@@ -9,9 +9,11 @@
  *   localStorage["ccx-enable-worker-scan"] = "1"   → OPT IN to the Phase-3 worker-pool scan fold.
  *                                                     OFF by default: the Turbopack worker chunk fails
  *                                                     to bootstrap ("Missing worker bootstrap config")
- *                                                     when the PWA service worker serves it without the
- *                                                     `?params=` the worker runtime needs, which stalled
- *                                                     every batch ~60s before falling back in-thread.
+ *                                                     when a PWA service worker serves it without the
+ *                                                     `#params=` HASH the worker runtime needs (a hash
+ *                                                     never reaches the SW; fixed by keeping worker
+ *                                                     chunks off the SW cache — `isWorkerChunk`), which
+ *                                                     stalled every batch ~60s before in-thread fallback.
  *                                                     Disabled, the fold runs in-thread (correct + the
  *                                                     original speed); the deep-sync win is multi-source
  *                                                     FETCH parallelism, which is unaffected.

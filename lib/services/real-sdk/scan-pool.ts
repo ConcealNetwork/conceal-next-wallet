@@ -5,17 +5,15 @@
  * WASM, same inputs), a worker result is byte-identical to an in-thread one — the pool only
  * distributes + reorders, it never changes what a scan produces.
  *
- * OPT-IN: the pool is OFF by default and only spun up when {@link workerScanEnabled} is set — the
- * Turbopack worker chunk currently fails to bootstrap ("Missing worker bootstrap config") when the
- * PWA service worker serves it without the `?params=` the worker runtime needs, so the safe default
- * is the in-thread fold (correct + the original speed). The deep-sync win is multi-source FETCH
- * parallelism, which is independent of this pool.
- *
- * TODO(worker-scan root cause): this gate ROUTES AROUND the bundler/SW interaction rather than
- * fixing it. The real fix is to stop the service worker from caching the Turbopack worker chunk
- * stripped of its `?params=` (precache should skip `_next/static/chunks/*worker*` or preserve the
- * query). Once that lands, flip {@link workerScanEnabled} back to default-on and re-validate the
- * fold parallelism in a real browser (Turbopack static export, incl. the PAGES_BASE_PATH subpath).
+ * OPT-IN: the pool is OFF by default and only spun up when {@link workerScanEnabled} is set. The
+ * Turbopack worker chunk encodes its bootstrap config in the URL HASH
+ * (`turbopack-worker-<hash>.js#params=…`); a hash never reaches the network, so a PWA service worker
+ * that cache-first-served the bare chunk made the module worker's `self.location` lose the params →
+ * "Missing worker bootstrap config". The service worker now keeps worker chunks OFF its cache so they
+ * load from the network with the hash intact (`isWorkerChunk` in lib/pwa/precache.mjs +
+ * public/service-worker.js). With that fixed the pool boots correctly (browser-validated on a real
+ * mainnet sync); the default stays OFF pending a separate flip-on validation. The deep-sync win is
+ * multi-source FETCH parallelism, which is independent of this pool.
  *
  * SAFETY: every failure mode falls back to the in-thread scan (no pool / no Worker support / a
  * worker error / a timeout), so the worker path can never break or stall sync — worst case it is
