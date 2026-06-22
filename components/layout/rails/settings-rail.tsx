@@ -1,6 +1,16 @@
 "use client";
 
-import { Bell, Check, Eye, Gauge, KeyRound, Lock, Server, TriangleAlert, Wallet } from "lucide-react";
+import {
+  Bell,
+  Check,
+  Eye,
+  Gauge,
+  KeyRound,
+  Lock,
+  Server,
+  TriangleAlert,
+  Wallet,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { RailSectionHeading, RailStatRow } from "@/components/layout/rails/rail-parts";
 import { RightRailHeader } from "@/components/layout/right-rail";
@@ -110,7 +120,9 @@ export function SettingsRail({ embedded = false }: { embedded?: boolean }) {
         label={t("settings.railSync")}
         value={isSyncing ? `${syncPct}%` : t("settings.railSynced")}
         sub={
-          info ? `${info.currentHeight.toLocaleString()} / ${info.networkHeight.toLocaleString()}` : undefined
+          info
+            ? `${info.currentHeight.toLocaleString()} / ${info.networkHeight.toLocaleString()}`
+            : undefined
         }
         first
       />
@@ -129,7 +141,9 @@ export function SettingsRail({ embedded = false }: { embedded?: boolean }) {
         <PostureRow
           icon={Lock}
           label={t("settings.autoLock")}
-          value={autoLock > 0 ? t("settings.postureMinutes", { n: autoLock }) : t("settings.postureOff")}
+          value={
+            autoLock > 0 ? t("settings.postureMinutes", { n: autoLock }) : t("settings.postureOff")
+          }
           tone={autoLock > 0 ? "ok" : "warn"}
         />
         <PostureRow
