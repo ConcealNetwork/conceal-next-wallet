@@ -65,12 +65,20 @@ export function UnlockNodePicker() {
   // the explicit official/community rows below PIN one node, remembered across sessions.
   const officialChoices: Choice[] = [
     { url: null, label: "Automatic (fastest node)", group: "Official" },
-    ...DEFAULT_DAEMON_NODES.map((url): Choice => ({ url, label: nodeLabel(url), group: "Official" })),
+    ...DEFAULT_DAEMON_NODES.map(
+      (url): Choice => ({ url, label: nodeLabel(url), group: "Official" }),
+    ),
   ];
   const officialHosts = new Set(DEFAULT_DAEMON_NODES.map((u) => nodeUrlToPoolHost(u)));
   const smartChoices: Choice[] = smartNodes
     .filter((node) => !officialHosts.has(nodeUrlToPoolHost(node.url)))
-    .map((node): Choice => ({ url: node.url, label: node.name || nodeLabel(node.url), group: "Community" }));
+    .map(
+      (node): Choice => ({
+        url: node.url,
+        label: node.name || nodeLabel(node.url),
+        group: "Community",
+      }),
+    );
 
   const allChoices = [...officialChoices, ...smartChoices];
   // Collapsed header: a pinned node shows its label; "Automatic" shows the resolved fastest host
@@ -133,7 +141,8 @@ export function UnlockNodePicker() {
             );
           })}
           <p className="px-2 pb-1 pt-2 text-[11px] leading-snug text-muted-foreground">
-            Automatic briefly contacts community nodes to find the fastest. Pick one above to pin it.
+            Automatic briefly contacts community nodes to find the fastest. Pick one above to pin
+            it.
           </p>
         </div>
       ) : null}

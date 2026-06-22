@@ -42,7 +42,11 @@ export interface UseGoals {
   restore: (id: string) => Promise<void>;
   /** Returns false when the amount is invalid. */
   logContribution: (goalId: string, input: NewContributionInput) => Promise<boolean>;
-  updateContribution: (goalId: string, contributionId: string, input: NewContributionInput) => Promise<boolean>;
+  updateContribution: (
+    goalId: string,
+    contributionId: string,
+    input: NewContributionInput,
+  ) => Promise<boolean>;
   deleteContribution: (goalId: string, contributionId: string) => Promise<void>;
 }
 

@@ -29,9 +29,20 @@ function isRuntimeAsset(url) {
   }
 }
 
+// A Turbopack Web Worker bootstrap chunk. Its config rides in the URL HASH
+// (`turbopack-worker-<hash>.js#params=…`), which never reaches the SW; serving the
+// bare chunk from cache makes the worker's `self.location` lose the params →
+// "Missing worker bootstrap config" (deep-sync scan pool, #184). Keep these on the
+// network (never cache-first) so the hash survives. Mirrors `isWorkerChunk` in
+// lib/pwa/precache.mjs, which also keeps them OUT of the precache manifest.
+function isWorkerChunk(pathname) {
+  return /\/_next\/static\/chunks\/[^/]*worker[^/]*\.js$/.test(pathname);
+}
+
 function isPrecacheAsset(url) {
   try {
     const path = new URL(url).pathname;
+    if (isWorkerChunk(path)) return false;
     return path.includes("/_next/static/") || path.endsWith(".webmanifest");
   } catch {
     return false;

@@ -38,9 +38,13 @@ export function AutoSendToggle({
 
   return (
     <>
-      <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+      <label
+        htmlFor={`auto-send-${schedule.id}`}
+        className="flex items-center gap-2 text-xs font-medium text-muted-foreground"
+      >
         <span>{t("scheduled.autoSend")}</span>
         <Switch
+          id={`auto-send-${schedule.id}`}
           checked={armed}
           disabled={disabled}
           aria-label={t("scheduled.autoSendAria", { label: schedule.label })}

@@ -106,7 +106,7 @@ describe("scanPoolForOwned", () => {
   const toScan = (() => ({ extra: "01", vout: [] }) as unknown as RawTransaction) as never;
 
   it("records the summed owned amount per pool tx, skipping non-owned", () => {
-    const scanOutputs = ((tx: RawTransaction) =>
+    const scanOutputs = (() =>
       // owned only for the first tx (by a marker we can't see here) — simulate via call order
       [{ amount: 300 } as OwnedOutput, { amount: 200 } as OwnedOutput]) as never;
     const records = scanPoolForOwned([poolTx("a")], toScan, scanOutputs, keys, T0_MS);
@@ -129,7 +129,7 @@ describe("scanPoolForOwned", () => {
   it("survives a scanner throwing on a single tx", () => {
     const owned = (() => [{ amount: 100 } as OwnedOutput]) as never;
     let calls = 0;
-    const flaky = ((tx: RawTransaction, k: WalletKeys) => {
+    const flaky = ((_tx: RawTransaction, _k: WalletKeys) => {
       calls += 1;
       if (calls === 1) throw new Error("bad tx");
       return [{ amount: 100 } as OwnedOutput];

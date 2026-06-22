@@ -107,7 +107,14 @@ export async function downloadWalletExportPdf(data: ExportWalletData): Promise<s
   const viewMatch = markdown.match(/## View Key\s+```\s*([\s\S]*?)```/);
   const spendMatch = markdown.match(/## SpendKey\s+```\s*([\s\S]*?)```/);
 
-  y = writeSection(doc, margin, pageWidth, y, "mnemonic phrase", mnemonicMatch?.[1] ?? data.mnemonic);
+  y = writeSection(
+    doc,
+    margin,
+    pageWidth,
+    y,
+    "mnemonic phrase",
+    mnemonicMatch?.[1] ?? data.mnemonic,
+  );
   y = writeSection(doc, margin, pageWidth, y, "View Key", viewMatch?.[1] ?? data.viewKey);
   y = writeSection(doc, margin, pageWidth, y, "SpendKey", spendMatch?.[1] ?? data.spendKey);
 

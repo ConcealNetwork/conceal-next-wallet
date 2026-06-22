@@ -49,7 +49,7 @@ export interface DecodedWalletUri {
 }
 
 export const CoinUri = {
-  coinTxPrefix: "conceal.", //legacy, used to be 'conceal:', but the char ':' was creating scanning issue
+  coinTxPrefix: "conceal.", // legacy decode segment; tx encode now uses bare ccx7
   coinAddressPrefix: "ccx7", //coin Address prefix, to check address , without using coinTxPrefix
   coinWalletPrefix: "conceal.", //legacy, used to be 'conceal:'
   coinAddressLength: 98,
@@ -130,13 +130,10 @@ export const CoinUri = {
     amount: string | null = null,
     recipientName: string | null = null,
     description: string | null = null,
-    // version retained for call-site compatibility; both v1 and v3 now emit a
-    // bare address. Upstream conceal-web-wallet dropped the 'conceal:' prefix —
-    // "the char ':' was creating scanning issue" — so QRs scan in the legacy
-    // wallet. decodeTx stays tolerant of 'conceal:'/'conceal.'/bare for back-compat.
-    _version: "v1" | "v3" = "v3",
   ): string {
-    let encoded = address; //legacy: version === "v3" ? COIN_URI_PREFIX + address : address
+    // Encode with no prefix to maximize compatibility (readable by regular camera QR
+    // readers). Scanning still decodes conceal:/conceal./bare in-app.
+    let encoded = address;
     if (address.length !== CoinUri.coinAddressLength) throw "invalid_address_length";
 
     // amount + payment_id are constrained (digits / hex) so they stay raw and

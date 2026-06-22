@@ -33,7 +33,7 @@ export const COIN_TICKER_FULL = "CCX";
 /** Short Conceal symbol shown when compact ticker is enabled. */
 export const COIN_TICKER_SHORT = "₡";
 
-/** Payment QR / URI prefix for v3 web-wallet payment requests (decode accepts bare ccx7 too). */
+/** conceal: tx-URI prefix — decode/back-compat only; encodeTx emits bare ccx7. */
 export const COIN_URI_PREFIX = "conceal:";
 
 /** Explorer pool registry base (smart-node discovery). */
