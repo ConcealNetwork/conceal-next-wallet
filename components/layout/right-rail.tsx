@@ -10,11 +10,12 @@ import {
   useState,
 } from "react";
 
-// Issue #122, stage 2 — the contextual right rail. Each page owns its rail
-// content: a page calls `usePageRightRail(<AccountRail />)` and the shell
-// renders that node in a third column (≥ xl). Below xl the rail is hidden for
-// now (stage 3 turns it into a drawer). The collapse pin in the panel header
-// shrinks the column to a narrow expand strip.
+// Issue #122 — the contextual right rail. Each page owns its rail content: a
+// page calls `usePageRightRail(<AccountRail />)` and the shell renders that node
+// in a third column at ≥ 1200px. Below the breakpoint the rail is hidden and the
+// page surfaces a `min-[1200px]:hidden` embedded fallback in the body. The
+// collapse control in the global header collapses the column away fully (no
+// leftover strip), handing the width back to the main content.
 //
 // The registered node is held in provider state so the SHELL can read it. The
 // page-side hook registers on mount and clears on unmount; it keeps the latest
