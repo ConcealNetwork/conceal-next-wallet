@@ -24,7 +24,16 @@ export function WalletServiceWorkerRegister() {
   tRef.current = t;
 
   useEffect(() => {
-    if (env.useMockWallet || !("serviceWorker" in navigator)) {
+    // Never register the SW in dev: in real-mode `next dev` it cache-firsts the Turbopack chunks,
+    // so source edits / HMR stop reflecting until you manually unregister it (and stale renders
+    // survive a `.next` nuke). The production static export (NODE_ENV=production) still registers;
+    // the forced-mock e2e is already gated off by `useMockWallet`, and the offline-PWA e2e runs a
+    // real production build.
+    if (
+      process.env.NODE_ENV !== "production" ||
+      env.useMockWallet ||
+      !("serviceWorker" in navigator)
+    ) {
       return;
     }
 
