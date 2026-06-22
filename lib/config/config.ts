@@ -13,6 +13,10 @@ export const COIN_UNIT_PLACES = walletNetworkScalars.coinUnitPlaces;
 export const TX_CONFIRMED_THRESHOLD = 10;
 export const COIN_FEE_ATOMIC = walletNetworkScalars.coinFeeAtomic;
 export const REMOTE_NODE_FEE_ATOMIC = walletNetworkScalars.remoteNodeFeeAtomic;
+/** Send-fee components in CCX — the single source for the Send page + Send rail. */
+export const NETWORK_FEE_CCX = COIN_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
+export const REMOTE_NODE_FEE_CCX = REMOTE_NODE_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
+export const SEND_FEE_CCX = NETWORK_FEE_CCX + REMOTE_NODE_FEE_CCX;
 export const DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC = walletNetworkScalars.depositSmallWithdrawFee;
 export const DEPOSIT_MIN_TERM_MONTH = walletNetworkScalars.depositMinTermMonth;
 export const DEPOSIT_MAX_TERM_MONTH = walletNetworkScalars.depositMaxTermMonth;

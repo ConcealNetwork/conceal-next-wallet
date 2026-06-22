@@ -1,10 +1,5 @@
 import { getBalance, isValidAddress, transactions as txns } from "conceal-wallet-sdk";
-import {
-  COIN_UNIT_PLACES,
-  MAX_MESSAGE_SIZE,
-  REMOTE_NODE_FEE_ATOMIC,
-  WALLET_DONATION_ADDRESS,
-} from "@/lib/config/config";
+import { COIN_UNIT_PLACES, MAX_MESSAGE_SIZE, REMOTE_NODE_FEE_ATOMIC } from "@/lib/config/config";
 import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
 import {
   mapQueuedTransaction,
@@ -25,12 +20,14 @@ import {
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, persistRuntime, requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
+  decodeFeeRecipient,
   decodeRecipient,
   enqueueAndBroadcast,
   FEE_ATOMIC,
   fetchDecoys,
   MIXIN,
   ownKeys,
+  safeNodeFeeAddress,
   selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
 import type { SendTransactionInput, TransactionService } from "@/lib/services/transaction.service";
@@ -249,27 +246,4 @@ function plainDestinations(
   ];
   if (nodeFee) destinations.push(nodeFee);
   return destinations;
-}
-
-/** The node's advertised fee address, or `""` when it charges none / on error. */
-async function safeNodeFeeAddress(daemon: {
-  getNodeFeeAddress(): Promise<string>;
-}): Promise<string> {
-  try {
-    return await daemon.getNodeFeeAddress();
-  } catch {
-    return "";
-  }
-}
-
-/**
- * Decode the node's fee address; fall back to the donation address when the
- * (untrusted) node returns an undecodable string — bounds a bad node to the fee.
- */
-function decodeFeeRecipient(feeAddress: string): {
-  spendPublicKey: string;
-  viewPublicKey: string;
-} {
-  const target = isValidAddress(feeAddress) ? feeAddress : WALLET_DONATION_ADDRESS;
-  return decodeRecipient(target);
 }

@@ -29,7 +29,12 @@ import { OutboundQueueCard } from "@/components/wallet/outbound-queue-card";
 import { SendReviewWarnings } from "@/components/wallet/send-review-warnings";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
-import { MAX_MESSAGE_SIZE, walletNetworkScalars } from "@/lib/config/config";
+import {
+  MAX_MESSAGE_SIZE,
+  NETWORK_FEE_CCX as NETWORK_FEE,
+  REMOTE_NODE_FEE_CCX as REMOTE_NODE_FEE,
+  SEND_FEE_CCX as SEND_FEE,
+} from "@/lib/config/config";
 import {
   useAddressBook,
   useMarketData,
@@ -53,11 +58,6 @@ import {
   truncateAddress,
 } from "@/lib/utils";
 import { isSendToSelf } from "@/lib/validation/ccx";
-
-const NETWORK_FEE = walletNetworkScalars.coinFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
-const REMOTE_NODE_FEE =
-  walletNetworkScalars.remoteNodeFeeAtomic / 10 ** walletNetworkScalars.coinUnitPlaces;
-const SEND_FEE = NETWORK_FEE + REMOTE_NODE_FEE;
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 

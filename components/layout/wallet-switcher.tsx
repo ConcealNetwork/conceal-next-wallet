@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, ChevronsUpDown, Download, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Download, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useSwitchWalletFlow } from "@/components/wallet/open-wallet-form";
@@ -49,29 +49,16 @@ export function WalletAvatar({
   );
 }
 
-type WalletSwitcherVariant = "sidebar" | "header";
-
 /**
- * Wallet switcher (#95, design Option A). Shows the active wallet; click → a
- * dropdown panel listing every wallet (active gets a check) plus "Add wallet".
- *
- * Two trigger variants share one dropdown:
- *  - `sidebar` (default): full-width card under the brand; hidden when the
- *    sidebar is collapsed (the brand label is too).
- *  - `header`: a compact rounded pill (avatar + name + truncated address +
- *    chevrons-up-down) for the global header. Ignores `collapsed`.
+ * Wallet switcher (#95, design Option A). Lives in the global header: a compact
+ * rounded pill (avatar + name + balance + chevrons-up-down) that opens a dropdown
+ * listing every wallet (active gets a check) plus "Add wallet" / "Import".
  *
  * The trigger's accessible name is always `wallets.switcherLabel` ("Switch
  * wallet") — the multi-wallet e2e clicks `getByRole("button", { name:
  * "Switch wallet" })` — and the dropdown menu shares that name.
  */
-export function WalletSwitcher({
-  collapsed = false,
-  variant = "sidebar",
-}: {
-  collapsed?: boolean;
-  variant?: WalletSwitcherVariant;
-}) {
+export function WalletSwitcher() {
   const { t } = useI18n();
   const router = useRouter();
   const { data: wallets } = useWallets();
@@ -107,8 +94,6 @@ export function WalletSwitcher({
   const active = list.find((wallet) => wallet.isActive) ?? list[0];
   // Nothing to switch when there's at most one wallet — but still surface "Add".
   if (!active) return null;
-  // Only the sidebar variant hides itself when the rail collapses.
-  if (variant === "sidebar" && collapsed) return null;
 
   function handleSwitch(id: string) {
     close();
@@ -133,78 +118,43 @@ export function WalletSwitcher({
     return amount ? formatCcx(amount) : null;
   }
 
-  const trigger =
-    variant === "header" ? (
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        aria-label={switcherLabel}
-        onClick={() => setOpen((value) => !value)}
-        className="flex max-w-[360px] cursor-pointer items-center gap-2.5 rounded-full border border-border bg-background/60 py-1.5 pr-3 pl-2 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <WalletAvatar round wallet={active} className="size-6 text-[11px]" />
-        <span className="hidden min-w-0 sm:block">
-          <span className="block truncate text-[13px] font-semibold leading-tight text-foreground">
-            {active.label}
-          </span>
-          {balanceFor(active) ? (
-            <span className="block truncate font-mono text-[10.5px] leading-tight text-muted-foreground">
-              {balanceFor(active)}
-            </span>
-          ) : null}
+  const trigger = (
+    <button
+      type="button"
+      aria-haspopup="menu"
+      aria-expanded={open}
+      aria-controls={open ? menuId : undefined}
+      aria-label={switcherLabel}
+      onClick={() => setOpen((value) => !value)}
+      className="flex max-w-[360px] cursor-pointer items-center gap-2.5 rounded-full border border-border bg-background/60 py-1.5 pr-3 pl-2 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <WalletAvatar round wallet={active} className="size-6 text-[11px]" />
+      <span className="hidden min-w-0 sm:block">
+        <span className="block truncate text-[13px] font-semibold leading-tight text-foreground">
+          {active.label}
         </span>
-        <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-      </button>
-    ) : (
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        aria-label={switcherLabel}
-        onClick={() => setOpen((value) => !value)}
-        className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-card/60 px-2.5 py-2 text-left transition-colors duration-200 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <WalletAvatar wallet={active} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-foreground">
-            {active.label}
+        {balanceFor(active) ? (
+          <span className="block truncate font-mono text-[10.5px] leading-tight text-muted-foreground">
+            {balanceFor(active)}
           </span>
-          {balanceFor(active) ? (
-            <span className="block truncate font-mono text-[11px] text-muted-foreground">
-              {balanceFor(active)}
-            </span>
-          ) : null}
-        </span>
-        <ChevronDown
-          className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
-            open && "rotate-180",
-          )}
-          aria-hidden="true"
-        />
-      </button>
-    );
+        ) : null}
+      </span>
+      <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+    </button>
+  );
 
   return (
-    <div ref={containerRef} className={variant === "sidebar" ? "relative px-3" : "relative"}>
+    <div ref={containerRef} className="relative">
       {trigger}
       {open ? (
         <div
           id={menuId}
           role="menu"
           aria-label={switcherLabel}
-          className={
-            variant === "header"
-              ? // Centred under the (header-centred) trigger and clamped to the viewport so the
-                // panel never runs off-screen on mobile, where the trigger collapses to just the
-                // avatar near the centre of the bar and a left-anchored 260px panel overflowed
-                // the right edge (#122 follow-up).
-                "absolute left-1/2 top-full z-50 mt-1.5 w-[260px] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
-              : "absolute right-3 left-3 z-50 mt-1.5 rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
-          }
+          // Centred under the (header-centred) trigger and clamped to the viewport so the panel
+          // never runs off-screen on mobile, where the trigger collapses to just the avatar near
+          // the centre of the bar and a left-anchored 260px panel overflowed the right edge.
+          className="absolute left-1/2 top-full z-50 mt-1.5 w-[260px] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,.5)]"
         >
           {list.map((wallet) => (
             <button

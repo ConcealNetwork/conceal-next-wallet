@@ -3,7 +3,6 @@ import {
   MAX_MESSAGE_SIZE,
   MESSAGE_TX_AMOUNT_ATOMIC,
   REMOTE_NODE_FEE_ATOMIC,
-  WALLET_DONATION_ADDRESS,
 } from "@/lib/config/config";
 import type { MessageService, SendMessageInput } from "@/lib/services/message.service";
 import {
@@ -20,11 +19,13 @@ import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime, type SdkRuntime, sync } from "@/lib/services/real-sdk/runtime";
 import {
   broadcast,
+  decodeFeeRecipient,
   decodeRecipient,
   FEE_ATOMIC,
   fetchDecoys,
   MIXIN,
   ownKeys,
+  safeNodeFeeAddress,
   selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
 import { assertCanSpend } from "@/lib/services/view-only";
@@ -74,8 +75,7 @@ export const realSdkMessageService: MessageService = {
     if (!hasTtl) {
       const feeAddress = await safeNodeFeeAddress(rt.daemon);
       if (feeAddress && feeAddress !== rt.account.address) {
-        const target = isValidAddress(feeAddress) ? feeAddress : WALLET_DONATION_ADDRESS;
-        const decoded = decodeRecipient(target);
+        const decoded = decodeFeeRecipient(feeAddress);
         nodeFee = {
           spendPublicKey: decoded.spendPublicKey,
           viewPublicKey: decoded.viewPublicKey,
@@ -162,14 +162,3 @@ export const realSdkMessageService: MessageService = {
     return toMessage({ ...match, unread: false });
   },
 };
-
-/** The node's advertised fee address, or `""` when it charges none / on error. */
-async function safeNodeFeeAddress(daemon: {
-  getNodeFeeAddress(): Promise<string>;
-}): Promise<string> {
-  try {
-    return await daemon.getNodeFeeAddress();
-  } catch {
-    return "";
-  }
-}
