@@ -71,6 +71,7 @@ import {
 } from "conceal-wallet-sdk";
 import { DEFAULT_DAEMON_NODES } from "@/lib/config/config";
 import { readAutoNode, readPreferredNode } from "@/lib/network/node-preference";
+import { syncProfileFromReadSpeed } from "@/lib/ui/sync-speed";
 import { probeNodes, rankNodes } from "@/lib/network/node-probe";
 import { fetchSmartNodes, nodeUrlToPoolHost } from "@/lib/network/smart-nodes";
 import {
@@ -708,6 +709,7 @@ async function buildSyncSources(
   rt: SdkRuntime,
   homeHeight: number,
   includeMinerTxs: boolean,
+  maxSources: number = MAX_SYNC_SOURCES,
 ): Promise<FetchSource<DaemonRawTransaction>[]> {
   const homeUrl = nodeUrlFromRaw(rt.raw);
   const home: FetchSource<DaemonRawTransaction> = {
@@ -717,6 +719,9 @@ async function buildSyncSources(
     // request can land on a trailing backend and answer short. Verification + failover make that safe.
     fetch: (start, end) => fetchVerifiedRange(rt.daemon, start, end, includeMinerTxs, homeHeight),
   };
+
+  // home-only (gentle Sync-speed levels): skip the pool fetch + probe entirely (GLM review L1).
+  if (maxSources <= 1) return [home];
 
   let candidateUrls: string[];
   try {
@@ -732,7 +737,8 @@ async function buildSyncSources(
 
   // Probe peers (latency + tip), keep the healthy ones (reachable + within node-lag of the tip),
   // fastest first, and cap how many we actually fan out to.
-  const healthy = rankNodes(await probeNodes(candidateUrls)).slice(0, MAX_SYNC_SOURCES - 1);
+  // maxSources is > 1 here (the <= 1 case returned home-only above), so this keeps >= 1 peer.
+  const healthy = rankNodes(await probeNodes(candidateUrls)).slice(0, maxSources - 1);
   const peers = healthy.map((probe): FetchSource<DaemonRawTransaction> => {
     const daemon = buildDaemon(probe.url);
     return {
@@ -752,7 +758,12 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // Await WASM crypto init before scanTransactionOutputsAndDeposits / ring math.
   await ensureSdkReady();
   const height = await rt.daemon.getHeight();
-  const batchSize = SYNC_BATCH_BLOCKS;
+  // The "Sync speed" profile (DOOM skill levels) drives the deep-sync knobs — batch size, worker-pool
+  // size, and multi-source node count — off the `options.readSpeed` number (an unknown/legacy value
+  // resolves to the default profile). `|| SYNC_BATCH_BLOCKS` is a defensive guard only — every
+  // resolved profile already has a concrete `batchBlocks`.
+  const profile = syncProfileFromReadSpeed(Number(rt.raw.options?.readSpeed ?? 0));
+  const batchSize = profile.batchBlocks || SYNC_BATCH_BLOCKS;
   // Coinbase (miner) outputs are scanned only when the wallet opts in (solo mining).
   const includeMinerTxs = Boolean(rt.raw.options?.checkMinerTx);
   // Resume from a re-scan window below the last scanned height (see RESCAN_LAG_BLOCKS),
@@ -839,7 +850,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     const bulkEnd = height - MULTI_SOURCE_TIP_MARGIN; // half-open exclusive; the tip stays on home
     if (bulkEnd > scanned + 1) {
       try {
-        const sources = await buildSyncSources(rt, height, includeMinerTxs);
+        const sources = await buildSyncSources(rt, height, includeMinerTxs, profile.maxSources);
         if (sources.length >= 2) {
           multiSourceEngaged = true;
           await fetchRangeMultiSource<DaemonRawTransaction>({
@@ -847,11 +858,12 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
             end: bulkEnd,
             batchSize,
             sources,
-            // Batches arrive ascending; scan each across the worker pool, then apply, advancing the
-            // cursor to its last (inclusive) block. onBatch is awaited sequentially by the driver, so
-            // applies stay strictly ordered even though scans run in parallel.
+            // Batches arrive ascending; scan each across the worker pool (sized by the Sync-speed
+            // profile), then apply, advancing the cursor to its last (inclusive) block. onBatch is
+            // awaited sequentially by the driver, so applies stay strictly ordered even though scans
+            // run in parallel.
             onBatch: async (items, _batchStart, batchEnd) => {
-              const results = await scanBatch(items, rt.account.keys);
+              const results = await scanBatch(items, rt.account.keys, profile.workers);
               foldBatch(results, batchEnd - 1);
             },
           });
@@ -902,7 +914,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
       : fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
     const data = fetched.then((rawTxs) =>
       useHeavyPath
-        ? scanBatch(rawTxs, rt.account.keys)
+        ? scanBatch(rawTxs, rt.account.keys, profile.workers)
         : rawTxs.map((tx) => scanRawTransaction(tx, rt.account.keys)),
     );
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch

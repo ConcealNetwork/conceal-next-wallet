@@ -44,7 +44,8 @@ export function freshRawWallet(keys: UserKeys, creationHeight: number): RawWalle
     nonce: "",
     keys,
     creationHeight: height,
-    options: { readSpeed: 50, checkMinerTx: false, customNode: false, nodeUrl: "" },
+    // readSpeed 4 = the "Hurt me plenty" default level (see lib/ui/sync-speed.ts).
+    options: { readSpeed: 4, checkMinerTx: false, customNode: false, nodeUrl: "" },
   };
 }
 

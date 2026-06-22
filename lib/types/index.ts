@@ -242,7 +242,8 @@ export type { SyncSpeed };
 export type WalletSettings = {
   useCustomNode: boolean;
   nodeUrl: string;
-  /** Parallel sync intensity (maps to wallet-core options.readSpeed). */
+  /** Sync intensity (DOOM levels) — drives the deep-sync worker-pool size, batch size, and
+   * multi-source node count via `lib/ui/sync-speed.ts`. Persisted as `options.readSpeed`. */
   syncSpeed: SyncSpeed;
   /** When true, sync includes coinbase (miner) outputs — required for solo mining rewards. */
   readMinorTx: boolean;

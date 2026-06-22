@@ -46,7 +46,9 @@ export const realSdkSettingsService: SettingsService = {
       useCustomNode,
       nodeUrl: rt.daemon.nodeUrl,
       readMinorTx: Boolean(options.checkMinerTx),
-      syncSpeed: syncSpeedFromReadSpeed(Number(options.readSpeed ?? 50)),
+      // `?? 0` (not 50) so a blob with no readSpeed resolves to the SAME default the runtime uses
+      // (`syncSpeedFromReadSpeed(0)` → the default level) — UI + engine must agree (Codex review).
+      syncSpeed: syncSpeedFromReadSpeed(Number(options.readSpeed ?? 0)),
       autoLockMinutes: readAutoLockMinutes(rt.raw),
       creationHeight: Math.max(0, Number(rt.raw.creationHeight ?? 0) || 0),
       scanHeight: rt.state.scannedHeight,

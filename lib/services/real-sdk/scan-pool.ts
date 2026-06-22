@@ -5,15 +5,16 @@
  * WASM, same inputs), a worker result is byte-identical to an in-thread one — the pool only
  * distributes + reorders, it never changes what a scan produces.
  *
- * OPT-IN: the pool is OFF by default and only spun up when {@link workerScanEnabled} is set. The
- * Turbopack worker chunk encodes its bootstrap config in the URL HASH
- * (`turbopack-worker-<hash>.js#params=…`); a hash never reaches the network, so a PWA service worker
- * that cache-first-served the bare chunk made the module worker's `self.location` lose the params →
- * "Missing worker bootstrap config". The service worker now keeps worker chunks OFF its cache so they
- * load from the network with the hash intact (`isWorkerChunk` in lib/pwa/precache.mjs +
- * public/service-worker.js). With that fixed the pool boots correctly (browser-validated on a real
- * mainnet sync); the default stays OFF pending a separate flip-on validation. The deep-sync win is
- * multi-source FETCH parallelism, which is independent of this pool.
+ * PROFILE-DRIVEN: the pool size is the `workers` count from the active wallet's "Sync speed" profile
+ * (see lib/ui/sync-speed.ts) — `scanBatch(…, workers)`. `workers === 0` (the default "Hurt me plenty"
+ * and gentler levels) means in-thread, no pool; Ultra-Violence/Nightmare request a real pool. The
+ * Turbopack worker chunk encodes its bootstrap config in the URL HASH (`turbopack-worker-<hash>.js
+ * #params=…`); a hash never reaches the network, so a PWA service worker that cache-first-served the
+ * bare chunk made the module worker's `self.location` lose the params → "Missing worker bootstrap
+ * config". The service worker now keeps worker chunks OFF its cache so they load from the network with
+ * the hash intact (`isWorkerChunk` in lib/pwa/precache.mjs + public/service-worker.js), so the pool
+ * boots correctly (browser-validated on a real mainnet sync). Multi-source FETCH parallelism (also
+ * profile-scaled via `maxSources`) is independent of this pool.
  *
  * SAFETY: every failure mode falls back to the in-thread scan (no pool / no Worker support / a
  * worker error / a timeout), so the worker path can never break or stall sync — worst case it is
@@ -34,7 +35,6 @@ import {
   scanRawTransaction,
 } from "@/lib/services/real-sdk/scan";
 import type { ScanResponse } from "@/lib/services/real-sdk/scan-worker";
-import { workerScanEnabled } from "@/lib/services/real-sdk/sync-flags";
 
 /** Hard cap on workers regardless of core count (diminishing returns + memory per WASM instance). */
 const MAX_WORKERS = 8;
@@ -47,17 +47,22 @@ type Pending = {
 };
 
 let workers: Worker[] | null = null;
-let poolInitTried = false;
+// Set once a worker has failed this session → stay in-thread (don't respawn workers that re-fail).
+// Reset on terminateScanPool (lock/disconnect) so a fresh unlock can try the pool again.
+let poolFailed = false;
 const pending = new Map<number, Pending>();
 let nextRequestId = 0;
 
-function desiredPoolSize(): number {
+/** Clamp the profile's requested worker count to [1, MAX_WORKERS] and the machine's core count. */
+function desiredPoolSize(requested: number): number {
   const cores =
     typeof navigator !== "undefined" && navigator.hardwareConcurrency
       ? navigator.hardwareConcurrency
       : 4;
-  // Leave a core for the main thread; at least 1, at most MAX_WORKERS.
-  return Math.max(1, Math.min(MAX_WORKERS, cores - 1));
+  // Leave ONE core for the main thread so the UI stays responsive enough to dial the level back
+  // down — pinning ALL cores (Nightmare on an 8-core box) froze the settings UI so you couldn't
+  // escape. Still brutal (all-but-one), just not a lockout. High-core boxes still hit MAX_WORKERS.
+  return Math.max(1, Math.min(requested, MAX_WORKERS, cores - 1));
 }
 
 /**
@@ -68,10 +73,11 @@ function desiredPoolSize(): number {
  * transient runtime error also retires the pool for the session) but it is always safe — every
  * in-flight chunk settles via the in-thread fallback NOW (each pending `reject` is wired to
  * `fallBackInThread`), never waiting out {@link CHUNK_TIMEOUT_MS}, and the worst case is the
- * in-thread fold speed. `workers` stays null with `poolInitTried` true, so subsequent batches scan
- * in-thread for the rest of the session instead of re-spawning workers that will only fail again.
+ * in-thread fold speed. `poolFailed` then stays true, so subsequent batches scan in-thread for the
+ * rest of the session instead of re-spawning workers that will only fail again.
  */
 function failPool(): void {
+  poolFailed = true;
   if (workers) {
     for (const worker of workers) worker.terminate();
   }
@@ -82,16 +88,25 @@ function failPool(): void {
     entry.reject(new Error("scan worker pool error — falling back in-thread"));
 }
 
-/** Lazily create the worker pool. Returns null when workers are unavailable (opt-out / SSR / blocked). */
-function getPool(): Worker[] | null {
-  if (poolInitTried) return workers;
-  poolInitTried = true;
-  // Opt-in only — default is the in-thread fold (see module header: broken Turbopack worker bootstrap).
-  if (!workerScanEnabled()) return null;
-  if (typeof Worker === "undefined") return null;
+/**
+ * Lazily create (or reuse) the worker pool sized to the profile's `requested` worker count. Returns
+ * null — i.e. scan in-thread — when `requested <= 0` (gentle Sync-speed levels), after a pool failure
+ * this session, or when Workers are unavailable (SSR / blocked). An existing pool is reused; if a
+ * LARGER count is now wanted (e.g. a Nightmare sync after an Ultra-Violence one created a smaller
+ * pool) it's grown — but only while IDLE (`pending.size === 0`), so a resize never orphans an
+ * in-flight chunk. A smaller request just reuses the bigger pool (spare workers are harmless).
+ */
+function getPool(requested: number): Worker[] | null {
+  if (poolFailed || requested <= 0 || typeof Worker === "undefined") return null;
+  const target = desiredPoolSize(requested);
+  if (workers) {
+    if (workers.length >= target || pending.size > 0) return workers;
+    for (const worker of workers) worker.terminate();
+    workers = null;
+  }
   try {
     const created: Worker[] = [];
-    for (let i = 0; i < desiredPoolSize(); i++) {
+    for (let i = 0; i < target; i++) {
       const worker = new Worker(new URL("./scan-worker.ts", import.meta.url), { type: "module" });
       worker.addEventListener("message", (event: MessageEvent<ScanResponse>) => {
         const entry = pending.get(event.data.id);
@@ -105,8 +120,7 @@ function getPool(): Worker[] | null {
       });
       // A worker that fails to LOAD/bootstrap never posts a message — fall the whole pool back to
       // in-thread immediately rather than letting each chunk wait out the 60s timeout.
-      // `preventDefault()` keeps a bootstrap failure from also surfacing as an uncaught error on the
-      // page in opt-in mode (the OFF default spawns no worker, so it never fires there at all).
+      // `preventDefault()` keeps a bootstrap failure from also surfacing as an uncaught page error.
       worker.addEventListener("error", (event) => {
         event.preventDefault();
         failPool();
@@ -169,15 +183,17 @@ function scanChunkOnWorker(
 }
 
 /**
- * Scan a batch of raw txs in parallel across the worker pool, preserving order. Falls back to a
- * straight in-thread scan when no pool is available. The returned array aligns 1:1 with `rawTxs`.
+ * Scan a batch of raw txs across a worker pool sized to `workers` (the Sync-speed profile's count),
+ * preserving order. Falls back to a straight in-thread scan when `workers <= 0` or no pool is
+ * available. The returned array aligns 1:1 with `rawTxs`.
  */
 export async function scanBatch(
   rawTxs: DaemonRawTransaction[],
   keys: WalletKeys,
+  workers: number,
 ): Promise<(RawScanResult | null)[]> {
   if (rawTxs.length === 0) return [];
-  const pool = getPool();
+  const pool = getPool(workers);
   if (!pool || pool.length === 0) {
     return rawTxs.map((tx) => scanRawTransaction(tx, keys));
   }
@@ -203,7 +219,7 @@ export function terminateScanPool(): void {
     for (const worker of workers) worker.terminate();
   }
   workers = null;
-  poolInitTried = false;
+  poolFailed = false;
   const inflight = [...pending.values()];
   pending.clear();
   for (const entry of inflight) entry.reject(new Error("scan pool terminated"));

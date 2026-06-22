@@ -113,7 +113,7 @@ function SyncSpeedSelector({
           onClick={() => onChange(speed)}
           aria-pressed={value === speed}
           className={cn(
-            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm font-semibold capitalize text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:active:scale-100 motion-reduce:transition-none",
+            "min-h-10 cursor-pointer rounded-xl border border-border px-4 text-sm font-semibold text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:active:scale-100 motion-reduce:transition-none",
             value === speed &&
               "border-primary bg-primary text-primary-foreground hover:text-primary-foreground",
           )}
@@ -326,9 +326,7 @@ export default function SettingsPage() {
         },
         onError: (error: unknown) => {
           setPreferredNode(prevPreferred);
-          toast.error(
-            error instanceof Error ? error.message : t("settings.toastNodeUpdateFailed"),
-          );
+          toast.error(error instanceof Error ? error.message : t("settings.toastNodeUpdateFailed"));
         },
       },
     );
