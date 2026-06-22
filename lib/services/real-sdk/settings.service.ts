@@ -8,7 +8,7 @@ import {
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   buildDaemon,
-  defaultNodeUrl,
+  nodeUrlFromRaw,
   persist,
   requireRuntime,
   sync,
@@ -127,12 +127,28 @@ export const realSdkSettingsService: SettingsService = {
 
     rt.raw = raw;
     if (rebuildDaemon) {
-      const nextUrl = options.customNode && options.nodeUrl ? options.nodeUrl : defaultNodeUrl();
-      rt.daemon = buildDaemon(nextUrl);
+      // Honor the FULL node precedence (custom > device-local preferred > auto-fastest > default),
+      // not just the custom node. Reconnecting straight to `defaultNodeUrl()` whenever custom was off
+      // dropped a "Use fastest"/preferred home pick — and, because picking a node no longer pins
+      // `customNode`, that's exactly the home node multi-source should anchor on.
+      rt.daemon = buildDaemon(nodeUrlFromRaw(raw));
     }
     await persist();
     if (rescan) {
       await sync();
+    } else if (rebuildDaemon) {
+      // A node change: kick a fresh sync (non-blocking) so the next `syncOnce` re-evaluates the
+      // multi-source gate + home node against the new daemon. Fire-and-forget — the UI mutation
+      // shouldn't wait out a catch-up; errors surface through the normal sync chain.
+      //
+      // The daemon was swapped in place above. If a `syncOnce` is ALREADY mid-catch-up, its fetch
+      // closures read `rt.daemon` per call, so it can flip to the new node mid-loop — but that is
+      // SAFE, not silent: every range goes through `fetchVerifiedRange`, which THROWS on a short/
+      // behind answer (→ failover to home, never advancing `scannedHeight` past a gap). Worst case
+      // is a thrown batch + retry, not a missed block. A clean mid-sync restart (abortable syncOnce
+      // keyed on a daemon generation) is a deliberate follow-up; this same in-place swap was already
+      // performed for every custom-node change before this path existed.
+      void sync().catch(() => {});
     }
     return this.getSettings();
   },

@@ -227,8 +227,10 @@ const en: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "No reachable nodes right now.",
   "nodeSelector.toastFastest": "Switched to the fastest node.",
+  "nodeSelector.toastUsingNode": "Now syncing from this node.",
   "settings.useCustomNode": "Use custom node",
-  "settings.useCustomNodeDescription": "Pin the URL below instead of rotating public nodes",
+  "settings.useCustomNodeDescription":
+    "Pin sync to one node you choose. This turns OFF the faster multi-node sync that spreads catch-up across the public pool. (Picking a node from the list below keeps that fast sync on.)",
   "settings.nodeUrl": "Node URL",
   "settings.nodeUrlDescriptionCustom": "Custom daemon — edit and press Enter to reconnect",
   "settings.nodeUrlDescriptionPublic":
@@ -1184,9 +1186,10 @@ const es: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "No hay nodos accesibles ahora.",
   "nodeSelector.toastFastest": "Cambiado al nodo más rápido.",
+  "nodeSelector.toastUsingNode": "Ahora se sincroniza desde este nodo.",
   "settings.useCustomNode": "Usar nodo personalizado",
   "settings.useCustomNodeDescription":
-    "Fija la URL de abajo en lugar de rotar entre nodos públicos",
+    "Fija la sincronización a un solo nodo que elijas. Esto DESACTIVA la sincronización multinodo más rápida que reparte la puesta al día por el grupo de nodos públicos. (Elegir un nodo de la lista de abajo mantiene activa esa sincronización rápida.)",
   "settings.nodeUrl": "URL del nodo",
   "settings.nodeUrlDescriptionCustom": "Daemon personalizado: edita y pulsa Enter para reconectar",
   "settings.nodeUrlDescriptionPublic":
@@ -2154,9 +2157,10 @@ const fr: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "Aucun nœud joignable pour l'instant.",
   "nodeSelector.toastFastest": "Basculé vers le nœud le plus rapide.",
+  "nodeSelector.toastUsingNode": "Synchronisation depuis ce nœud désormais.",
   "settings.useCustomNode": "Utiliser un nœud personnalisé",
   "settings.useCustomNodeDescription":
-    "Fixez l'URL ci-dessous au lieu d'alterner les nœuds publics",
+    "Fixe la synchronisation sur un seul nœud de votre choix. Cela DÉSACTIVE la synchronisation multi-nœuds plus rapide qui répartit le rattrapage sur le pool de nœuds publics. (Choisir un nœud dans la liste ci-dessous garde cette synchronisation rapide active.)",
   "settings.nodeUrl": "URL du nœud",
   "settings.nodeUrlDescriptionCustom":
     "Démon personnalisé — modifiez et appuyez sur Entrée pour vous reconnecter",
@@ -3133,9 +3137,10 @@ const de: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "Derzeit keine erreichbaren Knoten.",
   "nodeSelector.toastFastest": "Zum schnellsten Knoten gewechselt.",
+  "nodeSelector.toastUsingNode": "Synchronisiert jetzt von diesem Knoten.",
   "settings.useCustomNode": "Eigenen Knoten verwenden",
   "settings.useCustomNodeDescription":
-    "Die URL unten festlegen, statt zwischen öffentlichen Knoten zu wechseln",
+    "Bindet die Synchronisierung an einen von dir gewählten Knoten. Das schaltet die schnellere Mehr-Knoten-Synchronisierung AUS, die das Aufholen auf den öffentlichen Knoten-Pool verteilt. (Wählst du einen Knoten aus der Liste unten, bleibt diese schnelle Synchronisierung an.)",
   "settings.nodeUrl": "Knoten-URL",
   "settings.nodeUrlDescriptionCustom":
     "Eigener Daemon – bearbeiten und Enter drücken, um neu zu verbinden",
@@ -4105,8 +4110,10 @@ const it: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "Nessun nodo raggiungibile al momento.",
   "nodeSelector.toastFastest": "Passato al nodo più veloce.",
+  "nodeSelector.toastUsingNode": "Ora sincronizza da questo nodo.",
   "settings.useCustomNode": "Usa un nodo personalizzato",
-  "settings.useCustomNodeDescription": "Fissa l'URL qui sotto invece di alternare i nodi pubblici",
+  "settings.useCustomNodeDescription":
+    "Vincola la sincronizzazione a un solo nodo che scegli tu. Questo DISATTIVA la sincronizzazione multi-nodo più veloce che distribuisce il recupero sull'insieme dei nodi pubblici. (Scegliere un nodo dall'elenco qui sotto mantiene attiva quella sincronizzazione veloce.)",
   "settings.nodeUrl": "URL del nodo",
   "settings.nodeUrlDescriptionCustom":
     "Daemon personalizzato: modifica e premi Invio per riconnetterti",
@@ -5075,8 +5082,10 @@ const pt: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "Nenhum nó acessível no momento.",
   "nodeSelector.toastFastest": "Mudou para o nó mais rápido.",
+  "nodeSelector.toastUsingNode": "Sincronizando agora a partir deste nó.",
   "settings.useCustomNode": "Usar nó personalizado",
-  "settings.useCustomNodeDescription": "Fixe a URL abaixo em vez de alternar entre nós públicos",
+  "settings.useCustomNodeDescription":
+    "Fixa a sincronização em um único nó que você escolher. Isso DESATIVA a sincronização multinó mais rápida que distribui a recuperação pelo conjunto de nós públicos. (Escolher um nó na lista abaixo mantém essa sincronização rápida ativada.)",
   "settings.nodeUrl": "URL do nó",
   "settings.nodeUrlDescriptionCustom":
     "Daemon personalizado — edite e pressione Enter para reconectar",
@@ -6040,8 +6049,10 @@ const ru: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "Сейчас нет доступных узлов.",
   "nodeSelector.toastFastest": "Переключено на быстрейший узел.",
+  "nodeSelector.toastUsingNode": "Синхронизация теперь идёт с этого узла.",
   "settings.useCustomNode": "Использовать свой узел",
-  "settings.useCustomNodeDescription": "Закрепить URL ниже вместо чередования публичных узлов",
+  "settings.useCustomNodeDescription":
+    "Привязать синхронизацию к одному выбранному вами узлу. Это ОТКЛЮЧАЕТ более быструю многоузловую синхронизацию, которая распределяет догоняющую синхронизацию по пулу публичных узлов. (Если выбрать узел из списка ниже, эта быстрая синхронизация останется включённой.)",
   "settings.nodeUrl": "URL узла",
   "settings.nodeUrlDescriptionCustom": "Свой демон — измените и нажмите Enter для переподключения",
   "settings.nodeUrlDescriptionPublic":
@@ -6997,8 +7008,10 @@ const zh: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "当前没有可访问的节点。",
   "nodeSelector.toastFastest": "已切换到最快节点。",
+  "nodeSelector.toastUsingNode": "现在从该节点同步。",
   "settings.useCustomNode": "使用自定义节点",
-  "settings.useCustomNodeDescription": "固定下方的 URL，而不是轮换公共节点",
+  "settings.useCustomNodeDescription":
+    "将同步固定到你选择的单个节点。这会关闭更快的多节点同步——后者会将追赶进度分散到公共节点池。（从下方列表中选择一个节点可保持该快速同步开启。）",
   "settings.nodeUrl": "节点 URL",
   "settings.nodeUrlDescriptionCustom": "自定义守护进程——编辑并按回车键重新连接",
   "settings.nodeUrlDescriptionPublic": "当前连接的守护进程——启用自定义节点前请先编辑",
@@ -7924,8 +7937,10 @@ const ja: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "現在到達可能なノードがありません。",
   "nodeSelector.toastFastest": "最速のノードに切り替えました。",
+  "nodeSelector.toastUsingNode": "このノードから同期するようになりました。",
   "settings.useCustomNode": "カスタムノードを使用",
-  "settings.useCustomNodeDescription": "パブリックノードを切り替える代わりに下の URL を固定します",
+  "settings.useCustomNodeDescription":
+    "同期を選択した 1 つのノードに固定します。これにより、追いつき処理をパブリックノードのプール全体に分散する高速なマルチノード同期がオフになります。（下のリストからノードを選べば、その高速同期は有効なまま維持されます。）",
   "settings.nodeUrl": "ノード URL",
   "settings.nodeUrlDescriptionCustom": "カスタムデーモン — 編集して Enter キーで再接続します",
   "settings.nodeUrlDescriptionPublic":
@@ -8875,8 +8890,10 @@ const ko: Dictionary = {
   "nodeSelector.latencyMs": "{ms} ms",
   "nodeSelector.toastNoneReachable": "현재 연결 가능한 노드가 없습니다.",
   "nodeSelector.toastFastest": "가장 빠른 노드로 전환했습니다.",
+  "nodeSelector.toastUsingNode": "이제 이 노드에서 동기화합니다.",
   "settings.useCustomNode": "사용자 지정 노드 사용",
-  "settings.useCustomNodeDescription": "공개 노드를 순환하는 대신 아래 URL을 고정합니다",
+  "settings.useCustomNodeDescription":
+    "동기화를 선택한 단일 노드에 고정합니다. 이렇게 하면 따라잡기 작업을 공개 노드 풀 전체에 분산하는 더 빠른 다중 노드 동기화가 꺼집니다. (아래 목록에서 노드를 선택하면 그 빠른 동기화는 켜진 상태로 유지됩니다.)",
   "settings.nodeUrl": "노드 URL",
   "settings.nodeUrlDescriptionCustom": "사용자 지정 데몬 — 편집한 뒤 Enter를 눌러 다시 연결하세요",
   "settings.nodeUrlDescriptionPublic": "현재 연결된 데몬 — 사용자 지정 노드를 켜기 전에 편집하세요",

@@ -40,6 +40,7 @@ import {
 } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { checkCustomNodeLag } from "@/lib/network/node-lag";
+import { getPreferredNode, setPreferredNode } from "@/lib/network/node-preference";
 import {
   getPermission,
   isNotificationSupported,
@@ -301,6 +302,36 @@ export default function SettingsPage() {
       onError: (error: unknown) =>
         toast.error(error instanceof Error ? error.message : t("settings.toastNodeUpdateFailed")),
     });
+  }
+
+  // Pick a node as the device-local PREFERRED HOME — NOT a custom pin. This anchors sync on the
+  // chosen node but leaves `useCustomNode` off, so multi-source parallel fetch stays enabled (the
+  // historical bulk still fans across the pool, with the tip on this home). Reconnecting with
+  // `useCustomNode: false` rebuilds the daemon to `nodeUrlFromRaw` — which now resolves to this
+  // preference. (The "Use custom node" toggle below is the deliberate single-node pin.)
+  function selectHomeNode(url: string, message: string) {
+    if (updateSettings.isPending) return;
+    // Persist the preference BEFORE the reconnect so `updateSettings`'s daemon rebuild
+    // (`nodeUrlFromRaw` → `readPreferredNode`) targets this node. Roll it back if the mutation
+    // fails, so a failed reconnect never leaves a dirty home pick behind (GLM review).
+    const prevPreferred = getPreferredNode();
+    setPreferredNode(url);
+    updateSettings.mutate(
+      { useCustomNode: false, nodeUrl: url },
+      {
+        onSuccess: (settings) => {
+          setNodeUrl(settings.nodeUrl);
+          setNodeUrlDirty(false);
+          toast.success(message);
+        },
+        onError: (error: unknown) => {
+          setPreferredNode(prevPreferred);
+          toast.error(
+            error instanceof Error ? error.message : t("settings.toastNodeUpdateFailed"),
+          );
+        },
+      },
+    );
   }
 
   function handleCustomNodeToggle(checked: boolean) {
@@ -591,21 +622,13 @@ export default function SettingsPage() {
                     <NodeSelector
                       activeNodeUrl={current.nodeUrl}
                       busy={updateSettings.isPending}
-                      onUseNode={(url) =>
-                        applyNodeConnection(
-                          { useCustomNode: true, nodeUrl: url },
-                          t("settings.toastCustomNodeConnected"),
-                        )
-                      }
+                      onUseNode={(url) => selectHomeNode(url, t("nodeSelector.toastUsingNode"))}
                       onUseFastest={(url) => {
                         if (!url) {
                           toast.error(t("nodeSelector.toastNoneReachable"));
                           return;
                         }
-                        applyNodeConnection(
-                          { useCustomNode: true, nodeUrl: url },
-                          t("nodeSelector.toastFastest"),
-                        );
+                        selectHomeNode(url, t("nodeSelector.toastFastest"));
                       }}
                     />
                   </div>
