@@ -1,4 +1,5 @@
 import qrcode from "qrcode-generator";
+import { triggerBlobDownload } from "@/lib/ui/download-blob";
 
 // Match the on-screen QR (components/qr/dotted-qr.tsx): dark ink + white field,
 // error-correction level H.
@@ -126,31 +127,27 @@ export function qrToDataUrl(value: string, options: QrPngOptions = {}): string {
   return url;
 }
 
-/** Filename like `conceal-qr-ccx7abcd.png`, sanitized to `[a-z0-9-]`. */
-export function qrPngFilename(label: string): string {
+/**
+ * Build a `<prefix>-<label>.png` filename, sanitizing the label to `[a-z0-9-]` and capping it at
+ * 16 chars. Shared by the QR + payment-card PNG exporters (payment-card-png.ts imports this).
+ */
+export function sanitizePngLabel(label: string, prefix: string): string {
   const cleaned = label
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 16)
     .replace(/-+$/, ""); // the slice can re-expose a trailing dash
-  return `conceal-qr${cleaned ? `-${cleaned}` : ""}.png`;
+  return `${prefix}${cleaned ? `-${cleaned}` : ""}.png`;
+}
+
+/** Filename like `conceal-qr-ccx7abcd.png`, sanitized to `[a-z0-9-]`. */
+export function qrPngFilename(label: string): string {
+  return sanitizePngLabel(label, "conceal-qr");
 }
 
 /** Trigger a browser download of a PNG Blob (same anchor pattern as the CSV/JSON exports). */
 export function downloadQrPng(filename: string, blob: Blob): void {
-  if (typeof window === "undefined") {
-    throw new Error("Download is only available in the browser.");
-  }
   const name = filename.endsWith(".png") ? filename : `${filename}.png`;
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = name;
-  anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  // Defer revocation — revoking synchronously cancels the download in WebKit/Safari.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  triggerBlobDownload(name, blob);
 }

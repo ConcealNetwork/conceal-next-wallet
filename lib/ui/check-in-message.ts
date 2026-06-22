@@ -12,7 +12,7 @@ import { encodeSmartMessage, parseSmartMessage } from "@/lib/messages/smart-mess
  * cryptographic proof of life.
  */
 
-export type CheckInStatusValue = "alive";
+type CheckInStatusValue = "alive";
 
 // Smart-message module for proof-of-life pings: {status,alive}. Sits alongside
 // the other ecosystem modules (2FA, vault, to-do, medical, trust, contact, agent).

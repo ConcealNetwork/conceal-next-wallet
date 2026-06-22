@@ -25,7 +25,7 @@ export interface BuiltWallet {
 }
 
 /** Map the SDK {@link WalletKeys} (sec/pub pairs) to the envelope {@link UserKeys}. */
-export function walletKeysToUserKeys(keys: WalletKeys): UserKeys {
+function walletKeysToUserKeys(keys: WalletKeys): UserKeys {
   return {
     pub: { view: keys.view.pub, spend: keys.spend.pub },
     priv: { view: keys.view.sec, spend: keys.spend.sec },
@@ -33,7 +33,7 @@ export function walletKeysToUserKeys(keys: WalletKeys): UserKeys {
 }
 
 /** A brand-new empty plaintext blob carrying `keys` at `creationHeight`. */
-export function freshRawWallet(keys: UserKeys, creationHeight: number): RawWalletV1 {
+function freshRawWallet(keys: UserKeys, creationHeight: number): RawWalletV1 {
   const height = Math.max(0, Math.round(creationHeight) || 0);
   return {
     deposits: [],

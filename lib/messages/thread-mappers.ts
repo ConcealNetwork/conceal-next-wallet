@@ -25,7 +25,7 @@ export function resolveThreadKeyFromMeta(
   return buildMessageThreadKey(counterpartyAddress, paymentId);
 }
 
-export function findAddressBookContact(
+function findAddressBookContact(
   addressBook: RawAddressEntry[],
   options: { paymentId?: string; address?: string },
 ): RawAddressEntry | undefined {
@@ -47,7 +47,7 @@ function messageChronologyHeight(blockHeight: number): number {
   return blockHeight > 0 ? blockHeight : Number.MAX_SAFE_INTEGER;
 }
 
-export function compareMessagesChronological(
+function compareMessagesChronological(
   a: Pick<UiMessage, "blockHeight" | "timestamp" | "direction" | "id">,
   b: Pick<UiMessage, "blockHeight" | "timestamp" | "direction" | "id">,
 ): number {

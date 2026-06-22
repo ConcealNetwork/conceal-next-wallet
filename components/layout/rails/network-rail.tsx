@@ -6,6 +6,7 @@ import { RightRailHeader } from "@/components/layout/right-rail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNetworkStatus } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
+import { formatHashrate } from "@/lib/ui/format-hashrate";
 
 // Network-page contextual rail (#122): a compact node/chain telemetry summary
 // beside the page's fuller telemetry. Fetches its own data so it stays live.
@@ -63,12 +64,4 @@ export function NetworkRail({ embedded = false }: { embedded?: boolean }) {
       </section>
     </div>
   );
-}
-
-// Mirrors the network page's formatHashrate (kept local — the page's is private).
-function formatHashrate(hps: number): string {
-  if (hps >= 1e9) return `${(hps / 1e9).toFixed(2)} GH/s`;
-  if (hps >= 1e6) return `${(hps / 1e6).toFixed(2)} MH/s`;
-  if (hps >= 1e3) return `${(hps / 1e3).toFixed(2)} kH/s`;
-  return `${Math.round(hps)} H/s`;
 }

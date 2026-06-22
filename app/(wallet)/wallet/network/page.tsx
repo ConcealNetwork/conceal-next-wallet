@@ -15,6 +15,7 @@ import {
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import { formatNodeVersion } from "@/lib/network/format-node-version";
+import { formatHashrate } from "@/lib/ui/format-hashrate";
 import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
 import type { SmartNode } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -680,13 +681,6 @@ function MiniBars({ values, color }: { values: number[]; color: string }) {
       ))}
     </div>
   );
-}
-
-function formatHashrate(hps: number) {
-  if (hps >= 1e9) return `${(hps / 1e9).toFixed(2)} GH/s`;
-  if (hps >= 1e6) return `${(hps / 1e6).toFixed(2)} MH/s`;
-  if (hps >= 1e3) return `${(hps / 1e3).toFixed(2)} kH/s`;
-  return `${Math.round(hps)} H/s`;
 }
 
 function formatDifficulty(difficulty: number, fmt: Formatters) {

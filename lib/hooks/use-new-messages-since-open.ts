@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { useWalletSynced } from "@/lib/hooks/use-check-ins";
 import { useQuery } from "@/lib/hooks/query-provider";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { countReceivedMessages } from "@/lib/messages/conversations";
@@ -14,15 +15,6 @@ import {
   recordMessageCountAtSync,
 } from "@/lib/ui/message-nav-badge";
 
-function useWalletInfo() {
-  const { status } = useWalletSession();
-  return useQuery({
-    queryKey: queryKeys.wallet,
-    queryFn: () => services.wallet.getWalletInfo(),
-    enabled: status === "open",
-  });
-}
-
 function useMessages(enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.messages,
@@ -30,13 +22,6 @@ function useMessages(enabled: boolean) {
     enabled,
     ...messagesQueryOptions,
   });
-}
-
-function useWalletSynced(): boolean {
-  const wallet = useWalletInfo();
-  const info = wallet.data;
-  if (info === undefined || info.networkHeight <= 0) return false;
-  return info.currentHeight >= info.networkHeight - 1;
 }
 
 /** +N nav badge when received messages increase after the wallet is synced. */

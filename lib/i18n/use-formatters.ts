@@ -5,7 +5,7 @@ import type { Locale } from "@/lib/i18n/i18n";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { CcxAmount, UsdAmount } from "@/lib/types";
 import {
-  CCX_HUMAIN_DECIMAL_DISPLAY,
+  CCX_PRECISION_DECIMAL_DISPLAY,
   formatCcx as formatCcxBase,
   formatUsd as formatUsdBase,
   timeAgo as timeAgoBase,
@@ -64,7 +64,7 @@ export function useFormatters(): Formatters {
     const bcp47 = localeToBcp47(locale);
     return {
       locale: bcp47,
-      formatCcx: (amount, decimals = CCX_HUMAIN_DECIMAL_DISPLAY, trimTrailingZeros = false) =>
+      formatCcx: (amount, decimals = CCX_PRECISION_DECIMAL_DISPLAY, trimTrailingZeros = false) =>
         formatCcxBase(amount, decimals, trimTrailingZeros, bcp47),
       formatUsd: (amount, decimals = 4) => formatUsdBase(amount, decimals, bcp47),
       timeAgo: (date, now = new Date()) => timeAgoBase(date, now, bcp47),

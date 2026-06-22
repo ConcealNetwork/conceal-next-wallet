@@ -53,12 +53,6 @@ export function getCuratedPoolListUrl(poolBase: string = PUBLIC_NODES_POOL_BASE)
 export const WALLET_DONATION_ADDRESS =
   "ccx7V4LeUXy2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQg84zbNrPduTX2whZ5pacfj";
 
-export const WALLET_DONATION_ADDRESSES = [
-  "ccx7NzuofXxcypov8Yqm2A118xT17HereBFjp3RScjzM7wncf8BRcnHZbACy63sWD71L7NmkJRgQKXFE3weCfAh31RAVFHgttf",
-  WALLET_DONATION_ADDRESS,
-  "ccx7YZ4RC97fqMh1bmzrFtDoSSiEgvEYzhaLE53SR9bh4QrDBUhGUH3TCmXqv8MTLjJDtnCeeaT5bLC2ZSzp3ZmQ19DoiPLLXS",
-] as const;
-
 /** Default (public) daemon nodes — the trusted reference set for the node-lag check. */
 export const DEFAULT_DAEMON_NODES = [
   "https://explorer.conceal.network/daemon/",

@@ -15,7 +15,7 @@ import type { IncomingPendingRecord } from "@/lib/services/real-sdk/incoming-pen
 type DaemonRawTransaction = Awaited<ReturnType<DaemonClient["getTransactionsPool"]>>[number];
 
 /** Cap the per-poll scan so a mempool spike can't stall the sync (each tx = one WASM scan). */
-export const MAX_POOL_SCAN = 200;
+const MAX_POOL_SCAN = 200;
 
 export function scanPoolForOwned(
   poolTxs: DaemonRawTransaction[],

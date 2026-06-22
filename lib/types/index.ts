@@ -60,7 +60,7 @@ export type WalletSummary = {
 export type QueuedBroadcastState = "pending" | "broadcast" | "failed";
 
 /** Why a queued broadcast failed (only set when state === "failed"). */
-export type QueuedBroadcastFailReason = "rejected" | "expired" | "conflict";
+type QueuedBroadcastFailReason = "rejected" | "expired" | "conflict";
 
 /** A built+signed transaction persisted in the durable outbound queue (#92). */
 export type QueuedTransaction = {

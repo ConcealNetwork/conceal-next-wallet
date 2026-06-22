@@ -22,7 +22,7 @@ const JSON_HEADERS: RequestInit = {
   headers: { Accept: "application/json" },
 };
 
-export type MarketPriceSource = "coingecko" | "coinpaprika";
+type MarketPriceSource = "coingecko" | "coinpaprika";
 
 type PriceSnapshot = {
   source: MarketPriceSource;

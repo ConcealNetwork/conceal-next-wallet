@@ -23,7 +23,7 @@ export const DEPOSIT_DURATION_OPTIONS = Array.from(
 ) as readonly number[];
 
 /** Indicative APR for mock UI; real deposits use on-chain interest from the mapper. */
-export const DEPOSIT_APR_BY_DURATION_MONTHS: Record<number, number> = {
+const DEPOSIT_APR_BY_DURATION_MONTHS: Record<number, number> = {
   1: 2.9,
   3: 3.2,
   6: 3.8,

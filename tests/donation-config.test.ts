@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { getDonationConfig, getDonationMethodsDescription } from "@/lib/donation-config";
+import { getDonationConfig } from "@/lib/donation-config";
 
 describe("getDonationConfig", () => {
   const originalFiat = process.env.DONATION_SUPPORT_FIAT;
@@ -34,20 +34,5 @@ describe("getDonationConfig", () => {
     process.env.DONATION_SUPPORT_METHOD = "Crypto,PayPal,Apple,Visa";
 
     expect(getDonationConfig().enabledMethods).toEqual(["crypto", "paypal", "apple", "visa"]);
-  });
-});
-
-describe("getDonationMethodsDescription", () => {
-  it("returns a sole-method description per payment key", () => {
-    expect(getDonationMethodsDescription(["crypto"])).toBe("Donate using cryptocurrency");
-    expect(getDonationMethodsDescription(["visa"])).toBe("Donate using credit card");
-    expect(getDonationMethodsDescription(["paypal"])).toBe("Donate using PayPal");
-    expect(getDonationMethodsDescription(["apple"])).toBe("Donate using Apple Pay");
-  });
-
-  it("returns the multi-method description when more than one is enabled", () => {
-    expect(getDonationMethodsDescription(["crypto", "paypal"])).toBe(
-      "Multiple ways to show your support",
-    );
   });
 });
