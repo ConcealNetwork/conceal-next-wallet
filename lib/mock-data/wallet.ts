@@ -356,7 +356,7 @@ export const mockNodeStatus: NodeStatus = {
 export const mockSettings: WalletSettings = {
   useCustomNode: false,
   nodeUrl: "https://explorer.conceal.network/daemon/",
-  syncSpeed: "medium",
+  syncSpeed: "hurtMePlenty",
   readMinorTx: false,
   autoLockMinutes: 0,
 };
