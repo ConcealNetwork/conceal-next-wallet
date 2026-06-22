@@ -13,8 +13,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Database,
+  Gauge,
+  type LucideIcon,
+  Palette,
+  Server,
+  ShieldCheck,
+  TriangleAlert,
+  Wallet,
+} from "lucide-react";
+import { SettingsRail } from "@/components/layout/rails/settings-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { PasskeySetting } from "@/components/wallet/biometric-setting";
@@ -61,13 +72,41 @@ import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 import { getNodeUrlFormatHints } from "@/lib/validation/node-url";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  icon: Icon,
+  danger = false,
+  children,
+}: {
+  id?: string;
+  title: string;
+  icon?: LucideIcon;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="py-4 first:pt-0 last:pb-0">
-      <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h2>
-      <div>{children}</div>
+    <section
+      id={id}
+      className={cn(
+        "scroll-mt-24 rounded-2xl border bg-card",
+        danger ? "border-destructive/40" : "border-border",
+      )}
+    >
+      <div className="flex items-center gap-2.5 border-b border-border/60 px-5 py-3.5">
+        {Icon ? (
+          <Icon
+            className={cn("size-4 shrink-0", danger ? "text-destructive" : "text-muted-foreground")}
+            aria-hidden="true"
+          />
+        ) : null}
+        <h2
+          className={cn("text-sm font-semibold", danger ? "text-destructive" : "text-foreground")}
+        >
+          {title}
+        </h2>
+      </div>
+      <div className="px-5">{children}</div>
     </section>
   );
 }
@@ -88,6 +127,31 @@ function Row({
         {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Like {@link Row} but stacks the control BELOW the label/description and lets it span the full
+ * card width — for wide controls (e.g. the DOOM sync-speed pill group) that a right-aligned
+ * `shrink-0` slot would crush. Same vertical rhythm as Row (`py-4`, top border except first).
+ */
+function StackRow({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-border py-4 first:border-t-0">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+      </div>
+      <div>{children}</div>
     </div>
   );
 }
@@ -450,314 +514,58 @@ export default function SettingsPage() {
     });
   }
 
+  usePageRightRail(<SettingsRail />);
+
   return (
     <>
       <PageHeader title={t("nav.settings")} subtitle={t("settings.subtitle")} />
       <WalletSyncingBanner hint={t("settings.syncingHint")} />
-      <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
-        <Card className="wallet-card">
-          <CardContent className="divide-y divide-border">
-            <Section title={t("settings.general")}>
-              <Row label={t("theme.label")} description={t("settings.themeDescription")}>
-                <ThemeToggle />
-              </Row>
-              <Row label={t("settings.language")} description={t("settings.languageDescription")}>
-                <LanguageSetting />
-              </Row>
-              {!isMock ? (
-                <div className="flex flex-col gap-3 border-t border-border py-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {t("settings.passkeyUnlock")}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {t("settings.passkeyUnlockDescription")}
-                    </p>
-                  </div>
-                  <PasskeySetting />
-                </div>
-              ) : null}
-              <Row
-                label={t("settings.notifications")}
-                description={t("settings.notificationsDescription")}
-              >
-                <NotificationsSetting />
-              </Row>
-              {!isMock ? (
-                <Row
-                  label={t("settings.watchWallets")}
-                  description={t("settings.watchWalletsDescription")}
-                >
-                  <WatchOtherWalletsSetting />
-                </Row>
-              ) : null}
-              <Row label={t("settings.ticker")} description={t("settings.tickerDescription")}>
-                <select
-                  className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
-                  value={ticker.useShortTicker ? "short" : "full"}
-                  onChange={(event) => {
-                    const useShort = event.target.value === "short";
-                    void ticker.setUseShortTicker(useShort).then(() => {
-                      toast.success(
-                        isMock
-                          ? t("settings.toastMockTickerUpdated")
-                          : t("settings.toastTickerUpdated"),
-                      );
-                    });
-                  }}
-                >
-                  {TICKER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </Row>
-              <Row
-                label={t("settings.optimization")}
-                description={t("settings.optimizationDescription")}
-              >
-                <div className="flex w-full flex-col items-end gap-1.5 sm:w-auto">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={
-                      optimizeWallet.isPending ||
-                      optimizationStatus.isLoading ||
-                      !optimizationNeeded ||
-                      isSyncing ||
-                      viewOnly
-                    }
-                    onClick={handleOptimize}
-                    title={viewOnly ? walletCopy.viewOnlyOptimizeDisabled : undefined}
-                  >
-                    {optimizeWallet.isPending
-                      ? t("settings.optimizing")
-                      : t("settings.optimizeNow")}
-                  </Button>
-                  {isSyncing ? (
-                    <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
-                      {t("settings.optimizeWaitForSync")}
-                    </p>
-                  ) : viewOnly ? (
-                    <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
-                      {walletCopy.viewOnlyOptimizeDisabled}
-                    </p>
-                  ) : optimizationNeeded ? (
-                    <p className="max-w-xs text-right text-xs text-amber-400/90 sm:max-w-sm">
-                      {t("settings.optimizeAvailable", { count: unspentOutputs })}
-                    </p>
-                  ) : null}
-                </div>
-              </Row>
-            </Section>
-
-            <Section title={t("wallets.title")}>
-              <div className="flex flex-col gap-3 py-4 first:pt-0">
-                <p className="text-xs text-muted-foreground">{t("wallets.description")}</p>
-                <WalletsSetting />
-              </div>
-            </Section>
-
-            {current && (
-              <Section title={t("settings.node")}>
-                <Row
-                  label={t("settings.useCustomNode")}
-                  description={t("settings.useCustomNodeDescription")}
-                >
-                  <Switch
-                    checked={current.useCustomNode}
-                    disabled={updateSettings.isPending}
-                    onCheckedChange={handleCustomNodeToggle}
-                  />
-                </Row>
-                <Row
-                  label={t("settings.nodeUrl")}
-                  description={
-                    current.useCustomNode
-                      ? t("settings.nodeUrlDescriptionCustom")
-                      : t("settings.nodeUrlDescriptionPublic")
-                  }
-                >
-                  <div className="flex w-full flex-col gap-1.5 sm:w-80">
-                    <Input
-                      value={nodeUrl}
-                      disabled={updateSettings.isPending}
-                      onChange={(event) => {
-                        setNodeUrl(event.target.value);
-                        setNodeUrlDirty(true);
-                      }}
-                      onBlur={() => commitCustomNodeUrl()}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          event.currentTarget.blur();
-                        }
-                      }}
-                      spellCheck={false}
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      aria-describedby={nodeUrlHints.length > 0 ? "node-url-hints" : undefined}
-                    />
-                    {nodeUrlHints.length > 0 && (
-                      <div id="node-url-hints" className="space-y-0.5">
-                        {nodeUrlHints.map((hint) => (
-                          <p key={hint} className="text-xs text-amber-400/90">
-                            {hint}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    {updateSettings.isPending && (
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.testingNodeConnection")}
-                      </p>
-                    )}
-                  </div>
-                </Row>
-                {!isMock ? (
-                  <div className="border-t border-border py-4">
-                    <NodeSelector
-                      activeNodeUrl={current.nodeUrl}
-                      busy={updateSettings.isPending}
-                      onUseNode={(url) => selectHomeNode(url, t("nodeSelector.toastUsingNode"))}
-                      onUseFastest={(url) => {
-                        if (!url) {
-                          toast.error(t("nodeSelector.toastNoneReachable"));
-                          return;
-                        }
-                        selectHomeNode(url, t("nodeSelector.toastFastest"));
-                      }}
-                    />
-                  </div>
-                ) : null}
-              </Section>
-            )}
-
-            {current && (
-              <Section title={t("settings.wallet")}>
-                <Row
-                  label={t("settings.syncSpeed")}
-                  description={t("settings.syncSpeedDescription")}
-                >
-                  <SyncSpeedSelector
-                    value={current.syncSpeed}
-                    disabled={updateSettings.isPending}
-                    onChange={(syncSpeed) => update({ syncSpeed })}
-                  />
-                </Row>
-                <Row
-                  label={t("settings.readMinerTx")}
-                  description={t("settings.readMinerTxDescription")}
-                >
-                  <Switch
-                    checked={current.readMinorTx}
-                    disabled={updateSettings.isPending}
-                    onCheckedChange={(checked: boolean) => update({ readMinorTx: checked })}
-                  />
-                </Row>
-                <Row
-                  label={t("settings.blockHeights")}
-                  description={t("settings.blockHeightsDescription")}
-                >
-                  <div className="flex gap-2">
-                    <Input
-                      value={creationHeight}
-                      disabled={updateSettings.isPending}
-                      onChange={(event) => {
-                        setCreationHeight(event.target.value);
-                        setCreationHeightDirty(true);
-                      }}
-                      className="w-32"
-                      aria-label={t("settings.creationHeightAriaLabel")}
-                      inputMode="numeric"
-                    />
-                    <Input
-                      value={String(syncedHeight)}
-                      readOnly
-                      disabled
-                      className="w-32"
-                      aria-label={t("settings.currentSyncedHeightAriaLabel")}
-                      inputMode="numeric"
-                    />
-                  </div>
-                </Row>
-                <Row
-                  label={t("settings.maintenance")}
-                  description={t("settings.maintenanceDescription")}
-                >
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      disabled={updateSettings.isPending}
-                      onClick={applyHeights}
-                    >
-                      {t("settings.update")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={resetAndRescan.isPending}
-                      onClick={handleResetAndRescan}
-                    >
-                      {resetAndRescan.isPending
-                        ? t("settings.rescanning")
-                        : t("settings.resetAndRescan")}
-                    </Button>
-                  </div>
-                </Row>
-                <Row
-                  label={t("settings.deviceDataBackup")}
-                  description={t("settings.deviceDataBackupDescription")}
-                >
-                  <VaultBackup />
-                </Row>
-                <Row
-                  label="Delete wallet"
-                  description={
+      <div className="flex flex-col gap-4 animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
+        <Section id="settings-appearance" icon={Palette} title={t("settings.cardAppearance")}>
+          <Row label={t("theme.label")} description={t("settings.themeDescription")}>
+            <ThemeToggle />
+          </Row>
+          <Row label={t("settings.language")} description={t("settings.languageDescription")}>
+            <LanguageSetting />
+          </Row>
+          <Row label={t("settings.ticker")} description={t("settings.tickerDescription")}>
+            <select
+              className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
+              value={ticker.useShortTicker ? "short" : "full"}
+              onChange={(event) => {
+                const useShort = event.target.value === "short";
+                void ticker.setUseShortTicker(useShort).then(() => {
+                  toast.success(
                     isMock
-                      ? "Removes this mock wallet session and returns to the open-wallet screen"
-                      : "Removes the encrypted wallet from this browser and returns to the open-wallet screen"
-                  }
-                >
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button type="button" variant="destructive">
-                        Delete wallet
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete wallet?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {isMock
-                            ? "This deletes the current mock wallet session and returns you to the open wallet screen."
-                            : "This permanently deletes the encrypted wallet stored in this browser."}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={deleteWallet}
-                        >
-                          Delete wallet
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </Row>
-                <Row
-                  label="Panic wipe"
-                  description="Erases everything local — wallet, settings, custom node, transaction notes — and returns to the open-wallet screen"
-                >
-                  <PanicWipeDialog isMock={isMock} onConfirm={panicWipe} />
-                </Row>
-              </Section>
-            )}
+                      ? t("settings.toastMockTickerUpdated")
+                      : t("settings.toastTickerUpdated"),
+                  );
+                });
+              }}
+            >
+              {TICKER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </Row>
+        </Section>
 
+        {/* Render only when there's content: real mode always has the passkey block; mock has the
+            auto-lock/password rows only once `current` resolves — guards an empty header flash. */}
+        {(!isMock || current) && (
+          <Section id="settings-security" icon={ShieldCheck} title={t("settings.cardSecurity")}>
+            {!isMock ? (
+              <StackRow
+                label={t("settings.passkeyUnlock")}
+                description={t("settings.passkeyUnlockDescription")}
+              >
+                <PasskeySetting />
+              </StackRow>
+            ) : null}
             {current && (
-              <Section title={t("settings.security")}>
+              <>
                 <Row label={t("settings.autoLock")} description={t("settings.autoLockDescription")}>
                   <select
                     className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
@@ -785,10 +593,279 @@ export default function SettingsPage() {
                     {t("settings.changePassword")}
                   </Button>
                 </Row>
-              </Section>
+              </>
             )}
-          </CardContent>
-        </Card>
+          </Section>
+        )}
+
+        {current && (
+          <Section id="settings-node" icon={Server} title={t("settings.cardNode")}>
+            <Row
+              label={t("settings.useCustomNode")}
+              description={t("settings.useCustomNodeDescription")}
+            >
+              <Switch
+                checked={current.useCustomNode}
+                disabled={updateSettings.isPending}
+                onCheckedChange={handleCustomNodeToggle}
+              />
+            </Row>
+            <Row
+              label={t("settings.nodeUrl")}
+              description={
+                current.useCustomNode
+                  ? t("settings.nodeUrlDescriptionCustom")
+                  : t("settings.nodeUrlDescriptionPublic")
+              }
+            >
+              <div className="flex w-full flex-col gap-1.5 sm:w-80">
+                <Input
+                  value={nodeUrl}
+                  disabled={updateSettings.isPending}
+                  onChange={(event) => {
+                    setNodeUrl(event.target.value);
+                    setNodeUrlDirty(true);
+                  }}
+                  onBlur={() => commitCustomNodeUrl()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  aria-describedby={nodeUrlHints.length > 0 ? "node-url-hints" : undefined}
+                />
+                {nodeUrlHints.length > 0 && (
+                  <div id="node-url-hints" className="space-y-0.5">
+                    {nodeUrlHints.map((hint) => (
+                      <p key={hint} className="text-xs text-amber-400/90">
+                        {hint}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {updateSettings.isPending && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("settings.testingNodeConnection")}
+                  </p>
+                )}
+              </div>
+            </Row>
+            {!isMock ? (
+              <div className="border-t border-border py-4">
+                <NodeSelector
+                  activeNodeUrl={current.nodeUrl}
+                  busy={updateSettings.isPending}
+                  onUseNode={(url) => selectHomeNode(url, t("nodeSelector.toastUsingNode"))}
+                  onUseFastest={(url) => {
+                    if (!url) {
+                      toast.error(t("nodeSelector.toastNoneReachable"));
+                      return;
+                    }
+                    selectHomeNode(url, t("nodeSelector.toastFastest"));
+                  }}
+                />
+              </div>
+            ) : null}
+          </Section>
+        )}
+
+        {current && (
+          <Section id="settings-sync" icon={Gauge} title={t("settings.cardSync")}>
+            <StackRow
+              label={t("settings.syncSpeed")}
+              description={t("settings.syncSpeedDescription")}
+            >
+              <SyncSpeedSelector
+                value={current.syncSpeed}
+                disabled={updateSettings.isPending}
+                onChange={(syncSpeed) => update({ syncSpeed })}
+              />
+            </StackRow>
+            <Row
+              label={t("settings.readMinerTx")}
+              description={t("settings.readMinerTxDescription")}
+            >
+              <Switch
+                checked={current.readMinorTx}
+                disabled={updateSettings.isPending}
+                onCheckedChange={(checked: boolean) => update({ readMinorTx: checked })}
+              />
+            </Row>
+            <Row
+              label={t("settings.blockHeights")}
+              description={t("settings.blockHeightsDescription")}
+            >
+              <div className="flex gap-2">
+                <Input
+                  value={creationHeight}
+                  disabled={updateSettings.isPending}
+                  onChange={(event) => {
+                    setCreationHeight(event.target.value);
+                    setCreationHeightDirty(true);
+                  }}
+                  className="w-32"
+                  aria-label={t("settings.creationHeightAriaLabel")}
+                  inputMode="numeric"
+                />
+                <Input
+                  value={String(syncedHeight)}
+                  readOnly
+                  disabled
+                  className="w-32"
+                  aria-label={t("settings.currentSyncedHeightAriaLabel")}
+                  inputMode="numeric"
+                />
+              </div>
+            </Row>
+            <Row
+              label={t("settings.maintenance")}
+              description={t("settings.maintenanceDescription")}
+            >
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" disabled={updateSettings.isPending} onClick={applyHeights}>
+                  {t("settings.update")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={resetAndRescan.isPending}
+                  onClick={handleResetAndRescan}
+                >
+                  {resetAndRescan.isPending
+                    ? t("settings.rescanning")
+                    : t("settings.resetAndRescan")}
+                </Button>
+              </div>
+            </Row>
+            <Row
+              label={t("settings.optimization")}
+              description={t("settings.optimizationDescription")}
+            >
+              <div className="flex w-full flex-col items-end gap-1.5 sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={
+                    optimizeWallet.isPending ||
+                    optimizationStatus.isLoading ||
+                    !optimizationNeeded ||
+                    isSyncing ||
+                    viewOnly
+                  }
+                  onClick={handleOptimize}
+                  title={viewOnly ? walletCopy.viewOnlyOptimizeDisabled : undefined}
+                >
+                  {optimizeWallet.isPending ? t("settings.optimizing") : t("settings.optimizeNow")}
+                </Button>
+                {isSyncing ? (
+                  <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
+                    {t("settings.optimizeWaitForSync")}
+                  </p>
+                ) : viewOnly ? (
+                  <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
+                    {walletCopy.viewOnlyOptimizeDisabled}
+                  </p>
+                ) : optimizationNeeded ? (
+                  <p className="max-w-xs text-right text-xs text-amber-400/90 sm:max-w-sm">
+                    {t("settings.optimizeAvailable", { count: unspentOutputs })}
+                  </p>
+                ) : null}
+              </div>
+            </Row>
+          </Section>
+        )}
+
+        <Section id="settings-wallets" icon={Wallet} title={t("settings.cardWallets")}>
+          <div className="flex flex-col gap-3 border-t border-border py-4 first:border-t-0">
+            <p className="text-xs text-muted-foreground">{t("wallets.description")}</p>
+            <WalletsSetting />
+          </div>
+        </Section>
+
+        <Section id="settings-backup" icon={Database} title={t("settings.cardBackup")}>
+          <Row
+            label={t("settings.deviceDataBackup")}
+            description={t("settings.deviceDataBackupDescription")}
+          >
+            <VaultBackup />
+          </Row>
+          <Row
+            label={t("settings.notifications")}
+            description={t("settings.notificationsDescription")}
+          >
+            <NotificationsSetting />
+          </Row>
+          {!isMock ? (
+            <Row
+              label={t("settings.watchWallets")}
+              description={t("settings.watchWalletsDescription")}
+            >
+              <WatchOtherWalletsSetting />
+            </Row>
+          ) : null}
+        </Section>
+
+        {current && (
+          <Section
+            id="settings-danger"
+            icon={TriangleAlert}
+            title={t("settings.cardDanger")}
+            danger
+          >
+            <Row
+              label="Delete wallet"
+              description={
+                isMock
+                  ? "Removes this mock wallet session and returns to the open-wallet screen"
+                  : "Removes the encrypted wallet from this browser and returns to the open-wallet screen"
+              }
+            >
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="destructive">
+                    Delete wallet
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete wallet?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {isMock
+                        ? "This deletes the current mock wallet session and returns you to the open wallet screen."
+                        : "This permanently deletes the encrypted wallet stored in this browser."}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={deleteWallet}
+                    >
+                      Delete wallet
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </Row>
+            <Row
+              label="Panic wipe"
+              description="Erases everything local — wallet, settings, custom node, transaction notes — and returns to the open-wallet screen"
+            >
+              <PanicWipeDialog isMock={isMock} onConfirm={panicWipe} />
+            </Row>
+          </Section>
+        )}
+
+        {/* Small-screen fallback: the contextual rail is hidden < 1200px, so surface its
+            Wallet-status + Security-posture summary and jump nav inline here. CSS-hidden above
+            the breakpoint, where the rail shows it instead. */}
+        <div className="min-[1200px]:hidden">
+          <SettingsRail embedded />
+        </div>
       </div>
     </>
   );
