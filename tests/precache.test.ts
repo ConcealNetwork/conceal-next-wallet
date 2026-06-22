@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPrecacheList } from "@/lib/pwa/precache.mjs";
+import { buildPrecacheList, isWorkerChunk } from "@/lib/pwa/precache.mjs";
 
 const FILES = [
   "index.html",
@@ -10,6 +10,7 @@ const FILES = [
   "_next/static/css/app-def456.css",
   "_next/static/media/font.woff2",
   "_next/static/chunks/main-abc123.js.map", // source map — excluded
+  "_next/static/chunks/turbopack-worker-2gqdcwp7k90ea.js", // worker bootstrap — excluded (#184)
   "manifest.webmanifest",
   "icon-192.png", // manifest install icon — precached
   "icon-512.png", // manifest install icon — precached
@@ -55,6 +56,21 @@ describe("buildPrecacheList", () => {
     expect(list).not.toContain("_not-found/index.html");
     expect(list).not.toContain("_next/static/chunks/main-abc123.js.map");
     expect(list).not.toContain("build-manifest.txt");
+  });
+
+  it("excludes Turbopack worker bootstrap chunks (their hash params die in a cached response)", () => {
+    const list = buildPrecacheList(FILES);
+    expect(list).not.toContain("_next/static/chunks/turbopack-worker-2gqdcwp7k90ea.js");
+    // ...but a regular code chunk in the same dir is still precached.
+    expect(list).toContain("_next/static/chunks/main-abc123.js");
+  });
+
+  it("isWorkerChunk matches only worker bootstrap chunks under _next/static/chunks", () => {
+    expect(isWorkerChunk("_next/static/chunks/turbopack-worker-2gqdcwp7k90ea.js")).toBe(true);
+    expect(isWorkerChunk("_next/static/chunks/scan-worker-abc.js")).toBe(true);
+    expect(isWorkerChunk("_next/static/chunks/main-abc123.js")).toBe(false);
+    expect(isWorkerChunk("_next/static/media/scan-worker.0c4lni7.ts")).toBe(false); // not a chunk .js
+    expect(isWorkerChunk("workers/sync-worker.js")).toBe(false); // not under _next/static/chunks
   });
 
   it("normalizes leading ./ and / and dedupes, returning sorted root-relative URLs", () => {
