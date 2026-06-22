@@ -1,5 +1,3 @@
-import { cn } from "@/lib/utils";
-
 /**
  * Shared sparkline (#194 dedup) — one normalize→points→SVG pipeline that previously lived as five
  * near-identical private copies (account/balance/market/rail/network). All five used the same
@@ -71,7 +69,7 @@ export function Sparkline({
       aria-hidden="true"
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
-      className={cn(className)}
+      className={className}
     >
       {baselineY !== null ? (
         <line
