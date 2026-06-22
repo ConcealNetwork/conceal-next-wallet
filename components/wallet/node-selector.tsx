@@ -115,7 +115,9 @@ export function NodeSelector({
           return (
             <li key={node.id} className="flex items-center gap-3 px-3.5 py-2.5">
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-2 text-[13.5px] font-medium text-foreground">
+                {/* div, not p: holds a Badge (which renders a <div>) — a <div> inside <p> is
+                    invalid HTML and triggers a hydration error. */}
+                <div className="flex items-center gap-2 text-[13.5px] font-medium text-foreground">
                   <span className="truncate">{node.name}</span>
                   {isActive ? (
                     <Badge variant="outline" className="shrink-0 gap-1 text-primary">
@@ -123,7 +125,7 @@ export function NodeSelector({
                       {t("nodeSelector.active")}
                     </Badge>
                   ) : null}
-                </p>
+                </div>
                 <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                   <LatencyLabel probe={probe} probing={probing} />
                   {typeof node.poolUptimePercent === "number" ? (
