@@ -23,7 +23,7 @@ export function readPreferredNode(): string | null {
   if (typeof localStorage === "undefined") return null;
   try {
     const value = localStorage.getItem(STORAGE_KEY);
-    return value && value.trim() ? value : null;
+    return value?.trim() ? value : null;
   } catch {
     return null;
   }
@@ -32,7 +32,7 @@ export function readPreferredNode(): string | null {
 function writePreferredNode(url: string | null): void {
   if (typeof localStorage === "undefined") return;
   try {
-    if (url && url.trim()) localStorage.setItem(STORAGE_KEY, url);
+    if (url?.trim()) localStorage.setItem(STORAGE_KEY, url);
     else localStorage.removeItem(STORAGE_KEY);
   } catch {
     // Private-mode / quota — keep the in-memory value; non-critical.
@@ -58,7 +58,7 @@ export function getPreferredNode(): string | null {
 
 /** Set (and persist) the preferred node. `null` clears it (revert to the default). */
 export function setPreferredNode(url: string | null): void {
-  const next = url && url.trim() ? url : null;
+  const next = url?.trim() ? url : null;
   cached = next;
   loaded = true;
   writePreferredNode(next);
@@ -68,4 +68,42 @@ export function setPreferredNode(url: string | null): void {
 export function subscribeNodePreference(listener: NodePreferenceListener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+// --- auto-selected fastest node ------------------------------------------------------------------
+// A SEPARATE slot for the "fastest healthy node" probed on the open screen (see
+// `lib/network/auto-node.ts#refreshAutoNode`). It sits BELOW the user's explicit pick in the
+// `nodeUrlFromRaw` precedence — it only improves the DEFAULT for users who haven't chosen a node,
+// spreading load off the single hardcoded default (different users/locations → different fastest).
+//
+// It lives in sessionStorage, NOT localStorage (unlike the explicit preferred pick above): the probe
+// re-runs every page load, so the auto pick is inherently per-session. Session scope means a cached
+// node can NEVER be trusted across sessions — a returning user starts with no auto node (so
+// `nodeUrlFromRaw` falls back to the static default) until this session's fresh probe lands, and a
+// node that goes dead/removed can't be pinned indefinitely the way a persisted value could (Codex
+// review). It still survives client-side navigation within the tab (e.g. the real-mode `?next=`
+// unlock bounce). SSR/static-export safe (guards `typeof sessionStorage`).
+
+const AUTO_KEY = "ccx-auto-node";
+
+/** The fastest node probed THIS session, or null when none cached yet. Direct read — safe for the runtime. */
+export function readAutoNode(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    const value = sessionStorage.getItem(AUTO_KEY);
+    return value?.trim() ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Cache this session's probed fastest node. `null` clears it. */
+export function setAutoNode(url: string | null): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    if (url?.trim()) sessionStorage.setItem(AUTO_KEY, url);
+    else sessionStorage.removeItem(AUTO_KEY);
+  } catch {
+    // Private-mode / quota — non-critical.
+  }
 }

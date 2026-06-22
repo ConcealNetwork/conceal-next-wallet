@@ -1,3 +1,4 @@
+import { AutoNodeWarmup } from "@/components/landing/auto-node-warmup";
 import { ConcealBackdrop } from "@/components/landing/conceal-backdrop";
 import {
   LandingActions,
@@ -17,6 +18,7 @@ const trustPoints = [
 export default function LandingPage() {
   return (
     <OpenWalletProvider>
+      <AutoNodeWarmup />
       <main className="relative min-h-screen overflow-x-hidden text-foreground">
         <ConcealBackdrop />
 

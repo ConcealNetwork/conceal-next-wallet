@@ -3,7 +3,7 @@
 import { ChevronDown, Server } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DEFAULT_DAEMON_NODES } from "@/lib/config/config";
-import { getPreferredNode, setPreferredNode } from "@/lib/network/node-preference";
+import { getPreferredNode, readAutoNode, setPreferredNode } from "@/lib/network/node-preference";
 import { fetchSmartNodes, nodeUrlToPoolHost } from "@/lib/network/smart-nodes";
 import type { SmartNode } from "@/lib/types";
 
@@ -26,8 +26,19 @@ type Choice = { url: string | null; label: string; group: "Official" | "Communit
 export function UnlockNodePicker() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(() => getPreferredNode());
+  const [autoNode, setAutoNodeHint] = useState<string | null>(() => readAutoNode());
   const [smartNodes, setSmartNodes] = useState<SmartNode[]>([]);
   const [smartLoading, setSmartLoading] = useState(false);
+
+  // The fastest-node probe runs on the open screen mount and may still be in flight when the picker
+  // is expanded. Poll its cached result while open so the "Automatic · <host>" label goes live the
+  // moment the probe lands (a cheap sessionStorage read), then stops when collapsed.
+  useEffect(() => {
+    if (!open) return;
+    setAutoNodeHint(readAutoNode());
+    const id = setInterval(() => setAutoNodeHint(readAutoNode()), 1500);
+    return () => clearInterval(id);
+  }, [open]);
 
   // Fetch the community pool LAZILY — only when the picker is expanded — so just opening a wallet
   // never makes a network call. Pool unavailable → silently show official nodes only.
@@ -50,11 +61,11 @@ export function UnlockNodePicker() {
     };
   }, [open, selected, smartNodes.length]);
 
+  // `null` = "Automatic" → the wallet probes and uses the FASTEST healthy node (see auto-node.ts);
+  // the explicit official/community rows below PIN one node, remembered across sessions.
   const officialChoices: Choice[] = [
-    { url: null, label: `${nodeLabel(DEFAULT_DAEMON_NODES[0])} (default)`, group: "Official" },
-    ...DEFAULT_DAEMON_NODES.slice(1).map(
-      (url): Choice => ({ url, label: nodeLabel(url), group: "Official" }),
-    ),
+    { url: null, label: "Automatic (fastest node)", group: "Official" },
+    ...DEFAULT_DAEMON_NODES.map((url): Choice => ({ url, label: nodeLabel(url), group: "Official" })),
   ];
   const officialHosts = new Set(DEFAULT_DAEMON_NODES.map((u) => nodeUrlToPoolHost(u)));
   const smartChoices: Choice[] = smartNodes
@@ -62,9 +73,13 @@ export function UnlockNodePicker() {
     .map((node): Choice => ({ url: node.url, label: node.name || nodeLabel(node.url), group: "Community" }));
 
   const allChoices = [...officialChoices, ...smartChoices];
-  const currentLabel =
-    allChoices.find((c) => c.url === selected)?.label ??
-    (selected ? nodeLabel(selected) : officialChoices[0].label);
+  // Collapsed header: a pinned node shows its label; "Automatic" shows the resolved fastest host
+  // once probed (transparency), else just "Automatic (fastest node)".
+  const currentLabel = selected
+    ? (allChoices.find((c) => c.url === selected)?.label ?? nodeLabel(selected))
+    : autoNode
+      ? `Automatic · ${nodeLabel(autoNode)}`
+      : "Automatic (fastest node)";
 
   const pick = (url: string | null) => {
     setSelected(url);
@@ -117,6 +132,9 @@ export function UnlockNodePicker() {
               </div>
             );
           })}
+          <p className="px-2 pb-1 pt-2 text-[11px] leading-snug text-muted-foreground">
+            Automatic briefly contacts community nodes to find the fastest. Pick one above to pin it.
+          </p>
         </div>
       ) : null}
     </div>
