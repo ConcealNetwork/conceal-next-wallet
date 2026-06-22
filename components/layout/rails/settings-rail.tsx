@@ -3,11 +3,15 @@
 import {
   Bell,
   Check,
+  Database,
   Eye,
   Gauge,
   KeyRound,
   Lock,
+  type LucideIcon,
+  Palette,
   Server,
+  ShieldCheck,
   TriangleAlert,
   Wallet,
 } from "lucide-react";
@@ -46,7 +50,7 @@ function PostureRow({
   tone,
   first = false,
 }: {
-  icon: typeof Check;
+  icon: LucideIcon;
   label: string;
   value: string;
   tone: PostureTone;
@@ -76,13 +80,13 @@ function PostureRow({
 }
 
 const JUMP_SECTIONS = [
-  { id: "settings-appearance", key: "settings.cardAppearance" },
-  { id: "settings-security", key: "settings.cardSecurity" },
-  { id: "settings-node", key: "settings.cardNode" },
-  { id: "settings-sync", key: "settings.cardSync" },
-  { id: "settings-wallets", key: "settings.cardWallets" },
-  { id: "settings-backup", key: "settings.cardBackup" },
-  { id: "settings-danger", key: "settings.cardDanger" },
+  { id: "settings-appearance", key: "settings.cardAppearance", icon: Palette },
+  { id: "settings-security", key: "settings.cardSecurity", icon: ShieldCheck },
+  { id: "settings-node", key: "settings.cardNode", icon: Server },
+  { id: "settings-sync", key: "settings.cardSync", icon: Gauge },
+  { id: "settings-wallets", key: "settings.cardWallets", icon: Wallet },
+  { id: "settings-backup", key: "settings.cardBackup", icon: Database },
+  { id: "settings-danger", key: "settings.cardDanger", icon: TriangleAlert },
 ] as const;
 
 export function SettingsRail({ embedded = false }: { embedded?: boolean }) {
@@ -162,13 +166,13 @@ export function SettingsRail({ embedded = false }: { embedded?: boolean }) {
 
       <RailSectionHeading icon={Gauge}>{t("settings.railJump")}</RailSectionHeading>
       <nav className="flex flex-col">
-        {JUMP_SECTIONS.map(({ id, key }) => (
+        {JUMP_SECTIONS.map(({ id, key, icon: Icon }) => (
           <a
             key={id}
             href={`#${id}`}
             className="flex items-center gap-2 rounded-md px-2 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
-            <Server className="size-3.5 shrink-0 opacity-60" aria-hidden="true" />
+            <Icon className="size-3.5 shrink-0 opacity-60" aria-hidden="true" />
             {t(key)}
           </a>
         ))}

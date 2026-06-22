@@ -131,6 +131,31 @@ function Row({
   );
 }
 
+/**
+ * Like {@link Row} but stacks the control BELOW the label/description and lets it span the full
+ * card width — for wide controls (e.g. the DOOM sync-speed pill group) that a right-aligned
+ * `shrink-0` slot would crush. Same vertical rhythm as Row (`py-4`, top border except first).
+ */
+function StackRow({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-border py-4 first:border-t-0">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
 function SyncSpeedSelector({
   value,
   disabled,
@@ -527,50 +552,51 @@ export default function SettingsPage() {
           </Row>
         </Section>
 
-        <Section id="settings-security" icon={ShieldCheck} title={t("settings.cardSecurity")}>
-          {!isMock ? (
-            <div className="flex flex-col gap-3 py-4 first:pt-0">
-              <div>
-                <p className="text-sm font-medium text-foreground">{t("settings.passkeyUnlock")}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {t("settings.passkeyUnlockDescription")}
-                </p>
-              </div>
-              <PasskeySetting />
-            </div>
-          ) : null}
-          {current && (
-            <>
-              <Row label={t("settings.autoLock")} description={t("settings.autoLockDescription")}>
-                <select
-                  className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
-                  value={String(current.autoLockMinutes)}
-                  onChange={(event) =>
-                    update(
-                      { autoLockMinutes: Number(event.target.value) },
-                      isMock ? "Mock auto-lock updated." : "Auto-lock updated.",
-                    )
-                  }
-                  aria-label={t("settings.autoLockTimeoutAriaLabel")}
-                >
-                  <option value="0">{t("settings.autoLockOff")}</option>
-                  <option value="5">{t("settings.autoLockAfter", { minutes: 5 })}</option>
-                  <option value="15">{t("settings.autoLockAfter", { minutes: 15 })}</option>
-                  <option value="30">{t("settings.autoLockAfter", { minutes: 30 })}</option>
-                </select>
-              </Row>
-              <Row label={t("settings.password")} description={t("settings.passwordDescription")}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/wallet/change-password")}
-                >
-                  {t("settings.changePassword")}
-                </Button>
-              </Row>
-            </>
-          )}
-        </Section>
+        {/* Render only when there's content: real mode always has the passkey block; mock has the
+            auto-lock/password rows only once `current` resolves — guards an empty header flash. */}
+        {(!isMock || current) && (
+          <Section id="settings-security" icon={ShieldCheck} title={t("settings.cardSecurity")}>
+            {!isMock ? (
+              <StackRow
+                label={t("settings.passkeyUnlock")}
+                description={t("settings.passkeyUnlockDescription")}
+              >
+                <PasskeySetting />
+              </StackRow>
+            ) : null}
+            {current && (
+              <>
+                <Row label={t("settings.autoLock")} description={t("settings.autoLockDescription")}>
+                  <select
+                    className="h-10 w-44 cursor-pointer rounded-xl border border-input bg-background px-3 text-sm text-foreground transition-colors duration-200 hover:border-ring/60 focus:outline-hidden focus:ring-2 focus:ring-ring"
+                    value={String(current.autoLockMinutes)}
+                    onChange={(event) =>
+                      update(
+                        { autoLockMinutes: Number(event.target.value) },
+                        isMock ? "Mock auto-lock updated." : "Auto-lock updated.",
+                      )
+                    }
+                    aria-label={t("settings.autoLockTimeoutAriaLabel")}
+                  >
+                    <option value="0">{t("settings.autoLockOff")}</option>
+                    <option value="5">{t("settings.autoLockAfter", { minutes: 5 })}</option>
+                    <option value="15">{t("settings.autoLockAfter", { minutes: 15 })}</option>
+                    <option value="30">{t("settings.autoLockAfter", { minutes: 30 })}</option>
+                  </select>
+                </Row>
+                <Row label={t("settings.password")} description={t("settings.passwordDescription")}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/wallet/change-password")}
+                  >
+                    {t("settings.changePassword")}
+                  </Button>
+                </Row>
+              </>
+            )}
+          </Section>
+        )}
 
         {current && (
           <Section id="settings-node" icon={Server} title={t("settings.cardNode")}>
@@ -649,13 +675,16 @@ export default function SettingsPage() {
 
         {current && (
           <Section id="settings-sync" icon={Gauge} title={t("settings.cardSync")}>
-            <Row label={t("settings.syncSpeed")} description={t("settings.syncSpeedDescription")}>
+            <StackRow
+              label={t("settings.syncSpeed")}
+              description={t("settings.syncSpeedDescription")}
+            >
               <SyncSpeedSelector
                 value={current.syncSpeed}
                 disabled={updateSettings.isPending}
                 onChange={(syncSpeed) => update({ syncSpeed })}
               />
-            </Row>
+            </StackRow>
             <Row
               label={t("settings.readMinerTx")}
               description={t("settings.readMinerTxDescription")}
@@ -751,7 +780,7 @@ export default function SettingsPage() {
         )}
 
         <Section id="settings-wallets" icon={Wallet} title={t("settings.cardWallets")}>
-          <div className="flex flex-col gap-3 py-4 first:pt-0">
+          <div className="flex flex-col gap-3 border-t border-border py-4 first:border-t-0">
             <p className="text-xs text-muted-foreground">{t("wallets.description")}</p>
             <WalletsSetting />
           </div>
@@ -780,49 +809,63 @@ export default function SettingsPage() {
           ) : null}
         </Section>
 
-        <Section id="settings-danger" icon={TriangleAlert} title={t("settings.cardDanger")} danger>
-          <Row
-            label="Delete wallet"
-            description={
-              isMock
-                ? "Removes this mock wallet session and returns to the open-wallet screen"
-                : "Removes the encrypted wallet from this browser and returns to the open-wallet screen"
-            }
+        {current && (
+          <Section
+            id="settings-danger"
+            icon={TriangleAlert}
+            title={t("settings.cardDanger")}
+            danger
           >
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button type="button" variant="destructive">
-                  Delete wallet
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete wallet?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {isMock
-                      ? "This deletes the current mock wallet session and returns you to the open wallet screen."
-                      : "This permanently deletes the encrypted wallet stored in this browser."}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={deleteWallet}
-                  >
+            <Row
+              label="Delete wallet"
+              description={
+                isMock
+                  ? "Removes this mock wallet session and returns to the open-wallet screen"
+                  : "Removes the encrypted wallet from this browser and returns to the open-wallet screen"
+              }
+            >
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="destructive">
                     Delete wallet
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </Row>
-          <Row
-            label="Panic wipe"
-            description="Erases everything local — wallet, settings, custom node, transaction notes — and returns to the open-wallet screen"
-          >
-            <PanicWipeDialog isMock={isMock} onConfirm={panicWipe} />
-          </Row>
-        </Section>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete wallet?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {isMock
+                        ? "This deletes the current mock wallet session and returns you to the open wallet screen."
+                        : "This permanently deletes the encrypted wallet stored in this browser."}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={deleteWallet}
+                    >
+                      Delete wallet
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </Row>
+            <Row
+              label="Panic wipe"
+              description="Erases everything local — wallet, settings, custom node, transaction notes — and returns to the open-wallet screen"
+            >
+              <PanicWipeDialog isMock={isMock} onConfirm={panicWipe} />
+            </Row>
+          </Section>
+        )}
+
+        {/* Small-screen fallback: the contextual rail is hidden < 1200px, so surface its
+            Wallet-status + Security-posture summary and jump nav inline here. CSS-hidden above
+            the breakpoint, where the rail shows it instead. */}
+        <div className="min-[1200px]:hidden">
+          <SettingsRail embedded />
+        </div>
       </div>
     </>
   );
