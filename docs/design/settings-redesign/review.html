@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Settings redesign — variant review</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b0b0d; color: #ededed; font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+  header { padding: 28px 32px 8px; max-width: 1360px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .sub { color: #9a9a9f; margin: 0 0 16px; max-width: 80ch; }
+  .rec { background: #17171a; border: 1px solid #26262b; border-left: 3px solid #e8a33d; border-radius: 12px; padding: 14px 18px; margin: 0 0 8px; }
+  .rec b { color: #e8a33d; }
+  .variants { max-width: 1360px; margin: 0 auto; padding: 16px 32px 64px; display: flex; flex-direction: column; gap: 40px; }
+  .variant h2 { font-size: 17px; margin: 0 0 4px; display: flex; align-items: baseline; gap: 10px; }
+  .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #0b0b0d; background: #e8a33d; padding: 2px 8px; border-radius: 999px; }
+  .tag.muted { background: #3a3a40; color: #cfcfd4; }
+  .variant p { color: #9a9a9f; margin: 4px 0 12px; max-width: 90ch; }
+  .frame { width: 100%; border: 1px solid #26262b; border-radius: 14px; overflow: hidden; background: #0e0e10; }
+  iframe { width: 100%; height: 1100px; border: 0; display: block; }
+  .missing { padding: 40px; text-align: center; color: #9a9a9f; border: 1px dashed #3a3a40; border-radius: 14px; }
+  code { background: #1d1d21; padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Settings redesign — pick a direction</h1>
+  <p class="sub">Each variant regroups the flat Settings list into logical cards, adds a contextual right rail
+  (the shell's ~380px column), promotes the DOOM Sync-speed control, and isolates destructive actions in a
+  Danger Zone. They converge on the same information architecture — the differences are in the rail content
+  and the sync-speed treatment.</p>
+  <div class="rec">
+    <b>Recommended:</b> use <b>Opus</b> as the base — intent-ordered cards (most-touched first) + a status rail
+    that summarizes STATE (live sync %, connected node + latency, active DOOM level, a security-posture checklist:
+    passkey / auto-lock / watch) with a jump-to-section scrollspy — and <b>graft Gemini's explanatory sync-speed box</b>
+    (cores / batch / nodes per level). Both isolate Delete + Panic into a red Danger Zone. Pick one, or mix-and-match
+    per element and I'll synthesize.
+  </div>
+</header>
+<div class="variants">
+  <div class="variant">
+    <h2>Opus <span class="tag">recommended base</span></h2>
+    <p>7 intent-ordered cards · status-ring rail (sync %, node, DOOM level, security checklist) + jump-nav · DOOM control as a hero block with per-level cores/batch/nodes · isolated red Danger Zone.</p>
+    <div class="frame"><iframe src="opus.html" title="Opus variant"></iframe></div>
+  </div>
+  <div class="variant">
+    <h2>Gemini <span class="tag muted">graft: sync-speed box</span></h2>
+    <p>Cards grouped (Appearance &amp; Notifications, Security &amp; Unlock, Network &amp; Node, Sync &amp; Performance, Wallets, Backup &amp; Data) · "Status Center" rail + quick-jump nav · sync-speed segmented pills with an explanatory core/batch box · red Danger Zone.</p>
+    <div class="frame"><iframe src="gemini.html" title="Gemini variant"></iframe></div>
+  </div>
+  <div class="variant">
+    <h2>GLM <span class="tag muted">3rd opinion</span></h2>
+    <p>Generating — refresh this page when it lands (file: <code>glm.html</code>). Codex was skipped (workspace out of credits).</p>
+    <div class="frame"><iframe src="glm.html" title="GLM variant" onerror="this.parentNode.innerHTML='<div class=missing>glm.html not ready yet — refresh to load it.</div>'"></iframe></div>
+  </div>
+</div>
+</body>
+</html>

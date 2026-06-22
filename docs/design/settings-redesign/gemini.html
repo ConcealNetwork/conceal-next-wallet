@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Conceal Next Wallet</title>
+    <style>
+        :root {
+            --bg: #0e0e10;
+            --card: #17171a;
+            --border: #26262b;
+            --primary: #e8a33d;
+            --text: #ededed;
+            --muted: #9a9a9f;
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .layout {
+            display: flex;
+            width: 100%;
+            max-width: 1280px;
+            padding: 40px;
+            gap: 40px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .right-rail {
+            width: 380px;
+            position: sticky;
+            top: 40px;
+            height: fit-content;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .header-desc {
+            color: var(--muted);
+            margin-bottom: 24px;
+            font-size: 15px;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            letter-spacing: -0.01em;
+        }
+
+        .card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px; /* rounded-xl */
+            padding: 24px;
+        }
+
+        .danger-zone {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: linear-gradient(180deg, var(--card) 0%, rgba(239, 68, 68, 0.02) 100%);
+        }
+
+        .danger-zone h2 {
+            color: var(--danger);
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .setting-row:first-child {
+            padding-top: 0;
+        }
+
+        .setting-info h3 {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .setting-info p {
+            font-size: 13px;
+            color: var(--muted);
+            max-width: 400px;
+        }
+
+        /* Controls */
+        .toggle {
+            width: 44px;
+            height: 24px;
+            background-color: var(--border);
+            border-radius: 999px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .toggle.on {
+            background-color: var(--primary);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle.on::after {
+            transform: translateX(20px);
+        }
+
+        .segmented-pill {
+            display: inline-flex;
+            background-color: var(--bg);
+            border-radius: 999px;
+            padding: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .pill-btn {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            padding: 6px 16px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pill-btn:hover:not(.active) {
+            color: var(--text);
+        }
+
+        .pill-btn.active {
+            background-color: var(--card);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+        }
+
+        .btn {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: var(--border);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
+        
+        .btn-primary:hover {
+            background-color: #f0b457;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-bg);
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(239, 68, 68, 0.2);
+        }
+
+        select, input[type="text"] {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            min-width: 140px;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--muted);
+        }
+
+        /* Sync Speed Doom Levels */
+        .doom-levels {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .doom-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background-color: var(--bg);
+            padding: 6px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            width: fit-content;
+        }
+
+        .doom-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--muted);
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .doom-btn:hover:not(.active) {
+            color: var(--text);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .doom-btn.active {
+            background-color: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(232, 163, 61, 0.3);
+        }
+
+        .doom-info {
+            background-color: var(--bg);
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            color: var(--text);
+            border: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        .doom-info svg {
+            color: var(--primary);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Right Rail Widgets */
+        .status-widget {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background-color: rgba(232, 163, 61, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .status-text h4 {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        .status-text p {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .nav-widget {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-item {
+            padding: 10px 12px;
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover {
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        
+        .nav-item.active {
+            background-color: rgba(232, 163, 61, 0.1);
+            color: var(--primary);
+        }
+        
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: var(--border);
+            border-radius: 999px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary);
+            width: 100%; /* fully synced */
+            border-radius: 999px;
+        }
+
+        .node-list {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .node-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background-color: var(--bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .node-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .node-url {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        
+        .node-stats {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #10b981; /* Green dot for uptime */
+        }
+
+        .wallet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .wallet-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background-color: var(--bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .wallet-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e8a33d 0%, #d18926 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .wallet-name {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .wallet-address {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 2px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .badge {
+            background-color: rgba(232, 163, 61, 0.1);
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+            border: 1px solid rgba(232, 163, 61, 0.2);
+        }
+        
+        .wallet-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .input-group input {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+<!-- rationale
+The redesigned Settings page groups what was previously a flat list of options into logical, visually distinct cards (e.g., Appearance & Notifications, Security & Unlock, Network & Node, Sync & Performance, Wallets, Backup & Data).
+A contextual right rail has been introduced. Rather than duplicating content, the rail provides a high-level "Status Center" (Sync status, Node connection, Security posture, current Sync speed) offering immediate context, plus a quick-jump navigation menu to easily reach specific sections on long screens.
+Destructive actions (Delete wallet, Panic wipe) are isolated into a red-accented Danger Zone at the bottom to prevent accidental clicks.
+The DOOM-themed sync speed control is elevated into a segmented pill selector with an explanatory box that details the core/batch allocation for the chosen difficulty level.
+-->
+
+<div class="layout">
+    <div class="main-content">
+        <header>
+            <h1>Settings</h1>
+            <p class="header-desc">Manage your wallet preferences, security, network, and data.</p>
+        </header>
+
+        <section id="appearance" class="card">
+            <h2>Appearance & Notifications</h2>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Theme</h3>
+                    <p>Select your preferred app theme.</p>
+                </div>
+                <div class="segmented-pill">
+                    <button class="pill-btn">Light</button>
+                    <button class="pill-btn active">Dark</button>
+                    <button class="pill-btn">System</button>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Language</h3>
+                    <p>Choose the interface language.</p>
+                </div>
+                <select>
+                    <option>English</option>
+                    <option>Spanish</option>
+                    <option>French</option>
+                    <option>German</option>
+                </select>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Enable Notifications</h3>
+                    <p>Receive alerts for incoming transactions and important events.</p>
+                </div>
+                <div class="toggle on"></div>
+            </div>
+        </section>
+
+        <section id="security" class="card">
+            <h2>Security & Unlock</h2>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Auto-lock</h3>
+                    <p>Automatically lock the wallet after a period of inactivity.</p>
+                </div>
+                <select>
+                    <option>5 minutes</option>
+                    <option selected>15 minutes</option>
+                    <option>1 hour</option>
+                    <option>Never</option>
+                </select>
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Change Password</h3>
+                    <p>Update your main wallet encryption password.</p>
+                </div>
+                <button class="btn">Update Password</button>
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Passkey Unlock</h3>
+                    <p>Use biometrics or a hardware key to unlock your wallet.</p>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                    <button class="btn btn-primary">Add Passkey</button>
+                    <span style="font-size: 13px; color: var(--muted);">1 passkey active</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="network" class="card">
+            <h2>Network & Node</h2>
+            
+            <div class="setting-row">
+                <div class="setting-info" style="width: 100%;">
+                    <h3>Use Custom Node</h3>
+                    <p>Connect to a specific Conceal node instead of the default pool.</p>
+                    <div class="input-group">
+                        <input type="text" placeholder="e.g. node.example.com:16000" disabled>
+                    </div>
+                </div>
+                <div class="toggle" style="margin-left: 24px;"></div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Watch Other Wallets</h3>
+                    <p>Allow the node to scan for transactions related to watch-only addresses.</p>
+                </div>
+                <div class="toggle on"></div>
+            </div>
+
+            <div class="node-list">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-size: 15px; font-weight: 500;">Available Nodes</h3>
+                    <button class="btn" style="padding: 4px 12px; font-size: 13px;">Use Fastest</button>
+                </div>
+                <div class="node-item">
+                    <div class="node-details">
+                        <span class="node-url">node1.conceal.network:16000</span>
+                        <span class="node-stats"><div class="status-dot"></div> Latency: 45ms • Uptime: 99.9%</span>
+                    </div>
+                    <button class="btn btn-primary">Use</button>
+                </div>
+                <div class="node-item">
+                    <div class="node-details">
+                        <span class="node-url">eu-node.conceal.network:16000</span>
+                        <span class="node-stats"><div class="status-dot"></div> Latency: 120ms • Uptime: 99.8%</span>
+                    </div>
+                    <button class="btn">Use</button>
+                </div>
+                <div class="node-item">
+                    <div class="node-details">
+                        <span class="node-url">us-west.conceal.network:16000</span>
+                        <span class="node-stats"><div class="status-dot"></div> Latency: 85ms • Uptime: 99.5%</span>
+                    </div>
+                    <button class="btn">Use</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="sync" class="card">
+            <h2>Sync & Performance</h2>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Read Miner Transactions</h3>
+                    <p>Include coinbase transactions in wallet history.</p>
+                </div>
+                <div class="toggle"></div>
+            </div>
+            
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Block Heights</h3>
+                    <p>Creation height: <strong>1,402,841</strong><br>Current synced: <strong>1,489,102</strong></p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn">Update</button>
+                    <button class="btn">Reset & Rescan</button>
+                </div>
+            </div>
+
+            <div class="doom-levels">
+                <div class="setting-info">
+                    <h3>Sync Speed</h3>
+                    <p>Adjust how aggressively the wallet utilizes system resources to scan blocks. Higher levels use more CPU cores and batch more blocks per request.</p>
+                </div>
+                <div class="doom-pills">
+                    <button class="doom-btn">I'm too young to die</button>
+                    <button class="doom-btn">Hey, not too rough</button>
+                    <button class="doom-btn active">Hurt me plenty</button>
+                    <button class="doom-btn">Ultra-Violence</button>
+                    <button class="doom-btn">Nightmare!</button>
+                </div>
+                <div class="doom-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <div>
+                        <strong style="color: var(--text);">Hurt me plenty</strong><br>
+                        The balanced approach. Uses 4 CPU cores and batches 500 blocks per request. Ideal for everyday use without overwhelming your system while maintaining good sync speeds.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="wallets" class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2>Wallets</h2>
+                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Wallet
+                </button>
+            </div>
+            
+            <div class="wallet-list">
+                <div class="wallet-item">
+                    <div class="wallet-info">
+                        <div class="wallet-avatar">P</div>
+                        <div>
+                            <div class="wallet-name">Primary Savings <span class="badge">Active</span></div>
+                            <div class="wallet-address">ccx7V8a...9x1B2c</div>
+                        </div>
+                    </div>
+                    <div class="wallet-actions">
+                        <button class="btn">Rename</button>
+                    </div>
+                </div>
+                <div class="wallet-item">
+                    <div class="wallet-info">
+                        <div class="wallet-avatar" style="background: linear-gradient(135deg, #4b5563 0%, #1f2937 100%); color: #ededed;">T</div>
+                        <div>
+                            <div class="wallet-name">Trading Wallet</div>
+                            <div class="wallet-address">ccx9L2p...4m8N5q</div>
+                        </div>
+                    </div>
+                    <div class="wallet-actions">
+                        <button class="btn">Rename</button>
+                        <button class="btn">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="backup" class="card">
+            <h2>Backup & Data</h2>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Device Data Backup</h3>
+                    <p>Export your local configuration, contacts, and labels (does not export private keys).</p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export
+                    </button>
+                    <button class="btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Restore
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="danger" class="card danger-zone">
+            <h2>Danger Zone</h2>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Delete Wallet</h3>
+                    <p>Remove the currently active wallet from this device. You will need your seed phrase to restore it.</p>
+                </div>
+                <button class="btn btn-danger">Delete Wallet</button>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <h3>Panic Wipe</h3>
+                    <p>Instantly erase ALL wallets, data, and settings from this device. Cannot be undone.</p>
+                </div>
+                <button class="btn btn-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Panic Wipe
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <div class="right-rail">
+        <div class="card status-widget">
+            <h2 style="margin-bottom: 4px;">Status Center</h2>
+            
+            <div class="status-item">
+                <div class="status-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.54 15H17a2 2 0 0 0-2 2v4.54"/><path d="M7 3.34V5a3 3 0 0 0 3 3v0a2 2 0 0 1 2 2v0c0 1.1.9 2 2 2v0a2 2 0 0 0 2-2v0c0-1.1.9-2 2-2h3.17"/><path d="M11 21.95V18a2 2 0 0 0-2-2v0a2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05"/><circle cx="12" cy="12" r="10"/></svg>
+                </div>
+                <div class="status-text">
+                    <h4>Network Synced</h4>
+                    <p>Block 1,489,102</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-item">
+                <div class="status-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M11 9h4a2 2 0 0 0 2-2V3"/><circle cx="9" cy="9" r="2"/><path d="M7 21v-4a2 2 0 0 1 2-2h4"/><circle cx="15" cy="15" r="2"/></svg>
+                </div>
+                <div class="status-text">
+                    <h4>Connected Node</h4>
+                    <p>node1.conceal.network (45ms)</p>
+                </div>
+            </div>
+
+            <div class="status-item">
+                <div class="status-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="status-text">
+                    <h4>Security Posture</h4>
+                    <p>Auto-lock on (15m) • Passkey active</p>
+                </div>
+            </div>
+
+            <div class="status-item">
+                <div class="status-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </div>
+                <div class="status-text">
+                    <h4>Sync Speed</h4>
+                    <p>Hurt me plenty</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="position: sticky; top: 40px;">
+            <h2 style="margin-bottom: 12px;">Quick Navigation</h2>
+            <div class="nav-widget">
+                <a href="#appearance" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                    Appearance & Notifications
+                </a>
+                <a href="#security" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Security & Unlock
+                </a>
+                <a href="#network" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h8"/><path d="M12 2v8"/><path d="m4.9 4.9 5.6 5.6"/><path d="m4.9 19.1 5.6-5.6"/><circle cx="12" cy="12" r="2"/></svg>
+                    Network & Node
+                </a>
+                <a href="#sync" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    Sync & Performance
+                </a>
+                <a href="#wallets" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>
+                    Wallets
+                </a>
+                <a href="#backup" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Backup & Data
+                </a>
+                <a href="#danger" class="nav-item" style="color: var(--danger); margin-top: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Danger Zone
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
