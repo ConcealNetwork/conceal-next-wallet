@@ -1,15 +1,15 @@
 import { MOCK_ADDRESS, mockDeposits } from "@/lib/mock-data/wallet";
-import { ccxAmount } from "@/lib/utils";
-import { clone, mockDelay } from "@/lib/services/mock/helpers";
-import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import {
+  type DepositService,
   estimateDepositInterest,
   estimateDepositUnlockDays,
   getDepositApr,
-  type DepositService,
 } from "@/lib/services/deposit.service";
+import { clone, mockDelay } from "@/lib/services/mock/helpers";
+import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import { assertCanSpend } from "@/lib/services/view-only";
 import { walletCopy } from "@/lib/ui/wallet-copy";
+import { ccxAmount } from "@/lib/utils";
 
 export const mockDepositService: DepositService = {
   async listDeposits() {

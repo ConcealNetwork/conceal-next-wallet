@@ -3,7 +3,7 @@ import {
   DEPOSIT_MAX_TERM_MONTH,
   DEPOSIT_MIN_TERM_BLOCK,
   DEPOSIT_MIN_TERM_MONTH,
-} from "@/lib/config/config";
+} from "conceal-wallet-sdk";
 import type { Deposit, Transaction } from "@/lib/types";
 
 export type CreateDepositInput = {

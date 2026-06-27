@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { NodeStatus } from "@/lib/types";
 import {
-  TELEMETRY_MAX_POINTS,
   accumulateNetworkTelemetry,
   ensureSparklinePoints,
   normalizeHashrateChartSeries,
+  TELEMETRY_MAX_POINTS,
 } from "@/lib/hooks/use-network-telemetry-history";
+import type { NodeStatus } from "@/lib/types";
 
 function status(over: Partial<NodeStatus>): NodeStatus {
   return {

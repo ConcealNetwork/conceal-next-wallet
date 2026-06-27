@@ -1,5 +1,6 @@
 "use client";
 
+import { COIN_UNIT_PLACES } from "conceal-wallet-sdk";
 import { Calculator, PiggyBank } from "lucide-react";
 import { useState } from "react";
 import {
@@ -19,12 +20,11 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { COIN_UNIT_PLACES } from "@/lib/config/config";
-import { DEPOSIT_DURATION_OPTIONS } from "@/lib/services/deposit.service";
 import { computeDepositInterest } from "@/lib/deposits/interest-calc";
 import { useDeposits } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
+import { DEPOSIT_DURATION_OPTIONS } from "@/lib/services/deposit.service";
 import type { Deposit } from "@/lib/types";
 import { ccxToNumber, cn } from "@/lib/utils";
 

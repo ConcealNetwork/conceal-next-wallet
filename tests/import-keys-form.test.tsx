@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/lib/i18n/i18n-provider";
+
 const renderI18n = (ui: Parameters<typeof render>[0]) => render(<I18nProvider>{ui}</I18nProvider>);
 
 // Capture what the form hands to the engine, and stub the session redirect.

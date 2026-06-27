@@ -38,6 +38,10 @@ type ScannedOutputs = ReturnType<typeof txns.scanTransactionOutputsAndDeposits>;
 export interface RawScanResult {
   /** The parsed scan transaction (carries hash/height; reused for message reconstruction). */
   scanTx: txns.RawTransaction;
+  /** Daemon inner `transaction` object (vin/vout for fusion/coinbase classification at fold). */
+  rawTransaction: unknown;
+  /** Transaction fee in atomic units, when the daemon supplied one. */
+  fee: number;
   /** Outputs/deposits owned by the wallet (the ECDH scan result). */
   ownedOutputs: ScannedOutputs["outputs"];
   ownedDeposits: ScannedOutputs["deposits"];
@@ -174,6 +178,8 @@ export function scanRawTransaction(
   );
   return {
     scanTx,
+    rawTransaction: inner,
+    fee: typeof rawTx.fee === "number" ? rawTx.fee : 0,
     ownedOutputs,
     ownedDeposits,
     inputKeyImages: extractInputKeyImages(inner),

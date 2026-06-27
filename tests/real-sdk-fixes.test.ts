@@ -25,7 +25,8 @@ type DaemonStub = {
   getNodeFeeAddress: () => Promise<string>;
   sendRawTransaction: (hex: string) => Promise<{ status: string }>;
   getRandomOuts: () => Promise<never[]>;
-  getWalletSyncData: (start: number, end: number) => Promise<unknown[]>;
+  getWalletSyncData: (start: number, end: number) => Promise<unknown>;
+  getTransactionsPool?: () => Promise<unknown[]>;
 };
 
 function legacyRaw(spend: string, view: string, spendPub: string, viewPub: string): RawWalletV1 {
@@ -448,6 +449,216 @@ describe("inbound message classification by decryptability (review #6 / #97)", (
     const inbound = reconstructReceivedMessage(scanTx, bob.keys, { sentHashes: new Set() });
     expect(inbound).not.toBeNull();
     expect(inbound?.body).toBe("ping");
+  });
+
+  it("resetAndRescan clears receivedMessages and rebuilds paymentIdFrom from tx extra", async () => {
+    const { realSdkSettingsService } = await import("@/lib/services/real-sdk/settings.service");
+    const { reconstructReceivedMessage, readReceivedRecords } = await import(
+      "@/lib/services/real-sdk/messages-store"
+    );
+    const runtimeMod = await import("@/lib/services/real-sdk/runtime");
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const bobDecoded = decodeAddress(bob.address);
+    const PID = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099";
+
+    const built = txns.buildMessageTransaction({
+      keys: alice.keys,
+      recipient: {
+        spendPublicKey: bobDecoded.spendPublicKey,
+        viewPublicKey: bobDecoded.viewPublicKey,
+      },
+      body: "from contact",
+      changeKeys: { spendPublicKey: alice.keys.spend.pub, viewPublicKey: alice.keys.view.pub },
+      unspentOutputs: [fundOwnedOutput(alice, 5_000_000)],
+      decoys: [fakeDecoys(5_000_000, 6)],
+      fee: 1000,
+      mixin: 5,
+      ttlUnixSeconds: 0,
+      nodeFee: null,
+      messageAmount: 100,
+      paymentId: PID,
+    });
+
+    const scanTx: txns.RawTransaction = {
+      extra: built.extra,
+      vout: built.outputs.map((out) => ({
+        amount: out.amount,
+        target: { type: "02", data: { key: out.publicKey } },
+      })),
+      outputIndexes: built.outputs.map((_, i) => 5000 + i),
+      hash: built.hash,
+      height: 42,
+    };
+
+    const staleInbound = reconstructReceivedMessage(scanTx, bob.keys, { sentHashes: new Set() });
+    expect(staleInbound?.paymentIdFrom).toBe(PID);
+    if (!staleInbound) throw new Error("expected stale inbound");
+
+    const daemon: DaemonStub = {
+      nodeUrl: "https://node.test/",
+      getHeight: () => Promise.resolve(50),
+      getNodeFeeAddress: () => Promise.resolve(""),
+      sendRawTransaction: () => Promise.resolve({ status: "OK" }),
+      getRandomOuts: () => Promise.resolve([]),
+      getWalletSyncData: (start, end) => {
+        if (start <= 42 && end > 42) {
+          return Promise.resolve([
+            {
+              transaction: {
+                extra: scanTx.extra,
+                vout: scanTx.vout,
+                vin: [],
+              },
+              timestamp: 1_700_000_000,
+              outputIndexes: scanTx.outputIndexes,
+              height: 42,
+              hash: built.hash,
+              blockHash: "aa".repeat(32),
+              fee: 1000,
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      },
+      getTransactionsPool: () => Promise.resolve([]),
+    };
+
+    runtimeMod._setRuntimeForTest({
+      account: bob,
+      raw: {
+        deposits: [],
+        withdrawals: [],
+        transactions: [],
+        lastHeight: 0,
+        nonce: "",
+        options: {},
+        creationHeight: 0,
+        receivedMessages: [
+          {
+            ...staleInbound,
+            paymentIdFrom: null,
+            threadKey: built.hash,
+            counterpartyAddress: "",
+          },
+        ],
+      },
+      state: {
+        ...createWalletState(bob),
+        scannedHeight: 50,
+        transactions: [
+          {
+            hash: built.hash,
+            height: 42,
+            amount: 100,
+            direction: "in" as const,
+            kind: "receive" as const,
+          },
+        ],
+      },
+      // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub for the test
+      daemon: daemon as any,
+      password: "pw",
+      viewOnly: false,
+    });
+
+    await realSdkSettingsService.resetAndRescan();
+    const runtime = runtimeMod.getRuntime();
+    expect(runtime).toBeDefined();
+    if (!runtime) throw new Error("expected runtime");
+    const received = readReceivedRecords(runtime.raw);
+    expect(received.some((row) => row.id === built.hash && row.paymentIdFrom === PID)).toBe(true);
+  });
+
+  it("captures paymentIdFrom from tx extra for conversation/contact matching", async () => {
+    const { reconstructReceivedMessage } = await import("@/lib/services/real-sdk/messages-store");
+    const { buildMessageConversations, buildMessageListContactEntry } = await import(
+      "@/lib/messages/conversations"
+    );
+    const alice = createAccount("english");
+    const bob = createAccount("english");
+    const bobDecoded = decodeAddress(bob.address);
+    const PID = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099";
+
+    const built = txns.buildMessageTransaction({
+      keys: alice.keys,
+      recipient: {
+        spendPublicKey: bobDecoded.spendPublicKey,
+        viewPublicKey: bobDecoded.viewPublicKey,
+      },
+      body: "from kraken",
+      changeKeys: { spendPublicKey: alice.keys.spend.pub, viewPublicKey: alice.keys.view.pub },
+      unspentOutputs: [fundOwnedOutput(alice, 5_000_000)],
+      decoys: [fakeDecoys(5_000_000, 6)],
+      fee: 1000,
+      mixin: 5,
+      ttlUnixSeconds: 0,
+      nodeFee: null,
+      messageAmount: 100,
+    });
+
+    const pidHexPairs = PID.match(/.{1,2}/g);
+    if (!pidHexPairs) throw new Error("invalid PID hex");
+    const pidBytes = Array.from(
+      new Uint8Array(pidHexPairs.map((byte) => Number.parseInt(byte, 16))),
+    );
+    const nonceData = [0x00, ...pidBytes];
+    const paymentIdNonce = `02${nonceData.length.toString(16).padStart(2, "0")}${nonceData
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")}`;
+    const extra = `${paymentIdNonce}${built.extra}`;
+
+    const scanTx: txns.RawTransaction = {
+      extra,
+      vout: built.outputs.map((out) => ({
+        amount: out.amount,
+        target: { type: "02", data: { key: out.publicKey } },
+      })),
+      outputIndexes: built.outputs.map((_, i) => 5000 + i),
+      hash: built.hash,
+      height: 10,
+    };
+
+    const inbound = reconstructReceivedMessage(scanTx, bob.keys, { sentHashes: new Set() });
+    expect(inbound).not.toBeNull();
+    expect(inbound?.paymentIdFrom).toBe(PID);
+    expect(inbound?.threadKey).toBe(`recv:${PID}:${PID}`);
+    if (!inbound) throw new Error("expected inbound");
+
+    const contactAddress =
+      "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
+    const addressBook = [
+      {
+        id: "addr-1",
+        label: "Kraken Exchange",
+        address: contactAddress,
+        paymentId: PID,
+        avatar: "kraken",
+      },
+    ];
+    const message = {
+      id: inbound.id,
+      direction: "received" as const,
+      counterpartyName: inbound.counterpartyName,
+      counterpartyAddress: inbound.counterpartyAddress,
+      body: inbound.body,
+      hasBody: true,
+      sentTo: null,
+      paymentIdFrom: inbound.paymentIdFrom,
+      paymentIdTo: null,
+      timestamp: inbound.timestamp,
+      unread: true,
+      blockHeight: inbound.blockHeight,
+      threadKey: inbound.threadKey,
+    };
+    const entry = buildMessageListContactEntry(message, addressBook);
+    expect(entry.label).toBe("Kraken Exchange");
+    expect(entry.avatar).toBe("kraken");
+
+    const threads = buildMessageConversations([message], addressBook, new Set());
+    expect(threads).toHaveLength(1);
+    expect(threads[0].name).toBe("Kraken Exchange");
+    expect(threads[0].avatar).toBe("kraken");
   });
 
   it("surfaces a message attached to a real-amount payment, not only the 100-atomic marker (#97)", async () => {

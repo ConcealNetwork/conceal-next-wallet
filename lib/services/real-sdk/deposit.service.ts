@@ -1,4 +1,5 @@
 import {
+  COIN_UNIT_PLACES,
   calculateDepositInterest,
   DEPOSIT_MAX_TERM_MONTH,
   DEPOSIT_MIN_AMOUNT_COIN,
@@ -11,7 +12,6 @@ import {
   getUnlockedDeposits,
   transactions as txns,
 } from "conceal-wallet-sdk";
-import { COIN_UNIT_PLACES } from "@/lib/config/config";
 import type {
   CreateDepositInput,
   DepositConstraints,

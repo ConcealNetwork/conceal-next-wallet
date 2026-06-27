@@ -1,7 +1,7 @@
 import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import type { Transaction, TransactionType } from "@/lib/types";
-import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber } from "@/lib/utils";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/ui/transaction-kind";
+import { CCX_PRECISION_DECIMAL_DISPLAY, ccxToNumber } from "@/lib/utils";
 
 /** Column order for the exported CSV. Single source for header + row shape. */
 export const CSV_COLUMNS = [

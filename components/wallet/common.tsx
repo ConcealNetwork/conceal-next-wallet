@@ -4,7 +4,6 @@ import { Check, Clipboard, EyeOff, Inbox } from "lucide-react";
 import { cloneElement, isValidElement, useState } from "react";
 import { DottedQrCode } from "@/components/qr/dotted-qr";
 import { Button } from "@/components/ui/button";
-import { Sparkline } from "@/components/ui/sparkline";
 import {
   Card,
   CardAction,
@@ -13,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Sparkline } from "@/components/ui/sparkline";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, withBasePath } from "@/lib/utils";

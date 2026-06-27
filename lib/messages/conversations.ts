@@ -1,6 +1,6 @@
-import type { AddressEntry, Message } from "@/lib/types";
 import { resolveThreadKeyFromMeta, sortMessagesByHeight } from "@/lib/messages/thread-mappers";
-import { addressIsValid, normalizePaymentId } from "@/lib/validation/ccx";
+import type { AddressEntry, Message } from "@/lib/types";
+import { addressIsValid, normalizePaymentId, paymentIdsMatch } from "@/lib/validation/ccx";
 
 export type MessageConversation = {
   threadKey: string;
@@ -53,7 +53,7 @@ function findContactByPaymentId(
 ): AddressEntry | undefined {
   const pid = normalizePaymentId(paymentId ?? undefined);
   if (!pid) return undefined;
-  return addressBook.find((entry) => normalizePaymentId(entry.paymentId) === pid);
+  return addressBook.find((entry) => paymentIdsMatch(entry.paymentId, pid));
 }
 
 export function findContactForMessages(
@@ -117,17 +117,14 @@ function filterConversationMessages(
         const to = message.sentTo ?? message.counterpartyAddress;
         if (to === sentToAddress) return true;
       }
-      if (
-        receivePaymentId &&
-        normalizePaymentId(message.paymentIdTo ?? undefined) === receivePaymentId
-      ) {
+      if (receivePaymentId && paymentIdsMatch(message.paymentIdTo ?? undefined, receivePaymentId)) {
         return true;
       }
       return false;
     }
 
     if (receivePaymentId) {
-      return normalizePaymentId(message.paymentIdFrom ?? undefined) === receivePaymentId;
+      return paymentIdsMatch(message.paymentIdFrom ?? undefined, receivePaymentId);
     }
     return false;
   });

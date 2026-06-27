@@ -1,5 +1,9 @@
-import { COIN_UNIT_PLACES, DEPOSIT_RATE_V3 } from "@/lib/config/config";
-import { InterestCalculator } from "@/lib/deposits/interest";
+import {
+  COIN_UNIT_PLACES,
+  calculateDepositInterest,
+  DEPOSIT_MIN_TERM_BLOCK,
+  DEPOSIT_RATE_V3,
+} from "conceal-wallet-sdk";
 
 // Shared deposit-interest estimator (V3 model). Extracted from the calculator
 // dialog so the dialog and the Deposits rail compute identically.
@@ -40,10 +44,14 @@ export function computeDepositInterest(ccx: number, months: number): DepositInte
 
   const mCoin = 10 ** COIN_UNIT_PLACES;
   const atomic = ccx * mCoin;
-  const termBlocks = months * 21900;
+  const termBlocks = months * DEPOSIT_MIN_TERM_BLOCK;
   const lockHeight = 999999999;
 
-  const interestAtomic = InterestCalculator.calculateInterest(atomic, termBlocks, lockHeight);
+  const interestAtomic = calculateDepositInterest({
+    amount: atomic,
+    term: termBlocks,
+    lockHeight,
+  });
   const interestCcx = interestAtomic / mCoin;
 
   const base = DEPOSIT_RATE_V3[getDepositTierIndex(ccx)];

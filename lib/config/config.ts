@@ -1,36 +1,10 @@
 /**
- * Network constants + default daemon nodes for the SDK engine. (Originally copied
- * from conceal-web-wallet/src/config.ts.)
+ * App-specific config (not chain consensus). Chain / fusion / message / tx scalars
+ * live in `conceal-wallet-sdk` (`src/constants/index.ts`); import from the SDK.
  */
 
-import { walletNetworkScalars as walletNetworkScalarsSource } from "./wallet-network-scalars.mjs";
-
-/** Plain-number fields (no JSBigInt) — safe for UI imports and tests. */
-export const walletNetworkScalars = walletNetworkScalarsSource;
-
-export const COIN_UNIT_PLACES = walletNetworkScalars.coinUnitPlaces;
 /** Confirmations at which a transaction is shown as "Confirmed" (UI + CSV export). */
 export const TX_CONFIRMED_THRESHOLD = 10;
-export const COIN_FEE_ATOMIC = walletNetworkScalars.coinFeeAtomic;
-export const REMOTE_NODE_FEE_ATOMIC = walletNetworkScalars.remoteNodeFeeAtomic;
-/** Send-fee components in CCX — the single source for the Send page + Send rail. */
-export const NETWORK_FEE_CCX = COIN_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
-export const REMOTE_NODE_FEE_CCX = REMOTE_NODE_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
-export const SEND_FEE_CCX = NETWORK_FEE_CCX + REMOTE_NODE_FEE_CCX;
-export const DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC = walletNetworkScalars.depositSmallWithdrawFee;
-export const DEPOSIT_MIN_TERM_MONTH = walletNetworkScalars.depositMinTermMonth;
-export const DEPOSIT_MAX_TERM_MONTH = walletNetworkScalars.depositMaxTermMonth;
-export const DEPOSIT_MIN_TERM_BLOCK = walletNetworkScalars.depositMinTermBlock;
-/** Base APR per deposit tier (V3 model): [<10k, 10k–20k, ≥20k CCX]. */
-export const DEPOSIT_RATE_V3: readonly [number, number, number] = [0.029, 0.039, 0.049];
-export const AVG_BLOCK_TIME_SECONDS = walletNetworkScalars.avgBlockTime;
-export const MAX_MESSAGE_SIZE = walletNetworkScalars.maxMessageSize;
-export const MAX_TTL_MINUTES = walletNetworkScalars.cryptonoteMemPoolTxLifetimeSeconds / 60;
-export const MESSAGE_TX_AMOUNT_ATOMIC = walletNetworkScalars.messageTxAmountAtomic;
-/** Sent message tx amount (remote node fee returned to wallet). */
-export const SENT_MESSAGE_AMOUNT_SELF_ATOMIC = MESSAGE_TX_AMOUNT_ATOMIC + REMOTE_NODE_FEE_ATOMIC;
-/** Sent message tx amount (remote node operator fee paid). */
-export const SENT_MESSAGE_AMOUNT_REMOTE_ATOMIC = SENT_MESSAGE_AMOUNT_SELF_ATOMIC + COIN_FEE_ATOMIC;
 
 /** Full ticker label (settings + amount formatting). */
 export const COIN_TICKER_FULL = "CCX";

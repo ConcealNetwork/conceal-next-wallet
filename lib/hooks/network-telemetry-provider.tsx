@@ -1,14 +1,14 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { useWalletSession } from "@/lib/session/wallet-session";
 import { useNetworkStatus } from "@/lib/hooks";
 import {
-  EMPTY_NETWORK_TELEMETRY,
   accumulateNetworkTelemetry,
-  normalizeHashrateChartSeries,
+  EMPTY_NETWORK_TELEMETRY,
   type NetworkTelemetryHistory,
+  normalizeHashrateChartSeries,
 } from "@/lib/hooks/use-network-telemetry-history";
+import { useWalletSession } from "@/lib/session/wallet-session";
 
 type NetworkTelemetryContextValue = {
   history: NetworkTelemetryHistory;

@@ -81,10 +81,8 @@ describe("pending-store (#96)", () => {
   it("never expires a pending tx before the network mempool lifetime (no early input unlock)", async () => {
     // Pruning before a tx can no longer be mined would release its input lock and let a
     // follow-up send double-spend those inputs (reviewer consensus: agy + GLM).
-    const { walletNetworkScalars } = await import("@/lib/config/config");
-    expect(PENDING_TTL_MS).toBeGreaterThanOrEqual(
-      walletNetworkScalars.cryptonoteMemPoolTxLifetimeSeconds * 1000,
-    );
+    const { CRYPTONOTE_MEMPOOL_TX_LIFETIME_SECONDS } = await import("conceal-wallet-sdk");
+    expect(PENDING_TTL_MS).toBe(CRYPTONOTE_MEMPOOL_TX_LIFETIME_SECONDS * 1000);
   });
 
   it("returns the same array reference when nothing is pruned (no needless persist)", () => {

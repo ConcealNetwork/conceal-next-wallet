@@ -1,10 +1,13 @@
 import {
+  FUSION_TX_MIN_INPUT_COUNT,
   fusion,
   getBalance,
   isOptimizationNeeded,
+  OPTIMIZE_THRESHOLD,
   type RawWalletV1,
   selectFusionInputs,
 } from "conceal-wallet-sdk";
+import { clearReceivedRecords } from "@/lib/services/real-sdk/messages-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   buildDaemon,
@@ -121,6 +124,7 @@ export const realSdkSettingsService: SettingsService = {
           deposits: [],
           spentDepositIndexes: [],
         };
+        raw = clearReceivedRecords(raw);
       } else {
         rt.state = { ...rt.state, scannedHeight: targetHeight };
       }
@@ -186,8 +190,8 @@ export const realSdkSettingsService: SettingsService = {
       return { ok: true, optimized: false };
     }
 
-    const selection = selectFusionInputs(outputs, fusion.OPTIMIZE_THRESHOLD, blockchainHeight);
-    if (selection === null || selection.selected.length < fusion.FUSION_TX_MIN_INPUT_COUNT) {
+    const selection = selectFusionInputs(outputs, OPTIMIZE_THRESHOLD, blockchainHeight);
+    if (selection === null || selection.selected.length < FUSION_TX_MIN_INPUT_COUNT) {
       return { ok: true, optimized: false };
     }
 
@@ -218,6 +222,7 @@ export const realSdkSettingsService: SettingsService = {
       deposits: [],
       spentDepositIndexes: [],
     };
+    rt.raw = clearReceivedRecords(rt.raw);
     await persist();
     await sync();
     return { ok: true };

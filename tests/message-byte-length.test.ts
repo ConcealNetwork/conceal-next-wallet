@@ -1,5 +1,5 @@
+import { MAX_MESSAGE_BODY_BYTES } from "conceal-wallet-sdk";
 import { describe, expect, it } from "vitest";
-import { MAX_MESSAGE_SIZE } from "@/lib/config/config";
 
 /**
  * Pins the message-size budget as UTF-8 BYTES, not UTF-16 chars (#gap-messages).
@@ -12,7 +12,7 @@ import { MAX_MESSAGE_SIZE } from "@/lib/config/config";
  * of the length is dropped by `.slice(-2)` in Cn.ts).
  *
  * This mirrors the exact byte-length validation in sendMessageOperation
- * (`new TextEncoder().encode(body).length > MAX_MESSAGE_SIZE`) so it can run in
+ * (`new TextEncoder().encode(body).length > MAX_MESSAGE_BODY_BYTES`) so it can run in
  * the mock-mode jsdom suite without pulling in wallet-core / the WASM derivation
  * path. The framing itself (single-byte length + 4-byte checksum) is exercised
  * end-to-end in tests/message-decrypt-gate.test.ts against the real WASM.
@@ -24,18 +24,18 @@ const CHECKSUM = 4;
 // the body against the byte budget. Returns the error message, or null if OK.
 function validateBodySize(body: string): string | null {
   const bodyByteLength = new TextEncoder().encode(body).length;
-  if (bodyByteLength > MAX_MESSAGE_SIZE) {
-    return `Message exceeds maximum length of ${MAX_MESSAGE_SIZE} bytes.`;
+  if (bodyByteLength > MAX_MESSAGE_BODY_BYTES) {
+    return `Message exceeds maximum length of ${MAX_MESSAGE_BODY_BYTES} bytes.`;
   }
   return null;
 }
 
 describe("message byte-length validation (single-byte tx_extra length field)", () => {
   it("budget is 251 bytes = 255 (single-byte ceiling) − 4-byte checksum", () => {
-    expect(MAX_MESSAGE_SIZE).toBe(251);
-    expect(MAX_MESSAGE_SIZE + CHECKSUM).toBe(255);
+    expect(MAX_MESSAGE_BODY_BYTES).toBe(251);
+    expect(MAX_MESSAGE_BODY_BYTES + CHECKSUM).toBe(255);
     // The framed length (body + checksum) must never exceed a single byte.
-    expect(MAX_MESSAGE_SIZE + CHECKSUM).toBeLessThanOrEqual(255);
+    expect(MAX_MESSAGE_BODY_BYTES + CHECKSUM).toBeLessThanOrEqual(255);
   });
 
   it("accepts a 251-byte ASCII body (exactly at the budget → frames to 255)", () => {
@@ -57,7 +57,7 @@ describe("message byte-length validation (single-byte tx_extra length field)", (
     // the fix closes: a string that slips under any char-based limit yet
     // overflows the one-byte on-chain length field.
     const body = "😀".repeat(63);
-    expect(body.length).toBeLessThanOrEqual(MAX_MESSAGE_SIZE); // UTF-16 char count slips under
+    expect(body.length).toBeLessThanOrEqual(MAX_MESSAGE_BODY_BYTES); // UTF-16 char count slips under
     expect(new TextEncoder().encode(body).length).toBe(252); // but the UTF-8 byte count overflows
     expect(validateBodySize(body)).toMatch(/exceeds maximum length of 251 bytes/);
   });

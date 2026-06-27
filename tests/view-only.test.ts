@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { MOCK_ADDRESS, mockWalletInfo } from "@/lib/mock-data/wallet";
 import { services } from "@/lib/services";
 import { _resetMockViewOnly } from "@/lib/services/mock/wallet.service";
 import { assertCanSpend, ViewOnlyWalletError } from "@/lib/services/view-only";
-import { mockWalletInfo, MOCK_ADDRESS } from "@/lib/mock-data/wallet";
 
 const viewOnlyImport = {
   method: "keys" as const,

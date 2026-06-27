@@ -6,7 +6,7 @@ import { RightRailHeader } from "@/components/layout/right-rail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton, WalletQrCode } from "@/components/wallet/common";
-import { SEND_FEE_CCX as SEND_FEE } from "@/lib/config/config";
+import { SEND_FEE_CCX as SEND_FEE } from "@/lib/chain/fees";
 import { useMarketData, useTransactions, useWalletInfo } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";

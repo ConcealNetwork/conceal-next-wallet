@@ -2,9 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { useWalletSynced } from "@/lib/hooks/use-check-ins";
-import { useQuery } from "@/lib/hooks/query-provider";
 import { queryKeys } from "@/lib/hooks/query-keys";
+import { useQuery } from "@/lib/hooks/query-provider";
+import { useWalletSynced } from "@/lib/hooks/use-check-ins";
 import { countReceivedMessages } from "@/lib/messages/conversations";
 import { services } from "@/lib/services";
 import { messagesQueryOptions } from "@/lib/services/query-options";

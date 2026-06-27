@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { useAddressBook, useMessages, useSendMessage, useWalletViewOnly } from "@/lib/hooks";
-import { focusCreateField, useCreateDeepLink } from "@/lib/hooks/use-create-deeplink";
 import { useWalletSynced } from "@/lib/hooks/use-check-ins";
+import { focusCreateField, useCreateDeepLink } from "@/lib/hooks/use-create-deeplink";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
   listWatchers,

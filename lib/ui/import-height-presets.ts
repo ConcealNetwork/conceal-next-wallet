@@ -1,4 +1,4 @@
-import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
+import { AVG_BLOCK_TIME_SECONDS } from "conceal-wallet-sdk";
 
 /**
  * Maps a plain-language "when did you first use this wallet?" answer to an

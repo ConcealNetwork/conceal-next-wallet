@@ -71,13 +71,8 @@ import {
 } from "conceal-wallet-sdk";
 import { DEFAULT_DAEMON_NODES } from "@/lib/config/config";
 import { readAutoNode, readPreferredNode } from "@/lib/network/node-preference";
-import { syncProfileFromReadSpeed } from "@/lib/ui/sync-speed";
 import { probeNodes, rankNodes } from "@/lib/network/node-probe";
 import { fetchSmartNodes, nodeUrlToPoolHost } from "@/lib/network/smart-nodes";
-import {
-  type FetchSource,
-  fetchRangeMultiSource,
-} from "@/lib/services/real-sdk/multi-source-fetch";
 import {
   type IncomingPendingRecord,
   readIncomingPendingRecords,
@@ -86,12 +81,17 @@ import {
 } from "@/lib/services/real-sdk/incoming-pending-store";
 import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 import {
+  applyInboundScanToReceived,
   readReceivedRecords,
   readSentRecords,
   reconstructReceivedMessage,
   type SdkMessageRecord,
   withReceivedRecords,
 } from "@/lib/services/real-sdk/messages-store";
+import {
+  type FetchSource,
+  fetchRangeMultiSource,
+} from "@/lib/services/real-sdk/multi-source-fetch";
 import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import {
   prunePendingRecords,
@@ -121,6 +121,7 @@ import {
   updateWallet,
   type WalletMeta,
 } from "@/lib/services/real-sdk/wallets-index";
+import { syncProfileFromReadSpeed } from "@/lib/ui/sync-speed";
 
 /**
  * The SDK's daemon-result types are not exported, so the minimal public shapes we consume are
@@ -786,6 +787,10 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   const useHeavyPath = farBehind && !parallelSyncDisabled();
   const startState = rt.state;
   let state = rt.state;
+  const chainStateWasReset =
+    startState.outputs.length === 0 &&
+    startState.transactions.length === 0 &&
+    startState.spentKeyImages.length === 0;
 
   // Diagnostic timing (opt-in via `ccx-sync-timing`): track how long the sync took + which path ran.
   const syncStartedAt = Date.now();
@@ -797,7 +802,9 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // them as inbound. Build the received-message set keyed by tx hash for dedupe.
   const sentHashes = new Set(readSentRecords(rt.raw).map((record) => record.id));
   const received = new Map<string, SdkMessageRecord>(
-    readReceivedRecords(rt.raw).map((record) => [record.id, record] as const),
+    chainStateWasReset
+      ? []
+      : readReceivedRecords(rt.raw).map((record) => [record.id, record] as const),
   );
   let receivedChanged = false;
 
@@ -815,13 +822,12 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
 
       // Reconstruct any inbound message from this tx's `extra` (deduped by hash).
       const txHash = typeof result.scanTx.hash === "string" ? result.scanTx.hash : "";
-      if (txHash && !received.has(txHash)) {
+      if (txHash) {
         const inbound = reconstructReceivedMessage(result.scanTx, rt.account.keys, {
           sentHashes,
           timestamp: result.timestamp,
         });
-        if (inbound !== null) {
-          received.set(inbound.id, inbound);
+        if (inbound !== null && applyInboundScanToReceived(received, txHash, inbound)) {
           receivedChanged = true;
         }
       }
@@ -1039,7 +1045,16 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
  * touches the wallet in no way (lets callers detect "nothing folded").
  */
 function applyScanResult(state: WalletState, result: RawScanResult): WalletState {
-  const { scanTx, ownedOutputs, ownedDeposits, inputKeyImages, depositInputs, timestamp } = result;
+  const {
+    scanTx,
+    rawTransaction,
+    fee,
+    ownedOutputs,
+    ownedDeposits,
+    inputKeyImages,
+    depositInputs,
+    timestamp,
+  } = result;
   const candidateDeposits =
     ownedDeposits.length > 0 ? [...state.deposits, ...ownedDeposits] : state.deposits;
   const withdrawnIndexes = findWithdrawnDepositIndexes(depositInputs, candidateDeposits);
@@ -1058,6 +1073,12 @@ function applyScanResult(state: WalletState, result: RawScanResult): WalletState
     { hash: scanTx.hash, height: scanTx.height, timestamp },
     ownedOutputs,
     inputKeyImages,
+    {
+      ownedDeposits,
+      depositInputs,
+      rawTransaction,
+      fee,
+    },
   );
   if (ownedDeposits.length > 0 || withdrawnIndexes.length > 0) {
     next = applyScannedDeposits(next, ownedDeposits, withdrawnIndexes);

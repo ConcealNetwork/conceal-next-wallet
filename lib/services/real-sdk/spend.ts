@@ -14,11 +14,12 @@ import {
   decodeAddress,
   getUnspentOutputs,
   isValidAddress,
+  MINIMUM_FEE_V2,
   type OutboundQueueState,
   type OwnedOutput,
-  type transactions as txns,
+  transactions as txns,
 } from "conceal-wallet-sdk";
-import { COIN_FEE_ATOMIC, WALLET_DONATION_ADDRESS } from "@/lib/config/config";
+import { WALLET_DONATION_ADDRESS } from "@/lib/config/config";
 import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
 import {
@@ -35,13 +36,42 @@ type DecoySet = txns.DecoySet;
 /** Ring size minus one — the wallet default mixin. */
 export const MIXIN = DEFAULT_MIXIN;
 /** Standard transaction network fee, atomic units. */
-export const FEE_ATOMIC = COIN_FEE_ATOMIC;
+export const FEE_ATOMIC = MINIMUM_FEE_V2;
 
 /** A decoded recipient: spend/view public keys + integrated payment id (if any). */
 export interface DecodedRecipient {
   spendPublicKey: string;
   viewPublicKey: string;
   paymentId?: string;
+}
+
+/** Resolve an outbound payment id: explicit field wins, else integrated address embed. */
+export function resolveOutboundPaymentId(
+  explicitPaymentId: string | undefined,
+  recipient: DecodedRecipient,
+): string | undefined {
+  const explicit = explicitPaymentId?.trim();
+  if (explicit) return explicit;
+  return recipient.paymentId?.trim() || undefined;
+}
+
+/** Build tx_extra nonce hex for an outbound payment id, or `""` when absent. */
+export function paymentIdExtraForSend(
+  paymentId: string | undefined,
+  recipientViewPublicKey: string,
+  txSecretKey: string,
+): string {
+  const pid = paymentId?.trim().toLowerCase();
+  if (!pid) return "";
+  return txns.encodePaymentIdNonceExtra(
+    pid as txns.Hex,
+    pid.length === 16
+      ? {
+          recipientViewPublicKey: recipientViewPublicKey as txns.Hex,
+          txSecretKey: txSecretKey as txns.Hex,
+        }
+      : undefined,
+  );
 }
 
 /** Decode + validate a CCX recipient address, throwing a friendly error. */

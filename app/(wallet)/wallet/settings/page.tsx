@@ -1,7 +1,19 @@
 "use client";
 
+import {
+  Database,
+  Gauge,
+  type LucideIcon,
+  Palette,
+  Server,
+  ShieldCheck,
+  TriangleAlert,
+  Wallet,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { SettingsRail } from "@/components/layout/rails/settings-rail";
+import { usePageRightRail } from "@/components/layout/right-rail";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,18 +25,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Database,
-  Gauge,
-  type LucideIcon,
-  Palette,
-  Server,
-  ShieldCheck,
-  TriangleAlert,
-  Wallet,
-} from "lucide-react";
-import { SettingsRail } from "@/components/layout/rails/settings-rail";
-import { usePageRightRail } from "@/components/layout/right-rail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";

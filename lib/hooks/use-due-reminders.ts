@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "@/lib/ui/toast";
 import { canNotify, isOptedIn, notify, selectNewKeys } from "@/lib/notifications/notify";
 import { listSchedules } from "@/lib/storage/scheduled-payments-store";
 import { countDue, dueInstanceKeys } from "@/lib/ui/scheduled-payments";
+import { toast } from "@/lib/ui/toast";
 
 /**
  * On wallet open — and again whenever the tab returns to the foreground —
