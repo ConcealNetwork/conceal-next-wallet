@@ -2,8 +2,8 @@
 // so lib/messages + services depend on a neutral module, not the engine.
 
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
-import type { Message as UiMessage, RawAddressEntry } from "@/lib/types";
-import { addressIsValid, normalizePaymentId } from "@/lib/validation/ccx";
+import type { RawAddressEntry, Message as UiMessage } from "@/lib/types";
+import { addressIsValid, normalizePaymentId, paymentIdsMatch } from "@/lib/validation/ccx";
 
 export function resolveThreadKeyFromMeta(
   addressBook: RawAddressEntry[],
@@ -31,9 +31,7 @@ function findAddressBookContact(
 ): RawAddressEntry | undefined {
   const normalizedPid = normalizePaymentId(options.paymentId);
   if (normalizedPid) {
-    const byPid = addressBook.find(
-      (entry) => normalizePaymentId(entry.paymentId) === normalizedPid,
-    );
+    const byPid = addressBook.find((entry) => paymentIdsMatch(entry.paymentId, normalizedPid));
     if (byPid) return byPid;
   }
   if (options.address) {

@@ -1,5 +1,11 @@
-import { getBalance, isValidAddress, transactions as txns } from "conceal-wallet-sdk";
-import { COIN_UNIT_PLACES, MAX_MESSAGE_SIZE, REMOTE_NODE_FEE_ATOMIC } from "@/lib/config/config";
+import {
+  COIN_UNIT_PLACES,
+  getBalance,
+  isValidAddress,
+  MAX_MESSAGE_BODY_BYTES,
+  REMOTE_NODE_FEE_ATOMIC,
+  transactions as txns,
+} from "conceal-wallet-sdk";
 import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
 import {
   mapQueuedTransaction,
@@ -8,6 +14,7 @@ import {
 } from "@/lib/services/real-sdk/mappers";
 import {
   createSentMessageRecord,
+  indexMessageRecords,
   readSentRecords,
   withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
@@ -27,6 +34,8 @@ import {
   fetchDecoys,
   MIXIN,
   ownKeys,
+  paymentIdExtraForSend,
+  resolveOutboundPaymentId,
   safeNodeFeeAddress,
   selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
@@ -47,6 +56,7 @@ export const realSdkTransactionService: TransactionService = {
       networkHeight,
       readPendingRecords(rt.raw),
       readIncomingPendingRecords(rt.raw),
+      indexMessageRecords(rt.raw),
     );
   },
 
@@ -67,12 +77,13 @@ export const realSdkTransactionService: TransactionService = {
     const hasMessage = message.length > 0;
     if (hasMessage) {
       const bodyByteLength = new TextEncoder().encode(message).length;
-      if (bodyByteLength > MAX_MESSAGE_SIZE) {
-        throw new Error(`Message exceeds maximum length of ${MAX_MESSAGE_SIZE} bytes.`);
+      if (bodyByteLength > MAX_MESSAGE_BODY_BYTES) {
+        throw new Error(`Message exceeds maximum length of ${MAX_MESSAGE_BODY_BYTES} bytes.`);
       }
     }
 
     const recipient = decodeRecipient(input.address);
+    const paymentId = resolveOutboundPaymentId(input.paymentId, recipient);
 
     // Resolve the remote-node fee BEFORE the balance check so its 10000-atomic
     // destination is counted: a node fee is added when the node advertises a fee
@@ -118,6 +129,7 @@ export const realSdkTransactionService: TransactionService = {
           ttlUnixSeconds: 0,
           nodeFee,
           messageAmount: amountAtomic,
+          ...(paymentId ? { paymentId: paymentId as txns.Hex } : {}),
         })
       : txns.buildTransaction({
           keys: rt.account.keys,
@@ -127,6 +139,12 @@ export const realSdkTransactionService: TransactionService = {
           decoys,
           fee: FEE_ATOMIC,
           mixin: MIXIN,
+          ...(paymentId
+            ? {
+                buildExtraRecords: ({ secretKey }) =>
+                  paymentIdExtraForSend(paymentId, recipient.viewPublicKey, secretKey) as txns.Hex,
+              }
+            : {}),
         });
 
     // Durable broadcast (#92): the tx is persisted in the outbound queue BEFORE any network
@@ -151,7 +169,7 @@ export const realSdkTransactionService: TransactionService = {
           : amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
       timestampIso: new Date().toISOString(),
       address: input.address,
-      ...(input.paymentId?.trim() ? { paymentId: input.paymentId.trim() } : {}),
+      ...(paymentId ? { paymentId } : {}),
       spentKeyImages: built.inputs.map((vin) => vin.keyImage),
     });
     if (hasMessage) {
@@ -161,7 +179,7 @@ export const realSdkTransactionService: TransactionService = {
           hash: built.hash,
           recipientAddress: input.address,
           body: message,
-          paymentId: input.paymentId?.trim() || undefined,
+          paymentId,
           timestampIso: new Date().toISOString(),
         }),
       ]);
@@ -175,9 +193,13 @@ export const realSdkTransactionService: TransactionService = {
     }
 
     const networkHeight = await rt.daemon.getHeight();
-    const fromHistory = mapTransactions(rt.state, networkHeight).find(
-      (tx) => tx.hash === built.hash,
-    );
+    const fromHistory = mapTransactions(
+      rt.state,
+      networkHeight,
+      readPendingRecords(rt.raw),
+      readIncomingPendingRecords(rt.raw),
+      indexMessageRecords(rt.raw),
+    ).find((tx) => tx.hash === built.hash);
     if (fromHistory) {
       return {
         ...fromHistory,

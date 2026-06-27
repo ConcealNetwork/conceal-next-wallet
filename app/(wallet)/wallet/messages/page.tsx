@@ -1,5 +1,6 @@
 "use client";
 
+import { CRYPTONOTE_MEMPOOL_TX_LIFETIME_SECONDS, MAX_MESSAGE_BODY_BYTES } from "conceal-wallet-sdk";
 import { ArrowLeft, Cog, Heart, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
@@ -23,7 +24,6 @@ import { CopyButton, PageHeader, ViewOnlyBadge } from "@/components/wallet/commo
 import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
-import { MAX_MESSAGE_SIZE, MAX_TTL_MINUTES } from "@/lib/config/config";
 import {
   useAddressBook,
   useMarkMessageRead,
@@ -58,6 +58,7 @@ import {
   paymentIdIsValid,
 } from "@/lib/validation/ccx";
 
+const MAX_TTL_MINUTES = CRYPTONOTE_MEMPOOL_TX_LIFETIME_SECONDS / 60;
 const TTL_STEP = 5;
 
 type PendingOutgoing = {
@@ -121,7 +122,7 @@ export default function MessagesPage() {
   );
 
   const showMdPreview = composeViewMd && shouldShowMessagePreview(composeBody);
-  // The engine caps messages by UTF-8 BYTES (MAX_MESSAGE_SIZE), not characters,
+  // The engine caps messages by UTF-8 BYTES (MAX_MESSAGE_BODY_BYTES), not characters,
   // so count bytes here too — otherwise a multi-byte (emoji/accent) message could
   // pass the UI but be rejected on send.
   const composeByteLength = new TextEncoder().encode(composeBody).length;
@@ -246,7 +247,7 @@ export default function MessagesPage() {
       toast.error(t("messages.errPaymentIdInvalid"));
       return;
     }
-    if (composeByteLength > MAX_MESSAGE_SIZE) {
+    if (composeByteLength > MAX_MESSAGE_BODY_BYTES) {
       toast.error(walletCopy.messageTooLong);
       return;
     }
@@ -476,9 +477,9 @@ export default function MessagesPage() {
                 value={composeBody}
                 onChange={(event) => setComposeBody(event.target.value)}
                 placeholder={t("messages.bodyPlaceholder")}
-                maxLength={MAX_MESSAGE_SIZE}
+                maxLength={MAX_MESSAGE_BODY_BYTES}
               />
-              {composeByteLength > MAX_MESSAGE_SIZE ? (
+              {composeByteLength > MAX_MESSAGE_BODY_BYTES ? (
                 <p className="text-sm text-destructive">{walletCopy.messageTooLong}</p>
               ) : null}
               {showMdPreview ? (
@@ -524,7 +525,7 @@ export default function MessagesPage() {
             <Button
               type="button"
               onClick={sendCompose}
-              disabled={send.isPending || composeByteLength > MAX_MESSAGE_SIZE || viewOnly}
+              disabled={send.isPending || composeByteLength > MAX_MESSAGE_BODY_BYTES || viewOnly}
               title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
             >
               {send.isPending ? t("messages.sending") : t("nav.send")}

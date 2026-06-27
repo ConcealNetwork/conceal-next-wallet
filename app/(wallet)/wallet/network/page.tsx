@@ -4,6 +4,7 @@ import { type CSSProperties, useId, useMemo } from "react";
 import { NetworkRail } from "@/components/layout/rails/network-rail";
 import { usePageRightRail } from "@/components/layout/right-rail";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sparkline } from "@/components/ui/sparkline";
 import { PageHeader } from "@/components/wallet/common";
 import { useNetworkStatus, useSmartNodes } from "@/lib/hooks";
 import { useNetworkTelemetry } from "@/lib/hooks/network-telemetry-provider";
@@ -15,10 +16,9 @@ import {
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import { formatNodeVersion } from "@/lib/network/format-node-version";
-import { Sparkline } from "@/components/ui/sparkline";
-import { formatHashrate } from "@/lib/ui/format-hashrate";
 import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
 import type { SmartNode } from "@/lib/types";
+import { formatHashrate } from "@/lib/ui/format-hashrate";
 import { cn } from "@/lib/utils";
 
 const BLOCK_TARGET_SECONDS = 120;

@@ -16,6 +16,7 @@
 import { type RawWalletV1, transactions as txns, type WalletKeys } from "conceal-wallet-sdk";
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { Message } from "@/lib/types";
+import { normalizePaymentId } from "@/lib/validation/ccx";
 
 /** One persisted message (sent or received) in the blob. */
 export interface SdkMessageRecord {
@@ -58,6 +59,25 @@ export function readReceivedRecords(raw: RawWalletV1): SdkMessageRecord[] {
   return Array.isArray(list) ? list.filter(isRecord) : [];
 }
 
+/** Hash-indexed sent/received records for joining onto transaction history. */
+export type MessageRecordsByHash = {
+  sentByHash: ReadonlyMap<string, SdkMessageRecord>;
+  receivedByHash: ReadonlyMap<string, SdkMessageRecord>;
+};
+
+/** Build hash lookups from a wallet blob (used by {@link mapTransactions}). */
+export function indexMessageRecords(raw: RawWalletV1): MessageRecordsByHash {
+  const sentByHash = new Map<string, SdkMessageRecord>();
+  for (const record of readSentRecords(raw)) {
+    sentByHash.set(record.id, record);
+  }
+  const receivedByHash = new Map<string, SdkMessageRecord>();
+  for (const record of readReceivedRecords(raw)) {
+    receivedByHash.set(record.id, record);
+  }
+  return { sentByHash, receivedByHash };
+}
+
 /** Return a NEW blob with the SENT records replaced. */
 export function withSentRecords(raw: RawWalletV1, records: SdkMessageRecord[]): RawWalletV1 {
   return { ...raw, [SENT_FIELD]: records };
@@ -66,6 +86,49 @@ export function withSentRecords(raw: RawWalletV1, records: SdkMessageRecord[]): 
 /** Return a NEW blob with the RECEIVED records replaced. */
 export function withReceivedRecords(raw: RawWalletV1, records: SdkMessageRecord[]): RawWalletV1 {
   return { ...raw, [RECEIVED_FIELD]: records };
+}
+
+/** Clear persisted inbound message copies (used when resetting scan height). */
+export function clearReceivedRecords(raw: RawWalletV1): RawWalletV1 {
+  return withReceivedRecords(raw, []);
+}
+
+/** Merge a fresh scan reconstruction onto a persisted row (keep read-state). */
+export function mergeReceivedRecord(
+  existing: SdkMessageRecord | undefined,
+  inbound: SdkMessageRecord,
+): SdkMessageRecord {
+  if (!existing) return inbound;
+  return {
+    ...inbound,
+    unread: existing.unread,
+    timestamp: existing.timestamp,
+  };
+}
+
+function receivedRecordChanged(before: SdkMessageRecord, after: SdkMessageRecord): boolean {
+  return (
+    before.paymentIdFrom !== after.paymentIdFrom ||
+    before.threadKey !== after.threadKey ||
+    before.counterpartyAddress !== after.counterpartyAddress ||
+    before.counterpartyName !== after.counterpartyName ||
+    before.body !== after.body ||
+    before.blockHeight !== after.blockHeight
+  );
+}
+
+export function applyInboundScanToReceived(
+  received: Map<string, SdkMessageRecord>,
+  txHash: string,
+  inbound: SdkMessageRecord,
+): boolean {
+  const existing = received.get(txHash);
+  const merged = mergeReceivedRecord(existing, inbound);
+  if (!existing || receivedRecordChanged(existing, merged)) {
+    received.set(txHash, merged);
+    return true;
+  }
+  return false;
 }
 
 /** A short display name for an address with no saved contact. */
@@ -165,22 +228,24 @@ export function reconstructReceivedMessage(
       ? options.timestamp * 1000
       : Date.now();
 
+  const paymentIdFrom = result.paymentId?.trim() ? normalizePaymentId(result.paymentId) : null;
+  const counterpartyAddress = paymentIdFrom ? `recv:${paymentIdFrom}` : "";
+  const counterpartyName = paymentIdFrom ? `PID ${paymentIdFrom.slice(0, 8)}…` : shortName(txHash);
+
   return {
     id: txHash,
     direction: "received",
-    // The sender's address is not recoverable from the tx alone (CryptoNote hides
-    // it); use a stable placeholder name keyed off the tx hash.
-    counterpartyAddress: "",
-    counterpartyName: shortName(txHash),
+    counterpartyAddress,
+    counterpartyName,
     body: result.body,
     hasBody: true,
     sentTo: null,
-    paymentIdFrom: null,
+    paymentIdFrom,
     paymentIdTo: null,
     timestamp: new Date(timestampMs).toISOString(),
     unread: true,
     blockHeight,
-    threadKey: txHash,
+    threadKey: paymentIdFrom ? buildMessageThreadKey(counterpartyAddress, paymentIdFrom) : txHash,
     ...(result.ttlUnixSeconds > 0 ? { ttlExpiresAt: result.ttlUnixSeconds } : {}),
   };
 }

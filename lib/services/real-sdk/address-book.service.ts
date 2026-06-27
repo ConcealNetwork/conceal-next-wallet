@@ -1,7 +1,7 @@
 import { isValidAddress, type RawAddressEntry } from "conceal-wallet-sdk";
+import type { AddressBookService, AddressEntryInput } from "@/lib/services/address-book.service";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime, type SdkRuntime } from "@/lib/services/real-sdk/runtime";
-import type { AddressBookService, AddressEntryInput } from "@/lib/services/address-book.service";
 import type { AddressEntry } from "@/lib/types";
 import { paymentIdIsValid } from "@/lib/validation/ccx";
 

@@ -34,3 +34,17 @@ export function generatePaymentId(): string {
 export function normalizePaymentId(paymentId: string | undefined): string {
   return (paymentId ?? "").trim().toLowerCase();
 }
+
+/** True when two PIDs refer to the same payment (exact or integrated-prefix of long-form). */
+export function paymentIdsMatch(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  const left = normalizePaymentId(a ?? undefined);
+  const right = normalizePaymentId(b ?? undefined);
+  if (!left || !right) return false;
+  if (left === right) return true;
+  if (left.length === 16 && right.length === 64) return right.startsWith(left);
+  if (left.length === 64 && right.length === 16) return left.startsWith(right);
+  return false;
+}

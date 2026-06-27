@@ -1,5 +1,6 @@
 "use client";
 
+import { MAX_MESSAGE_BODY_BYTES } from "conceal-wallet-sdk";
 import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ReceiveRail } from "@/components/layout/rails/receive-rail";
@@ -18,7 +19,6 @@ import {
 import { SharePaymentCard } from "@/components/wallet/share-payment-card";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
-import { MAX_MESSAGE_SIZE } from "@/lib/config/config";
 import { useWalletInfo, useWalletViewOnly } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { CoinUri } from "@/lib/ui/coin-uri";
@@ -66,7 +66,7 @@ export default function ReceivePage() {
   // from the encoded QR + link (so they stay scannable/valid) and flagged inline.
   const paymentIdValid = paymentIdIsValid(paymentId);
   const messageBytes = new TextEncoder().encode(message).length;
-  const messageTooLong = messageBytes > MAX_MESSAGE_SIZE;
+  const messageTooLong = messageBytes > MAX_MESSAGE_BODY_BYTES;
   const paymentUri = useMemo(() => {
     if (!address) return "";
     // Encode with no prefix to maximize compatibility (readable by regular camera QR
@@ -250,7 +250,7 @@ export default function ReceivePage() {
                           messageTooLong ? "text-wallet-outgoing" : "text-muted-foreground",
                         )}
                       >
-                        {messageBytes}/{MAX_MESSAGE_SIZE}
+                        {messageBytes}/{MAX_MESSAGE_BODY_BYTES}
                       </p>
                     </div>
                   </div>

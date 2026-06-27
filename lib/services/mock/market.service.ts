@@ -1,6 +1,6 @@
 import { mockMarketData, mockMarketHistoryByTimeframe } from "@/lib/mock-data/wallet";
-import { clone, mockDelay } from "@/lib/services/mock/helpers";
 import type { MarketService } from "@/lib/services/market.service";
+import { clone, mockDelay } from "@/lib/services/mock/helpers";
 
 export const mockMarketService: MarketService = {
   async getMarketData() {

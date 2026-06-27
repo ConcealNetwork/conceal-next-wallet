@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   encodeAddress,
   getBalance,
@@ -7,6 +6,7 @@ import {
   getUnspentOutputs,
   type RawWalletV1,
 } from "conceal-wallet-sdk";
+import { describe, expect, it } from "vitest";
 import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 
 /**

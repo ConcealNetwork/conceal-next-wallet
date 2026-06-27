@@ -1,6 +1,6 @@
 import { mockAddressBook } from "@/lib/mock-data/wallet";
-import { clone, mockDelay } from "@/lib/services/mock/helpers";
 import type { AddressBookService } from "@/lib/services/address-book.service";
+import { clone, mockDelay } from "@/lib/services/mock/helpers";
 
 export const mockAddressBookService: AddressBookService = {
   async listEntries() {

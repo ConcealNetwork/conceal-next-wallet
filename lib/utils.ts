@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
+import { COIN_UNIT_PLACES } from "conceal-wallet-sdk";
 import { twMerge } from "tailwind-merge";
-import { COIN_UNIT_PLACES } from "@/lib/config/config";
 import type { CcxAmount, UsdAmount } from "@/lib/types";
 import { getDisplayTicker } from "@/lib/ui/ticker-preference";
 

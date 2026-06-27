@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { MAX_MESSAGE_BODY_BYTES } from "conceal-wallet-sdk";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -30,11 +31,10 @@ import { SendReviewWarnings } from "@/components/wallet/send-review-warnings";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import {
-  MAX_MESSAGE_SIZE,
   NETWORK_FEE_CCX as NETWORK_FEE,
   REMOTE_NODE_FEE_CCX as REMOTE_NODE_FEE,
   SEND_FEE_CCX as SEND_FEE,
-} from "@/lib/config/config";
+} from "@/lib/chain/fees";
 import {
   useAddressBook,
   useMarketData,
@@ -79,8 +79,8 @@ function makeSendSchema(t: Translate) {
     message: z
       .string()
       .refine(
-        (value) => new TextEncoder().encode(value).length <= MAX_MESSAGE_SIZE,
-        `Message exceeds ${MAX_MESSAGE_SIZE} bytes`,
+        (value) => new TextEncoder().encode(value).length <= MAX_MESSAGE_BODY_BYTES,
+        `Message exceeds ${MAX_MESSAGE_BODY_BYTES} bytes`,
       )
       .optional(),
   });
@@ -340,7 +340,7 @@ export default function SendPage() {
                   {...form.register("message")}
                 />
                 <p id="message-count" className="text-right text-xs text-muted-foreground">
-                  {messageBytes}/{MAX_MESSAGE_SIZE}
+                  {messageBytes}/{MAX_MESSAGE_BODY_BYTES}
                 </p>
                 {form.formState.errors.message && (
                   <p id="message-error" className="text-sm text-wallet-outgoing">

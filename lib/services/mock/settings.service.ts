@@ -3,8 +3,8 @@ import { clone, mockDelay } from "@/lib/services/mock/helpers";
 import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import type { SettingsService } from "@/lib/services/settings.service";
 import { assertCanSpend } from "@/lib/services/view-only";
-import { validateNodeUrlFormat } from "@/lib/validation/node-url";
 import { walletCopy } from "@/lib/ui/wallet-copy";
+import { validateNodeUrlFormat } from "@/lib/validation/node-url";
 
 let currentSettings = clone(mockSettings);
 

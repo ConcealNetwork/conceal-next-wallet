@@ -1,5 +1,6 @@
 "use client";
 
+import { COIN_UNIT_PLACES, DEPOSIT_MAX_TERM_MONTH, DEPOSIT_RATE_V3 } from "conceal-wallet-sdk";
 import { Calculator } from "lucide-react";
 import { useState } from "react";
 import {
@@ -19,11 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { COIN_UNIT_PLACES, DEPOSIT_MAX_TERM_MONTH, DEPOSIT_RATE_V3 } from "@/lib/config/config";
-import { DEPOSIT_DURATION_OPTIONS } from "@/lib/services/deposit.service";
 import { computeDepositInterest, getDepositTierIndex } from "@/lib/deposits/interest-calc";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useFormatters } from "@/lib/i18n/use-formatters";
+import { DEPOSIT_DURATION_OPTIONS } from "@/lib/services/deposit.service";
 
 // Tier bounds are numeric so thresholds + "Tier N" labels render locale-aware:
 // the threshold string (e.g. "< 10,000 CCX") is formatted via formatCcx at render

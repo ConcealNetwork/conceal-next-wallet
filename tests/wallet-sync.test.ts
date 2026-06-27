@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isWalletSyncing, walletSyncPercent } from "@/lib/ui/wallet-sync";
 import type { WalletInfo } from "@/lib/types";
+import { isWalletSyncing, walletSyncPercent } from "@/lib/ui/wallet-sync";
 
 const zero = { atomic: 0 };
 

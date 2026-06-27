@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { createAccount, crypto as cc } from "conceal-wallet-sdk";
+import { crypto as cc, createAccount } from "conceal-wallet-sdk";
 import { afterEach, describe, expect, it } from "vitest";
 import { type DaemonRawTransaction, scanRawTransaction } from "@/lib/services/real-sdk/scan";
 import { scanBatch, terminateScanPool } from "@/lib/services/real-sdk/scan-pool";

@@ -5,22 +5,29 @@
  * the SDK-engine analogue of `lib/wallet-core/mappers.ts`.
  */
 import {
+  AVG_BLOCK_TIME_SECONDS,
   DEPOSIT_MIN_TERM_BLOCK,
+  DUST_THRESHOLD,
   getBalance,
+  getDustAmount,
   getLockedDeposits,
   getTransactions,
   getUnlockedDeposits,
   getUnspentOutputs,
   type OutboundQueueEntry,
   type OwnedDeposit,
+  resolveWalletTransactionKind,
   type WalletState,
   type WalletTransaction,
 } from "conceal-wallet-sdk";
-import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
 import {
   type IncomingPendingRecord,
   incomingPendingAtomic,
 } from "@/lib/services/real-sdk/incoming-pending-store";
+import type {
+  MessageRecordsByHash,
+  SdkMessageRecord,
+} from "@/lib/services/real-sdk/messages-store";
 import { type PendingTxRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
 import type {
@@ -31,6 +38,7 @@ import type {
   TransactionType,
   WalletInfo,
 } from "@/lib/types";
+import { isMappedMessageIn, isMappedMessageOut } from "@/lib/ui/transaction-kind";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -53,7 +61,7 @@ function isoFromUnix(seconds?: number): string {
 
 /** Map one SDK history entry to the UI {@link Transaction}. */
 export function mapTransaction(tx: WalletTransaction, networkHeight: number): Transaction {
-  const type: TransactionType = tx.direction === "out" ? "send" : "receive";
+  const type: TransactionType = resolveWalletTransactionKind(tx);
   return {
     id: tx.hash,
     hash: tx.hash,
@@ -63,6 +71,97 @@ export function mapTransaction(tx: WalletTransaction, networkHeight: number): Tr
     timestamp: isoFromUnix(tx.timestamp),
     blockHeight: tx.height,
     confirmations: confirmationsFor(tx.height, networkHeight),
+  };
+}
+
+/**
+ * SDK-engine port of pre-#91 `mapCoreTransaction` (`lib/wallet-core/mappers.ts`):
+ * chain kind from {@link resolveWalletTransactionKind}, message type/fields from persisted
+ * sent/received copies (same as `hydrateSentMessageBody` + `getSentMessageRecord`).
+ */
+function mapWalletTransaction(
+  tx: WalletTransaction,
+  networkHeight: number,
+  walletAddress: string,
+  sent?: SdkMessageRecord,
+  received?: SdkMessageRecord,
+): Transaction {
+  const messageBody = sent?.body?.trim() || received?.body?.trim() || undefined;
+  const messageOut = isMappedMessageOut(messageBody, tx.amount, {
+    direction: tx.direction,
+    blockHeight: tx.height,
+    ttlExpiresAt: sent?.ttlExpiresAt,
+  });
+  const messageIn = isMappedMessageIn(messageBody, tx.amount, tx.direction);
+  const type: TransactionType =
+    messageOut || messageIn ? "message" : resolveWalletTransactionKind(tx);
+
+  const address =
+    messageOut && sent?.counterpartyAddress
+      ? sent.counterpartyAddress
+      : type === "send"
+        ? ""
+        : walletAddress;
+
+  return {
+    id: tx.hash,
+    hash: tx.hash,
+    type,
+    amount: atomic(tx.amount),
+    address,
+    timestamp: isoFromUnix(tx.timestamp),
+    blockHeight: tx.height,
+    confirmations: confirmationsFor(tx.height, networkHeight),
+    ...(messageBody ? { message: messageBody } : {}),
+    ...(messageOut ? { outgoing: true } : {}),
+    ...(sent?.paymentIdTo
+      ? { paymentId: sent.paymentIdTo }
+      : received?.paymentIdFrom
+        ? { paymentId: received.paymentIdFrom }
+        : {}),
+  };
+}
+
+/** Pending row + optional sent copy (pre-#91 `txsMem` + `hydrateSentMessageBody`). */
+function mapPendingWithMessages(record: PendingTxRecord, sent?: SdkMessageRecord): Transaction {
+  const base = mapPendingTransaction(record);
+  const messageBody = sent?.body?.trim();
+  if (!messageBody) return base;
+
+  const messageOut = isMappedMessageOut(messageBody, record.amountAtomic, {
+    direction: "out",
+    blockHeight: 0,
+    ttlExpiresAt: sent?.ttlExpiresAt,
+  });
+
+  return {
+    ...base,
+    ...(messageBody ? { message: messageBody } : {}),
+    ...(messageOut
+      ? {
+          type: "message" as const,
+          outgoing: true,
+          address: sent?.counterpartyAddress || record.address,
+        }
+      : {}),
+    ...(sent?.paymentIdTo ? { paymentId: sent.paymentIdTo } : {}),
+  };
+}
+
+function mapIncomingWithMessages(
+  record: IncomingPendingRecord,
+  received?: SdkMessageRecord,
+): Transaction {
+  const base = mapIncomingPendingTransaction(record);
+  const messageBody = received?.body?.trim();
+  if (!messageBody) return base;
+
+  const messageIn = isMappedMessageIn(messageBody, record.amountAtomic, "in");
+  return {
+    ...base,
+    message: messageBody,
+    ...(messageIn ? { type: "message" as const } : {}),
+    ...(received?.paymentIdFrom ? { paymentId: received.paymentIdFrom } : {}),
   };
 }
 
@@ -106,18 +205,28 @@ export function mapTransactions(
   networkHeight: number,
   pending: readonly PendingTxRecord[] = [],
   incoming: readonly IncomingPendingRecord[] = [],
+  messages?: MessageRecordsByHash,
 ): Transaction[] {
-  const scanned = getTransactions(state).map((tx) => mapTransaction(tx, networkHeight));
+  const walletAddress = state.address;
+  const scanned = getTransactions(state).map((tx) =>
+    mapWalletTransaction(
+      tx,
+      networkHeight,
+      walletAddress,
+      messages?.sentByHash.get(tx.hash),
+      messages?.receivedByHash.get(tx.hash),
+    ),
+  );
   if (pending.length === 0 && incoming.length === 0) return scanned;
   const scannedHashes = new Set(scanned.map((tx) => tx.hash));
   const pendingTxs = pending
     .filter((record) => !scannedHashes.has(record.hash))
-    .map(mapPendingTransaction);
+    .map((record) => mapPendingWithMessages(record, messages?.sentByHash.get(record.hash)));
   // Don't double-list a tx already shown as an optimistic outbound pending (self-send).
   const pendingHashes = new Set(pendingTxs.map((tx) => tx.hash));
   const incomingTxs = incoming
     .filter((record) => !scannedHashes.has(record.hash) && !pendingHashes.has(record.hash))
-    .map(mapIncomingPendingTransaction);
+    .map((record) => mapIncomingWithMessages(record, messages?.receivedByHash.get(record.hash)));
   return [...incomingTxs, ...pendingTxs, ...scanned];
 }
 
@@ -223,17 +332,19 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
     0,
   );
   const pendingSpent = new Set(livePending.flatMap((record) => record.spentKeyImages));
-  const availableAtomic = getUnspentOutputs(state).reduce(
+  const spendableUnspent = getUnspentOutputs(state).reduce(
     (sum, out) => sum + (pendingSpent.has(out.keyImage) ? 0 : out.amount),
     0,
   );
+  const dustAtomic = getDustAmount(state, DUST_THRESHOLD);
+  const availableAtomic = Math.max(0, spendableUnspent - dustAtomic);
 
   return {
     address: state.address,
     viewOnly: runtime.viewOnly,
     balanceTotal: atomic(balance.total),
     available: atomic(availableAtomic),
-    dust: atomic(0),
+    dust: atomic(dustAtomic),
     pending: atomic(pendingOut),
     // Exclude live OUTBOUND-pending hashes: a self-send / withdrawal / deposit whose own
     // change or returned outputs we own (and the pool reports) must not double-count funds

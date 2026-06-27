@@ -1,7 +1,7 @@
-import { AVG_BLOCK_TIME_SECONDS } from "@/lib/config/config";
+import { AVG_BLOCK_TIME_SECONDS } from "conceal-wallet-sdk";
+import type { NetworkService } from "@/lib/services/network.service";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { getRuntime } from "@/lib/services/real-sdk/runtime";
-import type { NetworkService } from "@/lib/services/network.service";
 import type { NodeStatus } from "@/lib/types";
 
 /**

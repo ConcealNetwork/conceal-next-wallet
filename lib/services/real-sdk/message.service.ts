@@ -1,9 +1,10 @@
-import { isValidAddress, transactions as txns } from "conceal-wallet-sdk";
 import {
-  MAX_MESSAGE_SIZE,
+  isValidAddress,
+  MAX_MESSAGE_BODY_BYTES,
   MESSAGE_TX_AMOUNT_ATOMIC,
   REMOTE_NODE_FEE_ATOMIC,
-} from "@/lib/config/config";
+  transactions as txns,
+} from "conceal-wallet-sdk";
 import type { MessageService, SendMessageInput } from "@/lib/services/message.service";
 import {
   createSentMessageRecord,
@@ -25,6 +26,7 @@ import {
   fetchDecoys,
   MIXIN,
   ownKeys,
+  resolveOutboundPaymentId,
   safeNodeFeeAddress,
   selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
@@ -57,8 +59,8 @@ export const realSdkMessageService: MessageService = {
     const body = input.body.trim();
     if (!body) throw new Error("Message is required.");
     const bodyByteLength = new TextEncoder().encode(body).length;
-    if (bodyByteLength > MAX_MESSAGE_SIZE) {
-      throw new Error(`Message exceeds maximum length of ${MAX_MESSAGE_SIZE} bytes.`);
+    if (bodyByteLength > MAX_MESSAGE_BODY_BYTES) {
+      throw new Error(`Message exceeds maximum length of ${MAX_MESSAGE_BODY_BYTES} bytes.`);
     }
 
     const destinationAddress = input.recipientAddress.trim();
@@ -67,6 +69,7 @@ export const realSdkMessageService: MessageService = {
     }
 
     const recipient = decodeRecipient(destinationAddress);
+    const paymentId = resolveOutboundPaymentId(input.paymentId, recipient);
     const ttlUnixSeconds = input.ttlUnix && input.ttlUnix > 0 ? input.ttlUnix : 0;
     const hasTtl = ttlUnixSeconds > 0;
 
@@ -101,9 +104,9 @@ export const realSdkMessageService: MessageService = {
       ttlUnixSeconds,
       nodeFee,
       messageAmount: MESSAGE_TX_AMOUNT_ATOMIC,
+      ...(paymentId ? { paymentId: paymentId as txns.Hex } : {}),
     });
 
-    const paymentId = input.paymentId?.trim() || undefined;
     const record: SdkMessageRecord = createSentMessageRecord({
       hash: built.hash,
       recipientAddress: destinationAddress,

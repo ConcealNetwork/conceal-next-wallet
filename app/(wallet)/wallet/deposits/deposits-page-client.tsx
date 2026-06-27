@@ -1,5 +1,6 @@
 "use client";
 
+import { COIN_UNIT_PLACES, DEPOSIT_SMALL_WITHDRAW_FEE, MINIMUM_FEE_V2 } from "conceal-wallet-sdk";
 import {
   Calculator,
   CalendarClock,
@@ -38,11 +39,6 @@ import { CcxAmount } from "@/components/wallet/ccx";
 import { EmptyState, PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
-import {
-  COIN_FEE_ATOMIC,
-  COIN_UNIT_PLACES,
-  DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC,
-} from "@/lib/config/config";
 import {
   useCreateDeposit,
   useDepositConstraints,
@@ -1200,7 +1196,7 @@ function DepositWithdrawButton({
   const canWithdraw = canWithdrawDeposit(deposit);
   const principal = ccxToNumber(deposit.amount);
   const interest = ccxToNumber(deposit.interest);
-  const withdrawFee = DEPOSIT_SMALL_WITHDRAW_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
+  const withdrawFee = DEPOSIT_SMALL_WITHDRAW_FEE / 10 ** COIN_UNIT_PLACES;
   const netReceive = principal + interest - withdrawFee;
 
   function confirmWithdraw() {
@@ -1425,7 +1421,7 @@ function CreateDepositDialog({
   );
   const previewInterest = preview.data?.interestCcx ?? 0;
   const previewApr = preview.data?.indicativeApr ?? 0;
-  const createFee = COIN_FEE_ATOMIC / 10 ** COIN_UNIT_PLACES;
+  const createFee = MINIMUM_FEE_V2 / 10 ** COIN_UNIT_PLACES;
   const maturityDate = formatDate(
     addDays(new Date(), estimateDepositUnlockDays(durationMonths)),
     fmt,
