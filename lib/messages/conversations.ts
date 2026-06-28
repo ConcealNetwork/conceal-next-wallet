@@ -1,13 +1,27 @@
-import { resolveThreadKeyFromMeta, sortMessagesByHeight } from "@/lib/messages/thread-mappers";
+import { buildConversationThreadKey } from "@/lib/messages/thread-key";
+import { sortMessagesByHeight } from "@/lib/messages/thread-mappers";
 import type { AddressEntry, Message } from "@/lib/types";
 import { addressIsValid, normalizePaymentId, paymentIdsMatch } from "@/lib/validation/ccx";
+
+export type ConversationPair = {
+  /** Matches received `paymentIdFrom` (contact inbound PID or observed on chain). */
+  paymentIdFrom: string | null;
+  /** Matches sent `paymentIdTo` (handshake PID — reused on reply, not on the contact). */
+  paymentIdTo: string | null;
+  /** Counterparty CCX address when known. */
+  address: string | null;
+};
 
 export type MessageConversation = {
   threadKey: string;
   /** CCX address used for replies; empty when unknown. */
   address: string;
-  /** Inbound PID for this thread (matches received paymentIdFrom). */
-  paymentId?: string;
+  /** Inbound half — matches received `paymentIdFrom`. */
+  paymentIdFrom?: string;
+  /** Outbound half — matches sent `paymentIdTo`; used by the reply composer. */
+  paymentIdTo?: string;
+  /** Both PID halves are known — full bilateral thread. */
+  established: boolean;
   name: string;
   avatar?: string;
   messages: Message[];
@@ -15,14 +29,15 @@ export type MessageConversation = {
   unread: number;
 };
 
-/** PID that identifies inbound messages in a thread (paymentIdFrom / sent paymentIdTo). */
-function inboundPaymentId(
-  message: Pick<Message, "direction" | "paymentIdFrom" | "paymentIdTo">,
-): string | null {
-  if (message.direction === "received") {
-    return normalizePaymentId(message.paymentIdFrom ?? undefined) || null;
-  }
-  return normalizePaymentId(message.paymentIdTo ?? undefined) || null;
+export type EstablishedConversationPair = ConversationPair & {
+  paymentIdFrom: string;
+  paymentIdTo: string;
+};
+
+export function isEstablishedConversation(
+  pair: ConversationPair,
+): pair is EstablishedConversationPair {
+  return !!(pair.paymentIdFrom && pair.paymentIdTo);
 }
 
 function findContactForMessage(
@@ -32,7 +47,7 @@ function findContactForMessage(
   return findContactForMessages(addressBook, [message]);
 }
 
-/** Address book row for message list avatars — received: PID only; sent: PID then recipient address. */
+/** Address book row for message list avatars — received: inbound PID; sent: recipient address. */
 export function buildMessageListContactEntry(
   message: Message,
   addressBook: AddressEntry[],
@@ -42,12 +57,12 @@ export function buildMessageListContactEntry(
     id: contact?.id ?? message.id,
     label: contact?.label ?? message.counterpartyName,
     address: contact?.address ?? message.counterpartyAddress,
-    paymentId: contact?.paymentId ?? message.paymentIdFrom ?? message.paymentIdTo ?? undefined,
+    paymentId: contact?.paymentId ?? message.paymentIdFrom ?? undefined,
     avatar: contact?.avatar,
   };
 }
 
-function findContactByPaymentId(
+function findContactByInboundPaymentId(
   addressBook: AddressEntry[],
   paymentId: string | null | undefined,
 ): AddressEntry | undefined {
@@ -61,7 +76,8 @@ export function findContactForMessages(
   messages: Message[],
 ): AddressEntry | undefined {
   for (const message of messages) {
-    const byPid = findContactByPaymentId(addressBook, inboundPaymentId(message));
+    if (message.direction !== "received") continue;
+    const byPid = findContactByInboundPaymentId(addressBook, message.paymentIdFrom);
     if (byPid) return byPid;
   }
   for (const message of messages) {
@@ -80,54 +96,127 @@ export function findContactForMessages(
   return undefined;
 }
 
-function resolveConversationMatchFromMessage(
+function resolveCounterpartyAddress(
   selected: Message,
-  addressBook: AddressEntry[],
-): { sentToAddress: string | null; receivePaymentId: string | null } {
-  const contact = findContactForMessages(addressBook, [selected]);
-  const pid = normalizePaymentId(contact?.paymentId) || inboundPaymentId(selected) || null;
-
-  let sentToAddress: string | null = null;
-  if (contact?.address) {
-    sentToAddress = contact.address;
-  } else if (selected.direction === "sent") {
+  contact: AddressEntry | undefined,
+  address: string | null,
+  all: Message[],
+): string | null {
+  if (address) return address;
+  if (contact?.address) return contact.address;
+  if (selected.direction === "sent") {
     const to = selected.sentTo ?? selected.counterpartyAddress;
-    if (to && !to.startsWith("recv:") && !to.startsWith("pid:") && !to.startsWith("sent:")) {
-      sentToAddress = to;
+    if (to && addressIsValid(to)) return to;
+  }
+  for (const message of all) {
+    if (message.direction !== "sent") continue;
+    const to = message.sentTo ?? message.counterpartyAddress;
+    if (to && addressIsValid(to)) return to;
+  }
+  return null;
+}
+
+/** Derive the bilateral `{ paymentIdFrom, paymentIdTo }` pair for a selected message. */
+export function resolveConversationPair(
+  selected: Message,
+  all: Message[],
+  addressBook: AddressEntry[],
+): ConversationPair {
+  const contact = findContactForMessages(addressBook, [selected]);
+
+  let address: string | null = null;
+  if (contact?.address) address = contact.address;
+  else if (selected.direction === "sent") {
+    const to = selected.sentTo ?? selected.counterpartyAddress;
+    if (addressIsValid(to)) address = to;
+  }
+
+  let paymentIdFrom: string | null = null;
+  if (contact?.paymentId) {
+    paymentIdFrom = normalizePaymentId(contact.paymentId) || null;
+  }
+  if (selected.direction === "received" && selected.paymentIdFrom) {
+    paymentIdFrom = normalizePaymentId(selected.paymentIdFrom) || paymentIdFrom;
+  }
+
+  let paymentIdTo: string | null = null;
+  if (selected.direction === "sent" && selected.paymentIdTo) {
+    paymentIdTo = normalizePaymentId(selected.paymentIdTo) || null;
+  } else if (selected.direction === "received") {
+    for (const message of all) {
+      if (message.direction !== "sent" || !message.paymentIdTo) continue;
+      const to = message.sentTo ?? message.counterpartyAddress;
+      if (address && to !== address) continue;
+      paymentIdTo = normalizePaymentId(message.paymentIdTo) || null;
+      if (paymentIdTo) break;
     }
   }
 
-  return { sentToAddress, receivePaymentId: pid || null };
+  for (const message of all) {
+    const to = message.sentTo ?? message.counterpartyAddress;
+    const sameAddress = !!(address && message.direction === "sent" && to === address);
+    const sameInbound =
+      !!(
+        paymentIdFrom &&
+        message.direction === "received" &&
+        paymentIdsMatch(message.paymentIdFrom, paymentIdFrom)
+      ) ||
+      !!(
+        message.direction === "received" &&
+        selected.direction === "received" &&
+        paymentIdsMatch(message.paymentIdFrom, selected.paymentIdFrom)
+      );
+
+    if (!sameAddress && !sameInbound && message.id !== selected.id) continue;
+
+    if (message.direction === "received" && message.paymentIdFrom) {
+      const from = normalizePaymentId(message.paymentIdFrom);
+      if (!paymentIdFrom) paymentIdFrom = from || null;
+    }
+    if (!address && message.direction === "sent" && addressIsValid(to)) {
+      address = to;
+    }
+  }
+
+  address = resolveCounterpartyAddress(selected, contact, address, all);
+
+  return { paymentIdFrom, paymentIdTo, address };
 }
 
-/** Messages in the same thread as `selected` (sent→address + received→paymentIdFrom). */
+export function messageMatchesConversationPair(message: Message, pair: ConversationPair): boolean {
+  if (!isEstablishedConversation(pair)) return false;
+
+  if (message.direction === "received") {
+    return paymentIdsMatch(message.paymentIdFrom ?? undefined, pair.paymentIdFrom);
+  }
+
+  const to = message.sentTo ?? message.counterpartyAddress;
+  if (pair.address && to !== pair.address) return false;
+  return paymentIdsMatch(message.paymentIdTo ?? undefined, pair.paymentIdTo);
+}
+
 function filterConversationMessages(
   selected: Message,
   all: Message[],
   addressBook: AddressEntry[],
 ): Message[] {
-  const { sentToAddress, receivePaymentId } = resolveConversationMatchFromMessage(
-    selected,
-    addressBook,
-  );
+  const pair = resolveConversationPair(selected, all, addressBook);
+  if (!isEstablishedConversation(pair)) {
+    return [selected];
+  }
+  return all.filter((message) => messageMatchesConversationPair(message, pair));
+}
 
-  return all.filter((message) => {
-    if (message.direction === "sent") {
-      if (sentToAddress) {
-        const to = message.sentTo ?? message.counterpartyAddress;
-        if (to === sentToAddress) return true;
-      }
-      if (receivePaymentId && paymentIdsMatch(message.paymentIdTo ?? undefined, receivePaymentId)) {
-        return true;
-      }
-      return false;
-    }
-
-    if (receivePaymentId) {
-      return paymentIdsMatch(message.paymentIdFrom ?? undefined, receivePaymentId);
-    }
-    return false;
-  });
+export function conversationThreadKeyForMessage(
+  message: Message,
+  all: Message[],
+  addressBook: AddressEntry[],
+): string {
+  const pair = resolveConversationPair(message, all, addressBook);
+  if (isEstablishedConversation(pair)) {
+    return buildConversationThreadKey(pair.paymentIdFrom, pair.paymentIdTo);
+  }
+  return `msg:${message.id}`;
 }
 
 export function buildConversationFromMessage(
@@ -136,16 +225,27 @@ export function buildConversationFromMessage(
   addressBook: AddressEntry[],
   readThreads: Set<string>,
 ): MessageConversation {
+  const pair = resolveConversationPair(selected, all, addressBook);
   const matched = sortMessagesByHeight(filterConversationMessages(selected, all, addressBook));
   const last = matched[matched.length - 1] ?? selected;
   const contact = findContactForMessages(addressBook, matched.length > 0 ? matched : [selected]);
   const address =
+    pair.address ??
     contact?.address ??
     (selected.direction === "sent"
       ? (selected.sentTo ?? selected.counterpartyAddress)
       : (matched.find((m) => m.sentTo)?.sentTo ?? ""));
-  const paymentId = contact?.paymentId ?? inboundPaymentId(selected) ?? undefined;
-  const threadKey = resolveThreadKey(selected, addressBook);
+  const paymentIdFrom = pair.paymentIdFrom ?? undefined;
+  const paymentIdTo = pair.paymentIdTo ?? undefined;
+  let threadKey: string;
+  let established: boolean;
+  if (isEstablishedConversation(pair)) {
+    established = true;
+    threadKey = buildConversationThreadKey(pair.paymentIdFrom, pair.paymentIdTo);
+  } else {
+    established = false;
+    threadKey = `msg:${selected.id}`;
+  }
   const name = contact?.label ?? selected.counterpartyName;
   const unread = readThreads.has(threadKey)
     ? 0
@@ -154,7 +254,9 @@ export function buildConversationFromMessage(
   return {
     threadKey,
     address: address && !address.startsWith("recv:") && !address.startsWith("pid:") ? address : "",
-    paymentId: paymentId ?? undefined,
+    paymentIdFrom,
+    paymentIdTo,
+    established,
     name,
     avatar: contact?.avatar,
     messages: matched.length > 0 ? matched : [selected],
@@ -174,51 +276,47 @@ export function buildMessageConversations(
 
   for (const message of messages) {
     if (seenMessageIds.has(message.id)) continue;
-    const canonicalKey = resolveThreadKey(message, addressBook);
-    if (seenThreadKeys.has(canonicalKey)) {
+    const conversation = buildConversationFromMessage(message, messages, addressBook, readThreads);
+    if (!conversation.established) {
       seenMessageIds.add(message.id);
       continue;
     }
-    const conversation = buildConversationFromMessage(message, messages, addressBook, readThreads);
-    seenThreadKeys.add(canonicalKey);
+    if (seenThreadKeys.has(conversation.threadKey)) {
+      seenMessageIds.add(message.id);
+      continue;
+    }
+    seenThreadKeys.add(conversation.threadKey);
     for (const row of conversation.messages) seenMessageIds.add(row.id);
-    conversations.push({ ...conversation, threadKey: canonicalKey });
+    conversations.push(conversation);
   }
 
-  return conversations.sort((a, b) => {
-    if (a.last.blockHeight !== b.last.blockHeight) {
-      return b.last.blockHeight - a.last.blockHeight;
-    }
-    return new Date(b.last.timestamp).getTime() - new Date(a.last.timestamp).getTime();
-  });
-}
-
-export function resolveThreadKey(message: Message, addressBook: AddressEntry[]): string {
-  return resolveThreadKeyFromMeta(
-    addressBook,
-    message.sentTo ?? message.counterpartyAddress,
-    message.paymentIdFrom ?? message.paymentIdTo ?? undefined,
+  return conversations.sort(
+    (a, b) => new Date(b.last.timestamp).getTime() - new Date(a.last.timestamp).getTime(),
   );
 }
 
+/** @deprecated Prefer {@link conversationThreadKeyForMessage}. */
+export function resolveThreadKey(
+  message: Message,
+  addressBook: AddressEntry[],
+  all: Message[] = [message],
+): string {
+  return conversationThreadKeyForMessage(message, all, addressBook);
+}
+
 export function canReplyToConversation(conversation: MessageConversation): boolean {
-  return addressIsValid(conversation.address);
+  return addressIsValid(conversation.address) && !!conversation.paymentIdTo;
 }
 
 export function countReceivedMessages(messages: readonly Message[]): number {
   return messages.filter((message) => message.direction === "received").length;
 }
 
-/** Mempool/pending messages (blockHeight === 0) sort to the top as the newest. */
-function listSortHeight(blockHeight: number): number {
-  return blockHeight > 0 ? blockHeight : Number.MAX_SAFE_INTEGER;
-}
-
+/** Flat inbox list: newest row first (timestamp primary, block height tie-break). */
 export function sortMessagesNewestFirst(messages: Message[]): Message[] {
   return [...messages].sort((a, b) => {
-    const ha = listSortHeight(a.blockHeight);
-    const hb = listSortHeight(b.blockHeight);
-    if (ha !== hb) return hb - ha;
-    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    const timeDiff = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return b.blockHeight - a.blockHeight;
   });
 }

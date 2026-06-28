@@ -40,11 +40,12 @@ import {
   buildConversationFromMessage,
   buildMessageListContactEntry,
   canReplyToConversation,
+  conversationThreadKeyForMessage,
   type MessageConversation,
   sortMessagesNewestFirst,
 } from "@/lib/messages/conversations";
 import { isKnownSmartMessage } from "@/lib/messages/smart-message";
-import { buildMessageThreadKey } from "@/lib/messages/thread-key";
+import { buildConversationThreadKey } from "@/lib/messages/thread-key";
 import type { AddressEntry, Message } from "@/lib/types";
 import { parseCheckIn } from "@/lib/ui/check-in-message";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
@@ -186,7 +187,11 @@ export default function MessagesPage() {
 
   function openMessage(message: Message) {
     setActiveMessageId(message.id);
-    setReadThreads((prev) => new Set(prev).add(message.threadKey));
+    setReadThreads((prev) =>
+      new Set(prev).add(
+        conversationThreadKeyForMessage(message, allMessages, addressBook.data ?? []),
+      ),
+    );
     setDraft("");
     setThreadViewMd(false);
     if (message.direction === "received" && message.unread) {
@@ -214,7 +219,7 @@ export default function MessagesPage() {
       {
         recipientAddress: active.address,
         body,
-        paymentId: active.paymentId ?? undefined,
+        paymentId: active.paymentIdTo ?? undefined,
       },
       {
         onSuccess: (sent) => {
@@ -252,7 +257,8 @@ export default function MessagesPage() {
       return;
     }
     const paymentId = composePaymentId.trim() || undefined;
-    const threadKey = buildMessageThreadKey(recipient.trim(), paymentId);
+    const contact = findAddressBookContactByAddress(addressBook.data ?? [], recipient.trim());
+    const threadKey = buildConversationThreadKey(contact?.paymentId, paymentId);
     setPendingOutgoing({ threadKey });
     send.mutate(
       {
@@ -631,7 +637,7 @@ function ThreadHeader({
     id: conversation.threadKey,
     label: conversation.name,
     address: conversation.address,
-    paymentId: conversation.paymentId,
+    paymentId: conversation.paymentIdFrom,
     avatar: conversation.avatar,
   };
 
@@ -659,11 +665,6 @@ function ThreadHeader({
         {addressIsValid(conversation.address) ? (
           <p className="truncate font-mono text-xs text-muted-foreground">
             {truncateAddress(conversation.address, 12, 8)}
-          </p>
-        ) : null}
-        {conversation.paymentId ? (
-          <p className="truncate font-mono text-[11px] text-muted-foreground/80">
-            PID {truncateAddress(conversation.paymentId, 8, 8)}
           </p>
         ) : null}
       </div>

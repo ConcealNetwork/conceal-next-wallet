@@ -40,24 +40,19 @@ function findAddressBookContact(
   return undefined;
 }
 
-/** Confirmed blocks sort ascending; mempool (0) sorts last as the newest thread row. */
-function messageChronologyHeight(blockHeight: number): number {
-  return blockHeight > 0 ? blockHeight : Number.MAX_SAFE_INTEGER;
-}
-
+/** Thread panel: oldest at top, newest at bottom (chat order). Timestamp is primary so a
+ *  still-pending message keeps its place even after a newer reply has already mined. */
 function compareMessagesChronological(
   a: Pick<UiMessage, "blockHeight" | "timestamp" | "direction" | "id">,
   b: Pick<UiMessage, "blockHeight" | "timestamp" | "direction" | "id">,
 ): number {
-  const heightA = messageChronologyHeight(a.blockHeight);
-  const heightB = messageChronologyHeight(b.blockHeight);
-  if (heightA !== heightB) return heightA - heightB;
-
   const timeA = new Date(a.timestamp).getTime();
   const timeB = new Date(b.timestamp).getTime();
   if (timeA !== timeB) return timeA - timeB;
 
-  // Same block & second: show incoming before outgoing (reply follows original).
+  if (a.blockHeight !== b.blockHeight) return a.blockHeight - b.blockHeight;
+
+  // Same instant: show incoming before outgoing (reply follows original).
   if (a.direction !== b.direction) {
     return a.direction === "received" ? -1 : 1;
   }
