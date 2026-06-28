@@ -13,7 +13,12 @@
  * `message.service.ts` (reads / merges / markRead) share one type + read/write
  * surface without a circular import.
  */
-import { type RawWalletV1, transactions as txns, type WalletKeys } from "conceal-wallet-sdk";
+import {
+  type RawWalletV1,
+  transactions as txns,
+  type WalletKeys,
+  type WalletState,
+} from "conceal-wallet-sdk";
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import type { Message } from "@/lib/types";
 import { normalizePaymentId } from "@/lib/validation/ccx";
@@ -129,6 +134,52 @@ export function applyInboundScanToReceived(
     return true;
   }
   return false;
+}
+
+/** Map mined tx hashes → block heights from scanned wallet state. */
+export function minedHeightsFromState(state: WalletState): ReadonlyMap<string, number> {
+  const map = new Map<string, number>();
+  for (const tx of state.transactions) {
+    if (tx.hash && tx.height > 0) map.set(tx.hash, tx.height);
+  }
+  return map;
+}
+
+/**
+ * Sent copies are written at broadcast with `blockHeight: 0`. Patch from mined state so
+ * the UI stops showing "Pending" once the tx is in `WalletState`.
+ */
+export function patchSentMessageBlockHeights(
+  records: SdkMessageRecord[],
+  minedHeights: ReadonlyMap<string, number>,
+): { records: SdkMessageRecord[]; changed: boolean } {
+  let changed = false;
+  const next = records.map((record) => {
+    if (record.direction !== "sent" || record.blockHeight > 0) return record;
+    const height = minedHeights.get(record.id);
+    if (typeof height === "number" && height > 0) {
+      changed = true;
+      return { ...record, blockHeight: height };
+    }
+    return record;
+  });
+  return { records: changed ? next : records, changed };
+}
+
+/**
+ * Drop 0-conf received copies whose tx left the mempool without mining (TTL / evicted).
+ * Mined rows (blockHeight > 0) and active mempool hashes are kept.
+ */
+export function pruneStaleMempoolReceived(
+  records: SdkMessageRecord[],
+  activeMempoolHashes: ReadonlySet<string>,
+  minedHashes: ReadonlySet<string>,
+): SdkMessageRecord[] {
+  return records.filter((record) => {
+    if (record.blockHeight !== 0) return true;
+    if (minedHashes.has(record.id)) return true;
+    return activeMempoolHashes.has(record.id);
+  });
 }
 
 /** A short display name for an address with no saved contact. */

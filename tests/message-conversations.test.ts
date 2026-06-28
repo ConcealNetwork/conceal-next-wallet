@@ -1,15 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildConversationFromMessage,
   buildMessageConversations,
   buildMessageListContactEntry,
+  canReplyToConversation,
   countReceivedMessages,
+  resolveConversationPair,
   resolveThreadKey,
 } from "@/lib/messages/conversations";
+import { buildConversationThreadKey } from "@/lib/messages/thread-key";
 import type { AddressEntry, Message } from "@/lib/types";
 
-const CONTACT_ADDRESS =
-  "ccx7Exch7J9PpM5rK2sL8nV4xA1zC6eT3wY9uD2fG5hJ8kL1mN4pQ7rS9tV2wX5yZ8aB1cD4eF7gH0jK3mNo";
+const CCX_ADDR = (suffix: string) => `ccx7${suffix.padEnd(94, "0").slice(0, 94)}`;
+
+const CONTACT_ADDRESS = CCX_ADDR(
+  "ExchKrakenDepositRef000000000000000000000000000000000000000000000000",
+);
+const ALICE_ADDRESS = CCX_ADDR("AliceWallet000000000000000000000000000000000000000000000000000000");
+const BOB_ADDRESS = CCX_ADDR("BobWallet00000000000000000000000000000000000000000000000000000000");
 const PID = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7ef099";
+const PID_ALICE_FOR_BOB = "1111111111111111111111111111111111111111111111111111111111111111";
+const PID_BOB_FOR_ALICE = "2222222222222222222222222222222222222222222222222222222222222222";
 
 const addressBook: AddressEntry[] = [
   {
@@ -37,7 +48,7 @@ function msg(partial: Partial<Message> & Pick<Message, "id" | "direction" | "bod
 }
 
 describe("message conversations", () => {
-  it("merges sent and received into one thread via address book + payment id", () => {
+  it("merges sent and received into one thread via bilateral PID pair (symmetric exchange)", () => {
     const received = msg({
       id: "r1",
       direction: "received",
@@ -61,27 +72,162 @@ describe("message conversations", () => {
       blockHeight: 105,
     });
 
-    const threads = buildMessageConversations([received, sent], addressBook, new Set());
+    const all = [received, sent];
+    const threads = buildMessageConversations(all, addressBook, new Set());
     expect(threads).toHaveLength(1);
     expect(threads[0].name).toBe("Kraken Exchange");
     expect(threads[0].avatar).toBe("kraken");
+    expect(threads[0].established).toBe(true);
+    expect(threads[0].paymentIdFrom).toBe(PID);
+    expect(threads[0].paymentIdTo).toBe(PID);
     expect(threads[0].messages).toHaveLength(2);
     expect(threads[0].messages[0].body).toBe("Hello");
     expect(threads[0].messages[1].body).toBe("Hi back");
     expect(threads[0].address).toBe(CONTACT_ADDRESS);
+    expect(canReplyToConversation(threads[0])).toBe(true);
   });
 
-  it("normalizes recv thread key when contact exists", () => {
+  it("merges asymmetric P2P threads by { paymentIdFrom, paymentIdTo }", () => {
+    const aliceBook: AddressEntry[] = [
+      { id: "bob", label: "Bob", address: BOB_ADDRESS, paymentId: PID_ALICE_FOR_BOB },
+    ];
+    const received = msg({
+      id: "r1",
+      direction: "received",
+      body: "Hi Alice",
+      paymentIdFrom: PID_ALICE_FOR_BOB,
+      counterpartyAddress: `recv:${PID_ALICE_FOR_BOB}`,
+      blockHeight: 100,
+    });
+    const sent = msg({
+      id: "s1",
+      direction: "sent",
+      body: "Hi Bob",
+      sentTo: BOB_ADDRESS,
+      counterpartyAddress: BOB_ADDRESS,
+      paymentIdTo: PID_BOB_FOR_ALICE,
+      blockHeight: 105,
+    });
+
+    const all = [received, sent];
+    const conversation = buildConversationFromMessage(received, all, aliceBook, new Set());
+    expect(conversation.established).toBe(true);
+    expect(conversation.paymentIdFrom).toBe(PID_ALICE_FOR_BOB);
+    expect(conversation.paymentIdTo).toBe(PID_BOB_FOR_ALICE);
+    expect(conversation.messages).toHaveLength(2);
+    expect(conversation.threadKey).toBe(
+      buildConversationThreadKey(PID_ALICE_FOR_BOB, PID_BOB_FOR_ALICE),
+    );
+    expect(canReplyToConversation(conversation)).toBe(true);
+  });
+
+  it("reply uses paymentIdTo, not contact inbound PID", () => {
+    const aliceBook: AddressEntry[] = [
+      { id: "bob", label: "Bob", address: BOB_ADDRESS, paymentId: PID_ALICE_FOR_BOB },
+    ];
+    const received = msg({
+      id: "r1",
+      direction: "received",
+      body: "ping",
+      paymentIdFrom: PID_ALICE_FOR_BOB,
+      counterpartyAddress: `recv:${PID_ALICE_FOR_BOB}`,
+    });
+    const sent = msg({
+      id: "s1",
+      direction: "sent",
+      body: "pong",
+      sentTo: BOB_ADDRESS,
+      paymentIdTo: PID_BOB_FOR_ALICE,
+    });
+
+    const conversation = buildConversationFromMessage(
+      received,
+      [received, sent],
+      aliceBook,
+      new Set(),
+    );
+    expect(conversation.paymentIdTo).toBe(PID_BOB_FOR_ALICE);
+    expect(conversation.paymentIdFrom).toBe(PID_ALICE_FOR_BOB);
+    expect(conversation.paymentIdTo).not.toBe(conversation.paymentIdFrom);
+  });
+
+  it("received-only message is a singleton until outbound PID is known", () => {
+    const aliceBook: AddressEntry[] = [
+      { id: "bob", label: "Bob", address: BOB_ADDRESS, paymentId: PID_ALICE_FOR_BOB },
+    ];
+    const received = msg({
+      id: "r1",
+      direction: "received",
+      body: "first",
+      paymentIdFrom: PID_ALICE_FOR_BOB,
+      counterpartyAddress: `recv:${PID_ALICE_FOR_BOB}`,
+    });
+
+    const conversation = buildConversationFromMessage(received, [received], aliceBook, new Set());
+    expect(conversation.established).toBe(false);
+    expect(conversation.messages).toHaveLength(1);
+    expect(canReplyToConversation(conversation)).toBe(false);
+
+    const threads = buildMessageConversations([received], aliceBook, new Set());
+    expect(threads).toHaveLength(0);
+  });
+
+  it("sent-only singleton does not join an established thread", () => {
+    const aliceBook: AddressEntry[] = [
+      { id: "bob", label: "Bob", address: BOB_ADDRESS, paymentId: PID_ALICE_FOR_BOB },
+    ];
+    const establishedSent = msg({
+      id: "s1",
+      direction: "sent",
+      body: "thread",
+      sentTo: BOB_ADDRESS,
+      paymentIdTo: PID_BOB_FOR_ALICE,
+      blockHeight: 100,
+    });
+    const establishedReceived = msg({
+      id: "r1",
+      direction: "received",
+      body: "thread reply",
+      paymentIdFrom: PID_ALICE_FOR_BOB,
+      blockHeight: 101,
+    });
+    const singleton = msg({
+      id: "s2",
+      direction: "sent",
+      body: "one-off",
+      sentTo: BOB_ADDRESS,
+      paymentIdTo: null,
+      blockHeight: 102,
+    });
+
+    const conversation = buildConversationFromMessage(
+      singleton,
+      [establishedSent, establishedReceived, singleton],
+      aliceBook,
+      new Set(),
+    );
+    expect(conversation.established).toBe(false);
+    expect(conversation.messages).toHaveLength(1);
+    expect(conversation.messages[0].id).toBe("s2");
+  });
+
+  it("uses bilateral pair thread key when established", () => {
     const received = msg({
       id: "r1",
       direction: "received",
       paymentIdFrom: PID,
-      paymentIdTo: null,
-      counterpartyAddress: `recv:${PID}`,
-      threadKey: `recv:${PID}:${PID}`,
       body: "x",
     });
-    expect(resolveThreadKey(received, addressBook)).toBe(`${CONTACT_ADDRESS}:${PID}`);
+    const sent = msg({
+      id: "s1",
+      direction: "sent",
+      paymentIdTo: PID,
+      sentTo: CONTACT_ADDRESS,
+      body: "y",
+    });
+    expect(resolveThreadKey(received, addressBook, [received, sent])).toBe(
+      buildConversationThreadKey(PID, PID),
+    );
   });
 
   it("counts only received messages for nav badge", () => {
@@ -93,7 +239,7 @@ describe("message conversations", () => {
     expect(countReceivedMessages(messages)).toBe(2);
   });
 
-  it("resolves received list contact by payment id for avatar and label", () => {
+  it("resolves received list contact by inbound payment id for avatar and label", () => {
     const received = msg({
       id: "r1",
       direction: "received",
@@ -112,10 +258,8 @@ describe("message conversations", () => {
   });
 
   it("does not match received sender by counterparty address (stealth)", () => {
-    const aliceAddress =
-      "ccx7AliceWalletAddr2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQ";
     const aliceBook: AddressEntry[] = [
-      { id: "addr-2", label: "Alice", address: aliceAddress, avatar: "alice" },
+      { id: "addr-2", label: "Alice", address: ALICE_ADDRESS, avatar: "alice" },
     ];
     const received = msg({
       id: "r1",
@@ -123,7 +267,7 @@ describe("message conversations", () => {
       body: "hi",
       paymentIdFrom: null,
       counterpartyName: "From abc12345…",
-      counterpartyAddress: aliceAddress,
+      counterpartyAddress: ALICE_ADDRESS,
     });
 
     const entry = buildMessageListContactEntry(received, aliceBook);
@@ -145,5 +289,28 @@ describe("message conversations", () => {
     const entry = buildMessageListContactEntry(sent, addressBook);
     expect(entry.label).toBe("Kraken Exchange");
     expect(entry.avatar).toBe("kraken");
+  });
+
+  it("resolveConversationPair picks up outbound PID from prior sent messages", () => {
+    const aliceBook: AddressEntry[] = [
+      { id: "bob", label: "Bob", address: BOB_ADDRESS, paymentId: PID_ALICE_FOR_BOB },
+    ];
+    const sent = msg({
+      id: "s1",
+      direction: "sent",
+      body: "handshake",
+      sentTo: BOB_ADDRESS,
+      paymentIdTo: PID_BOB_FOR_ALICE,
+    });
+    const received = msg({
+      id: "r1",
+      direction: "received",
+      body: "reply",
+      paymentIdFrom: PID_ALICE_FOR_BOB,
+    });
+
+    const pair = resolveConversationPair(received, [sent, received], aliceBook);
+    expect(pair.paymentIdFrom).toBe(PID_ALICE_FOR_BOB);
+    expect(pair.paymentIdTo).toBe(PID_BOB_FOR_ALICE);
   });
 });

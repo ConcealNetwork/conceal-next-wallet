@@ -572,9 +572,11 @@ describe("inbound message classification by decryptability (review #6 / #97)", (
 
   it("captures paymentIdFrom from tx extra for conversation/contact matching", async () => {
     const { reconstructReceivedMessage } = await import("@/lib/services/real-sdk/messages-store");
-    const { buildMessageConversations, buildMessageListContactEntry } = await import(
-      "@/lib/messages/conversations"
-    );
+    const {
+      buildMessageConversations,
+      buildConversationFromMessage,
+      buildMessageListContactEntry,
+    } = await import("@/lib/messages/conversations");
     const alice = createAccount("english");
     const bob = createAccount("english");
     const bobDecoded = decodeAddress(bob.address);
@@ -656,9 +658,12 @@ describe("inbound message classification by decryptability (review #6 / #97)", (
     expect(entry.avatar).toBe("kraken");
 
     const threads = buildMessageConversations([message], addressBook, new Set());
-    expect(threads).toHaveLength(1);
-    expect(threads[0].name).toBe("Kraken Exchange");
-    expect(threads[0].avatar).toBe("kraken");
+    expect(threads).toHaveLength(0);
+
+    const singleton = buildConversationFromMessage(message, [message], addressBook, new Set());
+    expect(singleton.established).toBe(false);
+    expect(singleton.name).toBe("Kraken Exchange");
+    expect(singleton.avatar).toBe("kraken");
   });
 
   it("surfaces a message attached to a real-amount payment, not only the 100-atomic marker (#97)", async () => {

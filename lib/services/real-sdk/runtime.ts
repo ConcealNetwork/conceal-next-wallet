@@ -82,11 +82,15 @@ import {
 import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 import {
   applyInboundScanToReceived,
+  minedHeightsFromState,
+  patchSentMessageBlockHeights,
+  pruneStaleMempoolReceived,
   readReceivedRecords,
   readSentRecords,
   reconstructReceivedMessage,
   type SdkMessageRecord,
   withReceivedRecords,
+  withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
 import {
   type FetchSource,
@@ -98,7 +102,7 @@ import {
   readPendingRecords,
   withPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
-import { scanPoolForOwned } from "@/lib/services/real-sdk/pool";
+import { scanPoolForInbound } from "@/lib/services/real-sdk/pool";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   type DaemonRawTransaction,
@@ -959,7 +963,17 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     }
   }
 
-  if (stateChanged || receivedChanged || pendingChanged) {
+  // Sent copies are written at broadcast with blockHeight 0 — patch from mined state every
+  // poll so the Messages UI clears "Pending" once the tx is in WalletState.
+  const { records: sentPatched, changed: sentHeightsChanged } = patchSentMessageBlockHeights(
+    readSentRecords(rt.raw),
+    minedHeightsFromState(rt.state),
+  );
+  if (sentHeightsChanged) {
+    rt.raw = withSentRecords(rt.raw, sentPatched);
+  }
+
+  if (stateChanged || receivedChanged || pendingChanged || sentHeightsChanged) {
     // Persist the mined-block results FIRST, before the optional mempool poll: a slow (or
     // hanging) pool RPC must never delay or block the durable write of freshly-mined state
     // (#109 review — GLM-M1 / Codex-1).
@@ -974,17 +988,26 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // the pool is transiently unreachable (#109 review — Codex-2). One clock for the pass.
   const nowMs = Date.now();
   let scannedIncoming: IncomingPendingRecord[] = [];
+  const sentHashesForPool = new Set(readSentRecords(rt.raw).map((record) => record.id));
+  const poolReceived = new Map<string, SdkMessageRecord>(
+    readReceivedRecords(rt.raw).map((record) => [record.id, record] as const),
+  );
   try {
     const poolTxs = await rt.daemon.getTransactionsPool();
     // The wallet may have been locked/torn down during the await — re-check before scanning.
     if (rt.account) {
-      scannedIncoming = scanPoolForOwned(
+      const poolScan = scanPoolForInbound(
         poolTxs,
         toScanTransaction,
         txns.scanTransactionOutputs,
         rt.account.keys,
         nowMs,
+        sentHashesForPool,
       );
+      scannedIncoming = poolScan.incoming;
+      for (const inbound of poolScan.receivedMessages) {
+        applyInboundScanToReceived(poolReceived, inbound.id, inbound);
+      }
     }
   } catch (error) {
     // Warn once per runtime — a daemon lacking the pool RPC would otherwise log on every
@@ -996,8 +1019,29 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   }
   const beforeIncoming = readIncomingPendingRecords(rt.raw);
   const nextIncoming = reconcileIncomingPending(beforeIncoming, scannedIncoming, rt.state, nowMs);
-  if (nextIncoming !== beforeIncoming) {
+  const incomingChanged = nextIncoming !== beforeIncoming;
+  const minedHashes = new Set(rt.state.transactions.map((tx) => tx.hash));
+  const activeMempoolHashes = new Set(nextIncoming.map((record) => record.hash));
+  const prunedReceived = pruneStaleMempoolReceived(
+    [...poolReceived.values()],
+    activeMempoolHashes,
+    minedHashes,
+  );
+  const beforeReceivedList = readReceivedRecords(rt.raw);
+  const receivedFingerprint = (list: SdkMessageRecord[]) =>
+    [...list]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((record) => `${record.id}:${record.body}:${record.blockHeight}`)
+      .join("|");
+  const receivedListChanged =
+    receivedFingerprint(beforeReceivedList) !== receivedFingerprint(prunedReceived);
+  if (incomingChanged) {
     rt.raw = withIncomingPendingRecords(rt.raw, nextIncoming);
+  }
+  if (receivedListChanged) {
+    rt.raw = withReceivedRecords(rt.raw, prunedReceived);
+  }
+  if (incomingChanged || receivedListChanged) {
     await persistRuntime(rt);
   }
 
