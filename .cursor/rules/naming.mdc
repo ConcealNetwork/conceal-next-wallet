@@ -1,0 +1,26 @@
+---
+description: camelCase identifiers — max three words; abbreviate when needed
+alwaysApply: true
+---
+
+# Naming (variables, functions, exports)
+
+**camelCase. At most three words** per identifier (count each capitalized segment: `saveOutboundPid` = save + Outbound + Pid ✓).
+
+When a name would exceed three words, **abbreviate** — do not stack synonyms:
+
+| Avoid | Prefer |
+|-------|--------|
+| `realSdkAddressBookService` | `sdkAddrBook` |
+| `recordOutboundPaymentId` | `saveOutboundPid` |
+| `patchContactOutboundPaymentId` | `patchOutboundPid` |
+| `patchContactOutboundPidIfMissing` | `fillOutboundPid` |
+| `mockAddressBookService` | `mockAddrBook` |
+
+**Allowed short forms:** `sdk`, `mock`, `addr`, `tx`, `msg`, `pid`, `svc` (only when context is obvious).
+
+**Still OK:** domain terms that are one concept (`paymentId`, `threadKey`, `blockHeight`).
+
+**Exports:** service singletons in `lib/services/**` follow `sdkWallet`, `mockMessages`, `sdkAddrBook` — not `realSdkWalletService`.
+
+**Do not** rename public API types, React components, or i18n keys in drive-by edits; fix names you touch or new code only unless a rename task is explicit.

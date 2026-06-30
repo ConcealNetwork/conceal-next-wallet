@@ -1,4 +1,4 @@
-import { realSdkAddressBookService } from "@/lib/services/real-sdk/address-book.service";
+import { sdkAddrBook } from "@/lib/services/real-sdk/address-book.service";
 import { realSdkDepositService } from "@/lib/services/real-sdk/deposit.service";
 import { realSdkMarketService } from "@/lib/services/real-sdk/market.service";
 import { realSdkMessageService } from "@/lib/services/real-sdk/message.service";
@@ -18,7 +18,7 @@ export const realServices: WalletServices = {
   market: realSdkMarketService,
   messages: realSdkMessageService,
   deposits: realSdkDepositService,
-  addressBook: realSdkAddressBookService,
+  addressBook: sdkAddrBook,
   network: realSdkNetworkService,
   settings: realSdkSettingsService,
 };

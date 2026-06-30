@@ -186,7 +186,9 @@ export type AddressEntry = {
   id: string;
   label: string;
   address: string;
-  paymentId?: string;
+  paymentId?: string; // PID this contact uses when messaging you 
+  paymentIdTo?: string; // PID you embed when sending to this contact
+  relationship?: boolean; // True when `address`, `paymentId`, and `paymentIdTo` are all set (bilateral P2P).
   /** Built-in avatar slug (e.g. "kraken") — maps to `/brand/contacts/{slug}.png`. */
   avatar?: string;
 };
@@ -197,6 +199,8 @@ export type RawAddressEntry = {
   label: string;
   address: string;
   paymentId?: string;
+  paymentIdTo?: string;
+  relationship?: boolean;
   avatar?: string;
 };
 

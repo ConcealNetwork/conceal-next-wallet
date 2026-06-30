@@ -1,7 +1,7 @@
 "use client";
 
 import { CRYPTONOTE_MEMPOOL_TX_LIFETIME_SECONDS, MAX_MESSAGE_BODY_BYTES } from "conceal-wallet-sdk";
-import { ArrowLeft, Cog, Heart, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
+import { ArrowLeft, Cog, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
 import {
   useAddressBook,
+  useFillOutboundPid,
   useMarkMessageRead,
   useMessages,
   useSendMessage,
@@ -41,13 +42,14 @@ import {
   buildMessageListContactEntry,
   canReplyToConversation,
   conversationThreadKeyForMessage,
+  findContactForMessages,
   type MessageConversation,
   sortMessagesNewestFirst,
 } from "@/lib/messages/conversations";
+import { missThreadPid } from "@/lib/messages/relationship";
 import { isKnownSmartMessage } from "@/lib/messages/smart-message";
 import { buildConversationThreadKey } from "@/lib/messages/thread-key";
 import type { AddressEntry, Message } from "@/lib/types";
-import { parseCheckIn } from "@/lib/ui/check-in-message";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -72,6 +74,7 @@ export default function MessagesPage() {
   const messages = useMessages();
   const addressBook = useAddressBook();
   const send = useSendMessage();
+  const fillOutboundPid = useFillOutboundPid();
   const markRead = useMarkMessageRead();
   const wallet = useWalletInfo();
   const { isSyncing } = useWalletSyncStatus();
@@ -128,6 +131,14 @@ export default function MessagesPage() {
   // pass the UI but be rejected on send.
   const composeByteLength = new TextEncoder().encode(composeBody).length;
   const replyEnabled = active ? canReplyToConversation(active) : false;
+
+  useEffect(() => {
+    if (!active?.established || !active.paymentIdTo) return;
+    const contact = findContactForMessages(addressBook.data ?? [], active.messages);
+    const input = missThreadPid(contact, active.paymentIdTo, active.address);
+    if (!input) return;
+    fillOutboundPid.mutate(input);
+  }, [active, addressBook.data, fillOutboundPid.mutate]);
 
   useEffect(() => {
     if (!pendingOutgoing?.txHash) return;
@@ -213,26 +224,38 @@ export default function MessagesPage() {
       toast.error(t("messages.errReplyNeedsContact"));
       return;
     }
+    const thread = active;
     const body = draft.trim();
-    setPendingOutgoing({ threadKey: active.threadKey });
-    send.mutate(
-      {
-        recipientAddress: active.address,
-        body,
-        paymentId: active.paymentIdTo ?? undefined,
-      },
-      {
-        onSuccess: (sent) => {
-          toast.success(walletCopy.messageSendSuccess);
-          setDraft("");
-          setPendingOutgoing({ threadKey: sent.threadKey, txHash: sent.id });
+    const paymentId = thread.paymentIdTo ?? undefined;
+    const contact = findContactForMessages(addressBook.data ?? [], thread.messages);
+    const pidFill = missThreadPid(contact, thread.paymentIdTo, thread.address);
+
+    async function doSend() {
+      if (pidFill) {
+        try {
+          await fillOutboundPid.mutateAsync(pidFill);
+        } catch {
+          // Non-fatal — send still uses the thread PID.
+        }
+      }
+      setPendingOutgoing({ threadKey: thread.threadKey });
+      send.mutate(
+        { recipientAddress: thread.address, body, paymentId },
+        {
+          onSuccess: (sent) => {
+            toast.success(walletCopy.messageSendSuccess);
+            setDraft("");
+            setPendingOutgoing({ threadKey: sent.threadKey, txHash: sent.id });
+          },
+          onError: (error) => {
+            setPendingOutgoing(null);
+            messageSendError(error);
+          },
         },
-        onError: (error) => {
-          setPendingOutgoing(null);
-          messageSendError(error);
-        },
-      },
-    );
+      );
+    }
+
+    void doSend();
   }
 
   function sendCompose() {
@@ -559,11 +582,9 @@ function MessageListItem({
   const entry = buildMessageListContactEntry(message, addressBook);
 
   const preview = message.hasBody
-    ? parseCheckIn(message.body)
-      ? t("messages.listCheckIn")
-      : isKnownSmartMessage(message.body)
-        ? t("messages.listSmartMessage")
-        : message.body
+    ? isKnownSmartMessage(message.body)
+      ? t("messages.listSmartMessage")
+      : message.body
     : message.direction === "sent"
       ? t("messages.listSentNoBody")
       : "";
@@ -721,13 +742,7 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
         )}
       >
         {message.hasBody ? (
-          parseCheckIn(message.body) ? (
-            <span className="inline-flex items-center gap-1.5 font-medium">
-              <Heart className="size-3.5 fill-current" aria-hidden="true" />
-              {t("messages.checkIn")}
-            </span>
-          ) : isKnownSmartMessage(message.body) ? (
-            // Other structured commands (2FA, vault, …) — show a chip, not the raw token.
+          isKnownSmartMessage(message.body) ? (
             <span className="inline-flex items-center gap-1.5 font-medium italic opacity-90">
               <Cog className="size-3.5" aria-hidden="true" />
               {t("messages.smartMessage")}

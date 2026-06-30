@@ -1,4 +1,4 @@
-import { mockAddressBookService } from "@/lib/services/mock/address-book.service";
+import { mockAddrBook } from "@/lib/services/mock/address-book.service";
 import { mockDepositService } from "@/lib/services/mock/deposit.service";
 import { mockMarketService } from "@/lib/services/mock/market.service";
 import { mockMessageService } from "@/lib/services/mock/message.service";
@@ -14,7 +14,7 @@ export const mockServices: WalletServices = {
   market: mockMarketService,
   messages: mockMessageService,
   deposits: mockDepositService,
-  addressBook: mockAddressBookService,
+  addressBook: mockAddrBook,
   network: mockNetworkService,
   settings: mockSettingsService,
 };
