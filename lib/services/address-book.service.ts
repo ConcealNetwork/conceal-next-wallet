@@ -12,4 +12,8 @@ export interface AddressBookService {
   createEntry(input: AddressEntryInput): Promise<AddressEntry>;
   updateEntry(id: string, input: AddressEntryInput): Promise<AddressEntry>;
   deleteEntry(id: string): Promise<{ ok: true }>;
+  /** After send — overwrites `paymentIdTo`. */
+  saveOutboundPid(recipientAddress: string, paymentId: string): Promise<void>;
+  /** From thread — fills `paymentIdTo` only when unset, then evals `relationship`. */
+  fillOutboundPid(recipientAddress: string, paymentId: string): Promise<void>;
 }

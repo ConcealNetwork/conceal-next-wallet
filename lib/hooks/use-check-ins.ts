@@ -1,17 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { useMessages, useWalletInfo } from "@/lib/hooks";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAddressBook, useMessages, useWalletInfo } from "@/lib/hooks";
+import { buildPulseRows, countRedPulses } from "@/lib/messages/pulse-rows";
 import { canNotify, isOptedIn, notify, selectNewKeys } from "@/lib/notifications/notify";
-import { listWatchers } from "@/lib/storage/check-ins-store";
-import type { Message } from "@/lib/types";
-import { countOverdue, overdueInstanceKeys } from "@/lib/ui/check-ins";
+import { listDismissed } from "@/lib/storage/pulse-dismiss-store";
 import { toast } from "@/lib/ui/toast";
 
 /**
- * True once the wallet has caught up to the network tip. Check-in evaluation is
- * gated on this so an in-progress sync (which hasn't pulled recent messages yet)
- * can't raise a false "overdue".
+ * True once the wallet has caught up to the network tip.
  */
 export function useWalletSynced(): boolean {
   const info = useWalletInfo().data;
@@ -19,63 +16,56 @@ export function useWalletSynced(): boolean {
   return info.currentHeight >= info.networkHeight - 1;
 }
 
-/** Overdue watched-contact count — 0 until synced. Drives the sidebar badge. */
+/** Red-phase received pulses — sidebar badge. */
 export function useOverdueCheckInCount(): number {
   const synced = useWalletSynced();
   const messages = useMessages();
+  const addressBook = useAddressBook();
+  const [dismissed] = useState(() => listDismissed());
   if (!synced || messages.data === undefined) return 0;
-  return countOverdue(listWatchers(), messages.data, new Date().toISOString());
+  const rows = buildPulseRows(messages.data, addressBook.data ?? [], dismissed, Date.now());
+  return countRedPulses(rows);
 }
 
-/**
- * Surface a nudge when watched contacts are overdue — on first synced load, on
- * message updates, and whenever the tab returns to the foreground.
- *
- * De-dupe is per overdue-instance (contact id + its last-heard basis), not a
- * once-per-load latch, so returning to a backgrounded tab re-evaluates without
- * re-alerting contacts already announced this session. Toasts are the default;
- * OS notifications fire additionally only when opted in + permission granted.
- */
+/** Toast when a contact's pulse enters the overdue (post-grace) phase. */
 export function useCheckInAlerts(): void {
   const synced = useWalletSynced();
   const messages = useMessages();
+  const addressBook = useAddressBook();
   const ready = synced && messages.data !== undefined;
-  // Per-session memory of overdue-instances already announced.
   const announcedRef = useRef<Set<string>>(new Set());
+  const [dismissed] = useState(() => listDismissed());
 
-  const evaluate = useCallback((data: readonly Message[]) => {
-    const nowISO = new Date().toISOString();
-    const watchers = listWatchers();
-    const fresh = selectNewKeys(overdueInstanceKeys(watchers, data, nowISO), announcedRef.current);
+  const evaluate = useCallback(() => {
+    const data = messages.data ?? [];
+    const rows = buildPulseRows(data, addressBook.data ?? [], dismissed, Date.now());
+    const overdue = rows.filter((row) => row.phase === "overdue");
+    const fresh = selectNewKeys(
+      overdue.map((row) => row.messageId),
+      announcedRef.current,
+    );
     if (fresh.length === 0) return;
     for (const key of fresh) announcedRef.current.add(key);
-
-    const overdue = countOverdue(watchers, data, nowISO);
-    if (overdue > 0) {
-      toast.warning(
-        `${overdue} check-in${overdue === 1 ? "" : "s"} overdue — you may want to reach out.`,
-      );
-    }
+    toast.warning(
+      `${fresh.length} pulse${fresh.length === 1 ? "" : "s"} past grace — you may want to reach out.`,
+    );
     if (isOptedIn() && canNotify()) {
-      void notify("Check-in overdue", {
-        body: `${fresh.length} watched contact${fresh.length === 1 ? " is" : "s are"} overdue — you may want to reach out.`,
-        tag: "ccx-check-ins",
-        // Scope-relative (no leading slash) so the SW notificationclick handler
-        // deep-links under any deploy base path.
+      void notify("Pulse overdue", {
+        body: `${fresh.length} contact${fresh.length === 1 ? "" : "s"} past their pulse grace window.`,
+        tag: "ccx-pulse",
         data: { url: "wallet/check-ins" },
       });
     }
-  }, []);
+  }, [messages.data, addressBook.data, dismissed]);
 
   useEffect(() => {
     if (!ready) return;
-    const data = messages.data ?? [];
-    evaluate(data);
+    evaluate();
     if (typeof document === "undefined") return;
     const onVisible = () => {
-      if (document.visibilityState === "visible") evaluate(data);
+      if (document.visibilityState === "visible") evaluate();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [ready, messages.data, evaluate]);
+  }, [ready, evaluate]);
 }

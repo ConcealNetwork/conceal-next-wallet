@@ -220,6 +220,18 @@ export function useSendMessage() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.addressBook });
+    },
+  });
+}
+
+export function useFillOutboundPid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { recipientAddress: string; paymentId: string }) =>
+      services.addressBook.fillOutboundPid(input.recipientAddress, input.paymentId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.addressBook });
     },
   });
 }

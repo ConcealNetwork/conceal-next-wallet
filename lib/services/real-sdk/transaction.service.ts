@@ -6,6 +6,7 @@ import {
   REMOTE_NODE_FEE_ATOMIC,
   transactions as txns,
 } from "conceal-wallet-sdk";
+import { sdkAddrBook } from "@/lib/services/real-sdk/address-book.service";
 import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
 import {
   mapQueuedTransaction,
@@ -190,6 +191,14 @@ export const realSdkTransactionService: TransactionService = {
       // Non-fatal: the tx is already relayed (broadcast persisted state itself), so
       // failing the send here would invite a retry → double-spend. Losing only the
       // optimistic pending / message UI records is acceptable; sync reconciles them.
+    }
+
+    if (paymentId) {
+      try {
+        await sdkAddrBook.saveOutboundPid(input.address, paymentId);
+      } catch {
+        // Non-fatal: payment already sent.
+      }
     }
 
     const networkHeight = await rt.daemon.getHeight();

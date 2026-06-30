@@ -6,6 +6,7 @@ import {
   transactions as txns,
 } from "conceal-wallet-sdk";
 import type { MessageService, SendMessageInput } from "@/lib/services/message.service";
+import { sdkAddrBook } from "@/lib/services/real-sdk/address-book.service";
 import {
   createSentMessageRecord,
   readReceivedRecords,
@@ -137,6 +138,14 @@ export const realSdkMessageService: MessageService = {
     } catch {
       // Non-fatal: the message is already relayed, so failing here would invite a
       // retry → double-spend. Only the sender's UI copy is lost; sync reconciles it.
+    }
+
+    if (paymentId) {
+      try {
+        await sdkAddrBook.saveOutboundPid(destinationAddress, paymentId);
+      } catch {
+        // Non-fatal: message already sent; contact row can be repaired on next send.
+      }
     }
 
     return toMessage(record);
