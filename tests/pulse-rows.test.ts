@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPulseRows } from "@/lib/messages/pulse-rows";
+import { buildPulseRows, countReceivedPulses } from "@/lib/messages/pulse-rows";
 import type { AddressEntry, Message } from "@/lib/types";
 
 const BOB_PID = "b".repeat(64);
@@ -40,8 +40,26 @@ describe("buildPulseRows", () => {
     expect(rows[0].phase).toBe("ok");
   });
 
+  it("shows inbound pulse without a matching contact row", () => {
+    const rows = buildPulseRows([msg({ paymentIdFrom: null })], [], new Set(), Date.now());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].label).toBe("Bob");
+  });
+
   it("skips dismissed rows", () => {
     const rows = buildPulseRows([msg({ id: "x" })], [bob], new Set(["x"]), Date.now());
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe("countReceivedPulses", () => {
+  it("counts inbound status messages only", () => {
+    expect(
+      countReceivedPulses([
+        msg({}),
+        msg({ id: "m2", body: "plain chat", direction: "received" }),
+        msg({ id: "m3", direction: "sent" }),
+      ]),
+    ).toBe(1);
   });
 });

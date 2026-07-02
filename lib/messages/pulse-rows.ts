@@ -1,11 +1,11 @@
 import { smartPulse } from "conceal-wallet-sdk";
 
-const { parseStatusPulse, pulsePhase } = smartPulse;
+const { parseStatusPulse, pulsePhase, isStatusPulse } = smartPulse;
 type PulsePhase = smartPulse.PulsePhase;
 type StatusPulse = smartPulse.StatusPulse;
 
+import { findContactForMessages } from "@/lib/messages/conversations";
 import type { AddressEntry, Message } from "@/lib/types";
-import { normalizePaymentId, paymentIdsMatch } from "@/lib/validation/ccx";
 
 export type PulseRow = {
   messageId: string;
@@ -21,13 +21,11 @@ function matchContact(
   message: Message,
   contacts: readonly AddressEntry[],
 ): AddressEntry | undefined {
-  const pid = normalizePaymentId(message.paymentIdFrom ?? undefined);
-  if (!pid) return undefined;
-  return contacts.find((c) => c.paymentId && paymentIdsMatch(c.paymentId, pid));
+  return findContactForMessages([...contacts], [message]);
 }
 
 /**
- * Latest status pulse per known contact from inbound messages (newest wins).
+ * Latest status pulse per sender from inbound messages (newest wins).
  * Skips `dismissed` message ids.
  */
 export function buildPulseRows(
@@ -43,25 +41,31 @@ export function buildPulseRows(
     const pulse = parseStatusPulse(message.body);
     if (!pulse) continue;
     const contact = matchContact(message, contacts);
-    if (!contact) continue;
 
     const row: PulseRow = {
       messageId: message.id,
-      contactId: contact.id,
-      label: contact.label,
-      avatar: contact.avatar,
+      contactId: contact?.id ?? message.id,
+      label: contact?.label ?? message.counterpartyName,
+      avatar: contact?.avatar,
       pulse,
       phase: pulsePhase(pulse, nowMs),
       receivedAt: message.timestamp,
     };
 
-    const prev = byContact.get(contact.id);
+    const prev = byContact.get(row.contactId);
     if (!prev || message.timestamp > prev.receivedAt) {
-      byContact.set(contact.id, row);
+      byContact.set(row.contactId, row);
     }
   }
 
   return [...byContact.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** Inbound `{status,…}` messages — nav badge baseline/delta (all rows, not latest-per-contact). */
+export function countReceivedPulses(messages: readonly Message[]): number {
+  return messages.filter(
+    (message) => message.direction === "received" && isStatusPulse(message.body),
+  ).length;
 }
 
 export function countRedPulses(rows: readonly PulseRow[]): number {

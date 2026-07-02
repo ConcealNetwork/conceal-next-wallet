@@ -25,7 +25,9 @@ import {
 } from "@/lib/services/real-sdk/spend";
 import type { SettingsService } from "@/lib/services/settings.service";
 import { assertCanSpend } from "@/lib/services/view-only";
+import { resetPulseDismissed } from "@/lib/storage/pulse-dismiss-store";
 import type { OptimizationStatus, OptimizeWalletResult, WalletSettings } from "@/lib/types";
+import { pulseNavBadge } from "@/lib/ui/nav-badge-store";
 import { readSpeedFromSyncSpeed, syncSpeedFromReadSpeed } from "@/lib/ui/sync-speed";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { validateNodeUrlFormat } from "@/lib/validation/node-url";
@@ -37,6 +39,11 @@ const AUTO_LOCK_FIELD = "autoLockMinutes";
 function readAutoLockMinutes(raw: { [key: string]: unknown }): number {
   const value = Number(raw[AUTO_LOCK_FIELD] ?? 0);
   return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function resetPulseUi(): void {
+  resetPulseDismissed();
+  pulseNavBadge.reset();
 }
 
 export const realSdkSettingsService: SettingsService = {
@@ -125,6 +132,7 @@ export const realSdkSettingsService: SettingsService = {
           spentDepositIndexes: [],
         };
         raw = clearReceivedRecords(raw);
+        resetPulseUi();
       } else {
         rt.state = { ...rt.state, scannedHeight: targetHeight };
       }
@@ -223,6 +231,7 @@ export const realSdkSettingsService: SettingsService = {
       spentDepositIndexes: [],
     };
     rt.raw = clearReceivedRecords(rt.raw);
+    resetPulseUi();
     await persist();
     await sync();
     return { ok: true };

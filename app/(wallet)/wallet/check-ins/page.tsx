@@ -17,7 +17,7 @@ import { hasRelationship } from "@/lib/messages/relationship";
 const { defaultUntilDate, formatStatusPulse } = smartPulse;
 type PulseKind = smartPulse.PulseKind;
 
-import { dismissPulse, listDismissed } from "@/lib/storage/pulse-dismiss-store";
+import { usePulseDismissed } from "@/lib/hooks/use-pulse-dismissed";
 import type { AddressEntry } from "@/lib/types";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
@@ -95,7 +95,7 @@ export default function PulsePage() {
   const [kind, setKind] = useState<PulseKind>("alive");
   const [until, setUntil] = useState(() => defaultUntilDate(14));
   const [grace, setGrace] = useState("2");
-  const [dismissed, setDismissed] = useState(() => listDismissed());
+  const [dismissed, dismissRow] = usePulseDismissed();
   const [recvFilter, setRecvFilter] = useState<RecvFilter>("all");
 
   const nowMs = Date.now();
@@ -138,7 +138,7 @@ export default function PulsePage() {
   }
 
   function removeRow(messageId: string) {
-    setDismissed(dismissPulse(messageId));
+    dismissRow(messageId);
   }
 
   const canSend = sendContactId !== "" && until !== "" && until >= minUntil;

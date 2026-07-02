@@ -1,5 +1,7 @@
 const STORAGE_KEY = "ccx-pulse-dismissed";
 
+export const PULSE_DISMISS_RESET = "ccx-pulse-dismiss-reset";
+
 export function listDismissed(): Set<string> {
   if (typeof localStorage === "undefined") return new Set();
   try {
@@ -21,4 +23,14 @@ export function dismissPulse(messageId: string): Set<string> {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
   }
   return next;
+}
+
+/** Cleared on wallet re-scan so rebuilt pulses (same tx hash) show again. */
+export function resetPulseDismissed(): void {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(PULSE_DISMISS_RESET));
+  }
 }

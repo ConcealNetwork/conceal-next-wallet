@@ -14,7 +14,7 @@ import { useAppBadge } from "@/lib/hooks/use-app-badge";
 import { useCheckInAlerts } from "@/lib/hooks/use-check-ins";
 import { useDuePaymentReminders } from "@/lib/hooks/use-due-reminders";
 import { useIdleLock } from "@/lib/hooks/use-idle-lock";
-import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-messages-since-open";
+import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-since-open";
 import { useScheduledAutoSend } from "@/lib/hooks/use-scheduled-auto-send";
 import { useSecondaryWalletWatch } from "@/lib/hooks/use-secondary-wallet-watch";
 import { useSyncWakeLock } from "@/lib/hooks/use-sync-wake-lock";

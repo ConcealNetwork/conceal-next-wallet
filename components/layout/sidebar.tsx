@@ -41,11 +41,12 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
 import { useWallets } from "@/lib/hooks";
-import { useOverdueCheckInCount } from "@/lib/hooks/use-check-ins";
 import {
   useAcknowledgeMessagesSinceOpen,
+  useAcknowledgePulsesSinceOpen,
   useNewMessagesSinceOpen,
-} from "@/lib/hooks/use-new-messages-since-open";
+  useNewPulsesSinceOpen,
+} from "@/lib/hooks/use-new-since-open";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
@@ -339,20 +340,29 @@ export function SidebarContent({
 }) {
   const newMessages = useNewMessagesSinceOpen();
   const acknowledgeMessages = useAcknowledgeMessagesSinceOpen();
-  const overdueCheckIns = useOverdueCheckInCount();
+  const newPulses = useNewPulsesSinceOpen();
+  const acknowledgePulses = useAcknowledgePulsesSinceOpen();
 
   function badgeFor(item: NavItem): number | undefined {
     if (item.href === "/wallet/messages") return newMessages;
-    if (item.href === "/wallet/check-ins") return overdueCheckIns;
+    if (item.href === "/wallet/check-ins") return newPulses;
     return undefined;
   }
 
   function navigateFor(item: NavItem): (() => void) | undefined {
-    if (item.href !== "/wallet/messages") return onNavigate;
-    return () => {
-      acknowledgeMessages();
-      onNavigate?.();
-    };
+    if (item.href === "/wallet/messages") {
+      return () => {
+        acknowledgeMessages();
+        onNavigate?.();
+      };
+    }
+    if (item.href === "/wallet/check-ins") {
+      return () => {
+        acknowledgePulses();
+        onNavigate?.();
+      };
+    }
+    return onNavigate;
   }
 
   return (
