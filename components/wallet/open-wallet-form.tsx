@@ -9,7 +9,7 @@ import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import { clearAllGoals, goalsStore } from "@/lib/storage/goals-store";
 import { clearAllTxNotes } from "@/lib/storage/tx-notes";
-import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
+import { resetNavBadges } from "@/lib/ui/nav-badge-store";
 import { toast } from "@/lib/ui/toast";
 
 // The unlock UI (password + biometric enroll/unlock + multi-wallet picker) lives in
@@ -32,7 +32,7 @@ export function useWalletDisconnect() {
       try {
         await services.wallet.disconnect?.();
         queryClient.clear();
-        resetMessageNavBadge();
+        resetNavBadges();
         closeSession();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to disconnect wallet.");
@@ -63,7 +63,7 @@ export function useSwitchWalletFlow() {
     void (async () => {
       try {
         const info = await services.wallet.switchWallet(id);
-        resetMessageNavBadge();
+        resetNavBadges();
         if (info) {
           // Target already unlocked (or mock) → swap the session in place, no route
           // change (omit redirectTo so the user stays on the current page). Refresh
@@ -103,7 +103,7 @@ export function useWalletDelete() {
         clearPasskeyEnrollment(walletId);
         await goalsStore.clear(walletId).catch(() => {});
         queryClient.clear();
-        resetMessageNavBadge();
+        resetNavBadges();
         closeSession();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to delete wallet.");
@@ -151,7 +151,7 @@ export function usePanicWipe() {
         failed = true;
       }
       queryClient.clear();
-      resetMessageNavBadge();
+      resetNavBadges();
       closeSession();
       if (failed) {
         toast.error("Some local data could not be erased — please try again.");

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAddressBook, useMessages, useWalletInfo } from "@/lib/hooks";
+import { usePulseDismissed } from "@/lib/hooks/use-pulse-dismissed";
 import { buildPulseRows, countRedPulses } from "@/lib/messages/pulse-rows";
 import { canNotify, isOptedIn, notify, selectNewKeys } from "@/lib/notifications/notify";
-import { listDismissed } from "@/lib/storage/pulse-dismiss-store";
 import { toast } from "@/lib/ui/toast";
 
 /**
@@ -21,7 +21,7 @@ export function useOverdueCheckInCount(): number {
   const synced = useWalletSynced();
   const messages = useMessages();
   const addressBook = useAddressBook();
-  const [dismissed] = useState(() => listDismissed());
+  const [dismissed] = usePulseDismissed();
   if (!synced || messages.data === undefined) return 0;
   const rows = buildPulseRows(messages.data, addressBook.data ?? [], dismissed, Date.now());
   return countRedPulses(rows);
@@ -34,7 +34,7 @@ export function useCheckInAlerts(): void {
   const addressBook = useAddressBook();
   const ready = synced && messages.data !== undefined;
   const announcedRef = useRef<Set<string>>(new Set());
-  const [dismissed] = useState(() => listDismissed());
+  const [dismissed] = usePulseDismissed();
 
   const evaluate = useCallback(() => {
     const data = messages.data ?? [];

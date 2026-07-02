@@ -9,7 +9,7 @@ import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQueryClient } from "@/lib/hooks/query-provider";
 import { requestPersistentStorage } from "@/lib/hooks/use-storage-health";
 import type { WalletInfo } from "@/lib/types";
-import { resetMessageNavBadge } from "@/lib/ui/message-nav-badge";
+import { resetNavBadges } from "@/lib/ui/nav-badge-store";
 
 type WalletStatus = "locked" | "open";
 
@@ -57,7 +57,7 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (env.persistWalletSession && isHydrated && status === "open") {
-      resetMessageNavBadge();
+      resetNavBadges();
     }
   }, [isHydrated, status]);
 
@@ -73,7 +73,7 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
 
   const openSession = useCallback(
     (nextWalletInfo: WalletInfo, redirectTo?: string) => {
-      resetMessageNavBadge();
+      resetNavBadges();
       // Opening the wallet is a user gesture — request durable storage now so the
       // browser is less likely to evict the encrypted wallet (best-effort).
       void requestPersistentStorage();
