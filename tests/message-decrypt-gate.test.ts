@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
+import { messages } from "conceal-wallet-sdk";
 import { beforeAll, describe, expect, it } from "vitest";
-import { isKnownSmartMessage, isSmartMessage } from "@/lib/messages/smart-message";
+
+const { isKnownSmartMessage, isSmartMessage } = messages;
 
 /**
  * Pins the decrypt acceptance gate for smart messages (#gap-messages).

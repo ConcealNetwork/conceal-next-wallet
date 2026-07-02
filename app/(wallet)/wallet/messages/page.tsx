@@ -1,6 +1,10 @@
 "use client";
 
-import { CRYPTONOTE_MEMPOOL_TX_LIFETIME_SECONDS, MAX_MESSAGE_BODY_BYTES } from "conceal-wallet-sdk";
+import {
+  CRYPTONOTE_MEMPOOL_TX_LIFETIME_SECONDS,
+  MAX_MESSAGE_BODY_BYTES,
+  messages,
+} from "conceal-wallet-sdk";
 import { ArrowLeft, Cog, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
@@ -47,7 +51,6 @@ import {
   sortMessagesNewestFirst,
 } from "@/lib/messages/conversations";
 import { missThreadPid } from "@/lib/messages/relationship";
-import { isKnownSmartMessage } from "@/lib/messages/smart-message";
 import { buildConversationThreadKey } from "@/lib/messages/thread-key";
 import type { AddressEntry, Message } from "@/lib/types";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
@@ -582,7 +585,7 @@ function MessageListItem({
   const entry = buildMessageListContactEntry(message, addressBook);
 
   const preview = message.hasBody
-    ? isKnownSmartMessage(message.body)
+    ? messages.isKnownSmartMessage(message.body)
       ? t("messages.listSmartMessage")
       : message.body
     : message.direction === "sent"
@@ -742,7 +745,7 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
         )}
       >
         {message.hasBody ? (
-          isKnownSmartMessage(message.body) ? (
+          messages.isKnownSmartMessage(message.body) ? (
             <span className="inline-flex items-center gap-1.5 font-medium italic opacity-90">
               <Cog className="size-3.5" aria-hidden="true" />
               {t("messages.smartMessage")}

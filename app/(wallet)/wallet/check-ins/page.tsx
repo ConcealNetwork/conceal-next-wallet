@@ -1,5 +1,6 @@
 "use client";
 
+import { smartPulse } from "conceal-wallet-sdk";
 import { Heart, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,13 +13,20 @@ import { useWalletSynced } from "@/lib/hooks/use-check-ins";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { buildPulseRows } from "@/lib/messages/pulse-rows";
 import { hasRelationship } from "@/lib/messages/relationship";
-import { defaultUntilDate, formatStatusPulse, type PulseKind } from "@/lib/messages/status-pulse";
+
+const { defaultUntilDate, formatStatusPulse } = smartPulse;
+type PulseKind = smartPulse.PulseKind;
+
 import { dismissPulse, listDismissed } from "@/lib/storage/pulse-dismiss-store";
 import type { AddressEntry } from "@/lib/types";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
 const PULSE_KINDS: PulseKind[] = ["alive", "sos", "sick", "dnd"];
+
+type RecvFilter = PulseKind | "all";
+
+const RECV_FILTERS: RecvFilter[] = ["all", "alive", "sick", "dnd", "sos"];
 
 const KIND_LABEL: Record<PulseKind, string> = {
   alive: "pulse.statusAlive",
@@ -42,6 +50,36 @@ function PulseDot({ kind, phase }: { kind: PulseKind; phase: "ok" | "grace" | "o
   return <span className={cn("size-2.5 shrink-0 rounded-full", color)} aria-hidden="true" />;
 }
 
+function RecvFilterToggle({
+  active,
+  onChange,
+}: {
+  active: RecvFilter;
+  onChange: (filter: RecvFilter) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <fieldset className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
+      <legend className="sr-only">{t("pulse.filterLegend")}</legend>
+      {RECV_FILTERS.map((filter) => (
+        <button
+          key={filter}
+          type="button"
+          onClick={() => onChange(filter)}
+          aria-pressed={active === filter}
+          className={cn(
+            "min-h-9 cursor-pointer rounded-xl border border-border px-3 text-sm font-semibold text-muted-foreground transition-[border-color,color,background-color,transform] duration-200 hover:border-ring hover:text-foreground active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 motion-reduce:transition-none",
+            active === filter &&
+              "border-primary bg-primary text-primary-foreground hover:text-primary-foreground",
+          )}
+        >
+          {filter === "all" ? t("pulse.filterAll") : t(KIND_LABEL[filter])}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
 export default function PulsePage() {
   const { t } = useI18n();
   const addressBook = useAddressBook();
@@ -58,6 +96,7 @@ export default function PulsePage() {
   const [until, setUntil] = useState(() => defaultUntilDate(14));
   const [grace, setGrace] = useState("2");
   const [dismissed, setDismissed] = useState(() => listDismissed());
+  const [recvFilter, setRecvFilter] = useState<RecvFilter>("all");
 
   const nowMs = Date.now();
   const msgs = messages.data ?? [];
@@ -65,6 +104,17 @@ export default function PulsePage() {
     () => buildPulseRows(msgs, contacts, dismissed, nowMs),
     [msgs, contacts, dismissed, nowMs],
   );
+  const filtered = useMemo(
+    () =>
+      recvFilter === "all" ? received : received.filter((row) => row.pulse.kind === recvFilter),
+    [received, recvFilter],
+  );
+
+  const minUntil = defaultUntilDate(0);
+
+  function setUntilDate(value: string) {
+    setUntil(value < minUntil ? minUntil : value);
+  }
 
   function broadcast() {
     if (viewOnly || sendMessage.isPending) return;
@@ -75,6 +125,7 @@ export default function PulsePage() {
     }
     const graceDays = Number(grace);
     if (!(graceDays >= 0)) return toast.error(t("pulse.errGrace"));
+    if (until < minUntil) return;
     const body = formatStatusPulse(kind, until, graceDays);
     sendMessage.mutate(
       { recipientAddress: contact.address, body, paymentId: paymentIdTo },
@@ -90,7 +141,7 @@ export default function PulsePage() {
     setDismissed(dismissPulse(messageId));
   }
 
-  const canSend = sendContactId !== "" && until !== "";
+  const canSend = sendContactId !== "" && until !== "" && until >= minUntil;
 
   return (
     <>
@@ -135,8 +186,9 @@ export default function PulsePage() {
               <Input
                 id="pulse-until"
                 type="date"
+                min={minUntil}
                 value={until}
-                onChange={(e) => setUntil(e.target.value)}
+                onChange={(e) => setUntilDate(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -163,14 +215,19 @@ export default function PulsePage() {
         </SectionCard>
 
         <SectionCard title={t("pulse.receivedTitle")}>
+          <div className="mb-4">
+            <RecvFilterToggle active={recvFilter} onChange={setRecvFilter} />
+          </div>
           {!synced && received.length > 0 ? (
             <p className="mb-3 text-sm text-muted-foreground">{t("pulse.syncing")}</p>
           ) : null}
           {received.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("pulse.noReceived")}</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("pulse.noReceivedFilter")}</p>
           ) : (
             <ul className="divide-y divide-border">
-              {received.map((row) => (
+              {filtered.map((row) => (
                 <li
                   key={row.messageId}
                   className="flex flex-wrap items-center justify-between gap-3 py-3"

@@ -1,9 +1,7 @@
-import {
-  formatStatusPulse,
-  isStatusPulse,
-  type PulseKind,
-  parseStatusPulse,
-} from "@/lib/messages/status-pulse";
+import { smartPulse } from "conceal-wallet-sdk";
+
+const { formatStatusPulse, isStatusPulse, parseStatusPulse } = smartPulse;
+export type PulseKind = smartPulse.PulseKind;
 
 /** @deprecated Use {@link formatStatusPulse}. */
 export function formatCheckIn(status: PulseKind = "alive"): string {

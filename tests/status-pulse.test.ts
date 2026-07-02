@@ -1,10 +1,7 @@
+import { smartPulse } from "conceal-wallet-sdk";
 import { describe, expect, it } from "vitest";
-import {
-  formatStatusPulse,
-  parseStatusPulse,
-  pulsePhase,
-  untilEndMs,
-} from "@/lib/messages/status-pulse";
+
+const { formatStatusPulse, parseStatusPulse, pulsePhase, untilEndMs } = smartPulse;
 
 describe("status pulse wire format", () => {
   it("round-trips {status,alive,2026-07-02,2}", () => {
