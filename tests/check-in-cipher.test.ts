@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
+import { messages } from "conceal-wallet-sdk";
 import { beforeAll, describe, expect, it } from "vitest";
-import { isKnownSmartMessage } from "@/lib/messages/smart-message";
+
+const { isKnownSmartMessage } = messages;
+
 import { formatCheckIn, parseCheckIn } from "@/lib/ui/check-in-message";
 
 /**

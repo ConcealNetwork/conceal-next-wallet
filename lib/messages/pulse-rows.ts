@@ -1,9 +1,9 @@
-import {
-  type PulsePhase,
-  parseStatusPulse,
-  pulsePhase,
-  type StatusPulse,
-} from "@/lib/messages/status-pulse";
+import { smartPulse } from "conceal-wallet-sdk";
+
+const { parseStatusPulse, pulsePhase } = smartPulse;
+type PulsePhase = smartPulse.PulsePhase;
+type StatusPulse = smartPulse.StatusPulse;
+
 import type { AddressEntry, Message } from "@/lib/types";
 import { normalizePaymentId, paymentIdsMatch } from "@/lib/validation/ccx";
 

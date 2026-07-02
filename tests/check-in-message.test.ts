@@ -1,10 +1,8 @@
+import { messages } from "conceal-wallet-sdk";
 import { describe, expect, it } from "vitest";
-import {
-  encodeSmartMessage,
-  isKnownSmartMessage,
-  isSmartMessage,
-  parseSmartMessage,
-} from "@/lib/messages/smart-message";
+
+const { encodeSmartMessage, isKnownSmartMessage, isSmartMessage, parseSmartMessage } = messages;
+
 import { formatCheckIn, isCheckInMessage, parseCheckIn } from "@/lib/ui/check-in-message";
 
 describe("smart-message convention (conceal-2fa compatible)", () => {
