@@ -108,10 +108,9 @@ import {
   type DaemonRawTransaction,
   isRecord,
   type RawScanResult,
-  scanRawTransaction,
   toScanTransaction,
 } from "@/lib/services/real-sdk/scan";
-import { scanBatch, terminateScanPool } from "@/lib/services/real-sdk/scan-pool";
+import { desiredPoolSize, scanBatch, terminateScanPool } from "@/lib/services/real-sdk/scan-pool";
 import { parallelSyncDisabled, syncTimingEnabled } from "@/lib/services/real-sdk/sync-flags";
 import {
   DEFAULT_WALLET_ID,
@@ -912,20 +911,20 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // coverage marker) and the parallel worker-pool scan — engages ONLY on a deep catch-up
     // (`farBehind`), where the payload/worker overhead is amortized and a mid-history truncation
     // would be unrecoverable. An ordinary incremental poll (an already-synced wallet, the common
-    // case) takes the LIGHT path: a sparse `fetchSyncRange` (no miner-tx payload) + an in-thread
-    // scan (no worker round-trip for a tiny batch) — i.e. the original fast behavior. A transient
-    // tip truncation on the light path self-heals via the next poll's RESCAN_LAG window. Coverage
-    // verification: a node clamps a past-its-tip range to a short 200 OK, so a load-balanced home
-    // routed to a TRAILING backend could answer short — verification + failover catch that on the
-    // deep path; the ≤FAR_BEHIND_THRESHOLD light path accepts that rare risk for incremental speed.
-    // The scan folds into the prefetch promise so the next batch's fetch+scan overlaps this apply.
+    // case) takes the LIGHT path: a sparse `fetchSyncRange` (no miner-tx payload) + a cooperative
+    // in-thread scan (no worker round-trip for a tiny batch). Always go through `scanBatch` so the
+    // light path still YIELDS (never a tight `map()` that freezes the UI on a large RESCAN_LAG
+    // window). A transient tip truncation on the light path self-heals via the next poll's
+    // RESCAN_LAG window. Coverage verification: a node clamps a past-its-tip range to a short 200
+    // OK, so a load-balanced home routed to a TRAILING backend could answer short — verification +
+    // failover catch that on the deep path; the ≤FAR_BEHIND_THRESHOLD light path accepts that rare
+    // risk for incremental speed. The scan folds into the prefetch promise so the next batch's
+    // fetch+scan overlaps this apply.
     const fetched = useHeavyPath
       ? fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs, height)
       : fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
     const data = fetched.then((rawTxs) =>
-      useHeavyPath
-        ? scanBatch(rawTxs, rt.account.keys, profile.workers)
-        : rawTxs.map((tx) => scanRawTransaction(tx, rt.account.keys)),
+      scanBatch(rawTxs, rt.account.keys, useHeavyPath ? profile.workers : 0),
     );
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
@@ -1071,10 +1070,18 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     const ms = Date.now() - syncStartedAt;
     const blocks = scanned - startScanned;
     const perSec = ms > 0 ? Math.round((blocks / ms) * 1000) : 0;
+    // `workers` is the profile request; `pool` is what scan-pool actually spawned after the
+    // hardwareConcurrency clamp (0 = cooperative in-thread). Log both so a slow mobile sync is
+    // diagnosable from the console (pool=0 while workers>0 means the pool failed this session).
+    const cores =
+      typeof navigator !== "undefined" && navigator.hardwareConcurrency
+        ? navigator.hardwareConcurrency
+        : 0;
+    const pool = useHeavyPath && profile.workers > 0 ? desiredPoolSize(profile.workers) : 0;
     console.warn(
       `[ccx-sync] ${blocks} blocks in ${ms}ms (${perSec}/s) · batches=${batchCount} · path=${
         useHeavyPath ? "parallel" : "light"
-      } · multiSource=${multiSourceEngaged}`,
+      } · multiSource=${multiSourceEngaged} · workers=${profile.workers}→${pool} · cores=${cores}`,
     );
   }
 

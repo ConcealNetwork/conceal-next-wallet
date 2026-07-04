@@ -7,10 +7,10 @@
  *   localStorage["ccx-disable-parallel-sync"] = "1" → force the LIGHT single-node path even on a deep
  *                                                     catch-up (kill-switch to A/B the speed options)
  *
- * The worker-pool scan fold is no longer flag-gated — it's driven by the wallet's "Sync speed"
- * profile (see lib/ui/sync-speed.ts): Ultra-Violence/Nightmare request a Web Worker pool, gentler
- * levels stay in-thread. `ccx-disable-parallel-sync` remains the hard kill-switch (forces the light
- * single-node, in-thread path regardless of the chosen speed).
+ * The worker-pool scan fold is driven by the wallet's "Sync speed" profile (see
+ * lib/ui/sync-speed.ts): the default and above request a Web Worker pool; only the gentlest level
+ * stays in-thread (and still yields). `ccx-disable-parallel-sync` remains the hard kill-switch
+ * (forces the light single-node, in-thread path regardless of the chosen speed).
  */
 function readFlag(name: string): boolean {
   if (typeof localStorage === "undefined") return false;

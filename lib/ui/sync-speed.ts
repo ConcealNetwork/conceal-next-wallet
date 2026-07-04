@@ -58,15 +58,16 @@ export type SyncProfile = {
 };
 
 /**
- * Per-level profiles. The default (Hurt me plenty) keeps the current safe behavior — in-thread fold
- * (no workers) + modest multi-source — so flipping speed is purely opt-IN to more parallelism.
- * Ultra-Violence + Nightmare engage the Web Worker pool (validated bootable since the SW worker-chunk
- * fix). Nightmare = all cores + the biggest batch + the most nodes.
+ * Per-level profiles. The default (Hurt me plenty) engages the Web Worker scan pool — the legacy
+ * wallet-core always screened txs off the main thread (`ParseWorker` pool), and running the ECDH
+ * fold in-thread freezes the UI on phones (Pixel/Android included). Only "I'm too young to die"
+ * stays in-thread (battery-saver); it still yields cooperatively so the UI can paint. Nightmare =
+ * all cores + the biggest batch + the most nodes.
  */
 export const SYNC_PROFILES: Record<SyncSpeed, SyncProfile> = {
   tooYoung: { workers: 0, batchBlocks: 100, maxSources: 1 },
-  notTooRough: { workers: 0, batchBlocks: 200, maxSources: 2 },
-  hurtMePlenty: { workers: 0, batchBlocks: 250, maxSources: 3 },
+  notTooRough: { workers: 2, batchBlocks: 200, maxSources: 2 },
+  hurtMePlenty: { workers: 4, batchBlocks: 250, maxSources: 3 },
   ultraViolence: { workers: 4, batchBlocks: 500, maxSources: 4 },
   nightmare: { workers: 8, batchBlocks: 1000, maxSources: 6 },
 };

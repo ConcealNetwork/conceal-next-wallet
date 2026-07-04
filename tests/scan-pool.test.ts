@@ -2,7 +2,7 @@
 import { crypto as cc, createAccount } from "conceal-wallet-sdk";
 import { afterEach, describe, expect, it } from "vitest";
 import { type DaemonRawTransaction, scanRawTransaction } from "@/lib/services/real-sdk/scan";
-import { scanBatch, terminateScanPool } from "@/lib/services/real-sdk/scan-pool";
+import { desiredPoolSize, scanBatch, terminateScanPool } from "@/lib/services/real-sdk/scan-pool";
 import { coinbaseTxsFor } from "./test-helpers";
 
 const me = createAccount("english");
@@ -170,6 +170,50 @@ describe("scanBatch — worker pool (workers > 0)", () => {
     const got = await scanBatch(txs, keys, POOL);
     expect(got).toEqual(txs.map((t) => scanRawTransaction(t, keys)));
     expect(got).toHaveLength(12);
+  });
+});
+
+describe("desiredPoolSize — mobile core clamp", () => {
+  const originalCores = globalThis.navigator?.hardwareConcurrency;
+
+  afterEach(() => {
+    // Restore whatever the environment had (node vitest has no navigator by default).
+    if (typeof globalThis.navigator === "undefined") return;
+    Object.defineProperty(globalThis.navigator, "hardwareConcurrency", {
+      configurable: true,
+      value: originalCores,
+    });
+  });
+
+  function setCores(n: number): void {
+    // biome-ignore lint/suspicious/noExplicitAny: install a minimal navigator for the clamp test
+    if (typeof (globalThis as any).navigator === "undefined") {
+      // biome-ignore lint/suspicious/noExplicitAny: see above
+      (globalThis as any).navigator = { hardwareConcurrency: n };
+      return;
+    }
+    Object.defineProperty(globalThis.navigator, "hardwareConcurrency", {
+      configurable: true,
+      value: n,
+    });
+  }
+
+  it("on a 2-core phone (Safari privacy cap) still uses BOTH cores, not one", () => {
+    // Pre-fix: Math.min(requested, cores - 1) → 1 worker and Ultra-Violence was a no-op on mobile.
+    setCores(2);
+    expect(desiredPoolSize(4)).toBe(2);
+    expect(desiredPoolSize(8)).toBe(2);
+  });
+
+  it("on a 1-core report still returns at least 1", () => {
+    setCores(1);
+    expect(desiredPoolSize(4)).toBe(1);
+  });
+
+  it("on a desktop still reserves one core for the UI", () => {
+    setCores(8);
+    expect(desiredPoolSize(8)).toBe(7);
+    expect(desiredPoolSize(4)).toBe(4);
   });
 });
 
