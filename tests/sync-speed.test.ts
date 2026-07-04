@@ -40,8 +40,9 @@ describe("sync-speed levels (DOOM)", () => {
     }
   });
 
-  it("the default level keeps the safe in-thread fold (no workers)", () => {
-    expect(syncProfileFor(DEFAULT_SYNC_SPEED).workers).toBe(0);
+  it("the default level engages the worker-pool fold (legacy always screened off-main-thread)", () => {
+    // In-thread ECDH freezes the UI on phones; default must use workers like wallet-core did.
+    expect(syncProfileFor(DEFAULT_SYNC_SPEED).workers).toBeGreaterThan(0);
   });
 
   it("Nightmare maxes every knob; gentler levels stay calmer", () => {

@@ -6,22 +6,25 @@
  * distributes + reorders, it never changes what a scan produces.
  *
  * PROFILE-DRIVEN: the pool size is the `workers` count from the active wallet's "Sync speed" profile
- * (see lib/ui/sync-speed.ts) — `scanBatch(…, workers)`. `workers === 0` (the default "Hurt me plenty"
- * and gentler levels) means in-thread, no pool; Ultra-Violence/Nightmare request a real pool. The
+ * (see lib/ui/sync-speed.ts) — `scanBatch(…, workers)`. The default ("Hurt me plenty") requests a
+ * real pool so the ECDH fold stays OFF the main thread (legacy wallet-core always did this via
+ * `ParseWorker`s; an in-thread tight loop freezes the UI on phones). `workers === 0` ("I'm too young
+ * to die") scans in-thread but YIELDS every {@link YIELD_EVERY} txs so React can still paint. The
  * Turbopack worker chunk encodes its bootstrap config in the URL HASH (`turbopack-worker-<hash>.js
  * #params=…`); a hash never reaches the network, so a PWA service worker that cache-first-served the
  * bare chunk made the module worker's `self.location` lose the params → "Missing worker bootstrap
  * config". The service worker now keeps worker chunks OFF its cache so they load from the network with
  * the hash intact (`isWorkerChunk` in lib/pwa/precache.mjs + public/service-worker.js), so the pool
- * boots correctly (browser-validated on a real mainnet sync). Multi-source FETCH parallelism (also
- * profile-scaled via `maxSources`) is independent of this pool.
+ * boots correctly. Multi-source FETCH parallelism (also profile-scaled via `maxSources`) is
+ * independent of this pool.
  *
- * SAFETY: every failure mode falls back to the in-thread scan (no pool / no Worker support / a
- * worker error / a timeout), so the worker path can never break or stall sync — worst case it is
- * exactly as fast as the single-threaded fold. A worker that errors on LOAD never replies, so we
- * wire its `error`/`messageerror` events to tear the pool down and settle every in-flight chunk
- * in-thread IMMEDIATELY rather than waiting out {@link CHUNK_TIMEOUT_MS} per batch. The caller must
- * have run `ensureSdkReady` (the in-thread fallback uses the main-thread WASM).
+ * SAFETY: every failure mode falls back to the cooperative in-thread scan (no pool / no Worker
+ * support / a worker error / a timeout), so the worker path can never break or stall sync — worst
+ * case it is the single-threaded fold WITH event-loop yields (UI stays responsive, just slower). A
+ * worker that errors on LOAD never replies, so we wire its `error`/`messageerror` events to tear the
+ * pool down and settle every in-flight chunk in-thread IMMEDIATELY rather than waiting out
+ * {@link CHUNK_TIMEOUT_MS} per batch. The caller must have run `ensureSdkReady` (the in-thread
+ * fallback uses the main-thread WASM).
  *
  * The pool is a process-wide singleton. Concurrent `scanBatch` calls (e.g. the active wallet's sync
  * and a background secondary-wallet sync, #108) share it: requests are id-keyed and the per-tx scan
@@ -40,6 +43,33 @@ import type { ScanResponse } from "@/lib/services/real-sdk/scan-worker";
 const MAX_WORKERS = 8;
 /** Generous per-chunk fallback timeout — only trips on a genuine hang, not normal scanning. */
 const CHUNK_TIMEOUT_MS = 60_000;
+/**
+ * In-thread scan yields to the event loop this often so a deep catch-up can't freeze the UI.
+ * ~600µs/tx × 16 ≈ 10ms between paints — enough for input + React to breathe on a phone.
+ */
+const YIELD_EVERY = 16;
+
+/** Yield to the event loop (setTimeout(0) — portable, no scheduler.yield dependency). */
+function yieldToUi(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Scan on the main thread, yielding every {@link YIELD_EVERY} txs. Used when the profile requests
+ * no pool (`workers === 0`) and as the fallback when the pool fails — never a tight `map()` that
+ * blocks the UI for an entire batch.
+ */
+async function scanInThread(
+  rawTxs: DaemonRawTransaction[],
+  keys: WalletKeys,
+): Promise<(RawScanResult | null)[]> {
+  const results: (RawScanResult | null)[] = new Array(rawTxs.length);
+  for (let i = 0; i < rawTxs.length; i++) {
+    results[i] = scanRawTransaction(rawTxs[i], keys);
+    if (i > 0 && i % YIELD_EVERY === 0) await yieldToUi();
+  }
+  return results;
+}
 
 type Pending = {
   resolve: (results: (RawScanResult | null)[]) => void;
@@ -53,16 +83,22 @@ let poolFailed = false;
 const pending = new Map<number, Pending>();
 let nextRequestId = 0;
 
-/** Clamp the profile's requested worker count to [1, MAX_WORKERS] and the machine's core count. */
-function desiredPoolSize(requested: number): number {
+/**
+ * Clamp the profile's requested worker count to [1, MAX_WORKERS] and the machine's core count.
+ * Exported for unit tests (mobile `hardwareConcurrency` edge cases).
+ */
+export function desiredPoolSize(requested: number): number {
   const cores =
     typeof navigator !== "undefined" && navigator.hardwareConcurrency
       ? navigator.hardwareConcurrency
       : 4;
-  // Leave ONE core for the main thread so the UI stays responsive enough to dial the level back
-  // down — pinning ALL cores (Nightmare on an 8-core box) froze the settings UI so you couldn't
-  // escape. Still brutal (all-but-one), just not a lockout. High-core boxes still hit MAX_WORKERS.
-  return Math.max(1, Math.min(requested, MAX_WORKERS, cores - 1));
+  // On bigger machines leave ONE core for the main thread so Nightmare can't freeze the settings
+  // UI (you couldn't dial the level back down). On phones that report 2 cores — Safari historically
+  // always did, and several mobile browsers still privacy-cap at 2 — `cores - 1` collapses the
+  // pool to a SINGLE worker and erases Ultra-Violence/Nightmare parallelism. Use every reported
+  // core when there are only one or two; reserve a core only when that still leaves real fan-out.
+  const cap = cores <= 2 ? cores : cores - 1;
+  return Math.max(1, Math.min(requested, MAX_WORKERS, cap));
 }
 
 /**
@@ -158,14 +194,9 @@ function scanChunkOnWorker(
       settled = true;
       clearTimeout(timer);
       pending.delete(id);
-      try {
-        resolve(chunkTxs.map((tx) => scanRawTransaction(tx, keys)));
-      } catch (error) {
-        // The in-thread fallback itself failed — REJECT (don't leave the promise unsettled, which
-        // would wedge the whole sync). The await in syncOnce then throws and the next poll retries
-        // from `scannedHeight`, matching the pre-worker error behavior (GLM review F1).
-        reject(error);
-      }
+      // Cooperative in-thread scan (yields) — a tight map() here would freeze the UI for the
+      // whole chunk whenever the pool fails (the dominant mobile failure mode before the SW fix).
+      void scanInThread(chunkTxs, keys).then(resolve, reject);
     };
     const timer = setTimeout(fallBackInThread, CHUNK_TIMEOUT_MS);
     pending.set(id, {
@@ -184,7 +215,7 @@ function scanChunkOnWorker(
 
 /**
  * Scan a batch of raw txs across a worker pool sized to `workers` (the Sync-speed profile's count),
- * preserving order. Falls back to a straight in-thread scan when `workers <= 0` or no pool is
+ * preserving order. Falls back to a cooperative in-thread scan when `workers <= 0` or no pool is
  * available. The returned array aligns 1:1 with `rawTxs`.
  */
 export async function scanBatch(
@@ -195,7 +226,7 @@ export async function scanBatch(
   if (rawTxs.length === 0) return [];
   const pool = getPool(workers);
   if (!pool || pool.length === 0) {
-    return rawTxs.map((tx) => scanRawTransaction(tx, keys));
+    return scanInThread(rawTxs, keys);
   }
   const chunks = chunk(rawTxs, pool.length);
   const scanned = await Promise.all(
