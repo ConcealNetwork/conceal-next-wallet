@@ -101,6 +101,19 @@ by `NEXT_PUBLIC_USE_MOCK`:
 See [`CLAUDE.md`](CLAUDE.md) for a full architecture tour and
 [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started.
 
+## Cordova
+
+Build a Cordova-ready static export (real wallet, WebView-safe paths) and copy the
+patched output into the sibling [`conceal-wallet-cordova`](../conceal-wallet-cordova)
+project’s `www/` folder:
+
+```bash
+npm run cordova
+```
+
+Requires `.env.local` (see `.env.example`). Then build the APK from
+`../conceal-wallet-cordova` (e.g. `./switch.sh` or `./build-with-version.sh`).
+
 ## License
 
 [BSD-3-Clause](LICENSE) — derived from the Conceal / Masari / Karbo wallet

@@ -4,11 +4,14 @@
 // subpath and emit a fully static export. Local `next dev`/`next build` leave
 // these unset so the app is served from the root as usual.
 const basePath = process.env.PAGES_BASE_PATH ?? "";
+const isCordova = process.env.NEXT_PUBLIC_CORDOVA === "true";
 
 const nextConfig = {
   output: "export",
-  basePath,
-  assetPrefix: basePath || undefined,
+  basePath: isCordova ? "" : basePath,
+  // Cordova Android serves www/ at https://localhost/ — origin-absolute `/_next/…`
+  // works from every nested route; `./_next` breaks under e.g. /wallet/account/.
+  assetPrefix: isCordova ? undefined : basePath || undefined,
   trailingSlash: true,
   images: {
     // next/image optimization needs a server; static export can't provide one.
@@ -21,8 +24,8 @@ const nextConfig = {
   // Exposed to the client so raw asset references (CSS url(), <img src>, script tags)
   // can be prefixed with the deploy subpath — Next only prefixes Link/favicon automatically.
   env: {
-    NEXT_PUBLIC_BASE_PATH: basePath,
-    NEXT_PUBLIC_PAGES_BASE_PATH: basePath,
+    NEXT_PUBLIC_BASE_PATH: isCordova ? "" : basePath,
+    NEXT_PUBLIC_PAGES_BASE_PATH: isCordova ? "" : basePath,
   },
   // Only consulted when running the webpack bundler (`next dev --webpack`) — used
   // locally to dodge a Turbopack 16.2.9 idle-CPU spin. The Conceal crypto ships as

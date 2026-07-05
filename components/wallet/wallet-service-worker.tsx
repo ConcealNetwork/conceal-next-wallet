@@ -28,10 +28,11 @@ export function WalletServiceWorkerRegister() {
     // so source edits / HMR stop reflecting until you manually unregister it (and stale renders
     // survive a `.next` nuke). The production static export (NODE_ENV=production) still registers;
     // the forced-mock e2e is already gated off by `useMockWallet`, and the offline-PWA e2e runs a
-    // real production build.
+    // real production build. Cordova WebView has no PWA SW — skip registration there too.
     if (
       process.env.NODE_ENV !== "production" ||
       env.useMockWallet ||
+      process.env.NEXT_PUBLIC_CORDOVA === "true" ||
       !("serviceWorker" in navigator)
     ) {
       return;
