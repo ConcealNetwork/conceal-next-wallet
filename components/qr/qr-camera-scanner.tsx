@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ensureCameraPermissionForCordova } from "@/lib/cordova/camera-permission";
 
 /**
  * Live camera QR scanner. Streams the rear camera, decodes frames with jsQR, and
@@ -41,6 +42,15 @@ export function QrCameraScanner({
         return;
       }
       try {
+        const allowed = await ensureCameraPermissionForCordova();
+        if (cancelled) return;
+        if (!allowed) {
+          setError(
+            "Camera permission was denied. Allow camera access in app settings, or upload a QR image instead.",
+          );
+          return;
+        }
+
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
         });

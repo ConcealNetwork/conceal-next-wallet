@@ -2,6 +2,10 @@ import { act, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QrCameraScanner } from "@/components/qr/qr-camera-scanner";
 
+vi.mock("@/lib/cordova/camera-permission", () => ({
+  ensureCameraPermissionForCordova: vi.fn(async () => true),
+}));
+
 const stop = vi.fn();
 const getUserMedia = vi.fn();
 
