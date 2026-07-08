@@ -10,16 +10,21 @@ import {
   DUST_THRESHOLD,
   getBalance,
   getDustAmount,
-  getLockedDeposits,
   getTransactions,
-  getUnlockedDeposits,
   getUnspentOutputs,
   type OutboundQueueEntry,
   type OwnedDeposit,
+  type RawWalletV1,
   resolveWalletTransactionKind,
   type WalletState,
   type WalletTransaction,
 } from "conceal-wallet-sdk";
+import {
+  buildSpendTxMap,
+  depRef,
+  resolveDepHeight,
+  uiDepStatus,
+} from "@/lib/deposits/deposit-status";
 import {
   type IncomingPendingRecord,
   incomingPendingAtomic,
@@ -28,7 +33,11 @@ import type {
   MessageRecordsByHash,
   SdkMessageRecord,
 } from "@/lib/services/real-sdk/messages-store";
-import { type PendingTxRecord, readPendingRecords } from "@/lib/services/real-sdk/pending-store";
+import {
+  type PendingTxRecord,
+  pendingWithdrawnDepositKeys,
+  readPendingRecords,
+} from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
 import type {
   CcxAmount,
@@ -249,16 +258,17 @@ export function mapDeposit(
   deposit: OwnedDeposit,
   networkHeight: number,
   address: string,
-  spentIndexes: ReadonlySet<number>,
+  state: WalletState,
+  spendMap: ReadonlyMap<string, string>,
+  withdrawPending = false,
 ): Deposit {
-  const unlockHeight = deposit.blockHeight + deposit.term;
-  const isSpent = spentIndexes.has(deposit.globalIndex);
-  const isUnlocked = networkHeight >= unlockHeight;
-  const status = isSpent ? "spent" : isUnlocked ? "unlocked" : "active";
+  const blockHeight = resolveDepHeight(deposit, state);
+  const unlockHeight = blockHeight + deposit.term;
+  const status = uiDepStatus(deposit, networkHeight, state, spendMap);
 
   const blocksRemaining = Math.max(0, unlockHeight - networkHeight);
   const unlocksInDays = Math.ceil((blocksRemaining * AVG_BLOCK_TIME_SECONDS) / SECONDS_PER_DAY);
-  const elapsed = deposit.term > 0 ? (networkHeight - deposit.blockHeight) / deposit.term : 1;
+  const elapsed = deposit.term > 0 ? (networkHeight - blockHeight) / deposit.term : 1;
   const progressPct = Math.min(100, Math.max(0, Math.round(elapsed * 100)));
 
   const months = Math.max(1, Math.round(deposit.term / DEPOSIT_MIN_TERM_BLOCK));
@@ -276,13 +286,28 @@ export function mapDeposit(
     unlocksInDays,
     progressPct,
     address,
+    ...(withdrawPending ? { withdrawPending: true } : {}),
   };
 }
 
 /** Map all owned deposits (locked + unlocked + spent) to UI deposits. */
-export function mapDeposits(state: WalletState, networkHeight: number): Deposit[] {
-  const spent = new Set(state.spentDepositIndexes);
-  return state.deposits.map((deposit) => mapDeposit(deposit, networkHeight, state.address, spent));
+export function mapDeposits(
+  state: WalletState,
+  networkHeight: number,
+  raw?: RawWalletV1,
+): Deposit[] {
+  const pendingKeys = raw ? pendingWithdrawnDepositKeys(raw) : new Set<string>();
+  const spendMap = buildSpendTxMap(state, raw, pendingKeys);
+  return state.deposits.map((deposit) =>
+    mapDeposit(
+      deposit,
+      networkHeight,
+      state.address,
+      state,
+      spendMap,
+      pendingKeys.has(depRef(deposit)),
+    ),
+  );
 }
 
 /** Indicative annualized rate from principal / earned interest / term (blocks). */
@@ -299,10 +324,13 @@ export function deriveApr(amount: number, interest: number, term: number): numbe
 export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): WalletInfo {
   const { state } = runtime;
   const balance = getBalance(state);
-  const locked = getLockedDeposits(state, networkHeight);
-  const unlocked = getUnlockedDeposits(state, networkHeight);
-  const lockedTotal = locked.reduce((sum, d) => sum + d.amount, 0);
-  const withdrawable = unlocked.reduce((sum, d) => sum + d.amount + d.interest, 0);
+  const mapped = mapDeposits(state, networkHeight, runtime.raw);
+  const lockedTotal = mapped
+    .filter((d) => d.status === "active")
+    .reduce((sum, d) => sum + d.amount.atomic, 0);
+  const withdrawable = mapped
+    .filter((d) => d.status === "unlocked")
+    .reduce((sum, d) => sum + d.amount.atomic, 0);
 
   // Hold the balance for broadcast-but-not-yet-mined outbound txs (#96). Count ONLY
   // pending records not yet scanned into state — a record mined just before its
@@ -342,7 +370,9 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
   return {
     address: state.address,
     viewOnly: runtime.viewOnly,
-    balanceTotal: atomic(balance.total),
+    // On-chain unspent outputs (incl. inputs locked by live pending txs) + locked deposit
+    // principal + outbound-pending deposit principal not yet folded into state.
+    balanceTotal: atomic(balance.total + lockedTotal + pendingLocked),
     available: atomic(availableAtomic),
     dust: atomic(dustAtomic),
     pending: atomic(pendingOut),

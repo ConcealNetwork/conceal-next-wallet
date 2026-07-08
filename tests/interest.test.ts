@@ -38,6 +38,8 @@ describe("calculateDepositInterest — golden master (SDK)", () => {
       expect(interest(1000 * M, 21900 * 12, LOCK)).toBe(40_000_000);
       expect(interest(1000 * M, 21900 * 24, LOCK)).toBe(40_000_000);
       expect(interest(9999 * M, 21900 * 6, LOCK)).toBe(169_983_000);
+      // Integer whole-CCX deposit (5467 CCX × 6 mo, EIR 1.7%): floor(principal × 0.017).
+      expect(interest(5467 * M, 21900 * 6, LOCK)).toBe(92_939_000);
     });
 
     it("tier 2 (10000–19999 CCX, base 3.9%)", () => {

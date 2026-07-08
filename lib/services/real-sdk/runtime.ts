@@ -58,7 +58,8 @@ import {
   type DaemonClient,
   deserializeWalletState,
   encodeAddress,
-  findWithdrawnDepositIndexes,
+  findWithdrawnDepRefs,
+  isWithdrawShape,
   openStoredWallet,
   type RawWalletV1,
   type StorageAdapter,
@@ -1091,7 +1092,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
 /**
  * Apply a pre-computed {@link RawScanResult} (the parallelizable per-tx scan, from {@link
  * scanRawTransaction} — run in-thread OR offloaded to the scan worker pool) into `state`. This is
- * the STATE-DEPENDENT half of folding (`findWithdrawnDepositIndexes` reads `state.deposits`), so it
+ * the STATE-DEPENDENT half of folding (`findWithdrawnDepRefs` reads `state.deposits`), so it
  * stays strictly sequential on the main thread. Returns the same `state` ref unchanged when the tx
  * touches the wallet in no way (lets callers detect "nothing folded").
  */
@@ -1108,13 +1109,16 @@ function applyScanResult(state: WalletState, result: RawScanResult): WalletState
   } = result;
   const candidateDeposits =
     ownedDeposits.length > 0 ? [...state.deposits, ...ownedDeposits] : state.deposits;
-  const withdrawnIndexes = findWithdrawnDepositIndexes(depositInputs, candidateDeposits);
+  const withdrawnRefs =
+    depositInputs.length > 0 && isWithdrawShape(rawTransaction, depositInputs)
+      ? findWithdrawnDepRefs(depositInputs, candidateDeposits, state.spentDepositRefs)
+      : [];
 
   if (
     ownedOutputs.length === 0 &&
     inputKeyImages.length === 0 &&
     ownedDeposits.length === 0 &&
-    withdrawnIndexes.length === 0
+    withdrawnRefs.length === 0
   ) {
     return state;
   }
@@ -1131,8 +1135,8 @@ function applyScanResult(state: WalletState, result: RawScanResult): WalletState
       fee,
     },
   );
-  if (ownedDeposits.length > 0 || withdrawnIndexes.length > 0) {
-    next = applyScannedDeposits(next, ownedDeposits, withdrawnIndexes);
+  if (ownedDeposits.length > 0 || withdrawnRefs.length > 0) {
+    next = applyScannedDeposits(next, ownedDeposits, withdrawnRefs);
   }
   return next;
 }

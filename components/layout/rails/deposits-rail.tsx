@@ -35,15 +35,19 @@ export function DepositsRail({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   const { formatCcx } = useFormatters();
   const deposits = useDeposits().data;
-  const active = (deposits ?? []).filter((deposit) => deposit.status === "active");
+  const lockedDeposits = (deposits ?? []).filter((deposit) => deposit.status === "active");
+  const withdrawableDeposits = (deposits ?? []).filter((deposit) => deposit.status === "unlocked");
+  const earningDeposits = [...lockedDeposits, ...withdrawableDeposits];
 
-  const totalLocked = active.reduce((sum, d) => sum + ccxToNumber(d.amount), 0);
-  const totalInterest = active.reduce((sum, d) => sum + ccxToNumber(d.interest), 0);
+  const totalLocked = lockedDeposits.reduce((sum, d) => sum + ccxToNumber(d.amount), 0);
+  const totalInterest = earningDeposits.reduce((sum, d) => sum + ccxToNumber(d.interest), 0);
+  const earningPrincipal = earningDeposits.reduce((sum, d) => sum + ccxToNumber(d.amount), 0);
   const weightedApr =
-    totalLocked > 0
-      ? active.reduce((sum, d) => sum + ccxToNumber(d.amount) * d.apr, 0) / totalLocked
+    earningPrincipal > 0
+      ? earningDeposits.reduce((sum, d) => sum + ccxToNumber(d.amount) * d.apr, 0) /
+        earningPrincipal
       : 0;
-  const nextUnlock = active.reduce<Deposit | null>(
+  const nextUnlock = lockedDeposits.reduce<Deposit | null>(
     (soonest, d) => (!soonest || d.unlocksInDays < soonest.unlocksInDays ? d : soonest),
     null,
   );
@@ -51,7 +55,9 @@ export function DepositsRail({ embedded = false }: { embedded?: boolean }) {
     ? t(nextUnlock.unlocksInDays === 1 ? "deposits.inDaysOne" : "deposits.inDaysOther", {
         count: nextUnlock.unlocksInDays,
       })
-    : "—";
+    : withdrawableDeposits.length > 0
+      ? t("deposits.readyNow")
+      : "—";
 
   // Inline deposit calculator (same V3 estimator as the full dialog).
   const [calcAmount, setCalcAmount] = useState("1000");
