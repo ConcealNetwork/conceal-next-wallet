@@ -8,10 +8,9 @@ import {
   DEPOSIT_SMALL_WITHDRAW_FEE,
   DEPOSIT_TX_FEE,
   getBalance,
-  getLockedDeposits,
-  getUnlockedDeposits,
   transactions as txns,
 } from "conceal-wallet-sdk";
+import { buildSpendTxMap, isDepSpent, uiDepStatus } from "@/lib/deposits/deposit-status";
 import type {
   CreateDepositInput,
   DepositConstraints,
@@ -44,7 +43,7 @@ export const realSdkDepositService: DepositService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
-    return mapDeposits(rt.state, networkHeight);
+    return mapDeposits(rt.state, networkHeight, rt.raw);
   },
 
   async getDepositConstraints(): Promise<DepositConstraints> {
@@ -57,8 +56,10 @@ export const realSdkDepositService: DepositService = {
       Math.floor((balance.spendable - DEPOSIT_TX_FEE) / ATOMIC_PER_CCX),
     );
     const isWalletSyncing = rt.state.scannedHeight < networkHeight;
-    const hasPendingDeposit = getLockedDeposits(rt.state, networkHeight).some(
-      (deposit) => deposit.blockHeight === 0,
+    const hasPendingDeposit = rt.state.deposits.some(
+      (deposit) =>
+        deposit.blockHeight === 0 &&
+        !isDepSpent(deposit, rt.state, buildSpendTxMap(rt.state, rt.raw)),
     );
     return {
       maxDepositAmount,
@@ -146,7 +147,7 @@ export const realSdkDepositService: DepositService = {
     }
 
     const networkHeight = await rt.daemon.getHeight();
-    const matched = mapDeposits(rt.state, networkHeight).find(
+    const matched = mapDeposits(rt.state, networkHeight, rt.raw).find(
       (deposit) => deposit.txHash === built.hash,
     );
     if (matched) return matched;
@@ -173,7 +174,8 @@ export const realSdkDepositService: DepositService = {
       },
       networkHeight,
       rt.account.address,
-      new Set<number>(),
+      rt.state,
+      buildSpendTxMap(rt.state, rt.raw),
     );
   },
 
@@ -192,18 +194,21 @@ export const realSdkDepositService: DepositService = {
     }
 
     const networkHeight = await rt.daemon.getHeight();
-    const deposit = getUnlockedDeposits(rt.state, networkHeight).find(
+    const spendMap = buildSpendTxMap(rt.state, rt.raw, pendingWithdrawnDepositKeys(rt.raw));
+    const owned = rt.state.deposits.find(
       (entry) => entry.txHash === input.txHash && entry.globalIndex === input.globalOutputIndex,
     );
-    if (!deposit) {
-      // Distinguish "still locked" from "unknown" for a clearer message.
-      const locked = getLockedDeposits(rt.state, networkHeight).find(
-        (entry) => entry.txHash === input.txHash && entry.globalIndex === input.globalOutputIndex,
-      );
-      throw new Error(
-        locked ? "Deposit is still locked." : "Deposit not found or already withdrawn.",
-      );
+    if (!owned) {
+      throw new Error("Deposit not found or already withdrawn.");
     }
+    if (isDepSpent(owned, rt.state, spendMap)) {
+      throw new Error("Deposit not found or already withdrawn.");
+    }
+    const status = uiDepStatus(owned, networkHeight, rt.state, spendMap);
+    if (status === "active") {
+      throw new Error("Deposit is still locked.");
+    }
+    const deposit = owned;
 
     const built = txns.buildWithdrawTransaction({
       keys: rt.account.keys,

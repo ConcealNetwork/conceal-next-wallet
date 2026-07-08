@@ -129,7 +129,7 @@ export const realSdkSettingsService: SettingsService = {
           spentKeyImages: [],
           transactions: [],
           deposits: [],
-          spentDepositIndexes: [],
+          spentDepositRefs: [],
         };
         raw = clearReceivedRecords(raw);
         resetPulseUi();
@@ -228,7 +228,7 @@ export const realSdkSettingsService: SettingsService = {
       spentKeyImages: [],
       transactions: [],
       deposits: [],
-      spentDepositIndexes: [],
+      spentDepositRefs: [],
     };
     rt.raw = clearReceivedRecords(rt.raw);
     resetPulseUi();

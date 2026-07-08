@@ -45,6 +45,7 @@ import {
   useDepositPreview,
   useDeposits,
   useMarketData,
+  useWalletSyncStatus,
   useWalletViewOnly,
   useWithdrawDeposit,
 } from "@/lib/hooks";
@@ -293,36 +294,49 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
   const { t } = useI18n();
   const fmt = useFormatters();
   const { formatCcx, formatNumber } = fmt;
-  const activeDeposits = useMemo(
+  const lockedDeposits = useMemo(
     () => deposits.filter((deposit) => deposit.status === "active"),
     [deposits],
   );
+  const withdrawableDeposits = useMemo(
+    () => deposits.filter((deposit) => deposit.status === "unlocked"),
+    [deposits],
+  );
+  const earningDeposits = useMemo(
+    () => [...lockedDeposits, ...withdrawableDeposits],
+    [lockedDeposits, withdrawableDeposits],
+  );
   const price = useMarketData().data?.price.value ?? 0;
-  const totalLocked = activeDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0);
-  const totalInterest = activeDeposits.reduce(
+  const totalLocked = lockedDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0);
+  const totalInterest = earningDeposits.reduce(
     (sum, deposit) => sum + ccxToNumber(deposit.interest),
     0,
   );
-  const totalAtMaturity = totalLocked + totalInterest;
+  const totalAtMaturity =
+    earningDeposits.reduce((sum, deposit) => sum + ccxToNumber(deposit.amount), 0) + totalInterest;
+  const earningPrincipal = earningDeposits.reduce(
+    (sum, deposit) => sum + ccxToNumber(deposit.amount),
+    0,
+  );
   const weightedApr =
-    totalLocked > 0
-      ? activeDeposits.reduce(
+    earningPrincipal > 0
+      ? earningDeposits.reduce(
           (sum, deposit) => sum + ccxToNumber(deposit.amount) * deposit.apr,
           0,
-        ) / totalLocked
+        ) / earningPrincipal
       : 0;
-  const nextUnlock = activeDeposits.reduce<Deposit | null>((soonest, deposit) => {
+  const nextUnlock = lockedDeposits.reduce<Deposit | null>((soonest, deposit) => {
     if (!soonest || deposit.unlocksInDays < soonest.unlocksInDays) return deposit;
     return soonest;
   }, null);
-  const maxUnlock = activeDeposits.reduce(
+  const maxUnlock = lockedDeposits.reduce(
     (max, deposit) => Math.max(max, deposit.unlocksInDays),
     0,
   );
 
   const segments = useMemo<DepositSegment[]>(
     () =>
-      activeDeposits.map((deposit, index) => ({
+      earningDeposits.map((deposit, index) => ({
         id: deposit.id,
         amount: ccxToNumber(deposit.amount),
         apr: deposit.apr,
@@ -330,11 +344,11 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
         progressPct: deposit.progressPct,
         color: DEPOSIT_SERIES_COLORS[index % DEPOSIT_SERIES_COLORS.length],
       })),
-    [activeDeposits],
+    [earningDeposits],
   );
   const projection = useMemo(
-    () => buildProjection(activeDeposits, maxUnlock),
-    [activeDeposits, maxUnlock],
+    () => buildProjection(earningDeposits, maxUnlock),
+    [earningDeposits, maxUnlock],
   );
   const maxAmount = segments.reduce((max, segment) => Math.max(max, segment.amount), 0);
   const maxApr = segments.reduce((max, segment) => Math.max(max, segment.apr), 0);
@@ -347,10 +361,10 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
           value={totalLocked}
           formatter={(value) => formatCcx(value)}
           detail={t(
-            activeDeposits.length === 1
+            lockedDeposits.length === 1
               ? "deposits.positionsEarningOne"
               : "deposits.positionsEarningOther",
-            { count: activeDeposits.length },
+            { count: lockedDeposits.length },
           )}
           tone="deposit"
           index={0}
@@ -359,9 +373,13 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
         />
         <SummaryCard
           label={t("deposits.activeDeposits")}
-          value={activeDeposits.length}
+          value={deposits.length}
           formatter={(value) => formatNumber(Math.round(value))}
-          detail={t("deposits.timeLocksOpen")}
+          detail={
+            withdrawableDeposits.length > 0 && lockedDeposits.length === 0
+              ? t("deposits.readyToWithdraw")
+              : t("deposits.timeLocksOpen")
+          }
           tone="default"
           index={1}
           chart={<AmountBars segments={segments} max={maxAmount} />}
@@ -395,14 +413,18 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
               ? t(Math.round(value) === 1 ? "deposits.daysLabelOne" : "deposits.daysLabelOther", {
                   count: Math.round(value),
                 })
-              : t("deposits.none")
+              : withdrawableDeposits.length > 0
+                ? t("deposits.readyNow")
+                : t("deposits.none")
           }
           detail={
             nextUnlock
               ? t("deposits.maturesOn", {
                   date: formatMaturityDate(nextUnlock.unlocksInDays, fmt),
                 })
-              : t("deposits.noActiveDeposits")
+              : withdrawableDeposits.length > 0
+                ? t("deposits.readyToWithdraw")
+                : t("deposits.noActiveDeposits")
           }
           tone="default"
           index={4}
@@ -410,7 +432,7 @@ function DepositsSummary({ deposits }: { deposits: Deposit[] }) {
         />
       </div>
 
-      {activeDeposits.length > 0 ? (
+      {earningDeposits.length > 0 ? (
         <div className="grid gap-4 @4xl:grid-cols-[1.6fr_1fr]">
           <ProjectionChart
             projection={projection}
@@ -1192,6 +1214,7 @@ function DepositWithdrawButton({
   const { formatCcx } = useFormatters();
   const withdraw = useWithdrawDeposit();
   const viewOnly = useWalletViewOnly();
+  const { isSyncing } = useWalletSyncStatus();
   const [open, setOpen] = useState(false);
   const canWithdraw = canWithdrawDeposit(deposit);
   const principal = ccxToNumber(deposit.amount);
@@ -1204,6 +1227,7 @@ function DepositWithdrawButton({
       toast.error(walletCopy.viewOnlyDepositDisabled);
       return;
     }
+    if (isSyncing) return;
     withdraw.mutate(
       { txHash: deposit.txHash, globalOutputIndex: deposit.globalOutputIndex },
       {
@@ -1232,9 +1256,15 @@ function DepositWithdrawButton({
         type="button"
         variant={canWithdraw ? "default" : "outline"}
         size={size}
-        disabled={!canWithdraw || withdraw.isPending || viewOnly}
+        disabled={!canWithdraw || withdraw.isPending || viewOnly || isSyncing}
         onClick={() => setOpen(true)}
-        title={viewOnly ? walletCopy.viewOnlyDepositDisabled : undefined}
+        title={
+          viewOnly
+            ? walletCopy.viewOnlyDepositDisabled
+            : isSyncing
+              ? t("deposits.syncingHint")
+              : undefined
+        }
         className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
       >
         {viewOnly ? (
@@ -1273,7 +1303,11 @@ function DepositWithdrawButton({
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               {t("action.cancel")}
             </Button>
-            <Button type="button" onClick={confirmWithdraw} disabled={withdraw.isPending}>
+            <Button
+              type="button"
+              onClick={confirmWithdraw}
+              disabled={withdraw.isPending || isSyncing}
+            >
               {withdraw.isPending ? t("deposits.withdrawing") : t("deposits.confirmAndWithdraw")}
             </Button>
           </DialogFooter>

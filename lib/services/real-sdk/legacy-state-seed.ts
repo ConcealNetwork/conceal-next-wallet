@@ -97,7 +97,7 @@ function spentKeyImagesOf(tx: Record<string, unknown>): string[] {
   const images: string[] = [];
   for (const input of ins) {
     if (!isRecord(input)) continue;
-    if (str(input.type) === DEPOSIT_TYPE) continue; // deposit withdrawals tracked via spentDepositIndexes
+    if (str(input.type) === DEPOSIT_TYPE) continue; // deposit withdrawals tracked via spentDepositRefs
     const keyImage = str(input.keyImage);
     if (keyImage) images.push(keyImage);
   }
@@ -148,13 +148,13 @@ export function seedStateFromLegacyBlob(account: Account, raw: RawWalletV1): Wal
 
   if (deposits.length > 0) {
     const owned = deposits.map(toOwnedDeposit);
-    const withdrawnIndexes = deposits
+    const withdrawnRefs = deposits
       .filter((d) => str(d.spentTx) !== "")
-      .map((d) => num(d.globalOutputIndex));
+      .map((d) => `${str(d.txHash)}:${num(d.globalOutputIndex)}`);
     for (const deposit of owned) {
       if (deposit.blockHeight > maxHeight) maxHeight = deposit.blockHeight;
     }
-    state = applyScannedDeposits(state, owned, withdrawnIndexes);
+    state = applyScannedDeposits(state, owned, withdrawnRefs);
   }
 
   // Resume exactly at the legacy synced tip (never below the highest scanned block).
