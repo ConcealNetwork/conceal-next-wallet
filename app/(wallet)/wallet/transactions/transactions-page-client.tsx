@@ -156,10 +156,10 @@ export default function TransactionsPageClient() {
     setCurrentPage(1);
   }
 
-  function handleExportCsv() {
+  async function handleExportCsv() {
     // Export the current filtered/searched view (WYSIWYG), not just the visible page.
     try {
-      downloadCsvFile(transactionCsvFilename(active), transactionsToCsv(filtered));
+      await downloadCsvFile(transactionCsvFilename(active), transactionsToCsv(filtered));
       toast.success(
         filtered.length === 1
           ? t("txn.exportSuccessOne")
@@ -216,7 +216,7 @@ export default function TransactionsPageClient() {
             type="button"
             variant="outline"
             className="gap-2"
-            onClick={handleExportCsv}
+            onClick={() => void handleExportCsv()}
             disabled={filtered.length === 0}
             title={filtered.length === 0 ? t("txn.exportEmpty") : undefined}
           >

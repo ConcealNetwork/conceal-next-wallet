@@ -12,7 +12,7 @@ export function backupDownloadFilename(name: string): string {
   return stem.endsWith(".json") ? stem : `${stem}.json`;
 }
 
-export function downloadJsonFile(filename: string, data: unknown): void {
+export function downloadJsonFile(filename: string, data: unknown): Promise<void> {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  triggerBlobDownload(backupDownloadFilename(filename), blob);
+  return triggerBlobDownload(backupDownloadFilename(filename), blob);
 }

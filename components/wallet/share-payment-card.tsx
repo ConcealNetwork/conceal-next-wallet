@@ -78,9 +78,13 @@ export function SharePaymentCard({
     };
   }, [open, qrValue, address, amountLabel, t]);
 
-  function handleSave() {
+  async function handleSave() {
     if (!blob) return;
-    downloadQrPng(paymentCardFilename(address.slice(0, 12)), blob);
+    try {
+      await downloadQrPng(paymentCardFilename(address.slice(0, 12)), blob);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save the image.");
+    }
   }
 
   async function handleShare() {
@@ -144,7 +148,7 @@ export function SharePaymentCard({
             variant="outline"
             className="w-full gap-2"
             disabled={!blob}
-            onClick={handleSave}
+            onClick={() => void handleSave()}
           >
             <Download className="size-4" aria-hidden="true" />
             {t("receive.saveImage")}

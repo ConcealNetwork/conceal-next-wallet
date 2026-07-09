@@ -1,3 +1,5 @@
+import { isCordovaAndroid, isCordovaShell, whenCordovaReady } from "@/lib/cordova/runtime";
+
 type PermissionStatus = { hasPermission: boolean };
 
 type CordovaPermissions = {
@@ -21,18 +23,15 @@ type CordovaWindow = Window & {
   };
 };
 
-function whenCordovaReady(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if ((window as CordovaWindow).cordova) return Promise.resolve();
-  // cordova.js is injected in mobile builds; on web there is nothing to wait for.
-  if (!document.querySelector('script[src*="cordova.js"]')) return Promise.resolve();
-  return new Promise((resolve) => {
-    document.addEventListener("deviceready", () => resolve(), { once: true });
-  });
-}
+async function whenCordovaPermissionsReady(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (!isCordovaShell()) return;
 
-function isCordovaAndroid(): boolean {
-  return (window as CordovaWindow).cordova?.platformId === "android";
+  const w = window as CordovaWindow;
+  // cordova.js can load before deviceready; plugins are not ready until then.
+  if (w.cordova?.platformId && w.cordova?.plugins?.permissions) return;
+
+  await whenCordovaReady();
 }
 
 function getPermissionsPlugin(): CordovaPermissions | null {
@@ -65,11 +64,11 @@ function requestCameraPermission(permissions: CordovaPermissions): Promise<boole
  * via cordova-plugin-android-permissions. No-op on web and other platforms.
  */
 export async function ensureCameraPermissionForCordova(): Promise<boolean> {
-  await whenCordovaReady();
+  await whenCordovaPermissionsReady();
   if (!isCordovaAndroid()) return true;
 
   const permissions = getPermissionsPlugin();
-  if (!permissions) return true;
+  if (!permissions) return false;
 
   if (await checkCameraPermission(permissions)) return true;
   return requestCameraPermission(permissions);

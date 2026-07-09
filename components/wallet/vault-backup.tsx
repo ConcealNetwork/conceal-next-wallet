@@ -57,7 +57,7 @@ export function VaultBackup() {
     try {
       const file = await buildVaultFile(password, new Date().toISOString());
       const stem = `conceal-device-data-${new Date().toISOString().slice(0, 10)}`;
-      downloadJsonFile(backupDownloadFilename(stem), file);
+      await downloadJsonFile(backupDownloadFilename(stem), file);
       toast.success("Encrypted backup downloaded.");
       close();
     } catch (error) {

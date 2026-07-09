@@ -147,7 +147,7 @@ export function qrPngFilename(label: string): string {
 }
 
 /** Trigger a browser download of a PNG Blob (same anchor pattern as the CSV/JSON exports). */
-export function downloadQrPng(filename: string, blob: Blob): void {
+export function downloadQrPng(filename: string, blob: Blob): Promise<void> {
   const name = filename.endsWith(".png") ? filename : `${filename}.png`;
-  triggerBlobDownload(name, blob);
+  return triggerBlobDownload(name, blob);
 }

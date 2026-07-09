@@ -17,8 +17,8 @@ export function transactionCsvFilename(activeFilter = "All", now = new Date()): 
   return `conceal-transactions${slug}-${date}.csv`;
 }
 
-export function downloadCsvFile(filename: string, csv: string): void {
+export function downloadCsvFile(filename: string, csv: string): Promise<void> {
   const name = filename.endsWith(".csv") ? filename : `${filename}.csv`;
   const blob = new Blob([CSV_BOM, csv], { type: "text/csv;charset=utf-8" });
-  triggerBlobDownload(name, blob);
+  return triggerBlobDownload(name, blob);
 }

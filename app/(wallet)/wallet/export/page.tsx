@@ -50,7 +50,7 @@ export default function ExportPage() {
         filename: backupName,
         password: backupPassword,
       });
-      downloadJsonFile(result.filename, result.payload);
+      await downloadJsonFile(result.filename, result.payload);
       toast.success(walletCopy.downloadBackupSuccess);
       setDownloadOpen(false);
       setBackupPassword("");
