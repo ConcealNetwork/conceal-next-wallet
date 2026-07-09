@@ -108,7 +108,7 @@ export default function ReceivePage() {
     if (!paymentUri) return;
     try {
       const blob = await qrToPngBlob(paymentUri);
-      downloadQrPng(qrPngFilename(address.slice(0, 12)), blob);
+      await downloadQrPng(qrPngFilename(address.slice(0, 12)), blob);
       toast.success(t("receive.qrSaved"));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("receive.qrSaveError"));

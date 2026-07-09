@@ -1,3 +1,5 @@
+import { isCordovaShell } from "@/lib/cordova/runtime";
+import { saveBlobInCordova } from "@/lib/cordova/save-blob";
 import type { ExportWalletData } from "@/lib/services/wallet.service";
 import { qrToDataUrl } from "@/lib/ui/qr-png";
 import { formatWalletBackupMarkdown } from "@/lib/ui/wallet-export-backup";
@@ -156,7 +158,12 @@ export async function downloadWalletExportPdf(data: ExportWalletData): Promise<s
     warningY,
   );
 
-  doc.save(PDF_FILENAME);
+  if (isCordovaShell()) {
+    const blob = doc.output("blob") as Blob;
+    await saveBlobInCordova(PDF_FILENAME, blob);
+  } else {
+    doc.save(PDF_FILENAME);
+  }
   return PDF_FILENAME;
 }
 
