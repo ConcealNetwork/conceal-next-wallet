@@ -37,7 +37,7 @@ describe("downloadCsvFile", () => {
     URL.revokeObjectURL = vi.fn();
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
 
-    downloadCsvFile("conceal-transactions-2026-06-16.csv", "Date\r\n");
+    await downloadCsvFile("conceal-transactions-2026-06-16.csv", "Date\r\n");
 
     expect(captured?.type).toBe("text/csv;charset=utf-8");
     const bytes = new Uint8Array((await captured?.arrayBuffer()) ?? new ArrayBuffer(0));
