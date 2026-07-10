@@ -1,10 +1,9 @@
+import { exportCordovaBlob } from "@/lib/cordova/export-blob";
 import { isCordovaShell } from "@/lib/cordova/runtime";
-import { saveBlobInCordova } from "@/lib/cordova/save-blob";
 
 /**
  * Trigger a download of a Blob. On desktop browsers this uses a transient anchor
- * click; in Cordova WebView it opens the native share sheet so the user can save
- * the file (Android ignores `<a download>` for blob URLs).
+ * click; in Cordova it opens the native Save dialog (SAF — user picks Downloads, etc.).
  */
 export async function triggerBlobDownload(filename: string, blob: Blob): Promise<void> {
   if (typeof window === "undefined") {
@@ -12,7 +11,7 @@ export async function triggerBlobDownload(filename: string, blob: Blob): Promise
   }
 
   if (isCordovaShell()) {
-    await saveBlobInCordova(filename, blob);
+    await exportCordovaBlob(filename, blob);
     return;
   }
 
