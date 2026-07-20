@@ -1,4 +1,5 @@
 import { CoinUri } from "@/lib/ui/coin-uri";
+import { paymentIdIsValid } from "@/lib/validation/ccx";
 
 export type ScannedSendDraft = {
   address: string;
@@ -37,4 +38,21 @@ export function parseScannedSendPayload(payload: string): ScannedSendDraft | nul
   }
 
   return { address: trimmed };
+}
+
+/** Extract a payment ID from a QR — raw hex PID, or `payment_id` from a payment URI. */
+export function parseScannedPaymentId(payload: string): string | null {
+  const trimmed = payload.trim();
+  if (!trimmed) return null;
+
+  try {
+    const tx = CoinUri.decodeTx(trimmed);
+    const fromUri = tx?.paymentId?.trim() ?? "";
+    if (fromUri && paymentIdIsValid(fromUri)) return fromUri;
+  } catch {
+    // Fall through to raw PID.
+  }
+
+  if (trimmed !== "" && paymentIdIsValid(trimmed)) return trimmed;
+  return null;
 }

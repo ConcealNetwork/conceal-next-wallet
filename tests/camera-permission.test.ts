@@ -120,4 +120,29 @@ describe("ensureCameraPermissionForCordova", () => {
     await expect(pending).resolves.toBe(true);
     expect(checkPermission).toHaveBeenCalled();
   });
+
+  it("waits for the permissions plugin even after platformId is set", async () => {
+    mockCordovaScriptInDom();
+    const checkPermission = vi.fn((_perm: string, ok: (s: { hasPermission: boolean }) => void) => {
+      ok({ hasPermission: true });
+    });
+    // platformId alone used to make us skip waiting — then return false with no dialog.
+    vi.stubGlobal("window", { cordova: { platformId: "android", plugins: {} } });
+
+    const pending = ensureCameraPermissionForCordova();
+    await Promise.resolve();
+    (window as Window & { cordova?: unknown }).cordova = {
+      platformId: "android",
+      plugins: {
+        permissions: {
+          CAMERA: "android.permission.CAMERA",
+          checkPermission,
+          requestPermission: vi.fn(),
+        },
+      },
+    };
+
+    await expect(pending).resolves.toBe(true);
+    expect(checkPermission).toHaveBeenCalled();
+  });
 });
