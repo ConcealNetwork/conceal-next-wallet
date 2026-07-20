@@ -1,4 +1,5 @@
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
+import { isTtlExpired } from "@/lib/messages/ttl";
 import { mockMessages } from "@/lib/mock-data/wallet";
 import type { MessageService } from "@/lib/services/message.service";
 import { mockAddrBook } from "@/lib/services/mock/address-book.service";
@@ -7,9 +8,19 @@ import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import { assertCanSpend } from "@/lib/services/view-only";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 
+/** Drop clock-expired TTL rows from the in-memory mock list (mirrors real blob prune). */
+function dropExpiredMock(): void {
+  for (let i = mockMessages.length - 1; i >= 0; i -= 1) {
+    if (isTtlExpired(mockMessages[i]?.ttlExpiresAt)) {
+      mockMessages.splice(i, 1);
+    }
+  }
+}
+
 export const mockMessageService: MessageService = {
   async listMessages() {
     await mockDelay();
+    dropExpiredMock();
     return clone(mockMessages);
   },
   async sendMessage(input) {
@@ -19,9 +30,10 @@ export const mockMessageService: MessageService = {
     if (paymentId) {
       await mockAddrBook.saveOutboundPid(input.recipientAddress, paymentId);
     }
-    return {
+    const ttlUnix = input.ttlUnix && input.ttlUnix > 0 ? input.ttlUnix : undefined;
+    const sent = {
       id: `msg-mock-${Date.now()}`,
-      direction: "sent",
+      direction: "sent" as const,
       counterpartyName: "New Contact",
       counterpartyAddress: input.recipientAddress,
       body: input.body,
@@ -33,7 +45,10 @@ export const mockMessageService: MessageService = {
       unread: false,
       blockHeight: 0,
       threadKey: buildMessageThreadKey(input.recipientAddress, paymentId),
+      ...(ttlUnix ? { ttlExpiresAt: ttlUnix } : {}),
     };
+    mockMessages.unshift(sent);
+    return clone(sent);
   },
   async markRead(id) {
     await mockDelay();

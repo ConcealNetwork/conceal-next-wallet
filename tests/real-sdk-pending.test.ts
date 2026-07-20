@@ -78,6 +78,15 @@ describe("pending-store (#96)", () => {
     expect(survivors).toHaveLength(0);
   });
 
+  it("drops a message-TTL pending once wall-clock expiry passes (safe early unlock)", () => {
+    // TTL mempool txs cannot mine after expiry — releasing inputs early is correct.
+    const nowMs = T0_MS + 60_000;
+    const nowUnix = Math.floor(nowMs / 1000);
+    const raw = addPendingRecord(baseRaw(), record({ ttlExpiresAt: nowUnix - 1 }));
+    const survivors = prunePendingRecords(raw, stateWithTxHashes([]), nowMs);
+    expect(survivors).toHaveLength(0);
+  });
+
   it("never expires a pending tx before the network mempool lifetime (no early input unlock)", async () => {
     // Pruning before a tx can no longer be mined would release its input lock and let a
     // follow-up send double-spend those inputs (reviewer consensus: agy + GLM).

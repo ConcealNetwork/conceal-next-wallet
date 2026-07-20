@@ -9,6 +9,7 @@ import type { MessageService, SendMessageInput } from "@/lib/services/message.se
 import { sdkAddrBook } from "@/lib/services/real-sdk/address-book.service";
 import {
   createSentMessageRecord,
+  dropExpiredTtl,
   readReceivedRecords,
   readSentRecords,
   type SdkMessageRecord,
@@ -47,6 +48,16 @@ export const realSdkMessageService: MessageService = {
     // Surface received messages reconstructed during sync alongside sent copies; a
     // fresh sync is what populates inbound history (no-op once caught up).
     await sync();
+    // Drop clock-expired TTL copies before the UI (and any follow-on export) sees them.
+    const ttlDrop = dropExpiredTtl(rt.raw);
+    if (ttlDrop.changed) {
+      rt.raw = ttlDrop.raw;
+      try {
+        await persist();
+      } catch {
+        // Non-fatal: in-memory list is still pruned for this response.
+      }
+    }
     return allRecords(rt)
       .map(toMessage)
       .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -125,12 +136,14 @@ export const realSdkMessageService: MessageService = {
     await broadcast(rt, built);
     rt.raw = addPendingRecord(rt.raw, {
       hash: built.hash,
+      type: "message",
       amountAtomic:
         destinationAddress === rt.account.address ? built.fee : built.sentAmount + built.fee,
       timestampIso: new Date().toISOString(),
       address: destinationAddress,
       ...(paymentId ? { paymentId } : {}),
       spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+      ...(hasTtl ? { ttlExpiresAt: ttlUnixSeconds } : {}),
     });
     rt.raw = withSentRecords(rt.raw, [...readSentRecords(rt.raw), record]);
     try {

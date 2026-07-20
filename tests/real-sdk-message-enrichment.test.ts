@@ -153,4 +153,32 @@ describe("mapTransactions — message enrichment", () => {
     expect(row?.type).toBe("send");
     expect(row?.outgoing).toBeUndefined();
   });
+
+  it("hides pending TTL message txs once wall-clock expiry has passed", () => {
+    const alice = createAccount("english");
+    const state = { ...createWalletState(alice), transactions: [] };
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const hash = "ttl-pending-hash";
+    const sent = createSentMessageRecord({
+      hash,
+      recipientAddress: createAccount("english").address,
+      body: "ephemeral",
+      timestampIso: new Date().toISOString(),
+      ttlExpiresAt: nowUnix - 30,
+    });
+    const raw = withSentRecords(EMPTY_RAW, [sent]);
+    const pending = [
+      {
+        hash,
+        type: "message" as const,
+        amountAtomic: MESSAGE_TX_AMOUNT_ATOMIC,
+        timestampIso: new Date().toISOString(),
+        address: sent.counterpartyAddress,
+        spentKeyImages: ["ki"],
+        ttlExpiresAt: nowUnix - 30,
+      },
+    ];
+    const rows = mapTransactions(state, 10, pending, [], indexMessageRecords(raw));
+    expect(rows.find((tx) => tx.hash === hash)).toBeUndefined();
+  });
 });

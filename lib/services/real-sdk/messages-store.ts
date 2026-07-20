@@ -20,6 +20,12 @@ import {
   type WalletState,
 } from "conceal-wallet-sdk";
 import { buildMessageThreadKey } from "@/lib/messages/thread-key";
+import { isTtlExpired } from "@/lib/messages/ttl";
+import {
+  readIncomingPendingRecords,
+  withIncomingPendingRecords,
+} from "@/lib/services/real-sdk/incoming-pending-store";
+import { readPendingRecords, withPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import type { Message } from "@/lib/types";
 import { normalizePaymentId } from "@/lib/validation/ccx";
 
@@ -180,6 +186,77 @@ export function pruneStaleMempoolReceived(
     if (minedHashes.has(record.id)) return true;
     return activeMempoolHashes.has(record.id);
   });
+}
+
+/**
+ * Drop unconfirmed records whose TTL has elapsed. Mined rows (`blockHeight > 0`) and
+ * non-TTL / still-live TTL rows are kept. Pure — callers persist onto the wallet blob.
+ */
+export function pruneExpiredTtl(
+  records: SdkMessageRecord[],
+  nowUnix = Math.floor(Date.now() / 1000),
+): SdkMessageRecord[] {
+  return records.filter(
+    (record) => !(isTtlExpired(record.ttlExpiresAt, nowUnix) && record.blockHeight === 0),
+  );
+}
+
+/**
+ * Remove expired TTL copies from the blob: sent/received message bodies AND matching
+ * optimistic pending / incoming-pending tx rows (0-conf only). After expiry they must
+ * not linger in history or wallet export as forever-pending.
+ */
+export function dropExpiredTtl(
+  raw: RawWalletV1,
+  nowUnix = Math.floor(Date.now() / 1000),
+): { raw: RawWalletV1; changed: boolean } {
+  const sent = readSentRecords(raw);
+  const received = readReceivedRecords(raw);
+  const expiredHashes = new Set<string>();
+  for (const record of sent) {
+    if (isTtlExpired(record.ttlExpiresAt, nowUnix) && record.blockHeight === 0) {
+      expiredHashes.add(record.id);
+    }
+  }
+  for (const record of received) {
+    if (isTtlExpired(record.ttlExpiresAt, nowUnix) && record.blockHeight === 0) {
+      expiredHashes.add(record.id);
+    }
+  }
+
+  const nextSent = pruneExpiredTtl(sent, nowUnix);
+  const nextReceived = pruneExpiredTtl(received, nowUnix);
+  const nextSentHashes = new Set(nextSent.map((record) => record.id));
+  const pending = readPendingRecords(raw);
+  const nextPending = pending.filter((record) => {
+    if (expiredHashes.has(record.hash)) return false;
+    if (isTtlExpired(record.ttlExpiresAt, nowUnix)) return false;
+    // Orphan message pending: sent copy already TTL-pruned (or never written).
+    if (record.type === "message" && !nextSentHashes.has(record.hash)) return false;
+    return true;
+  });
+  const incoming = readIncomingPendingRecords(raw);
+  const nextIncoming = incoming.filter((record) => !expiredHashes.has(record.hash));
+
+  const messagesChanged =
+    nextSent.length !== sent.length || nextReceived.length !== received.length;
+  const pendingChanged = nextPending.length !== pending.length;
+  const incomingChanged = nextIncoming.length !== incoming.length;
+  if (!messagesChanged && !pendingChanged && !incomingChanged) {
+    return { raw, changed: false };
+  }
+
+  let nextRaw = raw;
+  if (messagesChanged) {
+    nextRaw = withReceivedRecords(withSentRecords(nextRaw, nextSent), nextReceived);
+  }
+  if (pendingChanged) {
+    nextRaw = withPendingRecords(nextRaw, nextPending);
+  }
+  if (incomingChanged) {
+    nextRaw = withIncomingPendingRecords(nextRaw, nextIncoming);
+  }
+  return { raw: nextRaw, changed: true };
 }
 
 /** A short display name for an address with no saved contact. */
