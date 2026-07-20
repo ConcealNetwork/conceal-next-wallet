@@ -118,6 +118,8 @@ export type Transaction = {
   message?: string;
   /** Standalone message txs only — true when this wallet sent the 0.0001 CCX envelope. */
   outgoing?: boolean;
+  /** Mempool message TTL (unix seconds); used to refetch/hide after wall-clock expiry. */
+  ttlExpiresAt?: number;
 };
 
 export type DepositStatus = "active" | "unlocked" | "spent";

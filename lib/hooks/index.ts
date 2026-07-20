@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useMutation, useQuery, useQueryClient } from "@/lib/hooks/query-provider";
 import { sortMessagesNewestFirst } from "@/lib/messages/conversations";
+import { ttlRefetchMs } from "@/lib/messages/ttl";
 import { fetchSmartNodes } from "@/lib/network/smart-nodes";
 import { services } from "@/lib/services";
 import type { AddressEntryInput } from "@/lib/services/address-book.service";
@@ -23,6 +24,11 @@ import type { Message, WalletInfo, WalletSettings, WalletSummary } from "@/lib/t
 import { isWalletSyncing, walletSyncPercent } from "@/lib/ui/wallet-sync";
 
 export { queryKeys };
+
+/** Refetch when the soonest live TTL message expires (wall-clock, not block height). */
+function messagesTtlInterval(query: { state: { data: Message[] | undefined } }): number | false {
+  return ttlRefetchMs(query.state.data);
+}
 
 // Live-refresh cadence (#112). Under the SDK engine nothing pushes a sync event to the
 // query cache and `getWalletInfo` only syncs on demand, so an open page never reflected
@@ -157,9 +163,16 @@ export function useWalletLiveSync() {
 }
 
 export function useTransactions() {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: queryKeys.transactions,
     queryFn: () => services.transactions.listTransactions(),
+    // Drive off pending rows' own `ttlExpiresAt` (not the messages cache): after messages
+    // prune on expiry the messages list no longer has TTL entries, so an interval keyed
+    // only off messages would go `false` and leave stale pending txs on screen.
+    refetchInterval: (query) =>
+      ttlRefetchMs(query.state.data) ||
+      ttlRefetchMs(queryClient.getQueryData<Message[]>(queryKeys.messages)),
   });
 }
 
@@ -200,10 +213,25 @@ export function useMarketData() {
 }
 
 export function useMessages() {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: queryKeys.messages,
-    queryFn: () => services.messages.listMessages(),
+    queryFn: async () => {
+      const previous = queryClient.getQueryData<Message[]>(queryKeys.messages);
+      const list = await services.messages.listMessages();
+      // listMessages runs dropExpiredTtl (pending outs too). If a TTL row vanished,
+      // force history + balance to refetch — txs interval alone can miss this tick.
+      const prevTtlIds = new Set((previous ?? []).filter((m) => m.ttlExpiresAt).map((m) => m.id));
+      if (prevTtlIds.size > 0 && [...prevTtlIds].some((id) => !list.some((m) => m.id === id))) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+      }
+      return list;
+    },
     ...messagesQueryOptions,
+    // Height-based invalidation alone misses clock-TTL expiry; schedule a refetch
+    // for the soonest future `ttlExpiresAt` so expired rows disappear promptly.
+    refetchInterval: messagesTtlInterval,
   });
 }
 

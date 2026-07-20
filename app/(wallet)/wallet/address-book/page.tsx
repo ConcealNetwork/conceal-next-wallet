@@ -1,7 +1,17 @@
 "use client";
 
-import { ArrowLeftRight, LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeftRight,
+  Eye,
+  EyeOff,
+  LayoutGrid,
+  Pencil,
+  Plus,
+  Search,
+  Table2,
+  Trash2,
+} from "lucide-react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { AddressBookRail } from "@/components/layout/rails/address-book-rail";
 import { usePageRightRail } from "@/components/layout/right-rail";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
@@ -11,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CopyButton, EmptyState, PageHeader, SectionCard } from "@/components/wallet/common";
 import { ContactAvatar } from "@/components/wallet/contact-avatar";
+import { ContactExpandPanel } from "@/components/wallet/contact-expand";
 import {
   useAddressBook,
   useCreateAddressEntry,
@@ -43,7 +54,12 @@ export default function AddressBookPage() {
   const [paymentId, setPaymentId] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   usePageRightRail(<AddressBookRail />);
+
+  function toggleExpand(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_KEY);
@@ -233,52 +249,61 @@ export default function AddressBookPage() {
                   {t("addressBook.noMatch", { query })}
                 </p>
               ) : view === "cards" ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 transition-colors duration-200 hover:border-ring/50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <ContactAvatar
-                          entry={entry}
-                          className="size-12 shrink-0 rounded-xl text-lg"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-semibold text-foreground">{entry.label}</p>
-                          <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground/70">
-                            PID {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
-                          </p>
+                <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {entries.map((entry) => {
+                    const expanded = expandedId === entry.id;
+                    return (
+                      <div
+                        key={entry.id}
+                        className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 transition-colors duration-200 hover:border-ring/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <ContactAvatar
+                            entry={entry}
+                            className="size-12 shrink-0 rounded-xl text-lg"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-foreground">{entry.label}</p>
+                            <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground/70">
+                              PID {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <p className="truncate rounded-lg border border-border bg-secondary/60 px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
-                        {truncateAddress(entry.address, 12, 10)}
-                      </p>
-                      <div className="flex items-center justify-between gap-2">
-                        <CopyButton value={entry.address} label={t("action.copy")} />
-                        <div className="flex gap-1.5">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            aria-label={t("addressBook.editAria", { label: entry.label })}
-                            onClick={() => openEdit(entry)}
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            aria-label={t("addressBook.deleteAria", { label: entry.label })}
-                            onClick={() => remove(entry.id)}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
+                        <p className="truncate rounded-lg border border-border bg-secondary/60 px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
+                          {truncateAddress(entry.address, 12, 10)}
+                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <CopyButton value={entry.address} label={t("action.copy")} />
+                          <div className="flex gap-1.5">
+                            <ExpandButton
+                              expanded={expanded}
+                              label={entry.label}
+                              onClick={() => toggleExpand(entry.id)}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              aria-label={t("addressBook.editAria", { label: entry.label })}
+                              onClick={() => openEdit(entry)}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              aria-label={t("addressBook.deleteAria", { label: entry.label })}
+                              onClick={() => remove(entry.id)}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
                         </div>
+                        {expanded ? <ContactExpandPanel key={entry.id} entry={entry} /> : null}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-border">
@@ -294,45 +319,65 @@ export default function AddressBookPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {entries.map((entry) => (
-                        <tr key={entry.id} className="border-b border-border last:border-b-0">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <ContactAvatar entry={entry} className="size-8 rounded-lg text-xs" />
-                              <span className="font-medium">{entry.label}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                            {truncateAddress(entry.address, 10, 8)}
-                          </td>
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                            {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-end gap-2">
-                              <CopyButton value={entry.address} label={t("action.copy")} />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                aria-label={t("addressBook.editAria", { label: entry.label })}
-                                onClick={() => openEdit(entry)}
-                              >
-                                <Pencil className="size-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                aria-label={t("addressBook.deleteAria", { label: entry.label })}
-                                onClick={() => remove(entry.id)}
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {entries.map((entry) => {
+                        const expanded = expandedId === entry.id;
+                        return (
+                          <Fragment key={entry.id}>
+                            <tr className="border-b border-border last:border-b-0">
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <ContactAvatar
+                                    entry={entry}
+                                    className="size-8 rounded-lg text-xs"
+                                  />
+                                  <span className="font-medium">{entry.label}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                                {truncateAddress(entry.address, 10, 8)}
+                              </td>
+                              <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                                {entry.paymentId ? truncateAddress(entry.paymentId, 6, 6) : "—"}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex justify-end gap-2">
+                                  <CopyButton value={entry.address} label={t("action.copy")} />
+                                  <ExpandButton
+                                    expanded={expanded}
+                                    label={entry.label}
+                                    onClick={() => toggleExpand(entry.id)}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    aria-label={t("addressBook.editAria", { label: entry.label })}
+                                    onClick={() => openEdit(entry)}
+                                  >
+                                    <Pencil className="size-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    aria-label={t("addressBook.deleteAria", { label: entry.label })}
+                                    onClick={() => remove(entry.id)}
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                            {expanded ? (
+                              <tr className="border-b border-border">
+                                <td colSpan={4} className="px-4 py-3">
+                                  <ContactExpandPanel entry={entry} />
+                                </td>
+                              </tr>
+                            ) : null}
+                          </Fragment>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -449,6 +494,32 @@ export default function AddressBookPage() {
         <AddressBookRail embedded />
       </div>
     </>
+  );
+}
+
+function ExpandButton({
+  expanded,
+  label,
+  onClick,
+}: {
+  expanded: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      aria-expanded={expanded}
+      aria-label={
+        expanded ? t("addressBook.hideAria", { label }) : t("addressBook.viewAria", { label })
+      }
+      onClick={onClick}
+    >
+      {expanded ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+    </Button>
   );
 }
 

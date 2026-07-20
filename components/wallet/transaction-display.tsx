@@ -1,12 +1,12 @@
 import {
   ArrowDownLeft,
-  ArrowUpFromLine,
   ArrowUpRight,
   Combine,
   Lock,
   type LucideIcon,
   Mail,
   Pickaxe,
+  Unlock,
 } from "lucide-react";
 import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import { useI18n } from "@/lib/i18n/i18n-provider";
@@ -66,7 +66,7 @@ export const transactionMeta: Record<
   },
   withdrawal: {
     labelKey: "txn.typeWithdrawal",
-    icon: ArrowUpFromLine,
+    icon: Unlock,
     sign: "+",
     amountClassName: "text-wallet-incoming",
     chipClassName: "bg-wallet-incoming/10 text-wallet-incoming",

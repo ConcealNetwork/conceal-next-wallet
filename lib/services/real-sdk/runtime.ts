@@ -83,6 +83,7 @@ import {
 import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 import {
   applyInboundScanToReceived,
+  dropExpiredTtl,
   minedHeightsFromState,
   patchSentMessageBlockHeights,
   pruneStaleMempoolReceived,
@@ -1041,7 +1042,13 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   if (receivedListChanged) {
     rt.raw = withReceivedRecords(rt.raw, prunedReceived);
   }
-  if (incomingChanged || receivedListChanged) {
+  // Clock-TTL: drop sent/received copies whose mempool TTL has elapsed so they
+  // cannot linger in the blob (UI + wallet export).
+  const ttlDrop = dropExpiredTtl(rt.raw, Math.floor(nowMs / 1000));
+  if (ttlDrop.changed) {
+    rt.raw = ttlDrop.raw;
+  }
+  if (incomingChanged || receivedListChanged || ttlDrop.changed) {
     await persistRuntime(rt);
   }
 

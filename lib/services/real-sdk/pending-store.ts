@@ -15,6 +15,7 @@ import {
   type RawWalletV1,
   type WalletState,
 } from "conceal-wallet-sdk";
+import { isTtlExpired } from "@/lib/messages/ttl";
 import type { TransactionType } from "@/lib/types";
 
 /** An optimistic outbound tx awaiting its first confirmation. */
@@ -45,6 +46,12 @@ export interface PendingTxRecord {
    * the same deposit in the mempool window (see {@link pendingWithdrawnDepositKeys}).
    */
   depositRef?: { txHash: string; globalIndex: number };
+  /**
+   * Mempool message TTL (unix seconds). When set, the daemon drops the tx at this
+   * wall-clock time — prune earlier than {@link PENDING_TTL_MS} so history + input
+   * locks clear when the message expires (safe: it cannot mine after TTL).
+   */
+  ttlExpiresAt?: number;
 }
 
 const PENDING_FIELD = "pendingTransactions";
@@ -112,14 +119,18 @@ export function pendingWithdrawnDepositKeys(raw: RawWalletV1): Set<string> {
 
 /**
  * Total atomic amount held pending-outbound (for the balance hold). Counts ONLY
- * outbound records — `undefined` (legacy/plain send), `"send"`, or `"fusion"`. A
- * pending deposit (#110) is becoming locked, not leaving (handled as locked elsewhere),
- * and a pending withdrawal is incoming, so both are excluded.
+ * outbound records — `undefined` (legacy/plain send), `"send"`, `"fusion"`, or
+ * `"message"`. A pending deposit (#110) is becoming locked, not leaving (handled as
+ * locked elsewhere), and a pending withdrawal is incoming, so both are excluded.
  */
 export function pendingOutAtomic(raw: RawWalletV1): number {
   return readPendingRecords(raw)
     .filter(
-      (record) => record.type === undefined || record.type === "send" || record.type === "fusion",
+      (record) =>
+        record.type === undefined ||
+        record.type === "send" ||
+        record.type === "fusion" ||
+        record.type === "message",
     )
     .reduce((sum, record) => sum + Math.max(0, record.amountAtomic), 0);
 }
@@ -138,8 +149,11 @@ export function prunePendingRecords(
   const current = readPendingRecords(raw);
   if (current.length === 0) return current;
   const minedHashes = new Set(state.transactions.map((tx) => tx.hash));
+  const nowUnix = Math.floor(nowMs / 1000);
   const survivors = current.filter((record) => {
     if (minedHashes.has(record.hash)) return false; // reconciled with the scanned tx
+    // Message TTL: daemon has dropped (or will drop) this mempool-only tx — clear now.
+    if (isTtlExpired(record.ttlExpiresAt, nowUnix)) return false;
     const ageMs = nowMs - Date.parse(record.timestampIso);
     if (Number.isFinite(ageMs) && ageMs > PENDING_TTL_MS) return false; // never mined
     return true;

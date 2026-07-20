@@ -15,6 +15,7 @@ import {
 } from "@/lib/services/real-sdk/mappers";
 import {
   createSentMessageRecord,
+  dropExpiredTtl,
   indexMessageRecords,
   readSentRecords,
   withSentRecords,
@@ -51,6 +52,17 @@ export const realSdkTransactionService: TransactionService = {
   async listTransactions(): Promise<Transaction[]> {
     await ensureSdkReady();
     const rt = requireRuntime();
+    // Drop clock-expired TTL message bodies + matching 0-conf pending rows so they
+    // never linger as forever-pending in history (or a subsequent wallet export).
+    const ttlDrop = dropExpiredTtl(rt.raw);
+    if (ttlDrop.changed) {
+      rt.raw = ttlDrop.raw;
+      try {
+        await persist();
+      } catch {
+        // Non-fatal: in-memory list is still pruned for this response.
+      }
+    }
     const networkHeight = await rt.daemon.getHeight();
     return mapTransactions(
       rt.state,

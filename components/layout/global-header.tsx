@@ -2,7 +2,6 @@
 
 import {
   ArrowDownLeft,
-  ArrowUpFromLine,
   ArrowUpRight,
   Bell,
   Check,
@@ -20,6 +19,7 @@ import {
   PanelRightOpen,
   Pickaxe,
   Sun,
+  Unlock,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -134,7 +134,7 @@ const NOTIF_META: Record<TransactionType, NotifMeta> = {
   },
   withdrawal: {
     titleKey: "header.notifWithdrew",
-    icon: ArrowUpFromLine,
+    icon: Unlock,
     chip: "bg-wallet-incoming/14 text-wallet-incoming",
   },
   fusion: {

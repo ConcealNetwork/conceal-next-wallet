@@ -7,7 +7,7 @@ import {
   userKeysFromPriv,
 } from "conceal-wallet-sdk";
 import { mapWalletInfo } from "@/lib/services/real-sdk/mappers";
-import { readReceivedRecords } from "@/lib/services/real-sdk/messages-store";
+import { dropExpiredTtl, readReceivedRecords } from "@/lib/services/real-sdk/messages-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   activeWalletId,
@@ -341,6 +341,12 @@ export const realSdkWalletService: WalletService = {
     const ok = await this.verifyPassword(input.password);
     if (!ok) {
       throw new Error("Invalid password.");
+    }
+    // Drop expired TTL message bodies before encrypting so a wallet.json backup
+    // never carries mempool-only messages past their expiry.
+    const ttlDrop = dropExpiredTtl(rt.raw);
+    if (ttlDrop.changed) {
+      rt.raw = ttlDrop.raw;
     }
     // Persist the latest in-memory state, then encrypt the current blob with the
     // verified password — the payload IS the new-format encrypted envelope.

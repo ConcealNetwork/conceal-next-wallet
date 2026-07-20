@@ -25,6 +25,7 @@ import {
   resolveDepHeight,
   uiDepStatus,
 } from "@/lib/deposits/deposit-status";
+import { isTtlExpired } from "@/lib/messages/ttl";
 import {
   type IncomingPendingRecord,
   incomingPendingAtomic,
@@ -154,6 +155,9 @@ function mapPendingWithMessages(record: PendingTxRecord, sent?: SdkMessageRecord
         }
       : {}),
     ...(sent?.paymentIdTo ? { paymentId: sent.paymentIdTo } : {}),
+    ...(typeof (record.ttlExpiresAt ?? sent?.ttlExpiresAt) === "number"
+      ? { ttlExpiresAt: record.ttlExpiresAt ?? sent?.ttlExpiresAt }
+      : {}),
   };
 }
 
@@ -186,6 +190,7 @@ export function mapPendingTransaction(record: PendingTxRecord): Transaction {
     blockHeight: 0,
     confirmations: 0,
     ...(record.paymentId ? { paymentId: record.paymentId } : {}),
+    ...(typeof record.ttlExpiresAt === "number" ? { ttlExpiresAt: record.ttlExpiresAt } : {}),
   };
 }
 
@@ -228,13 +233,31 @@ export function mapTransactions(
   );
   if (pending.length === 0 && incoming.length === 0) return scanned;
   const scannedHashes = new Set(scanned.map((tx) => tx.hash));
+  const nowUnix = Math.floor(Date.now() / 1000);
   const pendingTxs = pending
     .filter((record) => !scannedHashes.has(record.hash))
+    // Hide clock-expired TTL mempool txs even if the blob prune hasn't run yet /
+    // React Query still holds a stale list — they cannot mine after expiry.
+    .filter((record) => {
+      const sent = messages?.sentByHash.get(record.hash);
+      const ttl = record.ttlExpiresAt ?? sent?.ttlExpiresAt;
+      return !isTtlExpired(ttl, nowUnix);
+    })
+    // Message pending whose sent copy is already gone (TTL-pruned) must not linger
+    // as a forever-pending send/message row.
+    .filter((record) => {
+      if (record.type !== "message") return true;
+      return messages?.sentByHash.has(record.hash) ?? false;
+    })
     .map((record) => mapPendingWithMessages(record, messages?.sentByHash.get(record.hash)));
   // Don't double-list a tx already shown as an optimistic outbound pending (self-send).
   const pendingHashes = new Set(pendingTxs.map((tx) => tx.hash));
   const incomingTxs = incoming
     .filter((record) => !scannedHashes.has(record.hash) && !pendingHashes.has(record.hash))
+    .filter((record) => {
+      const received = messages?.receivedByHash.get(record.hash);
+      return !isTtlExpired(received?.ttlExpiresAt, nowUnix);
+    })
     .map((record) => mapIncomingWithMessages(record, messages?.receivedByHash.get(record.hash)));
   return [...incomingTxs, ...pendingTxs, ...scanned];
 }
