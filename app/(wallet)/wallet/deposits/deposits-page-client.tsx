@@ -1,6 +1,6 @@
 "use client";
 
-import { COIN_UNIT_PLACES, DEPOSIT_SMALL_WITHDRAW_FEE, MINIMUM_FEE_V2 } from "conceal-wallet-sdk";
+import { COIN_UNIT_PLACES, DEPOSIT_SMALL_WITHDRAW_FEE } from "conceal-wallet-sdk";
 import {
   Calculator,
   CalendarClock,
@@ -39,6 +39,10 @@ import { CcxAmount } from "@/components/wallet/ccx";
 import { EmptyState, PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
+import {
+  NETWORK_FEE_CCX as NETWORK_FEE,
+  REMOTE_NODE_FEE_CCX as REMOTE_NODE_FEE,
+} from "@/lib/chain/fees";
 import {
   useCreateDeposit,
   useDepositConstraints,
@@ -1455,7 +1459,8 @@ function CreateDepositDialog({
   );
   const previewInterest = preview.data?.interestCcx ?? 0;
   const previewApr = preview.data?.indicativeApr ?? 0;
-  const createFee = MINIMUM_FEE_V2 / 10 ** COIN_UNIT_PLACES;
+  // Same fee split as send: network fee + remote-node fee (when the node advertises one).
+  const createTotalDebit = amountValue + NETWORK_FEE + REMOTE_NODE_FEE;
   const maturityDate = formatDate(
     addDays(new Date(), estimateDepositUnlockDays(durationMonths)),
     fmt,
@@ -1627,10 +1632,11 @@ function CreateDepositDialog({
                 value={formatCcx(previewInterest, 6)}
                 tone="incoming"
               />
-              <ConfirmRow label={t("deposits.networkFee")} value={formatCcx(createFee, 6)} />
+              <ConfirmRow label={t("deposits.networkFee")} value={formatCcx(NETWORK_FEE, 6)} />
+              <ConfirmRow label={t("send.remoteNodeFee")} value={formatCcx(REMOTE_NODE_FEE, 6)} />
               <ConfirmRow
                 label={t("deposits.totalDebit")}
-                value={formatCcx(amountValue + createFee, 6)}
+                value={formatCcx(createTotalDebit, 6)}
                 strong
               />
             </dl>

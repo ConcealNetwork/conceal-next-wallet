@@ -8,6 +8,7 @@ import {
   DEPOSIT_SMALL_WITHDRAW_FEE,
   DEPOSIT_TX_FEE,
   getBalance,
+  REMOTE_NODE_FEE_ATOMIC,
   transactions as txns,
 } from "conceal-wallet-sdk";
 import { buildSpendTxMap, isDepSpent, uiDepStatus } from "@/lib/deposits/deposit-status";
@@ -27,9 +28,11 @@ import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
 import {
   broadcast,
+  decodeFeeRecipient,
   fetchDecoys,
   MIXIN,
   ownKeys,
+  safeNodeFeeAddress,
   selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
 import { assertCanSpend } from "@/lib/services/view-only";
@@ -51,9 +54,14 @@ export const realSdkDepositService: DepositService = {
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
     const balance = getBalance(rt.state);
+    // Budget the remote-node fee too, so the advertised max stays creatable
+    // (createDeposit checks amount + DEPOSIT_TX_FEE + node fee against spendable).
+    const feeAddress = await safeNodeFeeAddress(rt.daemon);
+    const nodeFeeAtomic =
+      feeAddress && feeAddress !== rt.account.address ? REMOTE_NODE_FEE_ATOMIC : 0;
     const maxDepositAmount = Math.max(
       0,
-      Math.floor((balance.spendable - DEPOSIT_TX_FEE) / ATOMIC_PER_CCX),
+      Math.floor((balance.spendable - DEPOSIT_TX_FEE - nodeFeeAtomic) / ATOMIC_PER_CCX),
     );
     const isWalletSyncing = rt.state.scannedHeight < networkHeight;
     const hasPendingDeposit = rt.state.deposits.some(
@@ -105,8 +113,24 @@ export const realSdkDepositService: DepositService = {
 
     const amountAtomic = amountCoins * ATOMIC_PER_CCX;
     const termBlocks = months * DEPOSIT_MIN_TERM_BLOCK;
+
+    // Resolve the remote-node fee BEFORE the balance check so its destination is
+    // counted — same guard as sendTransaction/sendMessage (fee address from the
+    // untrusted node; bounded to the donation address when undecodable).
+    const feeAddress = await safeNodeFeeAddress(rt.daemon);
+    let nodeFee: { spendPublicKey: string; viewPublicKey: string } | null = null;
+    if (feeAddress && feeAddress !== rt.account.address) {
+      const decoded = decodeFeeRecipient(feeAddress);
+      nodeFee = {
+        spendPublicKey: decoded.spendPublicKey,
+        viewPublicKey: decoded.viewPublicKey,
+        // amount omitted — the SDK defaults to REMOTE_NODE_FEE_ATOMIC
+      };
+    }
+    const nodeFeeAtomic = nodeFee ? REMOTE_NODE_FEE_ATOMIC : 0;
+
     const balance = getBalance(rt.state);
-    if (amountAtomic + DEPOSIT_TX_FEE > balance.spendable) {
+    if (amountAtomic + DEPOSIT_TX_FEE + nodeFeeAtomic > balance.spendable) {
       throw new Error("Not enough unlocked balance for deposit and network fee.");
     }
 
@@ -121,6 +145,7 @@ export const realSdkDepositService: DepositService = {
       decoys,
       fee: DEPOSIT_TX_FEE,
       mixin: MIXIN,
+      nodeFee,
     });
 
     await broadcast(rt, built);
@@ -133,7 +158,7 @@ export const realSdkDepositService: DepositService = {
     rt.raw = addPendingRecord(rt.raw, {
       hash: built.hash,
       type: "deposit",
-      amountAtomic: amountAtomic + DEPOSIT_TX_FEE,
+      amountAtomic: amountAtomic + DEPOSIT_TX_FEE + nodeFeeAtomic,
       timestampIso: new Date().toISOString(),
       address: rt.account.address,
       spentKeyImages: built.inputs.map((vin) => vin.keyImage),
