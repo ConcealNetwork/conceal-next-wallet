@@ -10,6 +10,7 @@
   "scripts": {
     "generate:precache": "node scripts/generate-precache-manifest.mjs",
     "dev": "next dev",
+    "preflight": "npm run types && npm run test && npm run lint && npm run format && npm run check",
     "build": "NODE_OPTIONS=--no-deprecation next build && npm run generate:precache",
     "cordova": "node scripts/cordova-postprocess.mjs --build ../conceal-wallet-cordova",
     "start": "next start",
@@ -36,7 +37,7 @@
     "@tanstack/react-query": "^5.101.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "conceal-wallet-sdk": "https://github.com/ConcealNetwork/conceal-wallet-sdk/releases/download/v0.2.9/conceal-wallet-sdk-0.2.9.tgz",
+    "conceal-wallet-sdk": "https://github.com/ConcealNetwork/conceal-wallet-sdk/releases/download/v0.2.10/conceal-wallet-sdk-0.2.10.tgz",
     "jspdf": "^4.2.1",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.18.0",
