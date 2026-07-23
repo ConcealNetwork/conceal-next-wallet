@@ -1,13 +1,10 @@
 /**
  * Shared spend orchestration for the SDK engine: decode destinations, fetch decoy
  * rings from the daemon, and broadcast a built transaction. Used by the
- * transaction / deposit / message / settings (fusion) services so the
- * select-inputs → fetch-decoys → build → send → re-sync flow lives in one place.
+ * transaction / deposit / message / settings (fusion) services.
  *
- * `buildTransaction` (and the deposit/message/fusion variants) select their own
- * inputs internally and only consume decoys for the amounts they pick. We fetch
- * `mixin + 1` decoys for every DISTINCT unspent-output amount up front, which is a
- * superset of what any build needs (an unused decoy set is simply ignored).
+ * Spend order: `selectInputs` (pretty / non-dust) → `fetchDecoys(selected)` →
+ * build with `unspentOutputs: selected`.
  */
 import {
   DEFAULT_MIXIN,
@@ -174,9 +171,9 @@ export async function enqueueAndBroadcast(
 }
 
 /**
- * Fetch `MIXIN + 1` decoy outputs for every distinct amount in `outputs`. Returns
- * `[]` when there are no outputs (the caller's build will then fail its own
- * insufficient-funds check with a clear message).
+ * Fetch `MIXIN + 1` decoy outputs for each distinct amount in `outputs`.
+ * Pass `selectInputs(...).selected` (or fusion's selection) — never the full
+ * unspent set (non-pretty dens have no mixable peers on chain).
  */
 export async function fetchDecoys(
   runtime: SdkRuntime,

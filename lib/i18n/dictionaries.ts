@@ -8,8 +8,10 @@ import type { Dictionary, Locale } from "@/lib/i18n/i18n";
  */
 const en: Dictionary = {
   "qr.scanAddressAria": "Scan address QR code",
+  "qr.scanPaymentIdAria": "Scan payment ID QR code",
   "qr.scanTitle": "Scan QR code",
   "qr.scanDescription": "Point your camera at a CCX address or payment request QR.",
+  "qr.scanPaymentIdDescription": "Point your camera at a payment ID QR.",
   "settings.passkeyNameAria": "Passkey name",
   "settings.passkeySynced": "synced",
   "settings.passkeyEmpty":
@@ -1009,8 +1011,10 @@ const en: Dictionary = {
 
 const es: Dictionary = {
   "qr.scanAddressAria": "Escanear código QR de dirección",
+  "qr.scanPaymentIdAria": "Escanear código QR de ID de pago",
   "qr.scanTitle": "Escanear código QR",
   "qr.scanDescription": "Apunta la cámara a un código QR de una dirección CCX o solicitud de pago.",
+  "qr.scanPaymentIdDescription": "Apunta la cámara a un código QR de ID de pago.",
   "settings.passkeyNameAria": "Nombre de la clave de acceso",
   "settings.passkeySynced": "sincronizada",
   "settings.passkeyEmpty":
@@ -2015,9 +2019,11 @@ const es: Dictionary = {
 
 const fr: Dictionary = {
   "qr.scanAddressAria": "Scanner le QR code de l'adresse",
+  "qr.scanPaymentIdAria": "Scanner le QR code de l'ID de paiement",
   "qr.scanTitle": "Scanner le QR code",
   "qr.scanDescription":
     "Pointez votre caméra vers un QR code d'adresse CCX ou de demande de paiement.",
+  "qr.scanPaymentIdDescription": "Pointez la caméra vers un QR code d'ID de paiement.",
   "settings.passkeyNameAria": "Nom de la clé d'accès",
   "settings.passkeySynced": "synchronisée",
   "settings.passkeyEmpty":
@@ -3031,9 +3037,11 @@ const fr: Dictionary = {
 
 const de: Dictionary = {
   "qr.scanAddressAria": "Adress-QR-Code scannen",
+  "qr.scanPaymentIdAria": "Zahlungs-ID-QR-Code scannen",
   "qr.scanTitle": "QR-Code scannen",
   "qr.scanDescription":
     "Richte deine Kamera auf einen QR-Code einer CCX-Adresse oder Zahlungsanforderung.",
+  "qr.scanPaymentIdDescription": "Kamera auf einen Zahlungs-ID-QR-Code richten.",
   "settings.passkeyNameAria": "Passkey-Name",
   "settings.passkeySynced": "synchronisiert",
   "settings.passkeyEmpty":
@@ -4042,9 +4050,11 @@ const de: Dictionary = {
 
 const it: Dictionary = {
   "qr.scanAddressAria": "Scansiona il codice QR dell'indirizzo",
+  "qr.scanPaymentIdAria": "Scansiona il codice QR dell'ID di pagamento",
   "qr.scanTitle": "Scansiona il codice QR",
   "qr.scanDescription":
     "Inquadra con la fotocamera un codice QR di un indirizzo CCX o di una richiesta di pagamento.",
+  "qr.scanPaymentIdDescription": "Punta la fotocamera su un codice QR di ID di pagamento.",
   "settings.passkeyNameAria": "Nome della passkey",
   "settings.passkeySynced": "sincronizzata",
   "settings.passkeyEmpty":
@@ -5052,9 +5062,11 @@ const it: Dictionary = {
 
 const pt: Dictionary = {
   "qr.scanAddressAria": "Ler o código QR do endereço",
+  "qr.scanPaymentIdAria": "Ler o código QR do ID de pagamento",
   "qr.scanTitle": "Ler o código QR",
   "qr.scanDescription":
     "Aponte a câmera para um código QR de um endereço CCX ou de um pedido de pagamento.",
+  "qr.scanPaymentIdDescription": "Aponte a câmera para um código QR de ID de pagamento.",
   "settings.passkeyNameAria": "Nome da chave de acesso",
   "settings.passkeySynced": "sincronizada",
   "settings.passkeyEmpty":
@@ -6057,8 +6069,10 @@ const pt: Dictionary = {
 
 const ru: Dictionary = {
   "qr.scanAddressAria": "Сканировать QR-код адреса",
+  "qr.scanPaymentIdAria": "Сканировать QR-код ID платежа",
   "qr.scanTitle": "Сканировать QR-код",
   "qr.scanDescription": "Наведите камеру на QR-код адреса CCX или запроса на оплату.",
+  "qr.scanPaymentIdDescription": "Наведите камеру на QR-код ID платежа.",
   "settings.passkeyNameAria": "Имя ключа доступа",
   "settings.passkeySynced": "синхронизирован",
   "settings.passkeyEmpty":
@@ -7059,8 +7073,10 @@ const ru: Dictionary = {
 
 const zh: Dictionary = {
   "qr.scanAddressAria": "扫描地址二维码",
+  "qr.scanPaymentIdAria": "扫描付款 ID 二维码",
   "qr.scanTitle": "扫描二维码",
   "qr.scanDescription": "将摄像头对准 CCX 地址或付款请求的二维码。",
+  "qr.scanPaymentIdDescription": "将摄像头对准付款 ID 二维码。",
   "settings.passkeyNameAria": "通行密钥名称",
   "settings.passkeySynced": "已同步",
   "settings.passkeyEmpty": "暂无通行密钥 — 在下方添加一个，或在下次使用密码解锁时启用。",
@@ -8022,8 +8038,10 @@ const zh: Dictionary = {
 
 const ja: Dictionary = {
   "qr.scanAddressAria": "アドレスのQRコードをスキャン",
+  "qr.scanPaymentIdAria": "支払い ID のQRコードをスキャン",
   "qr.scanTitle": "QRコードをスキャン",
   "qr.scanDescription": "CCXアドレスまたは支払いリクエストのQRコードにカメラを向けてください。",
+  "qr.scanPaymentIdDescription": "支払い ID のQRコードにカメラを向けてください。",
   "settings.passkeyNameAria": "パスキー名",
   "settings.passkeySynced": "同期済み",
   "settings.passkeyEmpty":
@@ -9013,8 +9031,10 @@ const ja: Dictionary = {
 
 const ko: Dictionary = {
   "qr.scanAddressAria": "주소 QR 코드 스캔",
+  "qr.scanPaymentIdAria": "결제 ID QR 코드 스캔",
   "qr.scanTitle": "QR 코드 스캔",
   "qr.scanDescription": "카메라를 CCX 주소 또는 결제 요청 QR 코드에 맞추세요.",
+  "qr.scanPaymentIdDescription": "카메라를 결제 ID QR 코드에 맞추세요.",
   "settings.passkeyNameAria": "패스키 이름",
   "settings.passkeySynced": "동기화됨",
   "settings.passkeyEmpty":

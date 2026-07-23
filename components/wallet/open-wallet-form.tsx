@@ -66,19 +66,18 @@ export function useSwitchWalletFlow() {
         resetNavBadges();
         if (info) {
           // Target already unlocked (or mock) → swap the session in place, no route
-          // change (omit redirectTo so the user stays on the current page). Refresh
-          // the wallet list + all wallet-scoped data so balances, transactions,
-          // messages, etc. reflect the now-active wallet.
+          // change (omit redirectTo so the user stays on the current page).
+          // `openSession` cancels in-flight fetches + invalidates all wallet-scoped
+          // queries so balances/txs/messages reflect the now-active wallet.
           openSession(info);
-          queryClient.setQueryData(queryKeys.wallet, info);
-          await queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
           await queryClient.refetchQueries({ queryKey: queryKeys.wallets });
-          await queryClient.invalidateQueries();
           return;
         }
         // Not cached → unlock the target in place via the shared dialog (passkey-first
-        // when enrolled). Clear stale cached data first so the previous wallet's
-        // balances/txs don't flash while the target unlocks.
+        // when enrolled). Cancel in-flight fetches first, then drop the cache so the
+        // previous wallet's balances/txs don't linger; successful unlock calls
+        // `openSession`, which reloads everything for the newly opened wallet.
+        await queryClient.cancelQueries();
         queryClient.removeQueries();
         await openWallet(id);
       } catch (error) {

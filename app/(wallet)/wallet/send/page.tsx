@@ -199,6 +199,9 @@ export default function SendPage() {
         setSelectedContactId(null);
         setReview(null);
       },
+      onError: (error) => {
+        toast.error(error instanceof Error ? error.message : "Send failed.");
+      },
     });
   }
 

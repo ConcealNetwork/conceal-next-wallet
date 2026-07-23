@@ -7,6 +7,17 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ensureCameraPermissionForCordova } from "@/lib/cordova/camera-permission";
 
+async function openCameraStream(): Promise<MediaStream> {
+  // Prefer rear camera, but some devices/WebViews reject facingMode constraints.
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+    });
+  } catch {
+    return await navigator.mediaDevices.getUserMedia({ video: true });
+  }
+}
+
 /**
  * Live camera QR scanner. Streams the rear camera, decodes frames with jsQR, and
  * calls `onDecode` with the first payload found. The MediaStream is always
@@ -46,29 +57,29 @@ export function QrCameraScanner({
         if (cancelled) return;
         if (!allowed) {
           setError(
-            "Camera permission was denied. Allow camera access in app settings, or upload a QR image instead.",
+            "Camera permission was denied. Allow camera access in app settings, force-stop and reopen the app, or upload a QR image instead.",
           );
           return;
         }
 
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        });
+        stream = await openCameraStream();
         const video = videoRef.current;
         if (cancelled || !video) {
-          stream?.getTracks().forEach((track) => {
+          stream.getTracks().forEach((track) => {
             track.stop();
           });
           return;
         }
         video.srcObject = stream;
+        video.setAttribute("playsinline", "true");
+        video.muted = true;
         await video.play();
         if (cancelled) return;
 
         const { decodeQrFromImageData } = await import("@/lib/ui/qr-decode");
         if (cancelled) return;
         const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
         const tick = () => {
           if (cancelled) return;
@@ -87,14 +98,17 @@ export function QrCameraScanner({
           raf = requestAnimationFrame(tick);
         };
         raf = requestAnimationFrame(tick);
-      } catch {
+      } catch (err) {
         // If the stream came up before a later step threw, stop it now rather
         // than leaving the camera on behind an error until unmount.
         stream?.getTracks().forEach((track) => {
           track.stop();
         });
         if (!cancelled) {
-          setError("Couldn't access the camera. Check permissions, or upload an image instead.");
+          const detail = err instanceof Error && err.message ? ` (${err.message})` : "";
+          setError(
+            `Couldn't access the camera${detail}. If you just allowed Camera in settings, force-stop and reopen the app, then try again — or upload an image instead.`,
+          );
         }
       }
     }
@@ -118,7 +132,13 @@ export function QrCameraScanner({
         </p>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-black">
-          <video ref={videoRef} className="aspect-square w-full object-cover" muted playsInline />
+          <video
+            ref={videoRef}
+            className="aspect-square w-full object-cover"
+            muted
+            playsInline
+            autoPlay
+          />
         </div>
       )}
       <Button type="button" variant="outline" className="w-full" onClick={onCancel}>

@@ -15,6 +15,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { AddressBookRail } from "@/components/layout/rails/address-book-rail";
 import { usePageRightRail } from "@/components/layout/right-rail";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
+import { PaymentIdQrScanButton } from "@/components/qr/payment-id-qr-scan-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -100,6 +101,10 @@ export default function AddressBookPage() {
     if (draft.paymentId) {
       setPaymentId(draft.paymentId);
     }
+  }
+
+  function applyScannedPid(pid: string) {
+    setPaymentId(pid);
   }
 
   function openEdit(entry: AddressEntry) {
@@ -459,14 +464,21 @@ export default function AddressBookPage() {
             <div className="space-y-2">
               <Label htmlFor="ab-paymentId">{t("rail.paymentId")}</Label>
               <div className="flex gap-2">
-                <Input
-                  id="ab-paymentId"
-                  value={paymentId}
-                  onChange={(event) => setPaymentId(event.target.value)}
-                  placeholder={t("addressBook.paymentIdPlaceholder")}
-                  autoComplete="off"
-                  className="flex-1"
-                />
+                <div className="relative min-w-0 flex-1">
+                  <Input
+                    id="ab-paymentId"
+                    value={paymentId}
+                    onChange={(event) => setPaymentId(event.target.value)}
+                    placeholder={t("addressBook.paymentIdPlaceholder")}
+                    autoComplete="off"
+                    className="max-lg:pr-10"
+                  />
+                  <PaymentIdQrScanButton
+                    className="absolute right-1 top-1/2 -translate-y-1/2 lg:hidden"
+                    disabled={isSaving}
+                    onScan={applyScannedPid}
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="outline"

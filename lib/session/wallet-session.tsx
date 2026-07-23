@@ -89,11 +89,14 @@ export function WalletSessionProvider({ children }: { children: React.ReactNode 
       });
       setStatus("open");
       setWalletInfo(nextWalletInfo);
+      // In-app switch → unlock keeps the user on the current route (no redirect). Cancel
+      // any in-flight fetches from the PREVIOUS wallet (removeQueries during the unlock
+      // dialog re-fires observers against the still-cached prior runtime), seed the
+      // wallet query, then invalidate EVERYTHING so balances/txs/deposits/messages
+      // reload for the newly opened wallet instead of leaving the page unchanged.
+      void queryClient.cancelQueries();
       queryClient.setQueryData(queryKeys.wallet, nextWalletInfo);
-      // Refresh the multi-wallet list (#95): opening via create/import ADDS a wallet,
-      // so the switcher's cached list is now stale — invalidate it to surface the new
-      // wallet + the correct active entry without a reload.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      void queryClient.invalidateQueries();
       if (env.persistWalletSession) {
         const nextSession: PersistedSession = { status: "open", walletInfo: nextWalletInfo };
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
