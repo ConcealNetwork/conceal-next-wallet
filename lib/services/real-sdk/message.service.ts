@@ -103,10 +103,7 @@ export const realSdkMessageService: MessageService = {
     const messageAmount = MESSAGE_TX_AMOUNT_ATOMIC;
     const feeForSelect = hasTtl ? 0 : FEE_ATOMIC;
     const nodeFeeAtomic = nodeFee ? REMOTE_NODE_FEE_ATOMIC : 0;
-    const { selected } = txns.selectInputs(
-      outputs,
-      messageAmount + feeForSelect + nodeFeeAtomic,
-    );
+    const { selected } = txns.selectInputs(outputs, messageAmount + feeForSelect + nodeFeeAtomic);
     const decoys = await fetchDecoys(rt, selected);
     const built = txns.buildMessageTransaction({
       keys: rt.account.keys,
