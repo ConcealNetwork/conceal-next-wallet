@@ -152,7 +152,11 @@ jobs:
           fail-on-severity: high
           # Block strong copyleft (incompatible with the repo's BSD-3-Clause
           # distribution); deny-list avoids false positives on obscure permissive licenses.
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, LGPL-3.0, SSPL-1.0
+          # LGPL-3.0 is intentionally allowed: Next.js pulls `sharp` → `@img/sharp-libvips-*`
+          # (LGPL-3.0-or-later). sharp dynamically links those prebuilt binaries at
+          # build/install time and does not ship them in the static wallet export
+          # (see lovell/sharp#3565). Re-deny if a runtime-bundled LGPL dep appears.
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, SSPL-1.0
           comment-summary-in-pr: on-failure
 
   actionlint:
