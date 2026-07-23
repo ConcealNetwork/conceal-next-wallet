@@ -19,6 +19,7 @@ import { useScheduledAutoSend } from "@/lib/hooks/use-scheduled-auto-send";
 import { useSecondaryWalletWatch } from "@/lib/hooks/use-secondary-wallet-watch";
 import { useSyncWakeLock } from "@/lib/hooks/use-sync-wake-lock";
 import { useI18n } from "@/lib/i18n/i18n-provider";
+import { useWalletSession } from "@/lib/session/wallet-session";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -80,8 +81,13 @@ function WalletShellLayout({
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
+  const { walletInfo } = useWalletSession();
   const { content: rail, collapsed: railCollapsed } = useRightRailContent();
   const railOpen = rail !== null && !railCollapsed;
+  // Remount page + rail content when the open wallet changes (in-place unlock after
+  // a switch). Query invalidation reloads data; the address key clears page-local
+  // state that would otherwise keep showing the previous wallet.
+  const walletKey = walletInfo?.address ?? "locked";
 
   return (
     <div className="flex min-h-screen flex-col text-foreground">
@@ -96,7 +102,9 @@ function WalletShellLayout({
           aria-label={t("shell.contextPanelAria")}
           className="fixed bottom-0 right-0 top-14 z-30 w-[380px] overflow-y-auto border-l border-border/70 bg-[hsl(var(--chrome))] max-[1199px]:hidden"
         >
-          <div className="px-7 pb-12 pt-8">{rail}</div>
+          <div key={walletKey} className="px-7 pb-12 pt-8">
+            {rail}
+          </div>
         </aside>
       ) : null}
       <main
@@ -108,6 +116,7 @@ function WalletShellLayout({
       >
         <div className="min-w-0 flex-1">
           <div
+            key={walletKey}
             className={cn(
               // `@container` so page grids can size to the ACTUAL content width
               // (which shrinks when the right rail is open) via `@`-breakpoints,
