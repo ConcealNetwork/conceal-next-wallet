@@ -135,13 +135,15 @@ export const realSdkDepositService: DepositService = {
     }
 
     const outputs = await selectableOutputs(rt);
-    const decoys = await fetchDecoys(rt, outputs);
+    const target = amountAtomic + DEPOSIT_TX_FEE + nodeFeeAtomic;
+    const { selected } = txns.selectInputs(outputs, target);
+    const decoys = await fetchDecoys(rt, selected);
     const built = txns.buildDepositTransaction({
       keys: rt.account.keys,
       amount: amountAtomic,
       termBlocks,
       ownKeys: ownKeys(rt),
-      unspentOutputs: outputs,
+      unspentOutputs: selected,
       decoys,
       fee: DEPOSIT_TX_FEE,
       mixin: MIXIN,

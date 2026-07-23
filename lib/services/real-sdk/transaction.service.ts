@@ -121,7 +121,9 @@ export const realSdkTransactionService: TransactionService = {
     }
 
     const outputs = await selectableOutputs(rt);
-    const decoys = await fetchDecoys(rt, outputs);
+    const target = amountAtomic + FEE_ATOMIC + nodeFeeAtomic;
+    const { selected } = txns.selectInputs(outputs, target);
+    const decoys = await fetchDecoys(rt, selected);
 
     // A transfer that carries a message is built as a message tx so the encrypted body
     // rides in tx_extra (recipient surfaces it, and we keep a sender copy). The
@@ -135,7 +137,7 @@ export const realSdkTransactionService: TransactionService = {
           },
           body: message,
           changeKeys: ownKeys(rt),
-          unspentOutputs: outputs,
+          unspentOutputs: selected,
           decoys,
           fee: FEE_ATOMIC,
           mixin: MIXIN,
@@ -148,7 +150,7 @@ export const realSdkTransactionService: TransactionService = {
           keys: rt.account.keys,
           destinations: plainDestinations(recipient, amountAtomic, nodeFee),
           changeKeys: ownKeys(rt),
-          unspentOutputs: outputs,
+          unspentOutputs: selected,
           decoys,
           fee: FEE_ATOMIC,
           mixin: MIXIN,

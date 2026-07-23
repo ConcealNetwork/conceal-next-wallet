@@ -16,18 +16,20 @@ function keysOf(account: ReturnType<typeof createAccount>): WalletKeys {
   return { spend: account.keys.spend, view: account.keys.view };
 }
 
-function makeInputs(amount: number) {
-  const tx = crypto.generateKeys(crypto.scReduce32("aa".repeat(32)));
-  return [
-    {
+/** Pretty-denomination UTXOs only — selectInputs skips non-pretty amounts. */
+function makeInputs(amounts: number[]) {
+  return amounts.map((amount, i) => {
+    const seed = (i + 1).toString(16).padStart(2, "0").repeat(32);
+    const tx = crypto.generateKeys(crypto.scReduce32(seed));
+    return {
       amount,
-      globalIndex: 1,
+      globalIndex: i + 1,
       outputIndex: 0,
       txPublicKey: tx.pub,
       publicKey: tx.pub,
       keyImage: crypto.generateKeyImage(tx.pub, tx.sec),
-    },
-  ];
+    };
+  });
 }
 
 describe("scan.ts → SDK daemon bridge", () => {
@@ -40,7 +42,8 @@ describe("scan.ts → SDK daemon bridge", () => {
       amount,
       termBlocks: TERM,
       ownKeys: { spendPublicKey: wallet.keys.spend.pub, viewPublicKey: wallet.keys.view.pub },
-      unspentOutputs: makeInputs(amount + DEPOSIT_FEE),
+      // Split amount+fee into pretty dens; a single (amount+fee) lump is non-pretty.
+      unspentOutputs: makeInputs([amount, DEPOSIT_FEE]),
       decoys: [],
       fee: DEPOSIT_FEE,
       mixin: 0,
