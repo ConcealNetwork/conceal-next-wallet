@@ -68,8 +68,10 @@ test("the global-header rail toggle collapses the panel away fully", async ({ pa
   await header.getByRole("button", { name: "Collapse panel" }).click();
   await expect(page.getByRole("complementary", { name: "Context panel" })).toHaveCount(0);
 
-  // Expand restores the full panel.
-  await header.getByRole("button", { name: "Expand panel" }).click();
+  // Expand restores the full panel. Retry: a sonner toast can sit over the header toggle.
+  await expect(async () => {
+    await header.getByRole("button", { name: "Expand panel" }).click({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
   await expect(
     page
       .getByRole("complementary", { name: "Context panel" })
