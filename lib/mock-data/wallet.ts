@@ -203,7 +203,9 @@ export const mockMessages: Message[] = [
     counterpartyName: "Alice",
     counterpartyAddress:
       "ccx7AliceWalletAddr2eZ9waDXgsLS7Uc11e2CpNSCWVdxEqSRFAm6P6NQhSb7XMG1D6VAZKmJeaJP37WYQ",
-    body: "{status,alive,2026-07-02,2}",
+    // Keep well in the future so mock mode doesn't toast "pulse past grace" on every
+    // wallet open (that toast sits over the header rail toggle and flakes e2e).
+    body: "{status,alive,2030-06-01,2}",
     hasBody: true,
     timestamp: "2026-05-21T18:00:00.000Z",
     unread: true,
