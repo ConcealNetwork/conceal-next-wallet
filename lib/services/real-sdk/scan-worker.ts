@@ -28,6 +28,8 @@ export interface ScanResponse {
 const ctx = self as unknown as Worker;
 
 ctx.addEventListener("message", async (event: MessageEvent<ScanRequest>) => {
+  // Do not allow cross-origin sender.
+  if (event.origin && event.origin !== self.location.origin) return;
   const { id, rawTxs, keys } = event.data;
   try {
     await ensureSdkReady();
