@@ -70,7 +70,9 @@ test("the global-header rail toggle collapses the panel away fully", async ({ pa
 
   // Expand restores the full panel.
   await expect(async () => {
-    await header.getByRole("button", { name: "Expand panel" }).click({ force: true, timeout: 2000 });
+    await header
+      .getByRole("button", { name: "Expand panel" })
+      .click({ force: true, timeout: 2000 });
     await expect(marketInRail).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 15_000 });
 });
