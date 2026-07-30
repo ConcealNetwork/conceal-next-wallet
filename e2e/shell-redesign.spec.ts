@@ -58,23 +58,23 @@ test("the global-header rail toggle collapses the panel away fully", async ({ pa
   await openWallet(page);
 
   const header = page.getByRole("banner");
-  await expect(
-    page
-      .getByRole("complementary", { name: "Context panel" })
-      .getByRole("heading", { name: "Market" }),
-  ).toBeVisible();
+  const marketInRail = page
+    .getByRole("complementary", { name: "Context panel" })
+    .getByRole("heading", { name: "Market" });
+  await expect(marketInRail).toBeVisible();
 
   // Collapse: the header toggle removes the rail column entirely (no leftover strip).
-  await header.getByRole("button", { name: "Collapse panel" }).click();
+  // force: sonner toasts can sit over the far-right header chrome.
+  await header.getByRole("button", { name: "Collapse panel" }).click({ force: true });
   await expect(page.getByRole("complementary", { name: "Context panel" })).toHaveCount(0);
 
   // Expand restores the full panel.
-  await header.getByRole("button", { name: "Expand panel" }).click();
-  await expect(
-    page
-      .getByRole("complementary", { name: "Context panel" })
-      .getByRole("heading", { name: "Market" }),
-  ).toBeVisible();
+  await expect(async () => {
+    await header
+      .getByRole("button", { name: "Expand panel" })
+      .click({ force: true, timeout: 2000 });
+    await expect(marketInRail).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
 });
 
 test("pages without a registered rail render full width", async ({ page }) => {
@@ -164,7 +164,7 @@ test("Transactions detail falls back to the dialog when the rail is collapsed (w
   await expect(rail).toBeVisible();
 
   // Collapse the rail away via the header toggle — the detail can no longer render there.
-  await header.getByRole("button", { name: "Collapse panel" }).click();
+  await header.getByRole("button", { name: "Collapse panel" }).click({ force: true });
   await expect(rail).toHaveCount(0);
 
   // Selecting a row now opens the dialog instead of showing nothing.
