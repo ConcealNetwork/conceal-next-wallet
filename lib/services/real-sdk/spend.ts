@@ -8,12 +8,14 @@
  */
 import {
   DEFAULT_MIXIN,
+  DUST_THRESHOLD,
   decodeAddress,
   getUnspentOutputs,
   isValidAddress,
   MINIMUM_FEE_V2,
   type OutboundQueueState,
   type OwnedOutput,
+  PRETTY_AMOUNTS,
   transactions as txns,
 } from "conceal-wallet-sdk";
 import { WALLET_DONATION_ADDRESS } from "@/lib/config/config";
@@ -34,6 +36,14 @@ type DecoySet = txns.DecoySet;
 export const MIXIN = DEFAULT_MIXIN;
 /** Standard transaction network fee, atomic units. */
 export const FEE_ATOMIC = MINIMUM_FEE_V2;
+
+/** `{1..9} × 10^k` ladder — only these denominations are selected for spends. */
+const PRETTY_SET = new Set(PRETTY_AMOUNTS);
+
+/** True when `amount` is on the Conceal pretty denomination ladder. */
+export function isPrettyAmount(amount: number): boolean {
+  return PRETTY_SET.has(amount);
+}
 
 /** A decoded recipient: spend/view public keys + integrated payment id (if any). */
 export interface DecodedRecipient {
@@ -128,11 +138,29 @@ export function unspentOutputs(runtime: SdkRuntime): OwnedOutput[] {
  * (not-yet-mined) broadcast. The queue is the durable source of truth for reservations; the
  * pending-store overlaps for the common send path but the two stay consistent (same tx →
  * same key images).
+ *
+ * Non-pretty amounts (not `{1..9}×10^k`) are skipped — unique leftovers (e.g. old withdraw
+ * redeem outs) are unmixable and must not be selected as spend inputs. Dust (`< DUST_THRESHOLD`)
+ * stays in this pool so fusion/optimize can still sweep it; ordinary spends gate dust via
+ * {@link selectSpendInputs}.
  */
 export async function selectableOutputs(runtime: SdkRuntime): Promise<OwnedOutput[]> {
   const reserved = await queueForRuntime(runtime).reservedKeyImages();
   const outputs = unspentOutputs(runtime);
-  return reserved.size === 0 ? outputs : outputs.filter((out) => !reserved.has(out.keyImage));
+  const free = reserved.size === 0 ? outputs : outputs.filter((out) => !reserved.has(out.keyImage));
+  return free.filter((out) => isPrettyAmount(out.amount));
+}
+
+/**
+ * Pick spend inputs: pretty denominations above the dust threshold. Prefer this over calling
+ * `txns.selectInputs` directly — the SDK defaults `dustThreshold` to `0`, which would spend
+ * mixable dust (e.g. 6 atomic) that the UI already excludes from Available.
+ */
+export function selectSpendInputs(
+  outputs: readonly OwnedOutput[],
+  targetAmount: number,
+): { selected: OwnedOutput[]; total: number } {
+  return txns.selectInputs(outputs, targetAmount, DUST_THRESHOLD);
 }
 
 /**
