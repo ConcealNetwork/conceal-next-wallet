@@ -8,6 +8,7 @@
  */
 import {
   DEFAULT_MIXIN,
+  DUST_THRESHOLD,
   decodeAddress,
   getUnspentOutputs,
   isValidAddress,
@@ -139,13 +140,27 @@ export function unspentOutputs(runtime: SdkRuntime): OwnedOutput[] {
  * same key images).
  *
  * Non-pretty amounts (not `{1..9}×10^k`) are skipped — unique leftovers (e.g. old withdraw
- * redeem outs) are unmixable and must not be selected as spend inputs.
+ * redeem outs) are unmixable and must not be selected as spend inputs. Dust (`< DUST_THRESHOLD`)
+ * stays in this pool so fusion/optimize can still sweep it; ordinary spends gate dust via
+ * {@link selectSpendInputs}.
  */
 export async function selectableOutputs(runtime: SdkRuntime): Promise<OwnedOutput[]> {
   const reserved = await queueForRuntime(runtime).reservedKeyImages();
   const outputs = unspentOutputs(runtime);
   const free = reserved.size === 0 ? outputs : outputs.filter((out) => !reserved.has(out.keyImage));
   return free.filter((out) => isPrettyAmount(out.amount));
+}
+
+/**
+ * Pick spend inputs: pretty denominations above the dust threshold. Prefer this over calling
+ * `txns.selectInputs` directly — the SDK defaults `dustThreshold` to `0`, which would spend
+ * mixable dust (e.g. 6 atomic) that the UI already excludes from Available.
+ */
+export function selectSpendInputs(
+  outputs: readonly OwnedOutput[],
+  targetAmount: number,
+): { selected: OwnedOutput[]; total: number } {
+  return txns.selectInputs(outputs, targetAmount, DUST_THRESHOLD);
 }
 
 /**

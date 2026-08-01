@@ -40,6 +40,7 @@ import {
   resolveOutboundPaymentId,
   safeNodeFeeAddress,
   selectableOutputs,
+  selectSpendInputs,
 } from "@/lib/services/real-sdk/spend";
 import type { SendTransactionInput, TransactionService } from "@/lib/services/transaction.service";
 import { assertCanSpend } from "@/lib/services/view-only";
@@ -122,7 +123,7 @@ export const realSdkTransactionService: TransactionService = {
 
     const outputs = await selectableOutputs(rt);
     const target = amountAtomic + FEE_ATOMIC + nodeFeeAtomic;
-    const { selected } = txns.selectInputs(outputs, target);
+    const { selected } = selectSpendInputs(outputs, target);
     const decoys = await fetchDecoys(rt, selected);
 
     // A transfer that carries a message is built as a message tx so the encrypted body

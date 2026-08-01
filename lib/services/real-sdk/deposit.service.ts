@@ -34,6 +34,7 @@ import {
   ownKeys,
   safeNodeFeeAddress,
   selectableOutputs,
+  selectSpendInputs,
 } from "@/lib/services/real-sdk/spend";
 import { assertCanSpend } from "@/lib/services/view-only";
 import type { Deposit, Transaction } from "@/lib/types";
@@ -136,7 +137,7 @@ export const realSdkDepositService: DepositService = {
 
     const outputs = await selectableOutputs(rt);
     const target = amountAtomic + DEPOSIT_TX_FEE + nodeFeeAtomic;
-    const { selected } = txns.selectInputs(outputs, target);
+    const { selected } = selectSpendInputs(outputs, target);
     const decoys = await fetchDecoys(rt, selected);
     const built = txns.buildDepositTransaction({
       keys: rt.account.keys,
