@@ -42,7 +42,7 @@ vi.mock("@/lib/auth/biometric-store", () => ({
   })),
 }));
 
-vi.mock("@/lib/auth/webauthn-prf", () => {
+vi.mock("@/lib/auth/platform-unlock", () => {
   class PasskeyError extends Error {
     constructor(
       readonly code: string,
@@ -52,11 +52,11 @@ vi.mock("@/lib/auth/webauthn-prf", () => {
     }
   }
   return {
-    isPasskeyUnlockAvailable: vi.fn().mockReturnValue(true),
-    enrollPasskeyCredential: vi
+    isBiometricUnlockAvailable: vi.fn().mockResolvedValue(true),
+    enrollUnlockCredential: vi
       .fn()
       .mockResolvedValue({ credentialId: "c", label: "This device", encrypted: {}, createdAt: "" }),
-    unlockWithPasskey: vi.fn().mockResolvedValue("recovered-password"),
+    unlockWithBiometric: vi.fn().mockResolvedValue("recovered-password"),
     PasskeyError,
   };
 });
