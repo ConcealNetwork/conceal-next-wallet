@@ -23,11 +23,11 @@ import {
   savePasskeyEnrollment,
 } from "@/lib/auth/biometric-store";
 import {
-  enrollPasskeyCredential,
-  isPasskeyUnlockAvailable,
+  enrollUnlockCredential,
+  isBiometricUnlockAvailable,
   PasskeyError,
-  unlockWithPasskey,
-} from "@/lib/auth/webauthn-prf";
+  unlockWithBiometric,
+} from "@/lib/auth/platform-unlock";
 import { env } from "@/lib/env";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { services } from "@/lib/services";
@@ -144,7 +144,7 @@ export function UnlockWalletProvider({
         try {
           const walletId = walletIdRef.current;
           const current = getPasskeyEnrollment(walletId);
-          const credential = await enrollPasskeyCredential(
+          const credential = await enrollUnlockCredential(
             passwordValue,
             current?.credentials ?? [],
           );
@@ -178,7 +178,7 @@ export function UnlockWalletProvider({
     setLoading(true);
     let recovered: string;
     try {
-      recovered = await unlockWithPasskey(enrollment);
+      recovered = await unlockWithBiometric(enrollment);
     } catch (error) {
       // Assertion cancelled / failed — keep the enrollment, fall back to manual.
       // A user cancel is silent; other failures explain themselves.
@@ -242,7 +242,7 @@ export function UnlockWalletProvider({
   // passkey is never probed/enrolled under an empty key (#113 review).
   useEffect(() => {
     if (!passkeyEnabled || !unlockDialogOpen) return;
-    setPasskeyAvailable(isPasskeyUnlockAvailable());
+    void isBiometricUnlockAvailable().then(setPasskeyAvailable);
     const id = selectedId || DEFAULT_WALLET_ID;
     walletIdRef.current = id;
     setEnrolled(hasPasskeyEnrollment(id));

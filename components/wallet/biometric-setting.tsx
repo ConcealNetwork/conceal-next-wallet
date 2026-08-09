@@ -23,11 +23,11 @@ import {
   savePasskeyEnrollment,
 } from "@/lib/auth/biometric-store";
 import {
-  enrollPasskeyCredential,
-  isPasskeyUnlockAvailable,
+  enrollUnlockCredential,
+  isBiometricUnlockAvailable,
   PasskeyError,
-  signalPasskeyRemoved,
-} from "@/lib/auth/webauthn-prf";
+  signalUnlockRemoved,
+} from "@/lib/auth/platform-unlock";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -50,8 +50,10 @@ export function PasskeySetting() {
   const walletIdRef = useRef<string>("default");
 
   useEffect(() => {
-    setAvailable(isPasskeyUnlockAvailable());
     let cancelled = false;
+    void isBiometricUnlockAvailable().then((supported) => {
+      if (!cancelled) setAvailable(supported);
+    });
     void getActiveWalletId().then((walletId) => {
       if (cancelled) return;
       walletIdRef.current = walletId;
@@ -84,7 +86,7 @@ export function PasskeySetting() {
       clearPasskeyEnrollment(walletId);
     }
     // Best-effort: ask the OS/provider to prune its copy of the removed passkey.
-    void signalPasskeyRemoved(credentialId);
+    void signalUnlockRemoved(credentialId);
     refresh();
     toast.success(t("toast.passkeyRemoved"));
   }
@@ -93,7 +95,7 @@ export function PasskeySetting() {
     const walletId = walletIdRef.current;
     const ids = (getPasskeyEnrollment(walletId)?.credentials ?? []).map((c) => c.credentialId);
     clearPasskeyEnrollment(walletId);
-    ids.forEach((id) => void signalPasskeyRemoved(id));
+    ids.forEach((id) => void signalUnlockRemoved(id));
     refresh();
     toast.success(t("toast.passkeyDisabled"));
   }
@@ -244,7 +246,7 @@ function AddPasskeyDialog({
       }
       const walletId = await getActiveWalletId();
       const current = getPasskeyEnrollment(walletId);
-      const credential = await enrollPasskeyCredential(password, current?.credentials ?? []);
+      const credential = await enrollUnlockCredential(password, current?.credentials ?? []);
       savePasskeyEnrollment(addPasskeyCredential(current, credential, address), walletId);
       toast.success(t("toast.passkeyAdded"));
       onAdded();
