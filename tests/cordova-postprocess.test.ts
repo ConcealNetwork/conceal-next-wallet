@@ -150,6 +150,36 @@ describe("cordovaPluginAddArgs", () => {
       "ANDROIDX_CORE_VERSION=1.6.+",
     ]);
   });
+
+  it("passes a file: spec verbatim without the id@ prefix", () => {
+    expect(
+      cordovaPluginAddArgs({
+        id: "cordova-plugin-biometric-unlock",
+        spec: "file:cordova-plugins/cordova-plugin-biometric-unlock",
+      }),
+    ).toEqual([
+      "plugin",
+      "add",
+      "file:cordova-plugins/cordova-plugin-biometric-unlock",
+    ]);
+  });
+
+  it("passes a git url spec verbatim without the id@ prefix", () => {
+    expect(
+      cordovaPluginAddArgs({
+        id: "cordova-plugin-x",
+        spec: "https://github.com/example/cordova-plugin-x.git",
+      }),
+    ).toEqual(["plugin", "add", "https://github.com/example/cordova-plugin-x.git"]);
+  });
+
+  it("emits a bare id when no spec is provided", () => {
+    expect(cordovaPluginAddArgs({ id: "cordova-plugin-insomnia" })).toEqual([
+      "plugin",
+      "add",
+      "cordova-plugin-insomnia",
+    ]);
+  });
 });
 
 describe("parseCordovaPluginList", () => {

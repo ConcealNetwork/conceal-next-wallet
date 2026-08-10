@@ -1,0 +1,14 @@
+{
+  "name": "cordova-plugin-biometric-unlock",
+  "version": "1.0.0",
+  "description": "Android Keystore + BiometricPrompt unlock for the Conceal wallet password (Cordova Android APK).",
+  "cordova": {
+    "id": "cordova-plugin-biometric-unlock",
+    "platforms": ["android"]
+  },
+  "keywords": ["conceal", "biometric", "keystore", "android", "cordova"],
+  "license": "MIT",
+  "engines": {
+    "cordova-android": ">=10.0.0"
+  }
+}

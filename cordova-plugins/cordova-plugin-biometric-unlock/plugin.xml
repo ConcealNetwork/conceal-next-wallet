@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  cordova-plugin-biometric-unlock
+
+  Vendored native plugin that wraps the wallet password unlock behind the
+  Android Keystore + BiometricPrompt. The TypeScript bridge in
+  lib/cordova/biometric-unlock.ts consumes window.cordova.plugins.biometricUnlock
+  exposed by www/biometricUnlock.js.
+
+  Security contract (reviewed):
+    - A fresh AES-256-GCM key is generated inside the Android Keystore per
+      credential (alias ccx-biometric-<credentialId>).
+    - The key is created with setUserAuthenticationRequired(true) and bound to
+      BIOMETRIC_STRONG via setUserAuthenticationParameters(0, AUTH_BIOMETRIC_STRONG)
+      on API 30+, so it can only be used after a successful BiometricPrompt auth.
+    - enroll()/unlock() return the 32-byte secret to the WebView ONLY through the
+      BiometricPrompt CryptoObject callback (authenticationSucceeded). On any
+      cancel/failure/error the secret is never released.
+    - The secret itself is never persisted: only its AES-GCM ciphertext + IV
+      (encrypted with the biometric-bound key) live in SharedPreferences, so they
+      are useless without an authenticated Keystore key. The raw secret is never
+      logged.
+-->
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        id="cordova-plugin-biometric-unlock"
+        version="1.0.0">
+  <name>Conceal Biometric Unlock</name>
+  <description>Android Keystore + BiometricPrompt unlock for the Conceal wallet password (Cordova Android APK).</description>
+  <license>MIT</license>
+  <repo>https://github.com/ConcealNetwork/conceal-next-wallet</repo>
+
+  <engines>
+    <engine name="cordova-android" version=">=10.0.0" />
+  </engines>
+
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="BiometricUnlock">
+        <param name="android-package" value="network.conceal.biometricunlock.BiometricUnlockPlugin" />
+      </feature>
+    </config-file>
+
+    <source-file src="src/android/BiometricUnlockPlugin.java" target-dir="src/network/conceal/biometricunlock" />
+    <source-file src="src/android/BiometricVault.java" target-dir="src/network/conceal/biometricunlock" />
+    <source-file src="src/android/BiometricPromptFragment.java" target-dir="src/network/conceal/biometricunlock" />
+
+    <!-- androidx.biometric provides BiometricPrompt + BiometricManager
+         (BIOMETRIC_STRONG detection + the CryptoObject path). -->
+    <framework src="androidx.biometric:biometric:1.1.0" />
+
+    <js-module src="www/biometricUnlock.js" name="biometricUnlock">
+      <clobbers target="cordova.plugins.biometricUnlock" />
+    </js-module>
+  </platform>
+</plugin>

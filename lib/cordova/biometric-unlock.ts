@@ -14,6 +14,17 @@ export type CordovaBiometricUnlockResult = {
   secretBase64url: string;
 };
 
+/**
+ * The wallet password is AES-GCM-wrapped under the secret the native plugin
+ * releases (webauthn-crypto.ts aesKeyFromSecret imports it raw). AES-256 needs
+ * exactly a 32-byte key. The native plugin is contractually expected to return
+ * 32 bytes, but this is the highest-value secret in the app and the native
+ * boundary lives in a vendored plugin — so enforce the length here too. A
+ * malformed/short secret from a buggy or tampered plugin can never reach
+ * aesKeyFromSecret; we fail closed.
+ */
+const BIOMETRIC_SECRET_BYTES = 32;
+
 type CordovaBiometricUnlockPlugin = {
   isAvailable: () => Promise<boolean>;
   enroll: () => Promise<CordovaBiometricEnrollResult>;
@@ -35,6 +46,21 @@ function getPlugin(): CordovaBiometricUnlockPlugin | null {
 function pluginReady(): boolean {
   const w = window as CordovaWindow;
   return !!(w.cordova?.platformId && w.cordova?.plugins?.biometricUnlock);
+}
+
+/**
+ * Decode + length-check the secret returned by the native plugin. Throws if the
+ * secret is not exactly {@link BIOMETRIC_SECRET_BYTES} bytes so a buggy/short
+ * secret can never be used as an AES key.
+ */
+function decodeSecret(secretBase64url: string): ArrayBuffer {
+  const bytes = base64urlToBytes(secretBase64url);
+  if (bytes.byteLength !== BIOMETRIC_SECRET_BYTES) {
+    throw new Error(
+      `Biometric unlock secret must be ${BIOMETRIC_SECRET_BYTES} bytes (got ${bytes.byteLength}).`,
+    );
+  }
+  return bytes.buffer;
 }
 
 /** Wait until the biometric plugin is attached (may lag deviceready by a tick). */
@@ -85,7 +111,7 @@ export async function cordovaBiometricEnroll(): Promise<{
   const result = await plugin.enroll();
   return {
     credentialId: result.credentialId,
-    secret: base64urlToBytes(result.secretBase64url).buffer,
+    secret: decodeSecret(result.secretBase64url),
   };
 }
 
@@ -94,7 +120,7 @@ export async function cordovaBiometricUnlock(credentialId: string): Promise<Arra
   const plugin = getPlugin();
   if (!plugin) throw new Error("Biometric unlock is not available.");
   const result = await plugin.unlock(credentialId);
-  return base64urlToBytes(result.secretBase64url).buffer;
+  return decodeSecret(result.secretBase64url);
 }
 
 /** Best-effort native cleanup when a credential is removed in Settings. */

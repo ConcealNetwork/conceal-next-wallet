@@ -17,6 +17,7 @@
       "types/**",
       "!public",
       "!docs",
+      "!cordova-plugins",
       "!**/*.svg",
       "!!out",
       "!!.next"
