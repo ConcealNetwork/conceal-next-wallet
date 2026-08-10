@@ -35,12 +35,34 @@ export async function isBiometricUnlockAvailable(): Promise<boolean> {
   return isPasskeyUnlockAvailable();
 }
 
+type CordovaPluginError = {
+  code?: unknown;
+  message?: string;
+};
+
+/**
+ * Resolve the single token `mapCordovaError` matches on. Prefer a typed plugin
+ * `code` when the plugin supplies one (the robust contract), and fall back to
+ * the error message string the plugin emits today so current behavior is kept.
+ */
+function readCordovaErrorToken(error: unknown): string | undefined {
+  if (error == null) return undefined;
+  if (typeof error === "string") return error;
+  if (typeof error === "object") {
+    const { code, message } = error as CordovaPluginError;
+    if (typeof code === "string" && code.length > 0) return code;
+    if (typeof message === "string") return message;
+  }
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 function mapCordovaError(error: unknown): PasskeyError {
-  const message = error instanceof Error ? error.message : String(error);
-  if (message === "cancelled") {
+  const token = readCordovaErrorToken(error);
+  if (token === "cancelled") {
     return new PasskeyError("cancelled", "Biometric enrollment was cancelled.");
   }
-  if (message === "unsupported") {
+  if (token === "unsupported") {
     return new PasskeyError("unsupported", "Biometric unlock is not available on this device.");
   }
   return new PasskeyError("failed", "Biometric unlock failed — please try again.");

@@ -3,7 +3,7 @@
  * WebAuthn remains the primary path whenever PublicKeyCredential exists.
  */
 import { base64urlToBytes } from "@/lib/auth/webauthn-crypto";
-import { isCordovaAndroid, isCordovaShell, whenCordovaReady } from "@/lib/cordova/runtime";
+import { isCordovaAndroid, whenCordovaPluginReady } from "@/lib/cordova/runtime";
 
 export type CordovaBiometricEnrollResult = {
   credentialId: string;
@@ -23,49 +23,28 @@ type CordovaBiometricUnlockPlugin = {
 
 type CordovaWindow = Window & {
   cordova?: {
-    platformId?: string;
     plugins?: { biometricUnlock?: CordovaBiometricUnlockPlugin };
   };
 };
+
+const BIOMETRIC_PLUGIN_PATH = "plugins.biometricUnlock";
 
 function getPlugin(): CordovaBiometricUnlockPlugin | null {
   return (window as CordovaWindow).cordova?.plugins?.biometricUnlock ?? null;
 }
 
-function pluginReady(): boolean {
-  const w = window as CordovaWindow;
-  return !!(w.cordova?.platformId && w.cordova?.plugins?.biometricUnlock);
-}
-
-/** Wait until the biometric plugin is attached (may lag deviceready by a tick). */
-export async function whenCordovaBiometricReady(): Promise<void> {
-  if (typeof window === "undefined") return;
-  if (!isCordovaShell() || !isCordovaAndroid()) return;
-  if (pluginReady()) return;
-
-  await whenCordovaReady();
-  if (pluginReady()) return;
-
-  await new Promise<void>((resolve) => {
-    const started = Date.now();
-    const finish = () => resolve();
-    const onReady = () => {
-      if (pluginReady()) finish();
-    };
-    document.addEventListener("deviceready", onReady, { once: true });
-    const poll = setInterval(() => {
-      if (pluginReady() || Date.now() - started > 4000) {
-        clearInterval(poll);
-        document.removeEventListener("deviceready", onReady);
-        finish();
-      }
-    }, 50);
-  });
+/**
+ * Wait until the biometric plugin is ready. The Android gate lives here so it
+ * is the single source of truth for the platform guard; readiness itself is
+ * delegated to the canonical `whenCordovaPluginReady` runtime helper.
+ */
+async function whenBiometricReady(): Promise<void> {
+  if (!isCordovaAndroid()) return;
+  await whenCordovaPluginReady(BIOMETRIC_PLUGIN_PATH);
 }
 
 export async function isCordovaBiometricUnlockAvailable(): Promise<boolean> {
-  await whenCordovaBiometricReady();
-  if (!isCordovaAndroid()) return false;
+  await whenBiometricReady();
   const plugin = getPlugin();
   if (!plugin) return false;
   try {
@@ -79,7 +58,7 @@ export async function cordovaBiometricEnroll(): Promise<{
   credentialId: string;
   secret: ArrayBuffer;
 }> {
-  await whenCordovaBiometricReady();
+  await whenBiometricReady();
   const plugin = getPlugin();
   if (!plugin) throw new Error("Biometric unlock is not available.");
   const result = await plugin.enroll();
@@ -90,7 +69,7 @@ export async function cordovaBiometricEnroll(): Promise<{
 }
 
 export async function cordovaBiometricUnlock(credentialId: string): Promise<ArrayBuffer> {
-  await whenCordovaBiometricReady();
+  await whenBiometricReady();
   const plugin = getPlugin();
   if (!plugin) throw new Error("Biometric unlock is not available.");
   const result = await plugin.unlock(credentialId);
@@ -99,7 +78,7 @@ export async function cordovaBiometricUnlock(credentialId: string): Promise<Arra
 
 /** Best-effort native cleanup when a credential is removed in Settings. */
 export async function cordovaBiometricRemove(credentialId: string): Promise<void> {
-  await whenCordovaBiometricReady();
+  await whenBiometricReady();
   const plugin = getPlugin();
   if (!plugin) return;
   try {

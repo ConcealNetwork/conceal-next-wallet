@@ -51,6 +51,28 @@ describe("isCordovaBiometricUnlockAvailable", () => {
     });
     expect(await isCordovaBiometricUnlockAvailable()).toBe(false);
   });
+
+  it("short-circuits the readiness wait on non-Android via the single platform gate", async () => {
+    // Real Cordova shell, but a non-Android platform: the biometric plugin is
+    // Android-only, so whenBiometricReady's isCordovaAndroid() gate must keep us
+    // out of whenCordovaPluginReady's 4s attachment poll entirely.
+    vi.useFakeTimers();
+    const prev = process.env.NEXT_PUBLIC_CORDOVA;
+    process.env.NEXT_PUBLIC_CORDOVA = "true";
+    Object.defineProperty(globalThis, "window", {
+      value: { cordova: { platformId: "ios", plugins: {} } },
+      configurable: true,
+    });
+    try {
+      const result = await isCordovaBiometricUnlockAvailable();
+      expect(result).toBe(false);
+      // If the platform gate were missing, this would still be pending at 100ms.
+      await vi.advanceTimersByTimeAsync(100);
+    } finally {
+      process.env.NEXT_PUBLIC_CORDOVA = prev;
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("cordovaBiometricEnroll", () => {

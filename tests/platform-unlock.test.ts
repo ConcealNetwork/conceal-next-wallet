@@ -124,6 +124,30 @@ describe("enrollUnlockCredential", () => {
     cordovaBiometricEnroll.mockRejectedValue(new Error("cancelled"));
     await expect(enrollUnlockCredential("pw")).rejects.toMatchObject({ code: "cancelled" });
   });
+
+  it("prefers a typed Cordova error code over the message string", async () => {
+    isCordovaBiometricUnlockAvailable.mockResolvedValue(true);
+    cordovaBiometricEnroll.mockRejectedValue({ code: "cancelled", message: "User dismissed" });
+    await expect(enrollUnlockCredential("pw")).rejects.toMatchObject({ code: "cancelled" });
+  });
+
+  it("maps a typed unsupported code to PasskeyError unsupported", async () => {
+    isCordovaBiometricUnlockAvailable.mockResolvedValue(true);
+    cordovaBiometricEnroll.mockRejectedValue({ code: "unsupported" });
+    await expect(enrollUnlockCredential("pw")).rejects.toMatchObject({ code: "unsupported" });
+  });
+
+  it("falls back to failed for an unrecognized Cordova error", async () => {
+    isCordovaBiometricUnlockAvailable.mockResolvedValue(true);
+    cordovaBiometricEnroll.mockRejectedValue({ code: "hardware_unavailable" });
+    await expect(enrollUnlockCredential("pw")).rejects.toMatchObject({ code: "failed" });
+  });
+
+  it("maps a bare cancelled string rejection", async () => {
+    isCordovaBiometricUnlockAvailable.mockResolvedValue(true);
+    cordovaBiometricEnroll.mockRejectedValue("cancelled");
+    await expect(enrollUnlockCredential("pw")).rejects.toMatchObject({ code: "cancelled" });
+  });
 });
 
 describe("unlockWithBiometric", () => {
