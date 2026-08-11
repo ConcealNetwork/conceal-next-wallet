@@ -48,3 +48,12 @@ diff.txt
 
 # agent worktrees (transient)
 .claude/worktrees/
+
+# AI generated files
+.actrc
+decisions.md
+scripts/hooks/
+openspec
+.cursor
+.forge
+.repo-kit
