@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bytesToBase64url } from "@/lib/auth/webauthn-crypto";
 import {
   cordovaBiometricEnroll,
   cordovaBiometricRemove,
@@ -12,6 +13,12 @@ const plugin = {
   unlock: vi.fn(),
   remove: vi.fn(),
 };
+
+function secret32(seed = 1) {
+  const bytes = new Uint8Array(32);
+  for (let i = 0; i < bytes.length; i += 1) bytes[i] = (i + seed) % 256;
+  return bytesToBase64url(bytes);
+}
 
 function setCordovaAndroid() {
   Object.defineProperty(globalThis, "window", {
@@ -54,22 +61,35 @@ describe("isCordovaBiometricUnlockAvailable", () => {
 });
 
 describe("cordovaBiometricEnroll", () => {
-  it("returns credential id and secret bytes", async () => {
+  it("returns credential id and a 32-byte secret", async () => {
+    plugin.enroll.mockResolvedValue({
+      credentialId: "abc",
+      secretBase64url: secret32(),
+    });
+    const result = await cordovaBiometricEnroll();
+    expect(result.credentialId).toBe("abc");
+    expect(result.secret.byteLength).toBe(32);
+  });
+
+  it("fails closed when the plugin returns a secret that is not 32 bytes", async () => {
     plugin.enroll.mockResolvedValue({
       credentialId: "abc",
       secretBase64url: "AQID",
     });
-    const result = await cordovaBiometricEnroll();
-    expect(result.credentialId).toBe("abc");
-    expect(new Uint8Array(result.secret)).toEqual(new Uint8Array([1, 2, 3]));
+    await expect(cordovaBiometricEnroll()).rejects.toThrow(/32 bytes/);
   });
 });
 
 describe("cordovaBiometricUnlock", () => {
-  it("returns secret bytes for a credential", async () => {
-    plugin.unlock.mockResolvedValue({ secretBase64url: "BAUG" });
+  it("returns a 32-byte secret for a credential", async () => {
+    plugin.unlock.mockResolvedValue({ secretBase64url: secret32(7) });
     const secret = await cordovaBiometricUnlock("abc");
-    expect(new Uint8Array(secret)).toEqual(new Uint8Array([4, 5, 6]));
+    expect(secret.byteLength).toBe(32);
+  });
+
+  it("fails closed when the plugin returns a secret that is not 32 bytes", async () => {
+    plugin.unlock.mockResolvedValue({ secretBase64url: "BAUG" });
+    await expect(cordovaBiometricUnlock("abc")).rejects.toThrow(/32 bytes/);
   });
 });
 

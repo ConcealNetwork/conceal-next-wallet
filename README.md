@@ -103,9 +103,15 @@ See [`CLAUDE.md`](CLAUDE.md) for a full architecture tour and
 
 ## Cordova
 
-Build a Cordova-ready static export (real wallet, WebView-safe paths) and copy the
-patched output into the sibling [`conceal-wallet-cordova`](../conceal-wallet-cordova)
-project’s `www/` folder:
+Cordova Mobile is a **two-repo** integration:
+
+| Repo | Role |
+|------|------|
+| **conceal-next-wallet** (this repo) | Next static export, WebView path patches, TS adapter (`lib/auth/platform-unlock.ts`, `lib/cordova/biometric-unlock.ts`) |
+| **[conceal-wallet-cordova](../conceal-wallet-cordova)** | Cordova shell, APK build, and the **native** `cordova-plugin-biometric-unlock` under `cordova-plugins/` |
+
+Build a Cordova-ready export (real wallet, WebView-safe paths) and copy it into the
+sibling project’s `www/` folder:
 
 ```bash
 npm run cordova
@@ -113,6 +119,14 @@ npm run cordova
 
 Requires `.env.local` (see `.env.example`). Then build the APK from
 `../conceal-wallet-cordova` (e.g. `./switch.sh` or `./build-with-version.sh`).
+`switch.sh` refreshes the local biometric plugin from `cordova-plugins/` before
+`cordova build android` — that is the supported plugin-install path.
+
+Optional: `node scripts/cordova-postprocess.mjs --build --ensure-plugins ../conceal-wallet-cordova`
+runs `cordova plugin add` for the default plugin set (paths such as
+`file:cordova-plugins/…` are resolved **in the Cordova project**, not here).
+
+Native plugin docs: [`conceal-wallet-cordova/cordova-plugins/cordova-plugin-biometric-unlock/README.md`](../conceal-wallet-cordova/cordova-plugins/cordova-plugin-biometric-unlock/README.md).
 
 ## License
 
