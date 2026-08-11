@@ -14,6 +14,9 @@ export type CordovaBiometricUnlockResult = {
   secretBase64url: string;
 };
 
+/** AES-256 key material — must match the native plugin contract (32 bytes). */
+const BIOMETRIC_SECRET_BYTES = 32;
+
 type CordovaBiometricUnlockPlugin = {
   isAvailable: () => Promise<boolean>;
   enroll: () => Promise<CordovaBiometricEnrollResult>;
@@ -35,6 +38,16 @@ function getPlugin(): CordovaBiometricUnlockPlugin | null {
 function pluginReady(): boolean {
   const w = window as CordovaWindow;
   return !!(w.cordova?.platformId && w.cordova?.plugins?.biometricUnlock);
+}
+
+function decodeSecret(secretBase64url: string): ArrayBuffer {
+  const bytes = base64urlToBytes(secretBase64url);
+  if (bytes.byteLength !== BIOMETRIC_SECRET_BYTES) {
+    throw new Error(
+      `Biometric unlock secret must be ${BIOMETRIC_SECRET_BYTES} bytes (got ${bytes.byteLength}).`,
+    );
+  }
+  return bytes.buffer;
 }
 
 /** Wait until the biometric plugin is attached (may lag deviceready by a tick). */
@@ -85,7 +98,7 @@ export async function cordovaBiometricEnroll(): Promise<{
   const result = await plugin.enroll();
   return {
     credentialId: result.credentialId,
-    secret: base64urlToBytes(result.secretBase64url).buffer,
+    secret: decodeSecret(result.secretBase64url),
   };
 }
 
@@ -94,7 +107,7 @@ export async function cordovaBiometricUnlock(credentialId: string): Promise<Arra
   const plugin = getPlugin();
   if (!plugin) throw new Error("Biometric unlock is not available.");
   const result = await plugin.unlock(credentialId);
-  return base64urlToBytes(result.secretBase64url).buffer;
+  return decodeSecret(result.secretBase64url);
 }
 
 /** Best-effort native cleanup when a credential is removed in Settings. */
