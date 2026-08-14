@@ -2,9 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { env } from "@/lib/env";
-import { useWalletInfo, useWallets } from "@/lib/hooks";
+import { useWalletInfo } from "@/lib/hooks";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQueryClient } from "@/lib/hooks/query-provider";
+import { useActiveWalletId } from "@/lib/hooks/use-active-wallet-id";
 import { canNotify, notify } from "@/lib/notifications/notify";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -39,7 +40,7 @@ const AUTO_SEND_POLL_MS = 30_000;
 export function useScheduledAutoSend(): void {
   const { status } = useWalletSession();
   const walletInfo = useWalletInfo();
-  const activeWalletId = useWallets().data?.find((w) => w.isActive)?.id;
+  const { walletId: activeWalletId } = useActiveWalletId();
   const queryClient = useQueryClient();
   const inFlight = useRef<Set<string>>(new Set());
 
@@ -57,7 +58,11 @@ export function useScheduledAutoSend(): void {
       ticking = true;
       try {
         const now = new Date().toISOString();
-        for (const schedule of schedulesToAutoSend(listSchedules(), now, activeWalletId)) {
+        for (const schedule of schedulesToAutoSend(
+          listSchedules(activeWalletId ?? undefined),
+          now,
+          activeWalletId ?? undefined,
+        )) {
           if (!active) break;
           if (inFlight.current.has(schedule.id)) continue;
 

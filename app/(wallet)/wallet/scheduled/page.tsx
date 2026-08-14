@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutoSendToggle } from "@/components/wallet/auto-send-toggle";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
-import { useWallets, useWalletViewOnly } from "@/lib/hooks";
+import { useWalletViewOnly } from "@/lib/hooks";
+import { useActiveWalletId } from "@/lib/hooks/use-active-wallet-id";
 import { focusCreateField, useCreateDeepLink } from "@/lib/hooks/use-create-deeplink";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import {
@@ -46,12 +47,16 @@ export default function ScheduledPage() {
   const { t } = useI18n();
   const router = useRouter();
   const viewOnly = useWalletViewOnly();
-  const activeWalletId = useWallets().data?.find((w) => w.isActive)?.id;
-  const [schedules, setSchedules] = useState<ScheduledPayment[]>(() => listSchedules());
+  const { walletId: activeWalletId, loading: walletIdLoading } = useActiveWalletId();
+  const [schedules, setSchedules] = useState<ScheduledPayment[]>([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const nowISO = useMemo(() => new Date().toISOString(), []);
   // The sidebar "+" quick-create deep-links here with ?new=1 — scroll to + focus the add form.
   useCreateDeepLink(() => focusCreateField("sched-label"));
+
+  useEffect(() => {
+    setSchedules(activeWalletId ? listSchedules(activeWalletId) : []);
+  }, [activeWalletId]);
   const canAdd =
     form.label.trim() !== "" &&
     addressIsValid(form.address.trim()) &&
@@ -59,6 +64,7 @@ export default function ScheduledPage() {
     form.anchorDate !== "";
 
   function add() {
+    if (!activeWalletId) return toast.error(t("scheduled.errSaveFailed"));
     if (!form.label.trim()) return toast.error(t("scheduled.errNameRequired"));
     if (!addressIsValid(form.address.trim())) return toast.error(t("scheduled.errAddressInvalid"));
     if (!(Number(form.amount) > 0)) return toast.error(t("scheduled.errAmountInvalid"));
@@ -66,6 +72,7 @@ export default function ScheduledPage() {
 
     const schedule: ScheduledPayment = {
       id: crypto.randomUUID(),
+      walletId: activeWalletId,
       label: form.label.trim(),
       address: form.address.trim(),
       amount: form.amount.trim(),
@@ -89,8 +96,9 @@ export default function ScheduledPage() {
   }
 
   function markPaid(id: string) {
+    if (!activeWalletId) return;
     try {
-      setSchedules(markSchedulePaid(id, new Date().toISOString()));
+      setSchedules(markSchedulePaid(id, new Date().toISOString(), activeWalletId));
       toast.success(t("scheduled.markedPaid"));
     } catch {
       toast.error(t("scheduled.errUpdateFailed"));
@@ -98,14 +106,16 @@ export default function ScheduledPage() {
   }
 
   function remove(id: string) {
+    if (!activeWalletId) return;
     try {
-      setSchedules(removeSchedule(id));
+      setSchedules(removeSchedule(id, activeWalletId));
     } catch {
       toast.error(t("scheduled.errRemoveFailed"));
     }
   }
 
   function setAutoSend(id: string, on: boolean) {
+    if (!activeWalletId) return;
     try {
       // Stamp the active wallet on arm so the engine only ever pays it from THIS wallet.
       setSchedules(setScheduleAutoSend(id, on, on ? activeWalletId : undefined));
@@ -183,7 +193,11 @@ export default function ScheduledPage() {
             </div>
           </div>
           <div className="mt-4">
-            <Button type="button" onClick={add} disabled={!canAdd}>
+            <Button
+              type="button"
+              onClick={add}
+              disabled={!canAdd || walletIdLoading || !activeWalletId}
+            >
               {t("scheduled.addReminder")}
             </Button>
           </div>

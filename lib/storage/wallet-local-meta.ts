@@ -1,6 +1,7 @@
 import { clearPasskeyEnrollment } from "@/lib/auth/biometric-store";
 import { goalsStore } from "@/lib/storage/goals-store";
 import { clearPulseMeta } from "@/lib/storage/pulse-meta";
+import { clearSchedules } from "@/lib/storage/scheduled-payments-store";
 
 export type ClearWalletLocalMetaOpts = {
   /** Reset pulse dismissals when the active wallet is deleted (session ends). */
@@ -18,5 +19,6 @@ export async function clearWalletLocalMeta(
   if (!walletId) return;
   clearPasskeyEnrollment(walletId);
   await goalsStore.clear(walletId).catch(() => {});
+  clearSchedules(walletId);
   clearPulseMeta({ dismissals: opts.pulseDismissals });
 }

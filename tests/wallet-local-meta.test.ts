@@ -69,4 +69,35 @@ describe("clearWalletLocalMeta", () => {
     await clearWalletLocalMeta("wallet-b");
     expect(listDismissed().has("tx-2")).toBe(true);
   });
+
+  it("clears scheduled payments for the target wallet only", async () => {
+    localStorage.setItem(
+      "ccx-scheduled-payments",
+      JSON.stringify([
+        {
+          id: "a",
+          walletId: "wallet-a",
+          label: "A",
+          address: "ccx7a",
+          amount: "1",
+          cadence: "monthly",
+          anchorDate: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "b",
+          walletId: "wallet-b",
+          label: "B",
+          address: "ccx7b",
+          amount: "1",
+          cadence: "monthly",
+          anchorDate: "2026-01-01T00:00:00.000Z",
+        },
+      ]),
+    );
+    vi.spyOn(goalsStore, "clear").mockResolvedValue(undefined);
+    await clearWalletLocalMeta("wallet-a");
+    const remaining = JSON.parse(localStorage.getItem("ccx-scheduled-payments") ?? "[]");
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].walletId).toBe("wallet-b");
+  });
 });

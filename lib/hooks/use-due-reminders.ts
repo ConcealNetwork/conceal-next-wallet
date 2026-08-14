@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useActiveWalletId } from "@/lib/hooks/use-active-wallet-id";
 import { canNotify, isOptedIn, notify, selectNewKeys } from "@/lib/notifications/notify";
 import { listSchedules } from "@/lib/storage/scheduled-payments-store";
 import { countDue, dueInstanceKeys } from "@/lib/ui/scheduled-payments";
@@ -18,12 +19,14 @@ import { toast } from "@/lib/ui/toast";
  * and granted permission.
  */
 export function useDuePaymentReminders(): void {
+  const { walletId: activeWalletId } = useActiveWalletId();
   // Per-session memory of due-instances already announced. A ref (not state) so
   // re-checks don't trigger re-renders; lives for the lifetime of the mount.
   const announcedRef = useRef<Set<string>>(new Set());
 
   const evaluate = useCallback(() => {
-    const schedules = listSchedules();
+    if (!activeWalletId) return;
+    const schedules = listSchedules(activeWalletId);
     const nowISO = new Date().toISOString();
     const fresh = selectNewKeys(dueInstanceKeys(schedules, nowISO), announcedRef.current);
     if (fresh.length === 0) return;
@@ -45,9 +48,10 @@ export function useDuePaymentReminders(): void {
         data: { url: "wallet/scheduled" },
       });
     }
-  }, []);
+  }, [activeWalletId]);
 
   useEffect(() => {
+    if (!activeWalletId) return;
     evaluate();
     if (typeof document === "undefined") return;
     const onVisible = () => {
@@ -55,7 +59,7 @@ export function useDuePaymentReminders(): void {
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [evaluate]);
+  }, [activeWalletId, evaluate]);
 }
 
 /** How often the due-reminder count re-checks the (device-local) schedules. */
@@ -69,10 +73,16 @@ const DUE_REMINDER_POLL_MS = 60_000;
  * react to). Starts at 0 to match SSR / the static export.
  */
 export function useDueReminderCount(): number {
+  const { walletId: activeWalletId } = useActiveWalletId();
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    const recount = () => setCount(countDue(listSchedules(), new Date().toISOString()));
+    if (!activeWalletId) {
+      setCount(0);
+      return;
+    }
+    const recount = () =>
+      setCount(countDue(listSchedules(activeWalletId), new Date().toISOString()));
     recount();
     const timer = setInterval(recount, DUE_REMINDER_POLL_MS);
     const onVisible = () => {
@@ -83,7 +93,7 @@ export function useDueReminderCount(): number {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [activeWalletId]);
 
   return count;
 }
