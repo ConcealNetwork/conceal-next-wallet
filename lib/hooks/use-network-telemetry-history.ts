@@ -7,14 +7,14 @@ export type NetworkTelemetryHistory = {
   height: number[];
   hashrate: number[];
   peers: number[];
-  blockTime: number[];
+  tipBlockAge: number[];
 };
 
 export const EMPTY_NETWORK_TELEMETRY: NetworkTelemetryHistory = {
   height: [],
   hashrate: [],
   peers: [],
-  blockTime: [],
+  tipBlockAge: [],
 };
 
 function append(series: number[], value: number): number[] {
@@ -25,7 +25,7 @@ function append(series: number[], value: number): number[] {
 
 /**
  * Append one daemon snapshot to the rolling telemetry series.
- * Block time uses `lastBlockSecondsAgo` (observed, climbs until the next block).
+ * Tip block age climbs between polls until the chain height advances.
  */
 export function accumulateNetworkTelemetry(
   prev: NetworkTelemetryHistory,
@@ -35,7 +35,7 @@ export function accumulateNetworkTelemetry(
     height: append(prev.height, data.networkHeight),
     hashrate: append(prev.hashrate, data.hashrate),
     peers: append(prev.peers, data.peers),
-    blockTime: append(prev.blockTime, data.lastBlockSecondsAgo),
+    tipBlockAge: append(prev.tipBlockAge, data.tipBlockAgeSeconds),
   };
 }
 

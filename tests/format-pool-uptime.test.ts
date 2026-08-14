@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatPoolUptimeForNodeUrl,
   formatSmartNodeUptime,
+  formatUptimeSeconds,
 } from "@/lib/network/format-pool-uptime";
 import { nodeUrlToPoolHost, poolEntryMatchesNodeUrl } from "@/lib/network/smart-nodes";
 import type { SmartNode } from "@/lib/types";
@@ -17,6 +18,17 @@ describe("pool host matching", () => {
     expect(nodeUrlToPoolHost("https://ccxapi.conceal.network/daemon/")).toBe(
       "ccxapi.conceal.network/daemon",
     );
+  });
+});
+
+describe("formatUptimeSeconds", () => {
+  it("shows seconds under one hour so live ticks are visible", () => {
+    expect(formatUptimeSeconds(45)).toBe("45s");
+    expect(formatUptimeSeconds(125)).toBe("2m 5s");
+  });
+
+  it("returns em dash when uptime is unknown", () => {
+    expect(formatUptimeSeconds(0)).toBe("—");
   });
 });
 

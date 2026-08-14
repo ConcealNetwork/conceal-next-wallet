@@ -5,6 +5,11 @@ import type { NetworkService } from "@/lib/services/network.service";
 export const mockNetworkService: NetworkService = {
   async getNodeStatus() {
     await mockDelay();
-    return clone(mockNodeStatus);
+    const now = Math.floor(Date.now() / 1000);
+    return clone({
+      ...mockNodeStatus,
+      tipBlockTimestamp: now - 47,
+      tipBlockAgeSeconds: 47,
+    });
   },
 };

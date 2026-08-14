@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/wallet/common";
 import { useNetworkStatus, useSmartNodes } from "@/lib/hooks";
 import { useNetworkTelemetry } from "@/lib/hooks/network-telemetry-provider";
 import { useCountUp, usePrefersReducedMotion } from "@/lib/hooks/use-count-up";
+import { useLiveAgeSeconds } from "@/lib/hooks/use-live-uptime";
 import {
   ensureSparklinePoints,
   normalizeHashrateChartSeries,
@@ -16,24 +17,31 @@ import {
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { type Formatters, useFormatters } from "@/lib/i18n/use-formatters";
 import { formatNodeVersion } from "@/lib/network/format-node-version";
-import { formatPoolUptimeForNodeUrl } from "@/lib/network/format-pool-uptime";
+import { formatUptimeSeconds } from "@/lib/network/format-pool-uptime";
+import { poolStartSecForUrl } from "@/lib/network/pool-node-uptime";
 import type { SmartNode } from "@/lib/types";
 import { formatHashrate } from "@/lib/ui/format-hashrate";
 import { cn } from "@/lib/utils";
 
 const BLOCK_TARGET_SECONDS = 120;
-const TELEMETRY_SKELETON_KEYS = ["height", "hashrate", "peers", "block-time"] as const;
+const TELEMETRY_SKELETON_KEYS = ["height", "hashrate", "peers", "tip-block-age"] as const;
 
 export default function NetworkPage() {
   const { t } = useI18n();
   const fmt = useFormatters();
   const { data, isLoading } = useNetworkStatus();
-  const { history: telemetry, hashrateChart } = useNetworkTelemetry();
   const {
     data: smartNodes,
     isPending: smartNodesPending,
     isError: smartNodesError,
   } = useSmartNodes(data?.url);
+  const poolStartSec = useMemo(
+    () => poolStartSecForUrl(smartNodes, data?.url ?? ""),
+    [smartNodes, data?.url],
+  );
+  const uptimeSeconds = useLiveAgeSeconds(poolStartSec);
+  const tipBlockAgeSeconds = useLiveAgeSeconds(data?.tipBlockTimestamp ?? 0);
+  const { history: telemetry, hashrateChart } = useNetworkTelemetry();
   // Gate on pending (no data yet), not fetching: a background refetch must never
   // blank the live peer graph back to the blurred placeholder.
   const smartNodesLoading = smartNodesPending;
@@ -70,7 +78,9 @@ export default function NetworkPage() {
   const host = data.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const syncPct =
     data.networkHeight > 0 ? Math.min((data.height / data.networkHeight) * 100, 100) : 0;
-  const uptimeLabel = smartNodesLoading ? "…" : formatPoolUptimeForNodeUrl(smartNodes, data.url);
+  const nodeUptimeLabel =
+    poolStartSec > 0 ? formatUptimeSeconds(uptimeSeconds) : smartNodesLoading ? "…" : "—";
+  const liveTipBlockAge = data.tipBlockTimestamp > 0 ? tipBlockAgeSeconds : data.tipBlockAgeSeconds;
 
   // Prefer the live, client-accumulated trend; fall back to the snapshot series
   // (multi-point in mock mode, where polling is disabled) until enough real
@@ -82,8 +92,8 @@ export default function NetworkPage() {
       : normalizeHashrateChartSeries(data.hashrateHistory),
   );
   const peersSeries = telemetry.peers.length > 0 ? telemetry.peers : data.peersHistory;
-  const blockTimeSeries = ensureSparklinePoints(
-    telemetry.blockTime.length >= 2 ? telemetry.blockTime : data.blockTimeHistory,
+  const tipBlockAgeSeries = ensureSparklinePoints(
+    telemetry.tipBlockAge.length >= 2 ? telemetry.tipBlockAge : data.tipBlockAgeHistory,
   );
 
   return (
@@ -101,7 +111,7 @@ export default function NetworkPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Meta label={t("network.uptime")} value={uptimeLabel} />
+            <Meta label={t("network.uptime")} value={nodeUptimeLabel} />
             <Meta label={t("network.version")} value={formatNodeVersion(data.version)} mono />
             <span
               className={cn(
@@ -163,7 +173,7 @@ export default function NetworkPage() {
           label={t("network.blockHeight")}
           value={heightLabel}
           detail={t("network.blockDetail", {
-            relative: formatRelative(data.lastBlockSecondsAgo, fmt),
+            relative: formatRelative(liveTipBlockAge, fmt),
           })}
           tone="amber"
           delay={210}
@@ -185,14 +195,14 @@ export default function NetworkPage() {
           chart={<MiniBars values={peersSeries} color="hsl(var(--chart-1))" />}
         />
         <ChartCard
-          label={t("network.avgBlockTime")}
-          value={`${Math.round(data.lastBlockSecondsAgo)} s`}
+          label={t("network.tipBlockAge")}
+          value={`${Math.round(liveTipBlockAge)} s`}
           detail={t("network.blockTimeTarget", { seconds: BLOCK_TARGET_SECONDS })}
           tone="incoming"
           delay={360}
           chart={
             <Sparkline
-              values={blockTimeSeries}
+              values={tipBlockAgeSeries}
               stroke="hsl(var(--chart-2))"
               baseline={BLOCK_TARGET_SECONDS}
               width={100}
