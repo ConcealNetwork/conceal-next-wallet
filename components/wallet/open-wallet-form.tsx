@@ -7,9 +7,9 @@ import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQueryClient } from "@/lib/hooks/query-provider";
 import { services } from "@/lib/services";
 import { useWalletSession } from "@/lib/session/wallet-session";
-import { clearAllGoals, goalsStore } from "@/lib/storage/goals-store";
-import { clearPulseMeta } from "@/lib/storage/pulse-meta";
+import { clearAllGoals } from "@/lib/storage/goals-store";
 import { clearAllTxNotes } from "@/lib/storage/tx-notes";
+import { clearWalletLocalMeta } from "@/lib/storage/wallet-local-meta";
 import { resetNavBadges } from "@/lib/ui/nav-badge-store";
 import { toast } from "@/lib/ui/toast";
 
@@ -100,9 +100,7 @@ export function useWalletDelete() {
         // actually being removed.
         const walletId = await getActiveWalletId();
         await services.wallet.deleteStoredWallet();
-        clearPasskeyEnrollment(walletId);
-        await goalsStore.clear(walletId).catch(() => {});
-        clearPulseMeta({ dismissals: true });
+        await clearWalletLocalMeta(walletId, { pulseDismissals: true });
         queryClient.clear();
         resetNavBadges();
         closeSession();

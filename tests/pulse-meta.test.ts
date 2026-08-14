@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import {
+  dismissPulse,
+  listDismissed,
+  resetPulseDismissed,
+} from "@/lib/storage/pulse-dismiss-store";
 import { clearPulseMeta } from "@/lib/storage/pulse-meta";
-import { dismissPulse, listDismissed, resetPulseDismissed } from "@/lib/storage/pulse-dismiss-store";
 
 const LEGACY_WATCHERS_KEY = "ccx-check-in-watchers";
 

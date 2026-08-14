@@ -20,7 +20,7 @@ import {
 } from "@/lib/services/query-options";
 import type { SendTransactionInput } from "@/lib/services/transaction.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
-import { clearPulseMeta } from "@/lib/storage/pulse-meta";
+import { clearWalletLocalMeta } from "@/lib/storage/wallet-local-meta";
 import type { Message, WalletInfo, WalletSettings, WalletSummary } from "@/lib/types";
 import { isWalletSyncing, walletSyncPercent } from "@/lib/ui/wallet-sync";
 
@@ -120,8 +120,8 @@ export function useDeleteWallet() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => services.wallet.deleteWallet(id),
-    onSuccess: () => {
-      clearPulseMeta();
+    onSuccess: (_result, id) => {
+      void clearWalletLocalMeta(id);
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
     },
   });
