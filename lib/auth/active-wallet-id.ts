@@ -17,7 +17,9 @@ import { env } from "@/lib/env";
  */
 export async function getActiveWalletId(): Promise<string> {
   if (env.useMockWallet) {
-    return DEFAULT_WALLET_ID;
+    const { mockWalletService } = await import("@/lib/services/mock/wallet.service");
+    const wallets = await mockWalletService.listWallets();
+    return wallets.find((w) => w.isActive)?.id ?? DEFAULT_WALLET_ID;
   }
   try {
     const { readWalletsIndex } = await import("@/lib/services/real-sdk/wallets-index");

@@ -1,15 +1,14 @@
 import { AVG_BLOCK_TIME_SECONDS } from "conceal-wallet-sdk";
+import { fetchDaemonGetInfo } from "@/lib/network/fetch-getinfo";
+import { trackTipBlockAge } from "@/lib/network/tip-block-age";
 import type { NetworkService } from "@/lib/services/network.service";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { getRuntime } from "@/lib/services/real-sdk/runtime";
 import type { NodeStatus } from "@/lib/types";
 
 /**
- * Node status from the SDK daemon client. Telemetry (difficulty / peer counts /
- * mempool / version) comes from `daemon.getInfo()` (the daemon `getinfo`
- * endpoint), mapped exactly as the legacy `getNodeStatusOperation` did:
- * `peers = white + grey peerlist`, `hashrate = difficulty / avgBlockTime`,
- * `mempool = transactions_pool_size`. Wallet height is the locally-scanned height.
+ * Node status from one daemon `getinfo` fetch. Parses Conceal-only fields
+ * (`last_block_timestamp`, `tx_pool_size`) the SDK client drops.
  */
 export const realSdkNetworkService: NetworkService = {
   async getNodeStatus(): Promise<NodeStatus> {
@@ -19,14 +18,16 @@ export const realSdkNetworkService: NetworkService = {
       throw new Error("Wallet is not open. Unlock the wallet to view node status.");
     }
 
-    const info = await rt.daemon.getInfo();
+    const info = await fetchDaemonGetInfo(rt.daemon.nodeUrl);
     const networkHeight = info.height;
     const walletHeight = Math.max(0, rt.state.scannedHeight);
     const peers = info.whitePeerlistSize + info.greyPeerlistSize;
     const hashrate = info.difficulty > 0 ? Math.round(info.difficulty / AVG_BLOCK_TIME_SECONDS) : 0;
     const now = Math.floor(Date.now() / 1000);
-    const lastBlockSecondsAgo =
-      info.startTime > 0 ? Math.max(0, now - info.startTime) : AVG_BLOCK_TIME_SECONDS;
+    const tipBlockAgeSeconds =
+      info.lastBlockTimestamp > 0
+        ? Math.max(0, now - info.lastBlockTimestamp)
+        : trackTipBlockAge(networkHeight, now, rt.daemon.nodeUrl);
     const version =
       info.version.trim().length > 0
         ? info.version.trim()
@@ -46,12 +47,12 @@ export const realSdkNetworkService: NetworkService = {
       difficulty: info.difficulty,
       hashrate,
       mempool: info.txPoolSize,
-      lastBlockSecondsAgo,
-      avgBlockTimeSeconds: AVG_BLOCK_TIME_SECONDS,
+      tipBlockTimestamp: info.lastBlockTimestamp > 0 ? info.lastBlockTimestamp : 0,
+      tipBlockAgeSeconds,
       heightHistory: [networkHeight],
       hashrateHistory: [hashrate],
       peersHistory: [peers],
-      blockTimeHistory: [lastBlockSecondsAgo],
+      tipBlockAgeHistory: [tipBlockAgeSeconds],
     };
   },
 };

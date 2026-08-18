@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { DEFAULT_WALLET_ID } from "@/lib/auth/biometric-store";
 import {
+  clearSchedules,
   listSchedules,
   markSchedulePaid,
   removeSchedule,
@@ -21,6 +23,7 @@ import {
 function schedule(over: Partial<ScheduledPayment> = {}): ScheduledPayment {
   return {
     id: "s1",
+    walletId: DEFAULT_WALLET_ID,
     label: "Rent",
     address: "ccx7abc",
     amount: "100",
@@ -82,18 +85,37 @@ describe("scheduled-payments store", () => {
 
   it("saves, lists, marks paid, and removes", () => {
     saveSchedule(schedule());
-    expect(listSchedules()).toHaveLength(1);
+    expect(listSchedules(DEFAULT_WALLET_ID)).toHaveLength(1);
 
     saveSchedule(schedule({ label: "Rent (updated)" })); // same id → update
-    const list = listSchedules();
+    const list = listSchedules(DEFAULT_WALLET_ID);
     expect(list).toHaveLength(1);
     expect(list[0].label).toBe("Rent (updated)");
 
-    markSchedulePaid("s1", "2026-02-01T00:00:00.000Z");
-    expect(listSchedules()[0].lastPaidAt).toBe("2026-02-01T00:00:00.000Z");
+    markSchedulePaid("s1", "2026-02-01T00:00:00.000Z", DEFAULT_WALLET_ID);
+    expect(listSchedules(DEFAULT_WALLET_ID)[0].lastPaidAt).toBe("2026-02-01T00:00:00.000Z");
 
-    removeSchedule("s1");
-    expect(listSchedules()).toHaveLength(0);
+    removeSchedule("s1", DEFAULT_WALLET_ID);
+    expect(listSchedules(DEFAULT_WALLET_ID)).toHaveLength(0);
+  });
+
+  it("isolates schedules per wallet and clears one wallet without touching another", () => {
+    saveSchedule(schedule({ id: "a", walletId: "wallet-a" }));
+    saveSchedule(schedule({ id: "b", walletId: "wallet-b" }));
+    expect(listSchedules("wallet-a")).toHaveLength(1);
+    expect(listSchedules("wallet-b")).toHaveLength(1);
+    clearSchedules("wallet-a");
+    expect(listSchedules("wallet-a")).toHaveLength(0);
+    expect(listSchedules("wallet-b")).toHaveLength(1);
+  });
+
+  it("treats legacy schedules without walletId as belonging to the default wallet", () => {
+    localStorage.setItem(
+      "ccx-scheduled-payments",
+      JSON.stringify([schedule({ id: "legacy", walletId: undefined })]),
+    );
+    expect(listSchedules(DEFAULT_WALLET_ID)).toHaveLength(1);
+    expect(listSchedules("wallet-other")).toHaveLength(0);
   });
 
   it("ignores corrupt / malformed stored entries", () => {
@@ -103,17 +125,17 @@ describe("scheduled-payments store", () => {
 
   it("snoozes and resumes a schedule, clearing snooze on mark-paid", () => {
     saveSchedule(schedule());
-    snoozeSchedule("s1", "2026-02-01T00:00:00.000Z");
-    expect(listSchedules()[0].snoozedUntil).toBe("2026-02-01T00:00:00.000Z");
+    snoozeSchedule("s1", "2026-02-01T00:00:00.000Z", DEFAULT_WALLET_ID);
+    expect(listSchedules(DEFAULT_WALLET_ID)[0].snoozedUntil).toBe("2026-02-01T00:00:00.000Z");
 
     // Marking paid clears the snooze and advances the schedule.
-    markSchedulePaid("s1", "2026-01-16T00:00:00.000Z");
-    expect(listSchedules()[0].snoozedUntil).toBeUndefined();
+    markSchedulePaid("s1", "2026-01-16T00:00:00.000Z", DEFAULT_WALLET_ID);
+    expect(listSchedules(DEFAULT_WALLET_ID)[0].snoozedUntil).toBeUndefined();
 
     // Clear snooze explicitly.
-    snoozeSchedule("s1", "2026-03-01T00:00:00.000Z");
-    snoozeSchedule("s1", undefined);
-    expect(listSchedules()[0].snoozedUntil).toBeUndefined();
+    snoozeSchedule("s1", "2026-03-01T00:00:00.000Z", DEFAULT_WALLET_ID);
+    snoozeSchedule("s1", undefined, DEFAULT_WALLET_ID);
+    expect(listSchedules(DEFAULT_WALLET_ID)[0].snoozedUntil).toBeUndefined();
   });
 
   it("accepts a valid stored snoozedUntil and rejects a non-string one", () => {
@@ -124,7 +146,7 @@ describe("scheduled-payments store", () => {
         { ...schedule({ id: "bad" }), snoozedUntil: 123 },
       ]),
     );
-    const list = listSchedules();
+    const list = listSchedules(DEFAULT_WALLET_ID);
     expect(list).toHaveLength(1);
     expect(list[0].snoozedUntil).toBe("2026-02-01T00:00:00.000Z");
   });

@@ -6,12 +6,16 @@
  * one-time consent at arming and no per-fire prompt.
  */
 
+import { DEFAULT_WALLET_ID } from "@/lib/auth/biometric-store";
+
 export type Cadence = "weekly" | "monthly" | "quarterly" | "yearly";
 
 export const CADENCES: readonly Cadence[] = ["weekly", "monthly", "quarterly", "yearly"];
 
 export interface ScheduledPayment {
   id: string;
+  /** Wallet that owns this reminder (stamped at create). Legacy entries omit → default. */
+  walletId?: string;
   /** Friendly name, e.g. "Rent". */
   label: string;
   address: string;
@@ -40,6 +44,21 @@ export interface ScheduledPayment {
    * Absent = legacy/any (pre-stamp); the engine then uses the active wallet.
    */
   autoSendWalletId?: string;
+}
+
+/** Resolved owner wallet for a schedule (legacy entries → default wallet). */
+export function scheduleOwnerId(
+  schedule: Pick<ScheduledPayment, "walletId" | "autoSendWalletId">,
+): string {
+  return schedule.walletId ?? schedule.autoSendWalletId ?? DEFAULT_WALLET_ID;
+}
+
+/** True when the schedule belongs to `walletId` (defaults to the default wallet). */
+export function belongsToWallet(
+  schedule: Pick<ScheduledPayment, "walletId" | "autoSendWalletId">,
+  walletId?: string,
+): boolean {
+  return scheduleOwnerId(schedule) === (walletId ?? DEFAULT_WALLET_ID);
 }
 
 const CADENCE_LABELS: Record<Cadence, string> = {
@@ -205,9 +224,6 @@ export function schedulesToAutoSend(
   activeWalletId?: string,
 ): ScheduledPayment[] {
   return schedules.filter(
-    (s) =>
-      s.autoSend === true &&
-      isDue(s, nowISO) &&
-      (s.autoSendWalletId === undefined || s.autoSendWalletId === activeWalletId),
+    (s) => s.autoSend === true && isDue(s, nowISO) && belongsToWallet(s, activeWalletId),
   );
 }

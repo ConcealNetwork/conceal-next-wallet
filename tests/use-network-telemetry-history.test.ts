@@ -20,12 +20,12 @@ function status(over: Partial<NodeStatus>): NodeStatus {
     difficulty: 100,
     hashrate: 50,
     mempool: 0,
-    lastBlockSecondsAgo: 45,
-    avgBlockTimeSeconds: 120,
+    tipBlockTimestamp: 0,
+    tipBlockAgeSeconds: 45,
     heightHistory: [],
     hashrateHistory: [],
     peersHistory: [],
-    blockTimeHistory: [],
+    tipBlockAgeHistory: [],
     ...over,
   };
 }
@@ -33,31 +33,31 @@ function status(over: Partial<NodeStatus>): NodeStatus {
 describe("accumulateNetworkTelemetry", () => {
   it("starts empty and records one point per reading", () => {
     let history = accumulateNetworkTelemetry(
-      { height: [], hashrate: [], peers: [], blockTime: [] },
-      status({ networkHeight: 100, hashrate: 10, peers: 4, lastBlockSecondsAgo: 30 }),
+      { height: [], hashrate: [], peers: [], tipBlockAge: [] },
+      status({ networkHeight: 100, hashrate: 10, peers: 4, tipBlockAgeSeconds: 30 }),
     );
     expect(history).toEqual({
       height: [100],
       hashrate: [10],
       peers: [4],
-      blockTime: [30],
+      tipBlockAge: [30],
     });
 
     history = accumulateNetworkTelemetry(
       history,
-      status({ networkHeight: 101, hashrate: 12, peers: 5, lastBlockSecondsAgo: 8 }),
+      status({ networkHeight: 101, hashrate: 12, peers: 5, tipBlockAgeSeconds: 8 }),
     );
     expect(history).toEqual({
       height: [100, 101],
       hashrate: [10, 12],
       peers: [4, 5],
-      blockTime: [30, 8],
+      tipBlockAge: [30, 8],
     });
   });
 
   it("caps the series at TELEMETRY_MAX_POINTS, keeping the newest", () => {
     let history = accumulateNetworkTelemetry(
-      { height: [], hashrate: [], peers: [], blockTime: [] },
+      { height: [], hashrate: [], peers: [], tipBlockAge: [] },
       status({ networkHeight: 0 }),
     );
     for (let i = 1; i < TELEMETRY_MAX_POINTS + 6; i += 1) {

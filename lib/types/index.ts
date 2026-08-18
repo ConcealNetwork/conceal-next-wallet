@@ -213,7 +213,7 @@ export type SmartNode = {
   /** Raw `url.host` from pool list (e.g. explorer.conceal.network/daemon). */
   poolHost: string;
   isActive?: boolean;
-  /** Pool registry `status.startTime` (ISO). */
+  /** Pool registry `status.startTime` (ISO) — node uptime on curated nodes. */
   poolStartTime?: string;
   /** Pool registry `status.uptime` (0–100). */
   poolUptimePercent?: number;
@@ -228,17 +228,19 @@ export type NodeStatus = {
   peersIn: number;
   isCustom: boolean;
   version: string;
-  // Populated from the Conceal daemon `getinfo` response (see getNodeStatusOperation).
+  // Populated from the Conceal daemon `getinfo` response.
   difficulty: number;
   hashrate: number; // hashes per second
   mempool: number; // pending tx count (tx_pool_size)
-  lastBlockSecondsAgo: number;
-  avgBlockTimeSeconds: number;
+  /** Tip block mined at (`getinfo.last_block_timestamp`, unix seconds; 0 when omitted). */
+  tipBlockTimestamp: number;
+  /** Seconds since tip block at last poll (height-poll fallback). */
+  tipBlockAgeSeconds: number;
   // Short recent-history series used by the telemetry sparklines (oldest → newest)
   heightHistory: number[];
   hashrateHistory: number[];
   peersHistory: number[];
-  blockTimeHistory: number[];
+  tipBlockAgeHistory: number[];
 };
 
 import type { SyncSpeed } from "@/lib/ui/sync-speed";
