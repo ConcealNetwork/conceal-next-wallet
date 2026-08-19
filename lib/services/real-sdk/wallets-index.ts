@@ -108,7 +108,7 @@ async function recoverIndexFromStorage(): Promise<WalletsIndex> {
 export async function readWalletsIndex(): Promise<WalletsIndex> {
   const raw = getSdkWalletStorage();
   const stored = await raw.getItem(INDEX_KEY);
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored) as Partial<WalletsIndex>;
       const wallets = Array.isArray(parsed.wallets) ? parsed.wallets.filter(isMeta) : [];

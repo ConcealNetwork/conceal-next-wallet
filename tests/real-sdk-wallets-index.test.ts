@@ -128,6 +128,21 @@ describe("wallets-index (#95)", () => {
     );
   });
 
+  it("recovers namespaced wallets when the stored index record is an empty string", async () => {
+    // A partial write can leave "" behind — that must take the recovery path too,
+    // not the legacy no-index migration that would orphan every namespaced wallet.
+    const main = await registerWallet({ label: "Main" });
+    const savings = await registerWallet({ label: "Savings" });
+    await storageForWallet(main).setItem("wallet", "MAIN-BLOB");
+    await storageForWallet(savings).setItem("wallet", "SAVINGS-BLOB");
+    await getSdkWalletStorage().setItem("wallets-index", "");
+
+    const index = await readWalletsIndex();
+    const ids = index.wallets.map((w) => w.id);
+    expect(ids).toContain(DEFAULT_WALLET_ID);
+    expect(ids).toContain(savings.id);
+  });
+
   it("recovers namespaced wallets when the stored index record has no usable entries", async () => {
     const savings = await registerWallet({ label: "Savings" }); // first → default keyspace
     const holiday = await registerWallet({ label: "Holiday" }); // namespaced
