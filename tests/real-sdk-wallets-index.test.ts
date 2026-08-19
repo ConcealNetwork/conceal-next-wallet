@@ -105,4 +105,57 @@ describe("wallets-index (#95)", () => {
     expect((await readWalletsIndex()).wallets).toHaveLength(1);
     expect(await storageForWallet(b).getItem("wallet")).toBeNull();
   });
+
+  it("recovers namespaced wallets when the stored index record is corrupt JSON", async () => {
+    const main = await registerWallet({ label: "Main" }); // bare "wallet" key
+    const savings = await registerWallet({ label: "Savings" }); // namespaced
+    await storageForWallet(main).setItem("wallet", "MAIN-BLOB");
+    await storageForWallet(savings).setItem("wallet", "SAVINGS-BLOB");
+    await getSdkWalletStorage().setItem("wallets-index", "{not valid json");
+
+    const index = await readWalletsIndex();
+    const ids = index.wallets.map((w) => w.id);
+    expect(ids).toContain(DEFAULT_WALLET_ID);
+    expect(ids).toContain(savings.id);
+    const recovered = index.wallets.find((w) => w.id === savings.id);
+    expect(recovered?.namespace).toBe(savings.id); // keyspace binding preserved
+    expect(index.activeId).toBe(DEFAULT_WALLET_ID);
+    // The blobs themselves were never touched — the switcher can still open them.
+    expect(await storageForWallet(savings).getItem("wallet")).toBe("SAVINGS-BLOB");
+    // The recovered registry is persisted: a second read returns it unchanged.
+    expect((await readWalletsIndex()).wallets.map((w) => w.id).sort()).toEqual(
+      [...ids].sort(),
+    );
+  });
+
+  it("recovers namespaced wallets when the stored index record has no usable entries", async () => {
+    const savings = await registerWallet({ label: "Savings" }); // first → default keyspace
+    const holiday = await registerWallet({ label: "Holiday" }); // namespaced
+    await storageForWallet(savings).setItem("wallet", "SAVINGS-BLOB");
+    await storageForWallet(holiday).setItem("wallet", "HOLIDAY-BLOB");
+    // A structurally-valid but wallet-less record (e.g. written by a partial write).
+    await getSdkWalletStorage().setItem(
+      "wallets-index",
+      JSON.stringify({ activeId: DEFAULT_WALLET_ID, wallets: [] }),
+    );
+
+    const index = await readWalletsIndex();
+    const ids = index.wallets.map((w) => w.id);
+    expect(ids).toContain(DEFAULT_WALLET_ID);
+    expect(ids).toContain(holiday.id);
+    expect(index.activeId).toBe(DEFAULT_WALLET_ID);
+  });
+
+  it("recovers a namespaced-only registry with the first wallet active when the index is corrupt", async () => {
+    // First wallet takes the DEFAULT keyspace; delete it, leaving only namespaced ones.
+    const def = await registerWallet({ label: "Default" });
+    const other = await registerWallet({ label: "Other" });
+    await storageForWallet(other).setItem("wallet", "OTHER-BLOB");
+    await unregisterWallet(def.id);
+    await getSdkWalletStorage().setItem("wallets-index", "]]garbage[["); // + wallet-less
+
+    const index = await readWalletsIndex();
+    expect(index.wallets.map((w) => w.id)).toEqual([other.id]);
+    expect(index.activeId).toBe(other.id); // default is gone → first recovered is active
+  });
 });
