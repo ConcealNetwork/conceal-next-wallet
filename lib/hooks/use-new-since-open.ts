@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { useQuery } from "@/lib/hooks/query-provider";
-import { useWalletSynced } from "@/lib/hooks/use-check-ins";
+import { useWalletSynced } from "@/lib/hooks/use-pulse";
 import { countReceivedMessages } from "@/lib/messages/conversations";
 import { countReceivedPulses } from "@/lib/messages/pulse-rows";
 import { services } from "@/lib/services";
@@ -77,7 +77,7 @@ export function useAcknowledgeMessagesSinceOpen(): () => void {
 export function useNewPulsesSinceOpen(): number {
   return useNewSinceOpen({
     store: pulseNavBadge,
-    pagePath: "/wallet/check-ins",
+    pagePath: "/wallet/pulse",
     count: countReceivedPulses,
   });
 }

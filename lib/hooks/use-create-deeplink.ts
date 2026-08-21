@@ -37,7 +37,7 @@ export function useCreateDeepLink(onCreate: () => void) {
 
 /**
  * Scroll a create-form field into view and focus it — the inline-form equivalent of opening a
- * create dialog. For pages whose "create flow" is an on-page add form (Scheduled, Check-ins)
+ * create dialog. For pages whose "create flow" is an on-page add form (Scheduled, Pulse)
  * rather than a modal.
  */
 export function focusCreateField(id: string): void {

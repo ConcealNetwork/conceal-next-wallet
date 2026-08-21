@@ -11,7 +11,7 @@ import { UnlockWalletProvider } from "@/components/wallet/unlock-wallet-provider
 import { useWalletLiveSync, useWalletSettings, useWalletSyncStatus } from "@/lib/hooks";
 import { NetworkTelemetryProvider } from "@/lib/hooks/network-telemetry-provider";
 import { useAppBadge } from "@/lib/hooks/use-app-badge";
-import { useCheckInAlerts } from "@/lib/hooks/use-check-ins";
+import { usePulseAlerts } from "@/lib/hooks/use-pulse";
 import { useDuePaymentReminders } from "@/lib/hooks/use-due-reminders";
 import { useIdleLock } from "@/lib/hooks/use-idle-lock";
 import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-since-open";
@@ -29,12 +29,12 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   useWalletLiveSync();
   usePrefetchMessagesForBadge();
   useDuePaymentReminders();
-  useCheckInAlerts();
+  usePulseAlerts();
   // Background-sync + notify for funds/messages arriving on UNLOCKED non-active wallets.
   useSecondaryWalletWatch();
   // Auto-send armed scheduled payments when due (#92 phase 2) — real mode + unlocked only.
   useScheduledAutoSend();
-  // Mirror actionable counts (overdue check-ins + due reminders) on the app icon.
+  // Mirror actionable counts (overdue pulses + due reminders) on the app icon.
   useAppBadge();
   // Keep the screen awake during long syncs so a scan doesn't stall on sleep.
   useSyncWakeLock(useWalletSyncStatus().isSyncing);

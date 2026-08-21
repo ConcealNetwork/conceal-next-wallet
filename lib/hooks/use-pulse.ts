@@ -17,7 +17,7 @@ export function useWalletSynced(): boolean {
 }
 
 /** Red-phase received pulses — sidebar badge. */
-export function useOverdueCheckInCount(): number {
+export function useOverduePulseCount(): number {
   const synced = useWalletSynced();
   const messages = useMessages();
   const addressBook = useAddressBook();
@@ -28,7 +28,7 @@ export function useOverdueCheckInCount(): number {
 }
 
 /** Toast when a contact's pulse enters the overdue (post-grace) phase. */
-export function useCheckInAlerts(): void {
+export function usePulseAlerts(): void {
   const synced = useWalletSynced();
   const messages = useMessages();
   const addressBook = useAddressBook();
@@ -53,7 +53,7 @@ export function useCheckInAlerts(): void {
       void notify("Pulse overdue", {
         body: `${fresh.length} contact${fresh.length === 1 ? "" : "s"} past their pulse grace window.`,
         tag: "ccx-pulse",
-        data: { url: "wallet/check-ins" },
+        data: { url: "wallet/pulse" },
       });
     }
   }, [messages.data, addressBook.data, dismissed]);

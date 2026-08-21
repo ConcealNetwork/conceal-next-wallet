@@ -15,7 +15,7 @@ const { isKnownSmartMessage, isSmartMessage } = messages;
  * allow-list, fall through to ChaCha8, fail its checksum, and vanish.
  *
  * This reproduces the exact decrypt gate against the real conceal-lib-js WASM
- * (the same `cypher` the wallet bundles), mirroring tests/check-in-cipher.test.ts.
+ * (the same `cypher` the wallet bundles), mirroring tests/pulse-cipher.test.ts.
  * It proves: (1) an unknown-module smart message round-trips via ChaCha12,
  * (2) a known-module smart message still does, (3) plain chat still falls
  * through to ChaCha8 unchanged, (4) the new structural gate is strictly broader

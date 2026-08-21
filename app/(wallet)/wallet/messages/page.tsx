@@ -750,7 +750,7 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
           messages.isKnownSmartMessage(message.body) ? (
             message.direction === "received" && smartPulse.isStatusPulse(message.body) ? (
               <Link
-                href="/wallet/check-ins"
+                href="/wallet/pulse"
                 className="inline-flex items-center gap-1.5 font-medium italic opacity-90"
               >
                 <Cog className="size-3.5" aria-hidden="true" />

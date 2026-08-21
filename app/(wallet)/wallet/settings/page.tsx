@@ -190,7 +190,7 @@ function SyncSpeedSelector({
 }
 
 /**
- * Opt-in OS notifications for due reminders / overdue check-ins. Strictly
+ * Opt-in OS notifications for due reminders / overdue pulses. Strictly
  * additive: toasts remain the default. The toggle persists the user's intent
  * and, on enable, requests browser permission from this click (a user gesture,
  * required by the API). Shows the current permission state.
