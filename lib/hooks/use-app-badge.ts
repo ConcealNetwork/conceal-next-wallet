@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useOverdueCheckInCount } from "@/lib/hooks/use-check-ins";
+import { useOverduePulseCount } from "@/lib/hooks/use-pulse";
 import { useDueReminderCount } from "@/lib/hooks/use-due-reminders";
 import { clearAppBadge, updateAppBadge } from "@/lib/notifications/app-badge";
 
@@ -9,7 +9,7 @@ import { clearAppBadge, updateAppBadge } from "@/lib/notifications/app-badge";
 const BADGE_REFRESH_MS = 60_000;
 
 /**
- * Mirror the count of *actionable* items (overdue check-ins + due payment
+ * Mirror the count of *actionable* items (overdue pulses + due payment
  * reminders) on the installed-app icon via the Badging API. Both source counts
  * are already computed by the app; this hook only forwards their sum.
  *
@@ -22,9 +22,9 @@ const BADGE_REFRESH_MS = 60_000;
  */
 export function useAppBadge(): void {
   const [, setTick] = useState(0);
-  const overdueCheckIns = useOverdueCheckInCount();
+  const overduePulses = useOverduePulseCount();
   const dueReminders = useDueReminderCount();
-  const total = overdueCheckIns + dueReminders;
+  const total = overduePulses + dueReminders;
 
   // Force a re-render (→ both counts recompute against a fresh clock) on a slow
   // cadence and on refocus. Increment guarantees a render even when a count is

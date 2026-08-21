@@ -15,7 +15,7 @@
 > POSTs to a push service. What a backend-less static PWA *can* do — and this
 > wallet **already does** — is **local, opt-in OS notifications** via the
 > Notification API (`registration.showNotification` with a constructor
-> fallback), fired from the foreground for due reminders / overdue check-ins.
+> fallback), fired from the foreground for due reminders / overdue pulses.
 > That is the realistic ceiling here.
 
 ---
@@ -76,8 +76,8 @@
   and `notify()` which prefers `registration.showNotification()` then falls
   back to `new Notification()`. Consumed by
   `/Users/travis/Projects/conceal-next-wallet/lib/hooks/use-due-reminders.ts`
-  (scheduled-payment due reminders) and `.../lib/hooks/use-check-ins.ts`
-  (overdue check-ins), both fired on wallet open + on `visibilitychange`,
+  (scheduled-payment due reminders) and `.../lib/hooks/use-pulse.ts`
+  (overdue pulses), both fired on wallet open + on `visibilitychange`,
   de-duped per due-instance. Settings toggle in
   `/Users/travis/Projects/conceal-next-wallet/app/(wallet)/wallet/settings/page.tsx`
   (`NotificationsSetting`).
@@ -148,8 +148,8 @@
 
 ### Badging API (`navigator.setAppBadge` / `clearAppBadge`) — RECOMMEND
 - **What:** Numeric/dot badge on the installed app icon — natural fit for the
-  existing **overdue check-ins** and **due reminders** counts (the sidebar
-  already computes `useOverdueCheckInCount`).
+  existing **overdue pulses** and **due reminders** counts (the sidebar
+  already computes `useOverduePulseCount`).
 - **Status (verified):** MDN **"Limited availability"** — works on installed
   PWAs in Chromium (desktop + Android) and Safari/iOS for Home-Screen web apps;
   not in Firefox. Document-scope `setAppBadge` works without a service worker,
@@ -159,7 +159,7 @@
   cleanly in the existing "purely-local UI metadata" lane.
 - **Caveat:** Only visible when **installed**; silently no-ops otherwise
   (feature-detect, never throw). Recommend wiring it into
-  `use-check-ins.ts` / `use-due-reminders.ts`.
+  `use-pulse.ts` / `use-due-reminders.ts`.
 
 ### Screen Wake Lock API (`navigator.wakeLock.request("screen")`) — RECOMMEND (scoped)
 - **What:** Keep the screen awake during the **initial long blockchain sync**
@@ -197,7 +197,7 @@
   - **iOS** additionally requires the app to be installed to Home Screen even
     if a server existed. [WebKit iOS Web Push blog]
 - **What *is* achievable without a server (already done):** **local**
-  notifications fired by the running app for due reminders / overdue check-ins
+  notifications fired by the running app for due reminders / overdue pulses
   (Part 1). The unavoidable gap vs. real push: nothing fires while the app is
   fully closed.
 - **If a backend is ever added (explicitly noted, not recommended now):** the

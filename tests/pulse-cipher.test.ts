@@ -1,10 +1,9 @@
 import { readFileSync } from "node:fs";
-import { messages } from "conceal-wallet-sdk";
+import { messages, smartPulse } from "conceal-wallet-sdk";
 import { beforeAll, describe, expect, it } from "vitest";
 
 const { isKnownSmartMessage } = messages;
-
-import { formatCheckIn, parseCheckIn } from "@/lib/ui/check-in-message";
+const { formatStatusPulse, parseStatusPulse } = smartPulse;
 
 /**
  * Verifies the smart-message cipher path against the REAL conceal-lib-js WASM
@@ -45,24 +44,24 @@ beforeAll(async () => {
   chacha12 = mod.chacha12;
 });
 
-describe("check-in cipher scheme (real conceal-lib-js WASM)", () => {
+describe("pulse cipher scheme (real conceal-lib-js WASM)", () => {
   const key = new Uint8Array(32).fill(9);
   const nonce = new Uint8Array(12); // message nonce is derived; all-zero is the common case
 
-  it("round-trips a {status,alive} check-in through ChaCha12 + checksum framing", () => {
-    const body = formatCheckIn("alive"); // {status,alive}
+  it("round-trips a {status,alive} pulse through ChaCha12 + checksum framing", () => {
+    const body = formatStatusPulse("alive"); // {status,alive}
     const ct = encrypt(chacha12, key, nonce, body);
     const recovered = decrypt(chacha12, key, nonce, ct);
     expect(recovered).toBe(body);
     expect(isKnownSmartMessage(recovered as string)).toBe(true);
-    expect(parseCheckIn(recovered)).toEqual({ status: "alive" });
+    expect(parseStatusPulse(recovered)).toEqual({ kind: "alive", graceDays: 0 });
   });
 
   it("a ChaCha8 (ordinary) message does NOT decrypt as a ChaCha12 smart message", () => {
     // This is exactly the decrypt fallback gate: try ChaCha12, reject, use ChaCha8.
     const ct8 = encrypt(chacha8, key, nonce, "hey, lunch tomorrow?");
     const asCha12 = decrypt(chacha12, key, nonce, ct8);
-    // Either checksum fails (null) or it isn't a smart message — never a false check-in.
+    // Either checksum fails (null) or it isn't a smart message — never a false pulse.
     expect(asCha12 === null || !isKnownSmartMessage(asCha12)).toBe(true);
     // And it round-trips correctly under ChaCha8.
     expect(decrypt(chacha8, key, nonce, ct8)).toBe("hey, lunch tomorrow?");
