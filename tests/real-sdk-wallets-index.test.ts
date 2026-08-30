@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { _resetSdkWalletStorage, getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
 import {
+  _clearWalletsIndex,
+  _resetWalletsIndexRecoveryNotice,
   DEFAULT_WALLET_ID,
   getActiveWallet,
   readWalletsIndex,
@@ -10,8 +12,6 @@ import {
   takeWalletsIndexRecoveryNotice,
   unregisterWallet,
   updateWallet,
-  _clearWalletsIndex,
-  _resetWalletsIndexRecoveryNotice,
 } from "@/lib/services/real-sdk/wallets-index";
 
 /**
@@ -131,9 +131,7 @@ describe("wallets-index (#95)", () => {
     // The blobs themselves were never touched — the switcher can still open them.
     expect(await storageForWallet(savings).getItem("wallet")).toBe("SAVINGS-BLOB");
     // The recovered registry is persisted: a second read returns it unchanged.
-    expect((await readWalletsIndex()).wallets.map((w) => w.id).sort()).toEqual(
-      [...ids].sort(),
-    );
+    expect((await readWalletsIndex()).wallets.map((w) => w.id).sort()).toEqual([...ids].sort());
   });
 
   it("recovers namespaced wallets when the stored index record is an empty string", async () => {
