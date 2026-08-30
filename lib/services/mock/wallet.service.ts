@@ -178,4 +178,7 @@ export const mockWalletService: WalletService = {
     // Mock mode has no real per-wallet background sync — nothing to watch (#108).
     return [];
   },
+  takeRegistryRecoveryNotice() {
+    return false;
+  },
 };

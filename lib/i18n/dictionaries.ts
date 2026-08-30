@@ -500,6 +500,8 @@ const en: Dictionary = {
   "toast.passkeyWrongPassword": "That password doesn't match this wallet.",
   "toast.passkeyOutOfDate":
     "Passkey unlock is out of date — unlock with your password to re-enable it.",
+  "toast.walletsIndexRecovered":
+    "Wallet list restored from local storage — rename wallets if labels look wrong.",
   "txn.rowAria": "{label} transaction for {amount} from {time}",
   "txn.confirmationsCount": "{count} confirmations",
   "txn.typeWithdrawal": "Withdrawal",
@@ -1499,6 +1501,8 @@ const es: Dictionary = {
   "toast.passkeyWrongPassword": "Esa contraseña no coincide con esta cartera.",
   "toast.passkeyOutOfDate":
     "El desbloqueo con clave de acceso está desactualizado — desbloquea con tu contraseña para volver a activarlo.",
+  "toast.walletsIndexRecovered":
+    "Lista de carteras restaurada desde el almacenamiento local — renombra las carteras si las etiquetas no son correctas.",
   "txn.rowAria": "Transacción de {label} por {amount} de {time}",
   "txn.confirmationsCount": "{count} confirmaciones",
   "txn.typeWithdrawal": "Retiro",
@@ -2512,6 +2516,8 @@ const fr: Dictionary = {
   "toast.passkeyWrongPassword": "Ce mot de passe ne correspond pas à ce portefeuille.",
   "toast.passkeyOutOfDate":
     "Le déverrouillage par clé d'accès n'est plus à jour — déverrouillez avec votre mot de passe pour le réactiver.",
+  "toast.walletsIndexRecovered":
+    "Liste de portefeuilles restaurée depuis le stockage local — renommez-les si les libellés semblent incorrects.",
   "txn.rowAria": "Transaction {label} de {amount} datant de {time}",
   "txn.confirmationsCount": "{count} confirmations",
   "txn.typeWithdrawal": "Retrait",
@@ -3529,6 +3535,8 @@ const de: Dictionary = {
   "toast.passkeyWrongPassword": "Dieses Passwort passt nicht zu dieser Wallet.",
   "toast.passkeyOutOfDate":
     "Das Entsperren per Passkey ist veraltet — entsperre mit deinem Passwort, um es erneut zu aktivieren.",
+  "toast.walletsIndexRecovered":
+    "Wallet-Liste aus lokalem Speicher wiederhergestellt — benenne Wallets um, wenn die Bezeichnungen falsch wirken.",
   "txn.rowAria": "{label}-Transaktion über {amount} von {time}",
   "txn.confirmationsCount": "{count} Bestätigungen",
   "txn.typeWithdrawal": "Abhebung",
@@ -4541,6 +4549,8 @@ const it: Dictionary = {
   "toast.passkeyWrongPassword": "Questa password non corrisponde a questo wallet.",
   "toast.passkeyOutOfDate":
     "Lo sblocco con passkey non è aggiornato — sblocca con la tua password per riattivarlo.",
+  "toast.walletsIndexRecovered":
+    "Elenco portafogli ripristinato dalla memoria locale — rinomina i portafogli se le etichette non sono corrette.",
   "txn.rowAria": "Transazione {label} di {amount} del {time}",
   "txn.confirmationsCount": "{count} conferme",
   "txn.typeWithdrawal": "Prelievo",
@@ -5551,6 +5561,8 @@ const pt: Dictionary = {
   "toast.passkeyWrongPassword": "Essa senha não corresponde a esta carteira.",
   "toast.passkeyOutOfDate":
     "O desbloqueio com chave de acesso está desatualizado — desbloqueie com a sua senha para reativá-lo.",
+  "toast.walletsIndexRecovered":
+    "Lista de carteiras restaurada do armazenamento local — renomeie as carteiras se os rótulos parecerem incorretos.",
   "txn.rowAria": "Transação de {label} de {amount} de {time}",
   "txn.confirmationsCount": "{count} confirmações",
   "txn.typeWithdrawal": "Saque",
@@ -6558,6 +6570,8 @@ const ru: Dictionary = {
   "toast.passkeyWrongPassword": "Этот пароль не подходит к этому кошельку.",
   "toast.passkeyOutOfDate":
     "Разблокировка по ключу доступа устарела — разблокируйте с помощью пароля, чтобы снова её включить.",
+  "toast.walletsIndexRecovered":
+    "Список кошельков восстановлен из локального хранилища — переименуйте кошельки, если подписи неверны.",
   "txn.rowAria": "Транзакция «{label}» на {amount} от {time}",
   "txn.confirmationsCount": "{count} подтверждений",
   "txn.typeWithdrawal": "Вывод",
@@ -7544,6 +7558,7 @@ const zh: Dictionary = {
   "toast.passkeySessionExpired": "钱包会话已过期 — 请重新打开钱包以添加通行密钥。",
   "toast.passkeyWrongPassword": "该密码与此钱包不匹配。",
   "toast.passkeyOutOfDate": "通行密钥解锁已过期 — 请使用密码解锁以重新启用。",
+  "toast.walletsIndexRecovered": "已从本地存储恢复钱包列表 — 若标签不正确请重命名钱包。",
   "txn.rowAria": "{label}交易，金额 {amount}，时间 {time}",
   "txn.confirmationsCount": "{count} 次确认",
   "txn.typeWithdrawal": "提现",
@@ -8519,6 +8534,8 @@ const ja: Dictionary = {
   "toast.passkeyWrongPassword": "そのパスワードはこのウォレットと一致しません。",
   "toast.passkeyOutOfDate":
     "パスキーによるロック解除が古くなっています — パスワードでロックを解除して再度有効にしてください。",
+  "toast.walletsIndexRecovered":
+    "ローカルストレージからウォレット一覧を復元しました — 表示名が正しくない場合は名前を変更してください。",
   "txn.rowAria": "{time} の {amount} の{label}取引",
   "txn.confirmationsCount": "{count} 件の確認",
   "txn.typeWithdrawal": "引き出し",
@@ -9511,6 +9528,8 @@ const ko: Dictionary = {
   "toast.passkeyWrongPassword": "이 비밀번호는 이 지갑과 일치하지 않습니다.",
   "toast.passkeyOutOfDate":
     "패스키 잠금 해제가 최신 상태가 아닙니다 — 비밀번호로 잠금을 해제하여 다시 활성화하세요.",
+  "toast.walletsIndexRecovered":
+    "로컬 저장소에서 지갑 목록을 복구했습니다 — 라벨이 잘못된 경우 지갑 이름을 변경하세요.",
   "txn.rowAria": "{time}의 {amount} {label} 거래",
   "txn.confirmationsCount": "확인 {count}회",
   "txn.typeWithdrawal": "출금",

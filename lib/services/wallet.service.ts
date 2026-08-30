@@ -117,6 +117,11 @@ export interface WalletService {
   /** Delete a wallet by id (erases its keyspace + drops it from the registry). */
   deleteWallet(id: string): Promise<void>;
   /**
+   * Real mode only: consume a one-shot notice that the wallet registry was rebuilt from
+   * local storage envelopes. Mock mode always returns false.
+   */
+  takeRegistryRecoveryNotice(): boolean;
+  /**
    * Background-sync every UNLOCKED non-active wallet and report its mined balance +
    * received-message count, so the UI can detect funds/messages arriving on a wallet the
    * user isn't viewing and fire a cross-wallet notification (#108). Best-effort per

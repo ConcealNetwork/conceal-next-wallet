@@ -25,6 +25,15 @@ const LEGACY_WALLET_KEY = "wallet";
 /** Stable id of the default (bare-key) wallet. */
 export const DEFAULT_WALLET_ID = "default";
 
+/**
+ * A namespaced wallet-envelope key `<id>:wallet` on the RAW adapter, where `<id>` is a
+ * wallet id from {@link newWalletId}: a UUID (browser `randomUUID`) or 32 hex chars
+ * (the older 16-random-bytes fallback). Strict on purpose so SDK namespaces living on
+ * the same adapter (e.g. `outbox:<hash>`, `wallets-index`) never match.
+ */
+const NAMESPACED_WALLET_KEY =
+  /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32}):wallet$/;
+
 /** One registered wallet. */
 export interface WalletMeta {
   /** Stable id. `"default"` for the bare-key wallet; a UUID for namespaced wallets. */
@@ -63,14 +72,66 @@ function newWalletId(): string {
 }
 
 /**
- * Read the registry, MIGRATING on first use: with no index but an existing bare
- * `"wallet"` blob, seed a one-entry registry for the default wallet; with neither,
- * return an empty registry. Always returns a well-formed, deduped index.
+ * Rebuild the registry from what storage actually holds: the bare `"wallet"` blob (the
+ * default/legacy wallet) plus every namespaced `<id>:wallet` envelope. Called when the
+ * stored `wallets-index` record is missing or unusable so every envelope stays reachable
+ * from the switcher. Custom labels and cached addresses are not stored on the envelope —
+ * recovered wallets use a default/truncated-id label and the default (or first) wallet
+ * becomes active.
+ */
+async function recoverIndexFromStorage(): Promise<WalletsIndex> {
+  const raw = getSdkWalletStorage();
+  const keys = await raw.keys();
+  const wallets: WalletMeta[] = [];
+  if (keys.includes(LEGACY_WALLET_KEY)) {
+    wallets.push({ id: DEFAULT_WALLET_ID, label: "Main wallet", namespace: "" });
+  }
+  for (const key of keys) {
+    const match = NAMESPACED_WALLET_KEY.exec(key);
+    if (match === null) continue;
+    const id = match[1] as string;
+    if (wallets.some((w) => w.id === id)) continue;
+    wallets.push({ id, label: `Wallet ${id.slice(0, 8)}`, namespace: id });
+  }
+  if (wallets.length === 0) {
+    return { activeId: DEFAULT_WALLET_ID, wallets: [] };
+  }
+  const active = wallets.find((w) => w.id === DEFAULT_WALLET_ID) ?? wallets[0];
+  return { activeId: active.id, wallets };
+}
+
+/** One-shot flag: set when the registry was rebuilt from storage envelopes. */
+let pendingRecoveryNotice = false;
+
+/** Consume and clear the recovery notice (for a single UI toast per rebuild). */
+export function takeWalletsIndexRecoveryNotice(): boolean {
+  const pending = pendingRecoveryNotice;
+  pendingRecoveryNotice = false;
+  return pending;
+}
+
+/** Test-only: reset the recovery notice flag. */
+export function _resetWalletsIndexRecoveryNotice(): void {
+  pendingRecoveryNotice = false;
+}
+
+async function persistRecoveredIndex(
+  recovered: WalletsIndex,
+  notify: boolean,
+): Promise<WalletsIndex> {
+  await writeWalletsIndex(recovered);
+  if (notify) pendingRecoveryNotice = true;
+  return recovered;
+}
+
+/**
+ * Read the registry, MIGRATING on first use: with no usable index, scan storage for
+ * wallet envelopes and seed the registry. Always returns a well-formed index.
  */
 export async function readWalletsIndex(): Promise<WalletsIndex> {
   const raw = getSdkWalletStorage();
   const stored = await raw.getItem(INDEX_KEY);
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored) as Partial<WalletsIndex>;
       const wallets = Array.isArray(parsed.wallets) ? parsed.wallets.filter(isMeta) : [];
@@ -83,19 +144,19 @@ export async function readWalletsIndex(): Promise<WalletsIndex> {
     } catch {
       // Corrupt index — fall through to re-derive from storage.
     }
+    // Unusable index (corrupt or wallet-less): re-derive from storage, then persist.
+    const recovered = await recoverIndexFromStorage();
+    return persistRecoveredIndex(recovered, true);
   }
 
-  // No (usable) index: migrate an existing bare wallet, else start empty.
-  const legacy = await raw.getItem(LEGACY_WALLET_KEY);
-  if (legacy) {
-    const index: WalletsIndex = {
-      activeId: DEFAULT_WALLET_ID,
-      wallets: [{ id: DEFAULT_WALLET_ID, label: "Main wallet", namespace: "" }],
-    };
-    await writeWalletsIndex(index);
-    return index;
+  // Missing index: scan envelopes. Notify only when namespaced wallets exist — a lone
+  // bare `"wallet"` blob is the normal pre-multi-wallet upgrade (silent migration).
+  const recovered = await recoverIndexFromStorage();
+  if (recovered.wallets.length === 0) {
+    return { activeId: DEFAULT_WALLET_ID, wallets: [] };
   }
-  return { activeId: DEFAULT_WALLET_ID, wallets: [] };
+  const notify = recovered.wallets.some((w) => w.namespace !== "");
+  return persistRecoveredIndex(recovered, notify);
 }
 
 /** Persist the registry. */
