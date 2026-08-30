@@ -7,8 +7,11 @@ import {
   registerWallet,
   setActiveWallet,
   storageForWallet,
+  takeWalletsIndexRecoveryNotice,
   unregisterWallet,
   updateWallet,
+  _clearWalletsIndex,
+  _resetWalletsIndexRecoveryNotice,
 } from "@/lib/services/real-sdk/wallets-index";
 
 /**
@@ -19,10 +22,12 @@ import {
 
 beforeEach(() => {
   _resetSdkWalletStorage();
+  _resetWalletsIndexRecoveryNotice();
   window.localStorage.clear();
 });
 afterEach(() => {
   _resetSdkWalletStorage();
+  _resetWalletsIndexRecoveryNotice();
   window.localStorage.clear();
 });
 
@@ -38,6 +43,7 @@ describe("wallets-index (#95)", () => {
     expect(index.wallets[0]?.id).toBe(DEFAULT_WALLET_ID);
     expect(index.wallets[0]?.namespace).toBe("");
     expect(index.activeId).toBe(DEFAULT_WALLET_ID);
+    expect(takeWalletsIndexRecoveryNotice()).toBe(false);
   });
 
   it("registers the first wallet at the bare key and the second namespaced + active", async () => {
@@ -120,6 +126,8 @@ describe("wallets-index (#95)", () => {
     const recovered = index.wallets.find((w) => w.id === savings.id);
     expect(recovered?.namespace).toBe(savings.id); // keyspace binding preserved
     expect(index.activeId).toBe(DEFAULT_WALLET_ID);
+    expect(takeWalletsIndexRecoveryNotice()).toBe(true);
+    expect(takeWalletsIndexRecoveryNotice()).toBe(false);
     // The blobs themselves were never touched — the switcher can still open them.
     expect(await storageForWallet(savings).getItem("wallet")).toBe("SAVINGS-BLOB");
     // The recovered registry is persisted: a second read returns it unchanged.
@@ -172,5 +180,26 @@ describe("wallets-index (#95)", () => {
     const index = await readWalletsIndex();
     expect(index.wallets.map((w) => w.id)).toEqual([other.id]);
     expect(index.activeId).toBe(other.id); // default is gone → first recovered is active
+  });
+
+  it("recovers namespaced wallets when the index key is missing entirely", async () => {
+    const def = await registerWallet({ label: "Default" });
+    const other = await registerWallet({ label: "Other" });
+    await storageForWallet(other).setItem("wallet", "OTHER-BLOB");
+    await unregisterWallet(def.id);
+    await _clearWalletsIndex();
+
+    const index = await readWalletsIndex();
+    expect(index.wallets.map((w) => w.id)).toEqual([other.id]);
+    expect(index.activeId).toBe(other.id);
+    expect(takeWalletsIndexRecoveryNotice()).toBe(true);
+  });
+
+  it("does not notify on a silent bare-wallet migration when the index key is missing", async () => {
+    await getSdkWalletStorage().setItem("wallet", "LEGACY-BLOB");
+    _resetWalletsIndexRecoveryNotice();
+
+    await readWalletsIndex();
+    expect(takeWalletsIndexRecoveryNotice()).toBe(false);
   });
 });

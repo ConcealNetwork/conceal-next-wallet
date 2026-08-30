@@ -15,6 +15,7 @@ import { useCheckInAlerts } from "@/lib/hooks/use-check-ins";
 import { useDuePaymentReminders } from "@/lib/hooks/use-due-reminders";
 import { useIdleLock } from "@/lib/hooks/use-idle-lock";
 import { usePrefetchMessagesForBadge } from "@/lib/hooks/use-new-since-open";
+import { useRegistryRecoveryToast } from "@/lib/hooks/use-registry-recovery-toast";
 import { useScheduledAutoSend } from "@/lib/hooks/use-scheduled-auto-send";
 import { useSecondaryWalletWatch } from "@/lib/hooks/use-secondary-wallet-watch";
 import { useSyncWakeLock } from "@/lib/hooks/use-sync-wake-lock";
@@ -32,6 +33,7 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   useCheckInAlerts();
   // Background-sync + notify for funds/messages arriving on UNLOCKED non-active wallets.
   useSecondaryWalletWatch();
+  useRegistryRecoveryToast();
   // Auto-send armed scheduled payments when due (#92 phase 2) — real mode + unlocked only.
   useScheduledAutoSend();
   // Mirror actionable counts (overdue check-ins + due reminders) on the app icon.

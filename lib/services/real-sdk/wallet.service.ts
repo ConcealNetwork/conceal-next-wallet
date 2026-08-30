@@ -40,7 +40,10 @@ import {
   mnemonicFromSpendKey,
 } from "@/lib/services/real-sdk/wallet-build";
 import { decodeWalletQr } from "@/lib/services/real-sdk/wallet-qr";
-import { getActiveWalletStorage } from "@/lib/services/real-sdk/wallets-index";
+import {
+  getActiveWalletStorage,
+  takeWalletsIndexRecoveryNotice,
+} from "@/lib/services/real-sdk/wallets-index";
 import type {
   DownloadWalletBackupInput,
   ExportWalletData,
@@ -469,6 +472,10 @@ export const realSdkWalletService: WalletService = {
       }
     }
     return statuses;
+  },
+
+  takeRegistryRecoveryNotice(): boolean {
+    return takeWalletsIndexRecoveryNotice();
   },
 
   async disconnect() {
