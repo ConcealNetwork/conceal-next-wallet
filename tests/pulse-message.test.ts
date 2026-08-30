@@ -1,9 +1,8 @@
-import { messages } from "conceal-wallet-sdk";
+import { messages, smartPulse } from "conceal-wallet-sdk";
 import { describe, expect, it } from "vitest";
 
 const { encodeSmartMessage, isKnownSmartMessage, isSmartMessage, parseSmartMessage } = messages;
-
-import { formatCheckIn, isCheckInMessage, parseCheckIn } from "@/lib/ui/check-in-message";
+const { formatStatusPulse, isStatusPulse, parseStatusPulse } = smartPulse;
 
 describe("smart-message convention (conceal-2fa compatible)", () => {
   it("detects a brace-wrapped token only", () => {
@@ -45,43 +44,43 @@ describe("smart-message convention (conceal-2fa compatible)", () => {
   });
 });
 
-describe("check-in message", () => {
+describe("status pulse message", () => {
   it("round-trips format → parse as a {status,…} smart message", () => {
-    expect(formatCheckIn("alive")).toBe("{status,alive}");
-    expect(parseCheckIn(formatCheckIn())).toEqual({ status: "alive" });
+    expect(formatStatusPulse("alive")).toBe("{status,alive}");
+    expect(parseStatusPulse(formatStatusPulse("alive"))).toEqual({ kind: "alive", graceDays: 0 });
   });
 
   it("accepts `ok` as an alias for alive", () => {
-    expect(parseCheckIn("{status,ok}")).toEqual({ status: "alive" });
+    expect(parseStatusPulse("{status,ok}")).toEqual({ kind: "alive", graceDays: 0 });
   });
 
   it("matches only the whole, trimmed body (no substring/injection)", () => {
-    expect(parseCheckIn("  {status,alive}  ")).toEqual({ status: "alive" });
-    expect(parseCheckIn("hi {status,alive}")).toBeNull();
-    expect(parseCheckIn("{status,alive} and more")).toBeNull();
+    expect(parseStatusPulse("  {status,alive}  ")).toEqual({ kind: "alive", graceDays: 0 });
+    expect(parseStatusPulse("hi {status,alive}")).toBeNull();
+    expect(parseStatusPulse("{status,alive} and more")).toBeNull();
   });
 
   it("rejects other modules and unknown statuses", () => {
-    expect(parseCheckIn("{2FA,c}")).toBeNull();
-    expect(parseCheckIn("{vault,u}")).toBeNull();
-    expect(parseCheckIn("{status,dead}")).toBeNull();
-    expect(parseCheckIn("{status,help}")).toBeNull(); // reserved, not wired in v1.1
-    expect(parseCheckIn("{status}")).toBeNull(); // no status value
+    expect(parseStatusPulse("{2FA,c}")).toBeNull();
+    expect(parseStatusPulse("{vault,u}")).toBeNull();
+    expect(parseStatusPulse("{status,dead}")).toBeNull();
+    expect(parseStatusPulse("{status,help}")).toBeNull(); // reserved, not wired in v1.1
+    expect(parseStatusPulse("{status}")).toBeNull(); // no status value
   });
 
   it("never throws or leaks prototype members on adversarial input", () => {
-    expect(parseCheckIn("")).toBeNull();
-    expect(parseCheckIn(undefined)).toBeNull();
-    expect(parseCheckIn(null)).toBeNull();
-    expect(parseCheckIn(12345)).toBeNull();
-    expect(parseCheckIn(`{status,${"x".repeat(10_000)}}`)).toBeNull();
-    expect(parseCheckIn("{status,constructor}")).toBeNull();
-    expect(parseCheckIn("{status,__proto__}")).toBeNull();
-    expect(parseCheckIn("{status,toString}")).toBeNull();
+    expect(parseStatusPulse("")).toBeNull();
+    expect(parseStatusPulse(undefined)).toBeNull();
+    expect(parseStatusPulse(null)).toBeNull();
+    expect(parseStatusPulse(12345)).toBeNull();
+    expect(parseStatusPulse(`{status,${"x".repeat(10_000)}}`)).toBeNull();
+    expect(parseStatusPulse("{status,constructor}")).toBeNull();
+    expect(parseStatusPulse("{status,__proto__}")).toBeNull();
+    expect(parseStatusPulse("{status,toString}")).toBeNull();
   });
 
-  it("isCheckInMessage mirrors parse", () => {
-    expect(isCheckInMessage("{status,alive}")).toBe(true);
-    expect(isCheckInMessage("just a normal message")).toBe(false);
+  it("isStatusPulse mirrors parse", () => {
+    expect(isStatusPulse("{status,alive}")).toBe(true);
+    expect(isStatusPulse("just a normal message")).toBe(false);
   });
 });

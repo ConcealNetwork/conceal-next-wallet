@@ -29,7 +29,7 @@ export interface ScheduledPayment {
   lastPaidAt?: string;
   /**
    * ISO; while now < snoozedUntil the reminder is suppressed (parity with
-   * check-in watchers). Optional and additive — absent means "not snoozed".
+   * the former check-in watchers). Optional and additive — absent means "not snoozed".
    */
   snoozedUntil?: string;
   /**

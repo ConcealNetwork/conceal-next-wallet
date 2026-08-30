@@ -5,7 +5,7 @@
  * main thread. Pure UI metadata: no `wallet-core` import, no service spine.
  *
  * The badge mirrors the count of *actionable* items the app already computes
- * (overdue check-ins + due payment reminders); it carries no string, so there's
+ * (overdue pulses + due payment reminders); it carries no string, so there's
  * nothing to localize.
  */
 
