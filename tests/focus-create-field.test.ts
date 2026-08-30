@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { focusCreateField } from "@/lib/hooks/use-create-deeplink";
 
 // Locks the scroll+focus contract the sidebar quick-create deep-link depends on (#192): clicking
-// the sidebar "+" on Scheduled / Check-ins must land focus on the add form's first field.
+// the sidebar "+" on Scheduled / Pulse must land focus on the add form's first field.
 afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();

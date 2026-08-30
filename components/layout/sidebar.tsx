@@ -52,7 +52,7 @@ import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
 
 // `canCreate` marks items whose page has a create flow (add contact, new
-// deposit, add reminder, compose message, watch a check-in) — the sidebar shows
+// deposit, add reminder, compose message, broadcast a pulse) — the sidebar shows
 // a trailing "+" affordance on those rows when expanded.
 type NavItem = { href: string; labelKey: string; icon: LucideIcon; canCreate?: boolean };
 type NavSectionDef = { label: string; items: NavItem[] };
@@ -100,7 +100,7 @@ const NAV_SECTIONS: NavSectionDef[] = [
         icon: CalendarClock,
         canCreate: true,
       },
-      { href: "/wallet/check-ins", labelKey: "nav.checkIns", icon: HeartPulse, canCreate: true },
+      { href: "/wallet/pulse", labelKey: "nav.pulse", icon: HeartPulse, canCreate: true },
       { href: "/wallet/network", labelKey: "nav.network", icon: Network },
       { href: "/wallet/donate", labelKey: "nav.donate", icon: Gift },
     ],
@@ -345,7 +345,7 @@ export function SidebarContent({
 
   function badgeFor(item: NavItem): number | undefined {
     if (item.href === "/wallet/messages") return newMessages;
-    if (item.href === "/wallet/check-ins") return newPulses;
+    if (item.href === "/wallet/pulse") return newPulses;
     return undefined;
   }
 
@@ -356,7 +356,7 @@ export function SidebarContent({
         onNavigate?.();
       };
     }
-    if (item.href === "/wallet/check-ins") {
+    if (item.href === "/wallet/pulse") {
       return () => {
         acknowledgePulses();
         onNavigate?.();

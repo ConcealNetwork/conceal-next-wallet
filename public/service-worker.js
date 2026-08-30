@@ -171,7 +171,7 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-// Clicking an OS notification (from reminders / check-ins) focuses an existing
+// Clicking an OS notification (from reminders / pulses) focuses an existing
 // wallet window if one is open, otherwise opens a new one. Best-effort and
 // additive — it never touches the cache logic above. Resolves to the SW scope
 // so it works under any deploy base path. If the notification carries a target
