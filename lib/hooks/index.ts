@@ -327,9 +327,15 @@ export function useWithdrawDeposit() {
 }
 
 export function useDepositConstraints() {
+  const { isSyncing } = useWalletSyncStatus();
   return useQuery({
     queryKey: [...queryKeys.deposits, "constraints"] as const,
     queryFn: () => services.deposits.getDepositConstraints(),
+    // Constraints are a cheap height+selection read (not a history walk), so poll on the
+    // fast wallet cadence while the scan catches up — a just-funded/synced wallet must not
+    // sit on a stale disabled button until the next invalidation (#112 cadence).
+    refetchInterval: isSyncing && !env.useMockWallet ? WALLET_POLL[0] : false,
+    refetchIntervalInBackground: false,
   });
 }
 

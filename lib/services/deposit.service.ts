@@ -47,7 +47,6 @@ export function estimateDepositUnlockDays(durationMonths: number) {
 export type DepositConstraints = {
   maxDepositAmount: number;
   isDepositDisabled: boolean;
-  isWalletSyncing: boolean;
   hasPendingDeposit: boolean;
 };
 

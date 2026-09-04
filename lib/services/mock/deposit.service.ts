@@ -21,7 +21,6 @@ export const mockDepositService: DepositService = {
     return {
       maxDepositAmount: 10_000,
       isDepositDisabled: false,
-      isWalletSyncing: false,
       hasPendingDeposit: false,
     };
   },

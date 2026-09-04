@@ -37,7 +37,7 @@ import type {
 import {
   type PendingTxRecord,
   pendingWithdrawnDepositKeys,
-  readPendingRecords,
+  unminedPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
 import type {
@@ -367,10 +367,7 @@ export function mapWalletInfo(runtime: SdkRuntime, networkHeight: number): Walle
   // the exact locked principal once the deposit mines and the record prunes.) A pending
   // WITHDRAWAL (#110, withdraw half) is likewise not an outflow — it's an incoming tx
   // that unlocks a deposit — so it's excluded from `pending` too.
-  const minedHashes = new Set(state.transactions.map((tx) => tx.hash));
-  const livePending = readPendingRecords(runtime.raw).filter(
-    (record) => !minedHashes.has(record.hash),
-  );
+  const livePending = unminedPendingRecords(runtime.raw, state);
   const pendingOut = livePending.reduce(
     (sum, record) =>
       record.type === "deposit" || record.type === "withdrawal"
