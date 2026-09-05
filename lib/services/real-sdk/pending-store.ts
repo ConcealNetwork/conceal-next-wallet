@@ -118,6 +118,17 @@ export function pendingWithdrawnDepositKeys(raw: RawWalletV1): Set<string> {
 }
 
 /**
+ * Pending records not yet reconciled with a scanned (mined) transaction — the "live"
+ * mempool window set that balance holds, history rows, and pending-deposit detection
+ * all count. A record mined just before its prune stays counted (same rule as the
+ * balance hold in {@link mapWalletInfo}).
+ */
+export function unminedPendingRecords(raw: RawWalletV1, state: WalletState): PendingTxRecord[] {
+  const minedHashes = new Set(state.transactions.map((tx) => tx.hash));
+  return readPendingRecords(raw).filter((record) => !minedHashes.has(record.hash));
+}
+
+/**
  * Total atomic amount held pending-outbound (for the balance hold). Counts ONLY
  * outbound records — `undefined` (legacy/plain send), `"send"`, `"fusion"`, or
  * `"message"`. A pending deposit (#110) is becoming locked, not leaving (handled as

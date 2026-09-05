@@ -330,6 +330,7 @@ export function useDepositConstraints() {
   return useQuery({
     queryKey: [...queryKeys.deposits, "constraints"] as const,
     queryFn: () => services.deposits.getDepositConstraints(),
+    // Invalidated by useWalletLiveSync on every height advance — no extra polling needed.
   });
 }
 

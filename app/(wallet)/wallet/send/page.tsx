@@ -367,7 +367,13 @@ export default function SendPage() {
                 type="submit"
                 className="w-full active:scale-[0.98] motion-reduce:active:scale-100"
                 disabled={send.isPending || sendToSelf || isSyncing || viewOnly}
-                title={viewOnly ? walletCopy.viewOnlySendDisabled : undefined}
+                title={
+                  viewOnly
+                    ? walletCopy.viewOnlySendDisabled
+                    : isSyncing
+                      ? walletCopy.sendSyncingDisabled
+                      : undefined
+                }
               >
                 {t("send.reviewButton")}
               </Button>

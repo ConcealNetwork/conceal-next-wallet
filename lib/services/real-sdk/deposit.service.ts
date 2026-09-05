@@ -23,6 +23,7 @@ import { deriveApr, mapDeposit, mapDeposits } from "@/lib/services/real-sdk/mapp
 import {
   addPendingRecord,
   pendingWithdrawnDepositKeys,
+  unminedPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime } from "@/lib/services/real-sdk/runtime";
@@ -34,11 +35,13 @@ import {
   ownKeys,
   safeNodeFeeAddress,
   selectableOutputs,
+  selectableSpendTotal,
   selectSpendInputs,
 } from "@/lib/services/real-sdk/spend";
 import { assertCanSpend } from "@/lib/services/view-only";
 import type { Deposit, Transaction } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
+import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
 
 const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
 
@@ -54,26 +57,35 @@ export const realSdkDepositService: DepositService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
-    const balance = getBalance(rt.state);
     // Budget the remote-node fee too, so the advertised max stays creatable
     // (createDeposit checks amount + DEPOSIT_TX_FEE + node fee against spendable).
     const feeAddress = await safeNodeFeeAddress(rt.daemon);
     const nodeFeeAtomic =
       feeAddress && feeAddress !== rt.account.address ? REMOTE_NODE_FEE_ATOMIC : 0;
+    // Gate on the SAME selectable pool a real createDeposit would draw from (dry-run of
+    // input selection: pretty, non-dust, unreserved outputs) — not the raw balance,
+    // which counts dust and unmixable outputs a deposit tx can never spend.
+    const selectableTotal = selectableSpendTotal(await selectableOutputs(rt));
     const maxDepositAmount = Math.max(
       0,
-      Math.floor((balance.spendable - DEPOSIT_TX_FEE - nodeFeeAtomic) / ATOMIC_PER_CCX),
+      Math.floor((selectableTotal - DEPOSIT_TX_FEE - nodeFeeAtomic) / ATOMIC_PER_CCX),
     );
-    const isWalletSyncing = rt.state.scannedHeight < networkHeight;
-    const hasPendingDeposit = rt.state.deposits.some(
-      (deposit) =>
-        deposit.blockHeight === 0 &&
-        !isDepSpent(deposit, rt.state, buildSpendTxMap(rt.state, rt.raw)),
+    // Optimistic pending entry (#110): a deposit waits ~1 block for its first scan,
+    // so state.deposits (mined blocks only) never sees it — read the pending store.
+    const hasPendingDeposit = unminedPendingRecords(rt.raw, rt.state).some(
+      (record) => record.type === "deposit",
     );
+    // Sync check (±2 blocks, same helper as withdraw): creating a deposit while
+    // the scan is behind the tip means we don't yet know the true selectable pool —
+    // block it so the user never acts on stale fund information. Exposed on the
+    // payload so UI reason copy uses this snapshot (not polled isSyncing, and not
+    // inferred from maxDepositAmount — which is 0 before outputs are scanned).
+    const isWalletSyncing = isWalletHeightSyncing(rt.state.scannedHeight, networkHeight);
     return {
       maxDepositAmount,
-      isDepositDisabled: rt.viewOnly || maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN,
       isWalletSyncing,
+      isDepositDisabled:
+        rt.viewOnly || isWalletSyncing || maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN,
       hasPendingDeposit,
     };
   },

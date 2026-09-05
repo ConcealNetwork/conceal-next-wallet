@@ -20,8 +20,8 @@ export const mockDepositService: DepositService = {
     await mockDelay();
     return {
       maxDepositAmount: 10_000,
-      isDepositDisabled: false,
       isWalletSyncing: false,
+      isDepositDisabled: isMockViewOnly(),
       hasPendingDeposit: false,
     };
   },

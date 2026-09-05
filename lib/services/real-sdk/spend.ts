@@ -152,6 +152,16 @@ export async function selectableOutputs(runtime: SdkRuntime): Promise<OwnedOutpu
 }
 
 /**
+ * Dry-run of {@link selectSpendInputs}: the total atomic value a fresh tx could actually
+ * select from `outputs` (pretty denominations above the dust threshold), without throwing
+ * on an insufficient pool. Gates (e.g. the deposit max) budget against this so they match
+ * what a real spend can pick — not the raw on-chain balance.
+ */
+export function selectableSpendTotal(outputs: readonly OwnedOutput[]): number {
+  return outputs.reduce((sum, out) => (out.amount > DUST_THRESHOLD ? sum + out.amount : sum), 0);
+}
+
+/**
  * Pick spend inputs: pretty denominations above the dust threshold. Prefer this over calling
  * `txns.selectInputs` directly — the SDK defaults `dustThreshold` to `0`, which would spend
  * mixable dust (e.g. 6 atomic) that the UI already excludes from Available.
