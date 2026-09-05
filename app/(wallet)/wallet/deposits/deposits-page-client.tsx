@@ -128,14 +128,16 @@ export default function DepositsPageClient() {
   }, [openDeposits, withdrawnDeposits]);
 
   const viewOnly = useWalletViewOnly();
+  const { isSyncing } = useWalletSyncStatus();
   const depositDisabled = constraints.data?.isDepositDisabled ?? false;
-  const createDisabled = depositDisabled || viewOnly;
-  // Say WHY the gate is up: view-only vs not enough selectable balance (min amount + fee).
+  const createDisabled = depositDisabled; // viewOnly + sync already folded into isDepositDisabled
   const createDisabledReason = viewOnly
     ? walletCopy.viewOnlyDepositDisabled
-    : depositDisabled
-      ? walletCopy.depositMinBalanceDisabled
-      : undefined;
+    : isSyncing
+      ? walletCopy.depositSyncingDisabled
+      : depositDisabled
+        ? walletCopy.depositMinBalanceDisabled
+        : undefined;
 
   useEffect(() => {
     function applyStoredView(next: DepositView) {
@@ -173,7 +175,7 @@ export default function DepositsPageClient() {
 
       <WalletSyncingBanner hint={t("deposits.syncingHint")} />
       <ViewOnlyBanner />
-      {!viewOnly && depositDisabled ? (
+      {!viewOnly && !isSyncing && depositDisabled ? (
         <div
           className="mb-4 rounded-xl border border-border bg-secondary/60 px-4 py-3 text-sm text-muted-foreground"
           role="status"

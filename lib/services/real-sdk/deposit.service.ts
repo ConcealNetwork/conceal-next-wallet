@@ -41,6 +41,7 @@ import {
 import { assertCanSpend } from "@/lib/services/view-only";
 import type { Deposit, Transaction } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
+import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
 
 const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
 
@@ -55,6 +56,7 @@ export const realSdkDepositService: DepositService = {
   async getDepositConstraints(): Promise<DepositConstraints> {
     await ensureSdkReady();
     const rt = requireRuntime();
+    const networkHeight = await rt.daemon.getHeight();
     // Budget the remote-node fee too, so the advertised max stays creatable
     // (createDeposit checks amount + DEPOSIT_TX_FEE + node fee against spendable).
     const feeAddress = await safeNodeFeeAddress(rt.daemon);
@@ -75,7 +77,13 @@ export const realSdkDepositService: DepositService = {
     );
     return {
       maxDepositAmount,
-      isDepositDisabled: rt.viewOnly || maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN,
+      // Sync check (±2 blocks, same helper as withdraw): creating a deposit while
+      // the scan is behind the tip means we don't yet know the true selectable pool —
+      // block it so the user never acts on stale fund information.
+      isDepositDisabled:
+        rt.viewOnly ||
+        isWalletHeightSyncing(rt.state.scannedHeight, networkHeight) ||
+        maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN,
       hasPendingDeposit,
     };
   },

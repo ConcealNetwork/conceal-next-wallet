@@ -73,13 +73,17 @@ type Scenario = {
   pending?: RawWalletV1;
   transactions?: WalletTransaction[];
   nodeFeeAddress?: string;
+  /** Local scanned height (default: matches networkHeight = fully synced). */
+  scannedHeight?: number;
 };
+
+const NETWORK_HEIGHT = 2000;
 
 async function constraintsFor(scenario: Scenario) {
   const alice = createAccount("english");
   const daemon: DaemonStub = {
     nodeUrl: "https://node.test/",
-    getHeight: () => Promise.resolve(2000),
+    getHeight: () => Promise.resolve(NETWORK_HEIGHT),
     getNodeFeeAddress: () => Promise.resolve(scenario.nodeFeeAddress ?? ""),
     sendRawTransaction: () => Promise.resolve({ status: "OK" }),
     getRandomOuts: () => Promise.resolve([]),
@@ -92,7 +96,7 @@ async function constraintsFor(scenario: Scenario) {
     raw: scenario.pending ?? emptyRaw(),
     state: {
       ...createWalletState(alice),
-      scannedHeight: 2000,
+      scannedHeight: scenario.scannedHeight ?? NETWORK_HEIGHT,
       outputs: scenario.outputs ?? [],
       deposits: scenario.deposits ?? [],
       transactions: scenario.transactions ?? [],
@@ -185,6 +189,29 @@ describe("getDepositConstraints gating math", () => {
     expect(constraints.maxDepositAmount).toBe(0);
     expect(constraints.isDepositDisabled).toBe(true);
     expect(constraints.hasPendingDeposit).toBe(true);
+  });
+});
+
+describe("sync gate", () => {
+  it("disables deposits while wallet is more than 2 blocks behind the tip", async () => {
+    const alice = createAccount("english");
+    const constraints = await constraintsFor({
+      outputs: [fundOwnedOutput(alice.keys, 1_000_000), fundOwnedOutput(alice.keys, 100_000)],
+      scannedHeight: 1990, // 10 blocks behind
+    });
+    expect(constraints.isDepositDisabled).toBe(true);
+    // funds are there — only the sync flag blocks
+    expect(constraints.maxDepositAmount).toBeGreaterThan(0);
+  });
+
+  it("enables deposits once wallet is within 2 blocks of the tip", async () => {
+    const alice = createAccount("english");
+    const constraints = await constraintsFor({
+      outputs: [fundOwnedOutput(alice.keys, 1_000_000), fundOwnedOutput(alice.keys, 100_000)],
+      scannedHeight: 1998, // within ±2
+    });
+    expect(constraints.isDepositDisabled).toBe(false);
+    expect(constraints.maxDepositAmount).toBeGreaterThan(0);
   });
 });
 
