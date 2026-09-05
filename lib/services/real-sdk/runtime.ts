@@ -1208,15 +1208,34 @@ export function persist(): Promise<void> {
 }
 
 /**
- * Best-effort durable flush of in-flight sync progress.
- * Called on tab hide / lock. Idempotent — no-op if locked or nothing advanced.
+ * Durable cursor already on the blob. Prefer serialized `sdkWalletState` —
+ * `raw.lastHeight` is a monotonic max and stays at the pre-rescan tip while
+ * a settings rescan climbs back up (PR #313 review).
+ */
+function savedScanHeight(rt: SdkRuntime): number {
+  try {
+    const saved = deserializeWalletState(String(rt.raw[SDK_STATE_FIELD] ?? ""));
+    if (saved.address === rt.account.address) return saved.scannedHeight;
+  } catch {
+    // Legacy or corrupt blob — lastHeight is the only durable cursor.
+  }
+  return Math.max(0, Number(rt.raw.lastHeight ?? 0) || 0);
+}
+
+/**
+ * Best-effort durable flush of in-flight sync progress for every unlocked
+ * runtime. Called on tab hide / lock. Idempotent — no-op if locked or nothing
+ * advanced past the saved cursor.
  */
 export async function flushSyncCheckpoint(): Promise<void> {
-  const rt = getRuntime();
-  if (!rt) return;
-  const lastPersisted = Math.max(0, Number(rt.raw.lastHeight ?? 0) || 0);
-  if (rt.state.scannedHeight <= lastPersisted) return;
-  await persistRuntime(rt);
+  for (const rt of runtimes.values()) {
+    if (rt.state.scannedHeight <= savedScanHeight(rt)) continue;
+    try {
+      await persistRuntime(rt);
+    } catch {
+      // Best-effort per wallet — one failed write must not block the rest.
+    }
+  }
 }
 
 /** Persist a SPECIFIC runtime's current `raw` (with the latest serialized state). */

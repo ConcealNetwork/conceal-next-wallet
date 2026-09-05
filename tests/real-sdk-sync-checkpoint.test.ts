@@ -7,13 +7,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * scannedHeight to the last end-of-loop write.
  */
 
-const { saveStoredWalletMock, serializeWalletStateMock } = vi.hoisted(() => ({
+const { saveStoredWalletMock, serializeWalletStateMock, realSerialize } = vi.hoisted(() => ({
   saveStoredWalletMock: vi.fn().mockResolvedValue(undefined),
   serializeWalletStateMock: vi.fn().mockReturnValue("{}"),
+  realSerialize: { fn: null as null | typeof import("conceal-wallet-sdk").serializeWalletState },
 }));
 
 vi.mock("conceal-wallet-sdk", async (importOriginal) => {
   const actual = await importOriginal<typeof import("conceal-wallet-sdk")>();
+  realSerialize.fn = actual.serializeWalletState;
   return {
     ...actual,
     saveStoredWallet: saveStoredWalletMock,
@@ -21,6 +23,7 @@ vi.mock("conceal-wallet-sdk", async (importOriginal) => {
   };
 });
 
+import { createAccount, createWalletState } from "conceal-wallet-sdk";
 import {
   flushReceivedRaw,
   readReceivedRecords,
@@ -33,6 +36,12 @@ import {
   maybeCheckpoint,
   type SdkRuntime,
 } from "@/lib/services/real-sdk/runtime";
+
+function serializeSaved(state: Parameters<NonNullable<typeof realSerialize.fn>>[0]): string {
+  const fn = realSerialize.fn;
+  if (!fn) throw new Error("serializeWalletState not captured");
+  return fn(state);
+}
 
 function fakeStorage(): SdkRuntime["storage"] {
   return {
@@ -154,6 +163,76 @@ describe("flushSyncCheckpoint", () => {
 
     expect(saveStoredWalletMock).toHaveBeenCalledOnce();
     expect(saveStoredWalletMock).toHaveBeenCalledWith(rt.storage, expect.any(Object), rt.password);
+  });
+
+  it("persists a mid-rescan advance even when lastHeight still holds the old tip", async () => {
+    const account = createAccount("english");
+    const saved = { ...createWalletState(account), scannedHeight: 500 };
+    const live = { ...createWalletState(account), scannedHeight: 800 };
+    const rt = {
+      id: "default",
+      account,
+      raw: {
+        lastHeight: 2_000_000,
+        sdkWalletState: serializeSaved(saved),
+      } as unknown as SdkRuntime["raw"],
+      state: live,
+      daemon: {} as SdkRuntime["daemon"],
+      password: "pw",
+      viewOnly: false,
+      storage: fakeStorage(),
+    };
+    _setRuntimeForTest(rt);
+
+    await flushSyncCheckpoint();
+
+    expect(saveStoredWalletMock).toHaveBeenCalledOnce();
+  });
+
+  it("is a no-op mid-rescan when live height has not passed the saved cursor", async () => {
+    const account = createAccount("english");
+    const saved = { ...createWalletState(account), scannedHeight: 800 };
+    const live = { ...createWalletState(account), scannedHeight: 800 };
+    _setRuntimeForTest({
+      id: "default",
+      account,
+      raw: {
+        lastHeight: 2_000_000,
+        sdkWalletState: serializeSaved(saved),
+      } as unknown as SdkRuntime["raw"],
+      state: live,
+      daemon: {} as SdkRuntime["daemon"],
+      password: "pw",
+      viewOnly: false,
+      storage: fakeStorage(),
+    });
+
+    await flushSyncCheckpoint();
+
+    expect(saveStoredWalletMock).not.toHaveBeenCalled();
+  });
+
+  it("flushes every unlocked runtime, not only the active one", async () => {
+    const first = makeRt(1000, 0);
+    first.id = "wallet-a";
+    const second = makeRt(2000, 0);
+    second.id = "wallet-b";
+    _setRuntimeForTest(first);
+    _setRuntimeForTest(second);
+
+    await flushSyncCheckpoint();
+
+    expect(saveStoredWalletMock).toHaveBeenCalledTimes(2);
+    expect(saveStoredWalletMock).toHaveBeenCalledWith(
+      first.storage,
+      expect.any(Object),
+      first.password,
+    );
+    expect(saveStoredWalletMock).toHaveBeenCalledWith(
+      second.storage,
+      expect.any(Object),
+      second.password,
+    );
   });
 });
 
