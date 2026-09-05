@@ -128,7 +128,19 @@ export default function DepositsPageClient() {
   }, [openDeposits, withdrawnDeposits]);
 
   const viewOnly = useWalletViewOnly();
-  const createDisabled = (constraints.data?.isDepositDisabled ?? false) || viewOnly;
+  const depositSyncing = constraints.data?.isWalletSyncing ?? false;
+  const depositDisabled = constraints.data?.isDepositDisabled ?? false;
+  // Reason copy from the same constraints snapshot as the gate (not polled
+  // isSyncing, and not inferred from maxDepositAmount — that is 0 until the
+  // scan finds outputs, so elimination would mis-label initial sync as underfunded).
+  const createDisabled = depositDisabled;
+  const createDisabledReason = viewOnly
+    ? walletCopy.viewOnlyDepositDisabled
+    : depositSyncing
+      ? walletCopy.depositSyncingDisabled
+      : depositDisabled
+        ? walletCopy.depositMinBalanceDisabled
+        : undefined;
 
   useEffect(() => {
     function applyStoredView(next: DepositView) {
@@ -156,7 +168,7 @@ export default function DepositsPageClient() {
             className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
             onClick={() => setOpen(true)}
             disabled={createDisabled}
-            title={viewOnly ? walletCopy.viewOnlyDepositDisabled : undefined}
+            title={createDisabledReason}
           >
             <Plus className="size-4" aria-hidden="true" />
             {t("deposits.createNew")}
@@ -166,6 +178,14 @@ export default function DepositsPageClient() {
 
       <WalletSyncingBanner hint={t("deposits.syncingHint")} />
       <ViewOnlyBanner />
+      {!viewOnly && !depositSyncing && depositDisabled ? (
+        <div
+          className="mb-4 rounded-xl border border-border bg-secondary/60 px-4 py-3 text-sm text-muted-foreground"
+          role="status"
+        >
+          {walletCopy.depositMinBalanceDisabled}
+        </div>
+      ) : null}
 
       {constraints.data?.hasPendingDeposit ? (
         <div

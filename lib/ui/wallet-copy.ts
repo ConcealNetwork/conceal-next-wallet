@@ -70,9 +70,14 @@ export const walletCopy = {
   viewOnlyBannerTitle: "View-only wallet",
   viewOnlyBannerBody:
     "Incoming transactions, deposits, and withdrawals are tracked. Regular sends are not shown — detecting spends requires the spend key or imported key images.",
+  sendSyncingDisabled: "Wallet is still syncing — wait until it's up to date before sending.",
   viewOnlySendDisabled: "This is a view-only wallet. Import the spend key to send CCX.",
   viewOnlyDepositDisabled:
     "This is a view-only wallet. Creating or withdrawing deposits requires the spend key.",
+  depositSyncingDisabled:
+    "Wallet is still syncing — wait until it's up to date before creating a deposit.",
+  depositMinBalanceDisabled:
+    "Creating a deposit needs at least 1 CCX available (plus the network fee) — funds locked in deposits or held by pending transactions don't count.",
   viewOnlyMessageDisabled: "This is a view-only wallet. Import the spend key to send messages.",
   viewOnlyOptimizeDisabled:
     "This is a view-only wallet. Optimizing outputs requires the spend key.",
