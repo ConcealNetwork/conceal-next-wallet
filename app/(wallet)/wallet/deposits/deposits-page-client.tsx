@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  COIN_UNIT_PLACES,
-  DEPOSIT_MIN_AMOUNT_COIN,
-  DEPOSIT_SMALL_WITHDRAW_FEE,
-} from "conceal-wallet-sdk";
+import { COIN_UNIT_PLACES, DEPOSIT_SMALL_WITHDRAW_FEE } from "conceal-wallet-sdk";
 import {
   Calculator,
   CalendarClock,
@@ -132,19 +128,19 @@ export default function DepositsPageClient() {
   }, [openDeposits, withdrawnDeposits]);
 
   const viewOnly = useWalletViewOnly();
-  const maxDepositAmount = constraints.data?.maxDepositAmount ?? 0;
+  const depositSyncing = constraints.data?.isWalletSyncing ?? false;
   const depositDisabled = constraints.data?.isDepositDisabled ?? false;
-  // viewOnly + sync + min balance are folded into isDepositDisabled — attribute the
-  // tooltip/banner from that same snapshot (maxDepositAmount), not polled isSyncing,
-  // so a brief height-source skew can't mis-label sync as "needs ≥ 1 CCX".
+  // Reason copy from the same constraints snapshot as the gate (not polled
+  // isSyncing, and not inferred from maxDepositAmount — that is 0 until the
+  // scan finds outputs, so elimination would mis-label initial sync as underfunded).
   const createDisabled = depositDisabled;
   const createDisabledReason = viewOnly
     ? walletCopy.viewOnlyDepositDisabled
-    : depositDisabled
-      ? maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN
+    : depositSyncing
+      ? walletCopy.depositSyncingDisabled
+      : depositDisabled
         ? walletCopy.depositMinBalanceDisabled
-        : walletCopy.depositSyncingDisabled
-      : undefined;
+        : undefined;
 
   useEffect(() => {
     function applyStoredView(next: DepositView) {
@@ -182,7 +178,7 @@ export default function DepositsPageClient() {
 
       <WalletSyncingBanner hint={t("deposits.syncingHint")} />
       <ViewOnlyBanner />
-      {!viewOnly && depositDisabled && maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN ? (
+      {!viewOnly && !depositSyncing && depositDisabled ? (
         <div
           className="mb-4 rounded-xl border border-border bg-secondary/60 px-4 py-3 text-sm text-muted-foreground"
           role="status"

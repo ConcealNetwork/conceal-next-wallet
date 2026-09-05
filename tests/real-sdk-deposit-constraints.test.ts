@@ -199,6 +199,7 @@ describe("sync gate", () => {
       outputs: [fundOwnedOutput(alice.keys, 1_000_000), fundOwnedOutput(alice.keys, 100_000)],
       scannedHeight: 1990, // 10 blocks behind
     });
+    expect(constraints.isWalletSyncing).toBe(true);
     expect(constraints.isDepositDisabled).toBe(true);
     // funds are there — only the sync flag blocks
     expect(constraints.maxDepositAmount).toBeGreaterThan(0);
@@ -210,8 +211,21 @@ describe("sync gate", () => {
       outputs: [fundOwnedOutput(alice.keys, 1_000_000), fundOwnedOutput(alice.keys, 100_000)],
       scannedHeight: 1998, // within ±2
     });
+    expect(constraints.isWalletSyncing).toBe(false);
     expect(constraints.isDepositDisabled).toBe(false);
     expect(constraints.maxDepositAmount).toBeGreaterThan(0);
+  });
+
+  it("flags syncing even when selectable max is still 0 (initial sync)", async () => {
+    // Before outputs are scanned, maxDepositAmount is 0 — UI must not infer
+    // "needs ≥ 1 CCX" from that; isWalletSyncing carries the real reason.
+    const constraints = await constraintsFor({
+      outputs: [],
+      scannedHeight: 0,
+    });
+    expect(constraints.maxDepositAmount).toBe(0);
+    expect(constraints.isWalletSyncing).toBe(true);
+    expect(constraints.isDepositDisabled).toBe(true);
   });
 });
 

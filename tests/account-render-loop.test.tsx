@@ -91,6 +91,7 @@ vi.mock("@/lib/services", () => ({
       getDepositConstraints: () =>
         Promise.resolve({
           maxDepositAmount: 50,
+          isWalletSyncing: false,
           isDepositDisabled: false,
           hasPendingDeposit: false,
         }),

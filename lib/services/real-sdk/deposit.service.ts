@@ -75,15 +75,17 @@ export const realSdkDepositService: DepositService = {
     const hasPendingDeposit = unminedPendingRecords(rt.raw, rt.state).some(
       (record) => record.type === "deposit",
     );
+    // Sync check (±2 blocks, same helper as withdraw): creating a deposit while
+    // the scan is behind the tip means we don't yet know the true selectable pool —
+    // block it so the user never acts on stale fund information. Exposed on the
+    // payload so UI reason copy uses this snapshot (not polled isSyncing, and not
+    // inferred from maxDepositAmount — which is 0 before outputs are scanned).
+    const isWalletSyncing = isWalletHeightSyncing(rt.state.scannedHeight, networkHeight);
     return {
       maxDepositAmount,
-      // Sync check (±2 blocks, same helper as withdraw): creating a deposit while
-      // the scan is behind the tip means we don't yet know the true selectable pool —
-      // block it so the user never acts on stale fund information.
+      isWalletSyncing,
       isDepositDisabled:
-        rt.viewOnly ||
-        isWalletHeightSyncing(rt.state.scannedHeight, networkHeight) ||
-        maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN,
+        rt.viewOnly || isWalletSyncing || maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN,
       hasPendingDeposit,
     };
   },
