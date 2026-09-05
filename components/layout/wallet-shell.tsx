@@ -18,6 +18,7 @@ import { usePulseAlerts } from "@/lib/hooks/use-pulse";
 import { useRegistryRecoveryToast } from "@/lib/hooks/use-registry-recovery-toast";
 import { useScheduledAutoSend } from "@/lib/hooks/use-scheduled-auto-send";
 import { useSecondaryWalletWatch } from "@/lib/hooks/use-secondary-wallet-watch";
+import { useSyncCheckpoint } from "@/lib/hooks/use-sync-checkpoint";
 import { useSyncWakeLock } from "@/lib/hooks/use-sync-wake-lock";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { useWalletSession } from "@/lib/session/wallet-session";
@@ -40,6 +41,8 @@ export function WalletShell({ children }: { children: React.ReactNode }) {
   useAppBadge();
   // Keep the screen awake during long syncs so a scan doesn't stall on sleep.
   useSyncWakeLock(useWalletSyncStatus().isSyncing);
+  // Persist mid-catch-up progress on tab hide so a discard does not rewind the cursor.
+  useSyncCheckpoint();
 
   // Auto-lock: after the configured idle window, drop the in-memory session and
   // bounce to the unlock screen. Disabled when autoLockMinutes is 0.

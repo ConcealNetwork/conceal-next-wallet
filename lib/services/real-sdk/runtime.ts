@@ -41,6 +41,10 @@
  *     back, so subsequent unlocks resume from the saved `scannedHeight`.
  *   - A blob previously saved by THIS engine carries `sdkWalletState` and is
  *     `deserializeWalletState`-d, resuming exactly where it left off.
+ *   - During a DEEP catch-up the blob is also checkpointed every
+ *     {@link SYNC_CHECKPOINT_BLOCKS} so a mid-scan kill resumes from that cursor
+ *     (inbound messages are flushed onto `raw` before each write). Incremental
+ *     polls still persist once at the end of `syncOnce`.
  *
  * INBOUND MESSAGES: the SDK `WalletState` discards tx `extra`, so during each sync
  * scan we also reconstruct received messages (`readMessageFromTransaction`) and
@@ -84,6 +88,7 @@ import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-se
 import {
   applyInboundScanToReceived,
   dropExpiredTtl,
+  flushReceivedRaw,
   minedHeightsFromState,
   patchSentMessageBlockHeights,
   pruneStaleMempoolReceived,
@@ -181,6 +186,9 @@ const MAX_FETCH_SPLIT_DEPTH = 8;
  */
 const FAR_BEHIND_THRESHOLD = 2000;
 
+/** Persist scan cursor every N blocks during deep catch-up (tab-close / lock safety). */
+const SYNC_CHECKPOINT_BLOCKS = 1000;
+
 /**
  * Blocks at the chain TIP always fetched from the HOME node only, never distributed. Keeps the
  * volatile, reorg-prone tip on the authoritative node and — being well above {@link
@@ -226,13 +234,15 @@ export interface SdkRuntime {
  * is never shared between cached wallets. A sync started for wallet A coalesces only
  * against other A syncs; A's persists chain only behind other A persists.
  */
-interface RuntimeCoordination {
+export interface RuntimeCoordination {
   /** The in-flight scan promise for this wallet, or null when idle. */
   inFlightSync: Promise<number> | null;
   /** A follow-up scan was requested while this wallet's scan was running. */
   pendingSync: boolean;
   /** Serializes this wallet's encrypt+write so two persists never interleave. */
   persistChain: Promise<void>;
+  /** Last scannedHeight written as a mid-sync checkpoint; reset at sync chain start. */
+  lastCheckpointHeight: number;
 }
 
 /** Cache of every UNLOCKED wallet runtime, keyed by registry id. */
@@ -251,7 +261,12 @@ function runtimeId(rt: SdkRuntime): string {
 function coordinationFor(id: string): RuntimeCoordination {
   let state = coordination.get(id);
   if (!state) {
-    state = { inFlightSync: null, pendingSync: false, persistChain: Promise.resolve() };
+    state = {
+      inFlightSync: null,
+      pendingSync: false,
+      persistChain: Promise.resolve(),
+      lastCheckpointHeight: 0,
+    };
     coordination.set(id, state);
   }
   return state;
@@ -574,8 +589,24 @@ async function runSyncChain(rt: SdkRuntime, coord: RuntimeCoordination): Promise
   } finally {
     coord.inFlightSync = null;
     coord.pendingSync = false;
+    coord.lastCheckpointHeight = 0;
   }
   return height;
+}
+
+/**
+ * Persist a mid-sync checkpoint during deep catch-up.
+ * No-op on the light path or if fewer than SYNC_CHECKPOINT_BLOCKS advanced since last checkpoint.
+ */
+export async function maybeCheckpoint(
+  rt: SdkRuntime,
+  coord: RuntimeCoordination,
+  useHeavyPath: boolean,
+): Promise<void> {
+  if (!useHeavyPath) return;
+  if (rt.state.scannedHeight - coord.lastCheckpointHeight < SYNC_CHECKPOINT_BLOCKS) return;
+  await persistRuntime(rt);
+  coord.lastCheckpointHeight = rt.state.scannedHeight;
 }
 
 /**
@@ -790,6 +821,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // `useHeavyPath` is `farBehind` unless the parallel speed path is force-disabled via the
   // `ccx-disable-parallel-sync` flag (a kill-switch to A/B the speed options against the light path).
   const useHeavyPath = farBehind && !parallelSyncDisabled();
+  const coord = coordinationFor(runtimeId(rt));
   const startState = rt.state;
   let state = rt.state;
   const chainStateWasReset =
@@ -821,6 +853,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // both deliver batches in ASCENDING block order, which the WalletState fold requires.
   const foldBatch = (scanResults: (RawScanResult | null)[], newScanned: number): void => {
     batchCount += 1;
+    let receivedChangedThisBatch = false;
     for (const result of scanResults) {
       if (result === null) continue;
       state = applyScanResult(state, result);
@@ -834,19 +867,23 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
         });
         if (inbound !== null && applyInboundScanToReceived(received, txHash, inbound)) {
           receivedChanged = true;
+          receivedChangedThisBatch = true;
         }
       }
     }
     scanned = newScanned;
     // Publish progress after each batch (never backwards), but ONLY when something changed — the
     // cursor advanced or a tx folded — so an idle at-tip re-scan never allocates a new state or
-    // triggers a persist (no per-poll write churn). In-memory only; the encrypted persist is once below.
+    // triggers a persist (no per-poll write churn). Encrypted persist is a checkpoint below
+    // (deep path) plus once at end of the loop.
     const cursorAdvanced = scanned > rt.state.scannedHeight;
     const foldedThisBatch = state !== rt.state;
     if (cursorAdvanced || foldedThisBatch) {
       state = { ...state, scannedHeight: Math.max(rt.state.scannedHeight, scanned) };
       rt.state = state;
     }
+    // Flush inbound copies onto the blob before a checkpoint so resume keeps messages.
+    rt.raw = flushReceivedRaw(rt.raw, received, receivedChangedThisBatch);
   };
 
   // Phase 2 — DEEP CATCH-UP acceleration: when far behind the tip (fresh import / long offline),
@@ -876,6 +913,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
             onBatch: async (items, _batchStart, batchEnd) => {
               const results = await scanBatch(items, rt.account.keys, profile.workers);
               foldBatch(results, batchEnd - 1);
+              await maybeCheckpoint(rt, coord, useHeavyPath);
             },
           });
         }
@@ -943,6 +981,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // Kick off the next range's fetch + scan BEFORE applying, so it runs during the apply.
     pending = endBlock < height ? fetchFrom(endBlock) : null;
     foldBatch(scanResults, endBlock);
+    await maybeCheckpoint(rt, coord, useHeavyPath);
   }
 
   // The per-batch publish advances rt.state only on real change, so `rt.state !==
@@ -1168,6 +1207,18 @@ export function persist(): Promise<void> {
   return persistRuntime(requireRuntime());
 }
 
+/**
+ * Best-effort durable flush of in-flight sync progress.
+ * Called on tab hide / lock. Idempotent — no-op if locked or nothing advanced.
+ */
+export async function flushSyncCheckpoint(): Promise<void> {
+  const rt = getRuntime();
+  if (!rt) return;
+  const lastPersisted = Math.max(0, Number(rt.raw.lastHeight ?? 0) || 0);
+  if (rt.state.scannedHeight <= lastPersisted) return;
+  await persistRuntime(rt);
+}
+
 /** Persist a SPECIFIC runtime's current `raw` (with the latest serialized state). */
 export function persistRuntime(rt: SdkRuntime): Promise<void> {
   const coord = coordinationFor(runtimeId(rt));
@@ -1212,8 +1263,12 @@ export function lock(): void {
 
 /** Lock + clear all runtimes (the SDK engine runs no workers / timers to stop). */
 export async function disconnect(): Promise<void> {
+  try {
+    await flushSyncCheckpoint();
+  } catch {
+    // Best-effort — lock must still drop keys if the write fails.
+  }
   lock();
-  await Promise.resolve();
 }
 
 /**

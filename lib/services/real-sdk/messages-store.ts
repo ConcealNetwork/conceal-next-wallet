@@ -99,6 +99,19 @@ export function withReceivedRecords(raw: RawWalletV1, records: SdkMessageRecord[
   return { ...raw, [RECEIVED_FIELD]: records };
 }
 
+/**
+ * Flush the in-flight received map onto the blob so a mid-sync checkpoint
+ * writes messages with the cursor. Idempotent when `changed` is false.
+ */
+export function flushReceivedRaw(
+  raw: RawWalletV1,
+  received: Map<string, SdkMessageRecord>,
+  changed: boolean,
+): RawWalletV1 {
+  if (!changed) return raw;
+  return withReceivedRecords(raw, [...received.values()]);
+}
+
 /** Clear persisted inbound message copies (used when resetting scan height). */
 export function clearReceivedRecords(raw: RawWalletV1): RawWalletV1 {
   return withReceivedRecords(raw, []);

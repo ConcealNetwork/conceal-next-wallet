@@ -97,6 +97,12 @@ export interface WalletService {
   verifyPassword(password: string): Promise<boolean>;
   disconnect?(): Promise<void>;
   /**
+   * Persist in-memory deep-sync progress if `scannedHeight` is ahead of the
+   * last durable write. No-op when locked or nothing advanced. Used on tab
+   * hide / lock so a mid-catch-up kill does not rewind the scan cursor.
+   */
+  flushSyncCheckpoint(): Promise<void>;
+  /**
    * Multi-wallet (#95). The engine can hold several encrypted wallets on one
    * device; these manage the switcher + Settings list. Creating/importing a wallet
    * (`finalizeCreateWallet` / `importWallet`) ADDS a wallet rather than replacing
