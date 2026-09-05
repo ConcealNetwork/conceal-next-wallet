@@ -1,6 +1,10 @@
 "use client";
 
-import { COIN_UNIT_PLACES, DEPOSIT_SMALL_WITHDRAW_FEE } from "conceal-wallet-sdk";
+import {
+  COIN_UNIT_PLACES,
+  DEPOSIT_MIN_AMOUNT_COIN,
+  DEPOSIT_SMALL_WITHDRAW_FEE,
+} from "conceal-wallet-sdk";
 import {
   Calculator,
   CalendarClock,
@@ -128,16 +132,19 @@ export default function DepositsPageClient() {
   }, [openDeposits, withdrawnDeposits]);
 
   const viewOnly = useWalletViewOnly();
-  const { isSyncing } = useWalletSyncStatus();
+  const maxDepositAmount = constraints.data?.maxDepositAmount ?? 0;
   const depositDisabled = constraints.data?.isDepositDisabled ?? false;
-  const createDisabled = depositDisabled; // viewOnly + sync already folded into isDepositDisabled
+  // viewOnly + sync + min balance are folded into isDepositDisabled — attribute the
+  // tooltip/banner from that same snapshot (maxDepositAmount), not polled isSyncing,
+  // so a brief height-source skew can't mis-label sync as "needs ≥ 1 CCX".
+  const createDisabled = depositDisabled;
   const createDisabledReason = viewOnly
     ? walletCopy.viewOnlyDepositDisabled
-    : isSyncing
-      ? walletCopy.depositSyncingDisabled
-      : depositDisabled
+    : depositDisabled
+      ? maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN
         ? walletCopy.depositMinBalanceDisabled
-        : undefined;
+        : walletCopy.depositSyncingDisabled
+      : undefined;
 
   useEffect(() => {
     function applyStoredView(next: DepositView) {
@@ -175,7 +182,7 @@ export default function DepositsPageClient() {
 
       <WalletSyncingBanner hint={t("deposits.syncingHint")} />
       <ViewOnlyBanner />
-      {!viewOnly && !isSyncing && depositDisabled ? (
+      {!viewOnly && depositDisabled && maxDepositAmount < DEPOSIT_MIN_AMOUNT_COIN ? (
         <div
           className="mb-4 rounded-xl border border-border bg-secondary/60 px-4 py-3 text-sm text-muted-foreground"
           role="status"
