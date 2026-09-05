@@ -138,6 +138,9 @@ export const mockWalletService: WalletService = {
     // no runtime in mock mode; clear view-only so the next open starts clean
     mockViewOnly = false;
   },
+  async flushSyncCheckpoint() {
+    // no runtime / scan cursor in mock mode
+  },
   async listWallets(): Promise<WalletSummary[]> {
     await mockDelay();
     return mockWallets.map((wallet) => ({

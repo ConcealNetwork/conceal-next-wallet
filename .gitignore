@@ -46,14 +46,12 @@ next-env.d.ts
 # Stray output from review CLIs (opencode/agy) writing to cwd
 diff.txt
 
-# agent worktrees (transient)
-.claude/worktrees/
-
 # AI generated files
 .actrc
 decisions.md
 scripts/hooks/
 openspec
 .cursor
+.claude
 .forge
 .repo-kit

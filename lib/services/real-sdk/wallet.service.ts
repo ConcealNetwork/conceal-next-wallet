@@ -14,10 +14,12 @@ import {
   adopt,
   buildDaemon,
   disconnect as disconnectRuntime,
+  flushSyncCheckpoint as flushCheckpointRuntime,
   friendlyMessage,
   getRuntime,
   hasUnlockedRuntime,
   listWalletMetas,
+  lock as lockRuntime,
   nodeUrlFromRaw,
   persist,
   removeStoredWallet,
@@ -184,7 +186,7 @@ export const realSdkWalletService: WalletService = {
     await ensureSdkReady();
     // Lock first (no flush) so nothing re-persists after the erase, then remove
     // the stored record. The SDK engine runs no workers/timers to terminate.
-    await disconnectRuntime();
+    lockRuntime();
     try {
       await removeStoredWallet();
     } catch (error) {
@@ -482,6 +484,10 @@ export const realSdkWalletService: WalletService = {
     pendingDraft = null;
     createdMnemonic = null;
     await disconnectRuntime();
+  },
+
+  async flushSyncCheckpoint() {
+    await flushCheckpointRuntime();
   },
 };
 
