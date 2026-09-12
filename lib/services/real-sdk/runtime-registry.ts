@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 /**
  * Per-wallet runtime REGISTRY for the SDK wallet engine — the cache of unlocked
  * {@link SdkRuntime}s keyed by wallet id, plus the id of the currently `active`
