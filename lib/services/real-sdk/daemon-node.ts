@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 /**
  * Daemon node resolution + client construction for the SDK engine — which node a
  * wallet talks to and how its client is built. Split out of `runtime.ts` so the
