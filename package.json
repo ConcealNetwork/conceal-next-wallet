@@ -53,7 +53,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.3",
