@@ -1,6 +1,6 @@
 {
   "name": "conceal-next-wallet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "BSD-3-Clause",
   "engines": {
@@ -37,7 +37,7 @@
     "@tanstack/react-query": "^5.102.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "conceal-wallet-sdk": "https://github.com/ConcealNetwork/conceal-wallet-sdk/releases/download/v0.2.15/conceal-wallet-sdk-0.2.15.tgz",
+    "conceal-wallet-sdk": "https://github.com/ConcealNetwork/conceal-wallet-sdk/releases/download/v0.2.16/conceal-wallet-sdk-0.2.16.tgz",
     "jspdf": "^4.2.1",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.41.0",

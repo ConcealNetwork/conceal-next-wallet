@@ -32,25 +32,27 @@ describe("calculateDepositInterest — golden master (SDK)", () => {
   const M = 1_000_000;
   const LOCK = 999_999_999;
 
+  // Expectations are daemon/float32 truth (Currency.cpp via Math.fround mirror),
+  // not legacy float64 Math.floor artifacts.
+
   describe("V3 path — monthly term", () => {
     it("tier 1 (< 10000 CCX, base 2.9%)", () => {
       expect(interest(1000 * M, 21900, LOCK)).toBe(2_416_666);
       expect(interest(1000 * M, 21900 * 12, LOCK)).toBe(40_000_000);
       expect(interest(1000 * M, 21900 * 24, LOCK)).toBe(40_000_000);
-      expect(interest(9999 * M, 21900 * 6, LOCK)).toBe(169_983_000);
-      // Integer whole-CCX deposit (5467 CCX × 6 mo, EIR 1.7%): floor(principal × 0.017).
-      expect(interest(5467 * M, 21900 * 6, LOCK)).toBe(92_939_000);
+      expect(interest(9999 * M, 21900 * 6, LOCK)).toBe(169_982_976);
+      expect(interest(5467 * M, 21900 * 6, LOCK)).toBe(92_938_992);
     });
 
     it("tier 2 (10000–19999 CCX, base 3.9%)", () => {
       expect(interest(10000 * M, 21900, LOCK)).toBe(32_500_000);
-      expect(interest(15000 * M, 21900 * 12, LOCK)).toBe(750_000_000);
-      expect(interest(19999 * M, 21900 * 3, LOCK)).toBe(204_989_750);
+      expect(interest(15000 * M, 21900 * 12, LOCK)).toBe(750_000_064);
+      expect(interest(19999 * M, 21900 * 3, LOCK)).toBe(204_989_760);
     });
 
     it("tier 3 (>= 20000 CCX, base 4.9%)", () => {
-      expect(interest(20000 * M, 21900, LOCK)).toBe(81_666_666);
-      expect(interest(50000 * M, 21900 * 12, LOCK)).toBe(3_000_000_000);
+      expect(interest(20000 * M, 21900, LOCK)).toBe(81_666_664);
+      expect(interest(50000 * M, 21900 * 12, LOCK)).toBe(2_999_999_744);
     });
 
     it("routes to V3 just above DEPOSIT_HEIGHT_V3", () => {
@@ -61,16 +63,16 @@ describe("calculateDepositInterest — golden master (SDK)", () => {
   describe("V2 investment path (term % 64800 === 0)", () => {
     it("quarterly compounding with quantity-tier bonus", () => {
       expect(interest(1000 * M, 64800, LOCK)).toBe(14_545_364);
-      expect(interest(200000 * M, 64800 * 2, LOCK)).toBe(6_007_192_570);
-      expect(interest(2500000 * M, 64800 * 4, LOCK)).toBe(173_489_564_338);
+      expect(interest(200000 * M, 64800 * 2, LOCK)).toBe(6_007_192_064);
+      expect(interest(2500000 * M, 64800 * 4, LOCK)).toBe(173_489_553_408);
     });
   });
 
   describe("V2 weekly path (term % 5040 === 0)", () => {
     it("weekly accrual with per-week increment", () => {
       expect(interest(1000 * M, 5040, LOCK)).toBe(698_000);
-      expect(interest(1000 * M, 5040 * 10, LOCK)).toBe(7_160_000);
-      expect(interest(50000 * M, 5040 * 4, LOCK)).toBe(140_799_999);
+      expect(interest(1000 * M, 5040 * 10, LOCK)).toBe(7_159_999);
+      expect(interest(50000 * M, 5040 * 4, LOCK)).toBe(140_800_000);
     });
   });
 });
