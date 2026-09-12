@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 /**
  * Shared spend orchestration for the SDK engine: decode destinations, fetch decoy
  * rings from the daemon, and broadcast a built transaction. Used by the
@@ -21,12 +24,7 @@ import {
 import { WALLET_DONATION_ADDRESS } from "@/lib/config/config";
 import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
-import {
-  decoysFromDaemon,
-  persistRuntime,
-  type SdkRuntime,
-  syncRuntime,
-} from "@/lib/services/real-sdk/runtime";
+import { persistRuntime, type SdkRuntime, syncRuntime } from "@/lib/services/real-sdk/runtime";
 
 /** Local aliases for types that live inside the SDK's `transactions` namespace. */
 type BuiltTransaction = txns.BuiltTransaction;
@@ -206,6 +204,27 @@ export async function enqueueAndBroadcast(
     // Non-fatal: the next refresh reconciles state.
   }
   return state;
+}
+
+/**
+ * Decoys returned by the daemon's `getRandomOuts` — the minimal public shape we
+ * consume (the SDK's daemon-result types are not exported).
+ */
+interface DaemonRandomOut {
+  globalIndex: number;
+  publicKey: string;
+}
+interface DaemonRandomOutsForAmount {
+  amount: number;
+  outs: DaemonRandomOut[];
+}
+
+/** Decoys returned by the daemon are already the {@link DecoySet} shape. */
+export function decoysFromDaemon(outs: DaemonRandomOutsForAmount[]): DecoySet[] {
+  return outs.map((entry) => ({
+    amount: entry.amount,
+    outs: entry.outs.map((out) => ({ globalIndex: out.globalIndex, publicKey: out.publicKey })),
+  }));
 }
 
 /**
