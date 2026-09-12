@@ -2,9 +2,11 @@ name: CodeQL
 
 on:
   push:
-    branches: [main]
+    # development is the merge target for feature PRs; analyzing it gives every
+    # commit that later lands on main a SAST check run (Scorecard SASTID).
+    branches: [main, development]
   pull_request:
-    branches: [main]
+    branches: [main, development]
   schedule:
     - cron: "27 4 * * 1" # weekly, Monday 04:27 UTC
   workflow_dispatch:
@@ -14,7 +16,9 @@ permissions:
 
 concurrency:
   group: codeql-${{ github.ref }}
-  cancel-in-progress: true
+  # Only cancel superseded PR runs; never cancel push analyses on
+  # main/development so no analyzed commit loses its completed check run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   analyze:
