@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 /**
  * The sync engine for the SDK wallet engine: fetch strategies (resilient split +
  * verified multi-source), the manual `syncOnce` loop (our OWN loop — NOT the SDK's
@@ -20,6 +23,9 @@ import {
   transactions as txns,
   type WalletState,
 } from "conceal-wallet-sdk";
+import { probeNodes, rankNodes } from "@/lib/network/node-probe";
+import { fetchSmartNodes, nodeUrlToPoolHost } from "@/lib/network/smart-nodes";
+import { buildDaemon, nodeUrlFromRaw } from "@/lib/services/real-sdk/daemon-node";
 import {
   type IncomingPendingRecord,
   readIncomingPendingRecords,
@@ -44,23 +50,22 @@ import {
   type FetchSource,
   fetchRangeMultiSource,
 } from "@/lib/services/real-sdk/multi-source-fetch";
-import { buildDaemon, nodeUrlFromRaw } from "@/lib/services/real-sdk/daemon-node";
 import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import {
   prunePendingRecords,
   readPendingRecords,
   withPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
+import { persistRuntime } from "@/lib/services/real-sdk/persistence";
 import { scanPoolForInbound } from "@/lib/services/real-sdk/pool";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
-  type RuntimeCoordination,
-  type SdkRuntime,
   coordinationFor,
+  type RuntimeCoordination,
   requireRuntime,
   runtimeId,
+  type SdkRuntime,
 } from "@/lib/services/real-sdk/runtime-registry";
-import { persistRuntime } from "@/lib/services/real-sdk/persistence";
 import {
   type DaemonRawTransaction,
   isRecord,
@@ -69,8 +74,6 @@ import {
 } from "@/lib/services/real-sdk/scan";
 import { desiredPoolSize, scanBatch } from "@/lib/services/real-sdk/scan-pool";
 import { parallelSyncDisabled, syncTimingEnabled } from "@/lib/services/real-sdk/sync-flags";
-import { fetchSmartNodes, nodeUrlToPoolHost } from "@/lib/network/smart-nodes";
-import { probeNodes, rankNodes } from "@/lib/network/node-probe";
 import { syncProfileFromReadSpeed } from "@/lib/ui/sync-speed";
 
 /**
@@ -365,7 +368,27 @@ async function buildSyncSources(
   return [home, ...peers];
 }
 
-async function syncOnce(rt: SdkRuntime): Promise<number> {
+/** Mutable shared state for one `syncOnce` pass — phases read/write this, not globals. */
+interface SyncPassCtx {
+  height: number;
+  profile: ReturnType<typeof syncProfileFromReadSpeed>;
+  batchSize: number;
+  includeMinerTxs: boolean;
+  scanned: number;
+  useHeavyPath: boolean;
+  coord: RuntimeCoordination;
+  startState: WalletState;
+  state: WalletState;
+  syncStartedAt: number;
+  startScanned: number;
+  batchCount: number;
+  multiSourceEngaged: boolean;
+  sentHashes: Set<string>;
+  received: Map<string, SdkMessageRecord>;
+  receivedChanged: boolean;
+}
+
+async function prepareSyncPass(rt: SdkRuntime): Promise<SyncPassCtx> {
   // Await WASM crypto init before scanTransactionOutputsAndDeposits / ring math.
   await ensureSdkReady();
   const height = await rt.daemon.getHeight();
@@ -386,7 +409,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // `RESCAN_LAG_BLOCKS` back could be missed (Codex review). Folding is idempotent, so the one
   // extra re-scanned block mid-catch-up is harmless; `seedFloor` still pins the lower bound.
   const seedFloor = Math.max(0, (Number(rt.raw.creationHeight ?? 0) || 0) - 1);
-  let scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS - 1);
+  const scanned = Math.max(seedFloor, rt.state.scannedHeight - RESCAN_LAG_BLOCKS - 1);
   // A DEEP catch-up (fresh import / long offline). Gates ALL the heavy machinery — multi-source
   // bulk fetch, coverage verification, AND the worker-pool scan — so an ordinary incremental poll
   // (already-synced wallet) stays on the original LIGHT path (sparse fetch + in-thread scan, no
@@ -397,7 +420,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   const useHeavyPath = farBehind && !parallelSyncDisabled();
   const coord = coordinationFor(runtimeId(rt));
   const startState = rt.state;
-  let state = rt.state;
+  const state = rt.state;
   const chainStateWasReset =
     startState.outputs.length === 0 &&
     startState.transactions.length === 0 &&
@@ -406,8 +429,8 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // Diagnostic timing (opt-in via `ccx-sync-timing`): track how long the sync took + which path ran.
   const syncStartedAt = Date.now();
   const startScanned = scanned;
-  let batchCount = 0;
-  let multiSourceEngaged = false;
+  const batchCount = 0;
+  const multiSourceEngaged = false;
 
   // Our own outbound message txs already live in `sentMessages`; never reclassify
   // them as inbound. Build the received-message set keyed by tx hash for dedupe.
@@ -417,49 +440,75 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
       ? []
       : readReceivedRecords(rt.raw).map((record) => [record.id, record] as const),
   );
-  let receivedChanged = false;
+  const receivedChanged = false;
 
-  // Apply one batch's PRE-SCANNED results into the running state: the per-tx ECDH scan already ran
-  // (in-thread or across the worker pool, see `scanBatch`); here we only do the state-dependent
-  // APPLY + inbound-message reconstruction (deduped by hash), advance the cursor to `newScanned`,
-  // and publish progress in-memory (never backwards) so a concurrent getWalletInfo sees the height
-  // climb during a long catch-up. Shared by the multi-source bulk phase and the single-node loop —
-  // both deliver batches in ASCENDING block order, which the WalletState fold requires.
-  const foldBatch = (scanResults: (RawScanResult | null)[], newScanned: number): void => {
-    batchCount += 1;
-    let receivedChangedThisBatch = false;
-    for (const result of scanResults) {
-      if (result === null) continue;
-      state = applyScanResult(state, result);
+  return {
+    height,
+    profile,
+    batchSize,
+    includeMinerTxs,
+    scanned,
+    useHeavyPath,
+    coord,
+    startState,
+    state,
+    syncStartedAt,
+    startScanned,
+    batchCount,
+    multiSourceEngaged,
+    sentHashes,
+    received,
+    receivedChanged,
+  };
+}
 
-      // Reconstruct any inbound message from this tx's `extra` (deduped by hash).
-      const txHash = typeof result.scanTx.hash === "string" ? result.scanTx.hash : "";
-      if (txHash) {
-        const inbound = reconstructReceivedMessage(result.scanTx, rt.account.keys, {
-          sentHashes,
-          timestamp: result.timestamp,
-        });
-        if (inbound !== null && applyInboundScanToReceived(received, txHash, inbound)) {
-          receivedChanged = true;
-          receivedChangedThisBatch = true;
-        }
+// Apply one batch's PRE-SCANNED results into the running state: the per-tx ECDH scan already ran
+// (in-thread or across the worker pool, see `scanBatch`); here we only do the state-dependent
+// APPLY + inbound-message reconstruction (deduped by hash), advance the cursor to `newScanned`,
+// and publish progress in-memory (never backwards) so a concurrent getWalletInfo sees the height
+// climb during a long catch-up. Shared by the multi-source bulk phase and the single-node loop —
+// both deliver batches in ASCENDING block order, which the WalletState fold requires.
+function foldBatch(
+  rt: SdkRuntime,
+  ctx: SyncPassCtx,
+  scanResults: (RawScanResult | null)[],
+  newScanned: number,
+): void {
+  ctx.batchCount += 1;
+  let receivedChangedThisBatch = false;
+  for (const result of scanResults) {
+    if (result === null) continue;
+    ctx.state = applyScanResult(ctx.state, result);
+
+    // Reconstruct any inbound message from this tx's `extra` (deduped by hash).
+    const txHash = typeof result.scanTx.hash === "string" ? result.scanTx.hash : "";
+    if (txHash) {
+      const inbound = reconstructReceivedMessage(result.scanTx, rt.account.keys, {
+        sentHashes: ctx.sentHashes,
+        timestamp: result.timestamp,
+      });
+      if (inbound !== null && applyInboundScanToReceived(ctx.received, txHash, inbound)) {
+        ctx.receivedChanged = true;
+        receivedChangedThisBatch = true;
       }
     }
-    scanned = newScanned;
-    // Publish progress after each batch (never backwards), but ONLY when something changed — the
-    // cursor advanced or a tx folded — so an idle at-tip re-scan never allocates a new state or
-    // triggers a persist (no per-poll write churn). Encrypted persist is a checkpoint below
-    // (deep path) plus once at end of the loop.
-    const cursorAdvanced = scanned > rt.state.scannedHeight;
-    const foldedThisBatch = state !== rt.state;
-    if (cursorAdvanced || foldedThisBatch) {
-      state = { ...state, scannedHeight: Math.max(rt.state.scannedHeight, scanned) };
-      rt.state = state;
-    }
-    // Flush inbound copies onto the blob before a checkpoint so resume keeps messages.
-    rt.raw = flushReceivedRaw(rt.raw, received, receivedChangedThisBatch);
-  };
+  }
+  ctx.scanned = newScanned;
+  // Publish progress after each batch (never backwards), but ONLY when something changed — the
+  // cursor advanced or a tx folded — so an idle at-tip re-scan never allocates a new state or
+  // triggers a persist (no per-poll write churn). Encrypted persist is a checkpoint below
+  // (deep path) plus once at end of the loop.
+  const cursorAdvanced = ctx.scanned > rt.state.scannedHeight;
+  const foldedThisBatch = ctx.state !== rt.state;
+  if (cursorAdvanced || foldedThisBatch) {
+    ctx.state = { ...ctx.state, scannedHeight: Math.max(rt.state.scannedHeight, ctx.scanned) };
+    rt.state = ctx.state;
+  }
+  // Flush inbound copies onto the blob before a checkpoint so resume keeps messages.
+  rt.raw = flushReceivedRaw(rt.raw, ctx.received, receivedChangedThisBatch);
+}
 
+async function runMultiSourceBulk(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void> {
   // Phase 2 — DEEP CATCH-UP acceleration: when far behind the tip (fresh import / long offline),
   // fetch the historical BULK across several pool nodes IN PARALLEL, keeping the volatile TIP on the
   // home node. Engages ONLY past FAR_BEHIND_THRESHOLD and only for a default (public-pool) node — a
@@ -468,26 +517,31 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // covers the ENTIRE remaining range from `scanned`. Block ranges are public, so distributing them
   // across nodes leaks nothing about ownership.
   const usingCustomNode = Boolean(rt.raw.options?.customNode);
-  if (!usingCustomNode && useHeavyPath) {
-    const bulkEnd = height - MULTI_SOURCE_TIP_MARGIN; // half-open exclusive; the tip stays on home
-    if (bulkEnd > scanned + 1) {
+  if (!usingCustomNode && ctx.useHeavyPath) {
+    const bulkEnd = ctx.height - MULTI_SOURCE_TIP_MARGIN; // half-open exclusive; the tip stays on home
+    if (bulkEnd > ctx.scanned + 1) {
       try {
-        const sources = await buildSyncSources(rt, height, includeMinerTxs, profile.maxSources);
+        const sources = await buildSyncSources(
+          rt,
+          ctx.height,
+          ctx.includeMinerTxs,
+          ctx.profile.maxSources,
+        );
         if (sources.length >= 2) {
-          multiSourceEngaged = true;
+          ctx.multiSourceEngaged = true;
           await fetchRangeMultiSource<DaemonRawTransaction>({
-            start: scanned + 1,
+            start: ctx.scanned + 1,
             end: bulkEnd,
-            batchSize,
+            batchSize: ctx.batchSize,
             sources,
             // Batches arrive ascending; scan each across the worker pool (sized by the Sync-speed
             // profile), then apply, advancing the cursor to its last (inclusive) block. onBatch is
             // awaited sequentially by the driver, so applies stay strictly ordered even though scans
             // run in parallel.
             onBatch: async (items, _batchStart, batchEnd) => {
-              const results = await scanBatch(items, rt.account.keys, profile.workers);
-              foldBatch(results, batchEnd - 1);
-              await maybeCheckpoint(rt, coord, useHeavyPath);
+              const results = await scanBatch(items, rt.account.keys, ctx.profile.workers);
+              foldBatch(rt, ctx, results, batchEnd - 1);
+              await maybeCheckpoint(rt, ctx.coord, ctx.useHeavyPath);
             },
           });
         }
@@ -500,7 +554,9 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
       }
     }
   }
+}
 
+async function runPipelinedHomeSync(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void> {
   // Pipeline the daemon fetch with the WASM fold: prefetch the NEXT block range while folding the
   // current one, so the round-trip (latency-dominant on remote nodes) overlaps the scan instead of
   // running serially. Wall-clock drops from ~sum(Σfetch + Σfold) toward ~max(Σfetch, Σfold). Folding
@@ -511,7 +567,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     from: number,
   ): { endBlock: number; data: Promise<(RawScanResult | null)[]> } => {
     const startBlock = from + 1;
-    const endBlock = Math.min(startBlock + batchSize - 1, height);
+    const endBlock = Math.min(startBlock + ctx.batchSize - 1, ctx.height);
     // The daemon's `get_raw_transactions_by_heights` range is HALF-OPEN `[start, end)` —
     // it returns blocks `start .. end-1`, EXCLUDING the upper bound (verified against a live
     // node: `heights:[100,101]` → only block 100; `[200,300]` → 200..299). `endBlock` here is
@@ -534,11 +590,11 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     // failover catch that on the deep path; the ≤FAR_BEHIND_THRESHOLD light path accepts that rare
     // risk for incremental speed. The scan folds into the prefetch promise so the next batch's
     // fetch+scan overlaps this apply.
-    const fetched = useHeavyPath
-      ? fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs, height)
-      : fetchSyncRange(rt.daemon, startBlock, endBlock + 1, includeMinerTxs);
+    const fetched = ctx.useHeavyPath
+      ? fetchVerifiedRange(rt.daemon, startBlock, endBlock + 1, ctx.includeMinerTxs, ctx.height)
+      : fetchSyncRange(rt.daemon, startBlock, endBlock + 1, ctx.includeMinerTxs);
     const data = fetched.then((rawTxs) =>
-      scanBatch(rawTxs, rt.account.keys, useHeavyPath ? profile.workers : 0),
+      scanBatch(rawTxs, rt.account.keys, ctx.useHeavyPath ? ctx.profile.workers : 0),
     );
     // Mark the prefetch as handled so an ORPHANED one — if the fold of an earlier batch
     // throws and exits `syncOnce` before this batch is ever awaited — can't fire an
@@ -548,21 +604,23 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     return { endBlock, data };
   };
 
-  let pending = scanned < height ? fetchFrom(scanned) : null;
+  let pending = ctx.scanned < ctx.height ? fetchFrom(ctx.scanned) : null;
   while (pending) {
     const { endBlock, data } = pending;
     const scanResults = await data;
     // Kick off the next range's fetch + scan BEFORE applying, so it runs during the apply.
-    pending = endBlock < height ? fetchFrom(endBlock) : null;
-    foldBatch(scanResults, endBlock);
-    await maybeCheckpoint(rt, coord, useHeavyPath);
+    pending = endBlock < ctx.height ? fetchFrom(endBlock) : null;
+    foldBatch(rt, ctx, scanResults, endBlock);
+    await maybeCheckpoint(rt, ctx.coord, ctx.useHeavyPath);
   }
+}
 
+async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void> {
   // The per-batch publish advances rt.state only on real change, so `rt.state !==
   // startState` means this scan genuinely advanced/folded something — persist iff so.
-  const stateChanged = rt.state !== startState;
-  if (receivedChanged) {
-    rt.raw = withReceivedRecords(rt.raw, [...received.values()]);
+  const stateChanged = rt.state !== ctx.startState;
+  if (ctx.receivedChanged) {
+    rt.raw = withReceivedRecords(rt.raw, [...ctx.received.values()]);
   }
 
   // Reconcile optimistic pending sends: drop any whose tx is now scanned into state
@@ -587,7 +645,7 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
     rt.raw = withSentRecords(rt.raw, sentPatched);
   }
 
-  if (stateChanged || receivedChanged || pendingChanged || sentHeightsChanged) {
+  if (stateChanged || ctx.receivedChanged || pendingChanged || sentHeightsChanged) {
     // Persist the mined-block results FIRST, before the optional mempool poll: a slow (or
     // hanging) pool RPC must never delay or block the durable write of freshly-mined state
     // (#109 review — GLM-M1 / Codex-1).
@@ -688,8 +746,8 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
   // Diagnostic timing (opt-in): report how long this sync took + which path ran, so the speed
   // options can be A/B'd on a real wallet (`ccx-sync-timing=1`; pair with `ccx-disable-parallel-sync`).
   if (syncTimingEnabled()) {
-    const ms = Date.now() - syncStartedAt;
-    const blocks = scanned - startScanned;
+    const ms = Date.now() - ctx.syncStartedAt;
+    const blocks = ctx.scanned - ctx.startScanned;
     const perSec = ms > 0 ? Math.round((blocks / ms) * 1000) : 0;
     // `workers` is the profile request; `pool` is what scan-pool actually spawned after the
     // hardwareConcurrency clamp (0 = cooperative in-thread). Log both so a slow mobile sync is
@@ -698,15 +756,22 @@ async function syncOnce(rt: SdkRuntime): Promise<number> {
       typeof navigator !== "undefined" && navigator.hardwareConcurrency
         ? navigator.hardwareConcurrency
         : 0;
-    const pool = useHeavyPath && profile.workers > 0 ? desiredPoolSize(profile.workers) : 0;
+    const pool =
+      ctx.useHeavyPath && ctx.profile.workers > 0 ? desiredPoolSize(ctx.profile.workers) : 0;
     console.warn(
-      `[ccx-sync] ${blocks} blocks in ${ms}ms (${perSec}/s) · batches=${batchCount} · path=${
-        useHeavyPath ? "parallel" : "light"
-      } · multiSource=${multiSourceEngaged} · workers=${profile.workers}→${pool} · cores=${cores}`,
+      `[ccx-sync] ${blocks} blocks in ${ms}ms (${perSec}/s) · batches=${ctx.batchCount} · path=${
+        ctx.useHeavyPath ? "parallel" : "light"
+      } · multiSource=${ctx.multiSourceEngaged} · workers=${ctx.profile.workers}→${pool} · cores=${cores}`,
     );
   }
+}
 
-  return height;
+async function syncOnce(rt: SdkRuntime): Promise<number> {
+  const ctx = await prepareSyncPass(rt);
+  await runMultiSourceBulk(rt, ctx);
+  await runPipelinedHomeSync(rt, ctx);
+  await finalizeSyncPass(rt, ctx);
+  return ctx.height;
 }
 
 /**

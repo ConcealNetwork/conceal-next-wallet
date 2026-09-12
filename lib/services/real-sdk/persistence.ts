@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 /**
  * Persistence for the SDK engine: encrypt + write a runtime's wallet blob (keys,
  * options, contacts, messages AND the serialized {@link WalletState}) into THAT
@@ -18,14 +21,14 @@ import {
   saveStoredWallet,
   serializeWalletState,
 } from "conceal-wallet-sdk";
-import { getActiveWalletStorage } from "@/lib/services/real-sdk/wallets-index";
 import {
-  type SdkRuntime,
   allUnlockedRuntimes,
   coordinationFor,
   requireRuntime,
   runtimeId,
+  type SdkRuntime,
 } from "@/lib/services/real-sdk/runtime-registry";
+import { getActiveWalletStorage } from "@/lib/services/real-sdk/wallets-index";
 
 /** Field we add to the persisted blob to carry the serialized SDK wallet state. */
 export const SDK_STATE_FIELD = "sdkWalletState";

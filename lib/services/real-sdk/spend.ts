@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 /**
  * Shared spend orchestration for the SDK engine: decode destinations, fetch decoy
  * rings from the daemon, and broadcast a built transaction. Used by the
@@ -21,11 +24,7 @@ import {
 import { WALLET_DONATION_ADDRESS } from "@/lib/config/config";
 import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
-import {
-  persistRuntime,
-  type SdkRuntime,
-  syncRuntime,
-} from "@/lib/services/real-sdk/runtime";
+import { persistRuntime, type SdkRuntime, syncRuntime } from "@/lib/services/real-sdk/runtime";
 
 /** Local aliases for types that live inside the SDK's `transactions` namespace. */
 type BuiltTransaction = txns.BuiltTransaction;

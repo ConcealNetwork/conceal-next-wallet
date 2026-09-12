@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 /**
  * Per-wallet runtime LIFECYCLE for the SDK wallet engine — unlock/adopt, lock/
  * disconnect, wallet-state (re)construction, and the multi-wallet helpers, plus
@@ -57,19 +60,19 @@ import {
   type WalletState,
 } from "conceal-wallet-sdk";
 import { buildDaemon, nodeUrlFromRaw } from "@/lib/services/real-sdk/daemon-node";
+import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 import {
   flushSyncCheckpoint as flushSyncCheckpointInternal,
   persist as persistInternal,
   SDK_STATE_FIELD,
 } from "@/lib/services/real-sdk/persistence";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 import {
-  type SdkRuntime,
   activateRuntime,
   clearAllRuntimes,
   dropCachedRuntime,
   getCachedRuntime,
+  type SdkRuntime,
   setRuntime,
 } from "@/lib/services/real-sdk/runtime-registry";
 import {
@@ -85,15 +88,21 @@ import {
   type WalletMeta,
 } from "@/lib/services/real-sdk/wallets-index";
 
+export { buildDaemon, defaultNodeUrl, nodeUrlFromRaw } from "@/lib/services/real-sdk/daemon-node";
+export {
+  flushSyncCheckpoint,
+  persist,
+  persistRuntime,
+} from "@/lib/services/real-sdk/persistence";
 // --- public façade: the extracted subsystems keep flowing through this module ---
 export {
-  type RuntimeCoordination,
-  type SdkRuntime,
   _setRuntimeForTest,
   getRuntime,
   hasUnlockedRuntime,
   isUnlocked,
+  type RuntimeCoordination,
   requireRuntime,
+  type SdkRuntime,
   unlockedNonActiveRuntimes,
 } from "@/lib/services/real-sdk/runtime-registry";
 export {
@@ -103,12 +112,6 @@ export {
   sync,
   syncRuntime,
 } from "@/lib/services/real-sdk/sync-engine";
-export {
-  flushSyncCheckpoint,
-  persist,
-  persistRuntime,
-} from "@/lib/services/real-sdk/persistence";
-export { buildDaemon, defaultNodeUrl, nodeUrlFromRaw } from "@/lib/services/real-sdk/daemon-node";
 
 /** Map normalized {@link UserKeys} to the SDK {@link WalletKeys} (sec/pub pairs). */
 function toWalletKeys(keys: UserKeys): WalletKeys {
