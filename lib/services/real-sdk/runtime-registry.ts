@@ -204,3 +204,22 @@ export function dropCachedRuntime(id: string): void {
     activeId = null;
   }
 }
+
+/** True when `rt` is the object currently cached for its id (stale post-delete handles fail). */
+export function isLiveRuntime(rt: SdkRuntime): boolean {
+  return getCachedRuntime(runtimeId(rt)) === rt;
+}
+
+/** Drop one cached runtime, then wait out a persist that already started. */
+export async function dropAndSettle(id: string): Promise<void> {
+  const persist = coordination.get(id)?.persistChain ?? Promise.resolve();
+  dropCachedRuntime(id);
+  await persist.catch(() => undefined);
+}
+
+/** Drop every cached runtime, then wait out persists that already started. */
+export async function clearAndSettle(): Promise<void> {
+  const persists = [...coordination.values()].map((c) => c.persistChain);
+  clearAllRuntimes();
+  await Promise.all(persists.map((p) => p.catch(() => undefined)));
+}

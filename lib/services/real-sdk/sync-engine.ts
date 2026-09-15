@@ -61,6 +61,7 @@ import { scanPoolForInbound } from "@/lib/services/real-sdk/pool";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   coordinationFor,
+  isLiveRuntime,
   type RuntimeCoordination,
   requireRuntime,
   runtimeId,
@@ -539,7 +540,9 @@ async function runMultiSourceBulk(rt: SdkRuntime, ctx: SyncPassCtx): Promise<voi
             // awaited sequentially by the driver, so applies stay strictly ordered even though scans
             // run in parallel.
             onBatch: async (items, _batchStart, batchEnd) => {
+              if (!isLiveRuntime(rt)) return;
               const results = await scanBatch(items, rt.account.keys, ctx.profile.workers);
+              if (!isLiveRuntime(rt)) return;
               foldBatch(rt, ctx, results, batchEnd - 1);
               await maybeCheckpoint(rt, ctx.coord, ctx.useHeavyPath);
             },
@@ -606,8 +609,10 @@ async function runPipelinedHomeSync(rt: SdkRuntime, ctx: SyncPassCtx): Promise<v
 
   let pending = ctx.scanned < ctx.height ? fetchFrom(ctx.scanned) : null;
   while (pending) {
+    if (!isLiveRuntime(rt)) return;
     const { endBlock, data } = pending;
     const scanResults = await data;
+    if (!isLiveRuntime(rt)) return;
     // Kick off the next range's fetch + scan BEFORE applying, so it runs during the apply.
     pending = endBlock < ctx.height ? fetchFrom(endBlock) : null;
     foldBatch(rt, ctx, scanResults, endBlock);
@@ -616,6 +621,8 @@ async function runPipelinedHomeSync(rt: SdkRuntime, ctx: SyncPassCtx): Promise<v
 }
 
 async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void> {
+  // Wallet was deleted/locked while this pass was mid-flight — do not persist or drain.
+  if (!isLiveRuntime(rt)) return;
   // The per-batch publish advances rt.state only on real change, so `rt.state !==
   // startState` means this scan genuinely advanced/folded something — persist iff so.
   const stateChanged = rt.state !== ctx.startState;
@@ -768,8 +775,11 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
 
 async function syncOnce(rt: SdkRuntime): Promise<number> {
   const ctx = await prepareSyncPass(rt);
+  if (!isLiveRuntime(rt)) return ctx.height;
   await runMultiSourceBulk(rt, ctx);
+  if (!isLiveRuntime(rt)) return ctx.height;
   await runPipelinedHomeSync(rt, ctx);
+  if (!isLiveRuntime(rt)) return ctx.height;
   await finalizeSyncPass(rt, ctx);
   return ctx.height;
 }

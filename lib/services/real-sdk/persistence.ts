@@ -24,6 +24,7 @@ import {
 import {
   allUnlockedRuntimes,
   coordinationFor,
+  isLiveRuntime,
   requireRuntime,
   runtimeId,
   type SdkRuntime,
@@ -71,6 +72,8 @@ export async function flushSyncCheckpoint(): Promise<void> {
 
 /** Persist a SPECIFIC runtime's current `raw` (with the latest serialized state). */
 export function persistRuntime(rt: SdkRuntime): Promise<void> {
+  // Deleted / locked handles must not recreate coordination or write the blob back.
+  if (!isLiveRuntime(rt)) return Promise.resolve();
   const coord = coordinationFor(runtimeId(rt));
   const run = coord.persistChain.then(
     () => persistNow(rt),
@@ -87,6 +90,7 @@ export function persistRuntime(rt: SdkRuntime): Promise<void> {
 
 /** Encrypt + write a runtime's current blob + serialized state (no concurrency guard). */
 async function persistNow(rt: SdkRuntime): Promise<void> {
+  if (!isLiveRuntime(rt)) return;
   const raw: RawWalletV1 = {
     ...rt.raw,
     [SDK_STATE_FIELD]: serializeWalletState(rt.state),
@@ -98,5 +102,6 @@ async function persistNow(rt: SdkRuntime): Promise<void> {
   // `_setRuntimeForTest`). Binding to `rt.storage` (not the live active wallet) is
   // what keeps A's data out of B's keyspace after a mid-flight switch.
   const storage = rt.storage ?? (await getActiveWalletStorage());
+  if (!isLiveRuntime(rt)) return;
   await saveStoredWallet(storage, raw, rt.password);
 }

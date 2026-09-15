@@ -126,6 +126,7 @@ describe("maybeCheckpoint", () => {
     const scannedHeight = lastCheckpoint + 1000;
     const rt = makeRt(scannedHeight);
     const coord = makeCoord(lastCheckpoint);
+    _setRuntimeForTest(rt);
 
     await maybeCheckpoint(rt, coord, true);
 
