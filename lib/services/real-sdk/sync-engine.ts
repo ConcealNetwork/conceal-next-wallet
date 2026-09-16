@@ -19,6 +19,7 @@ import {
   applyScannedTransaction,
   type DaemonClient,
   findWithdrawnDepRefs,
+  getBalance,
   isWithdrawShape,
   transactions as txns,
   type WalletState,
@@ -32,6 +33,7 @@ import {
   reconcileIncomingPending,
   withIncomingPendingRecords,
 } from "@/lib/services/real-sdk/incoming-pending-store";
+import { drainIntents, rebuildSend } from "@/lib/services/real-sdk/intent-drain";
 import {
   applyInboundScanToReceived,
   dropExpiredTtl,
@@ -50,7 +52,6 @@ import {
   type FetchSource,
   fetchRangeMultiSource,
 } from "@/lib/services/real-sdk/multi-source-fetch";
-import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import {
   prunePendingRecords,
   readPendingRecords,
@@ -732,19 +733,18 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
   // Pool RPC throw + persist await both skip the check above — stop before drain.
   if (!isLiveRuntime(rt)) return;
 
-  // Durable outbound queue (#92): retry any due broadcasts (a send that hit a transient
-  // network error stays queued until it relays), then drop entries whose tx has now mined
-  // into state. Best-effort and on its own persisted namespace — never blocks mined sync.
+  // Session send intents: rebuild a due auto payment after synced wait ticks. Best-effort —
+  // a drain error must never throw out of finalize (same wrap as the old #92 hex drain).
   try {
-    const queue = queueForRuntime(rt);
-    await queue.drainOnce();
-    const entries = await queue.list();
-    if (entries.length > 0) {
-      const minedHashes = new Set(rt.state.transactions.map((tx) => tx.hash));
-      for (const entry of entries) {
-        if (minedHashes.has(entry.hash)) await queue.remove(entry.id);
-      }
-    }
+    const historyHashes = new Set([...minedHashes, ...activeMempoolHashes]);
+    await drainIntents(rt, {
+      scannedHeight: rt.state.scannedHeight,
+      networkHeight: ctx.height,
+      spendableAtomic: getBalance(rt.state).spendable,
+      historyHashes,
+      isLive: () => isLiveRuntime(rt),
+      rebuild: (intent) => rebuildSend(rt, intent),
+    });
   } catch (error) {
     if (!queueDrainWarned.has(rt)) {
       queueDrainWarned.add(rt);

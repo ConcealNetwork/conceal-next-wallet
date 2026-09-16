@@ -262,7 +262,7 @@ export function mapTransactions(
   return [...incomingTxs, ...pendingTxs, ...scanned];
 }
 
-/** Map a durable outbound-queue entry to the UI {@link QueuedTransaction} (#92). */
+/** Map a leftover SDK outbound-queue entry to {@link QueuedTransaction} (hash set). */
 export function mapQueuedTransaction(entry: OutboundQueueEntry): QueuedTransaction {
   return {
     id: entry.id,

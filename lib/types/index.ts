@@ -56,18 +56,23 @@ export type WalletSummary = {
   balanceTotal?: CcxAmount;
 };
 
-/** Lifecycle of a durable outbound-queue entry (#92), mirrored from the SDK. */
+/** Legacy broadcast states from #92 / mock demo rows. */
 export type QueuedBroadcastState = "pending" | "broadcast" | "failed";
+
+export type QueuedIntentKind = "auto" | "hung";
 
 /** Why a queued broadcast failed (only set when state === "failed"). */
 type QueuedBroadcastFailReason = "rejected" | "expired" | "conflict";
 
-/** A built+signed transaction persisted in the durable outbound queue (#92). */
+/** Session send intent listed by TransactionService (hash only on hung watch). */
 export type QueuedTransaction = {
-  /** Queue id — equal to the tx hash. */
+  /** Intent id (not necessarily a tx hash). */
   id: string;
-  hash: string;
-  state: QueuedBroadcastState;
+  /** Hung watchedHash only. */
+  hash?: string;
+  kind?: QueuedIntentKind;
+  sent?: boolean;
+  state: QueuedBroadcastState | "hung" | "sent";
   /** Transient-error attempts so far. */
   attempts: number;
   /** Wall-clock ms when first enqueued. */

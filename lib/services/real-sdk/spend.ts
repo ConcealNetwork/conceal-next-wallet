@@ -131,11 +131,10 @@ export function unspentOutputs(runtime: SdkRuntime): OwnedOutput[] {
 }
 
 /**
- * Spendable outputs with BOTH the optimistic-pending (#96) and the durable-queue (#92)
- * reservations removed, so a new send never selects an input already committed to a queued
- * (not-yet-mined) broadcast. The queue is the durable source of truth for reservations; the
- * pending-store overlaps for the common send path but the two stay consistent (same tx →
- * same key images).
+ * Spendable outputs with optimistic-pending (#96) holds removed, then pretty-filtered.
+ * Leftover hex `outbox:` reservations are ignored — the next rebuild selects current
+ * unspent or drops if funds are gone. Pending-store still excludes images from an OK
+ * optimistic send ({@link unspentOutputs} / `pendingSpentKeyImages`).
  *
  * Non-pretty amounts (not `{1..9}×10^k`) are skipped — unique leftovers (e.g. old withdraw
  * redeem outs) are unmixable and must not be selected as spend inputs. Dust (`< DUST_THRESHOLD`)
@@ -143,10 +142,7 @@ export function unspentOutputs(runtime: SdkRuntime): OwnedOutput[] {
  * {@link selectSpendInputs}.
  */
 export async function selectableOutputs(runtime: SdkRuntime): Promise<OwnedOutput[]> {
-  const reserved = await queueForRuntime(runtime).reservedKeyImages();
-  const outputs = unspentOutputs(runtime);
-  const free = reserved.size === 0 ? outputs : outputs.filter((out) => !reserved.has(out.keyImage));
-  return free.filter((out) => isPrettyAmount(out.amount));
+  return unspentOutputs(runtime).filter((out) => isPrettyAmount(out.amount));
 }
 
 /**
@@ -242,6 +238,29 @@ export async function fetchDecoys(
   return decoysFromDaemon(raw);
 }
 
+/** How long send waits for `sendRawTransaction` before treating it as hung. */
+export const submitHangMs = 15_000;
+
+type RawSubmit = { status?: string };
+
+/** Submit signed hex without parking it. A never-settling RPC becomes a reject. */
+export async function submitRawHex(
+  daemon: { sendRawTransaction(hex: string): Promise<RawSubmit> },
+  serialized: string,
+): Promise<RawSubmit> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      daemon.sendRawTransaction(serialized),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("submit hung")), submitHangMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 /**
  * Broadcast a built transaction, then re-sync so the new tx is reflected in state.
  * Throws a friendly error when the daemon rejects the relay.
@@ -267,7 +286,7 @@ export async function broadcast(runtime: SdkRuntime, built: BuiltTransaction): P
 }
 
 /** Persist the per-tx private key into the blob's `txPrivateKeys` map (immutably). */
-function recordTxPrivateKey(runtime: SdkRuntime, built: BuiltTransaction): void {
+export function recordTxPrivateKey(runtime: SdkRuntime, built: BuiltTransaction): void {
   const existing =
     runtime.raw.txPrivateKeys && typeof runtime.raw.txPrivateKeys === "object"
       ? runtime.raw.txPrivateKeys

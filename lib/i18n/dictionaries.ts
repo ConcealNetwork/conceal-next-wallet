@@ -181,10 +181,10 @@ const en: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Unlock with Touch ID / Windows Hello, a security key, or your phone — on this device",
   "settings.notifications": "Enable notifications",
-  "queue.title": "Pending broadcasts",
-  "queue.description":
-    "Transactions saved for delivery. They retry automatically until they confirm.",
+  "queue.title": "Retrying payments",
+  "queue.description": "Payments in this session retry automatically until they go through.",
   "queue.statePending": "Queued",
+  "queue.stateRetrying": "Retrying",
   "queue.stateBroadcast": "Sent",
   "queue.stateFailed": "Failed",
   "queue.cancel": "Cancel",
@@ -1130,10 +1130,11 @@ const es: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Desbloquea con Touch ID / Windows Hello, una llave de seguridad o tu teléfono, en este dispositivo",
   "settings.notifications": "Activar notificaciones",
-  "queue.title": "Difusiones pendientes",
+  "queue.title": "Pagos en reintento",
   "queue.description":
-    "Transacciones guardadas para enviar. Se reintentan automáticamente hasta confirmarse.",
+    "Los pagos de esta sesión se reintentan automáticamente hasta que se completen.",
   "queue.statePending": "En cola",
+  "queue.stateRetrying": "Reintentando",
   "queue.stateBroadcast": "Enviada",
   "queue.stateFailed": "Fallida",
   "queue.cancel": "Cancelar",
@@ -2090,10 +2091,11 @@ const fr: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Déverrouillez avec Touch ID / Windows Hello, une clé de sécurité ou votre téléphone, sur cet appareil",
   "settings.notifications": "Activer les notifications",
-  "queue.title": "Diffusions en attente",
+  "queue.title": "Paiements en nouvel essai",
   "queue.description":
-    "Transactions enregistrées pour envoi. Elles sont réessayées automatiquement jusqu'à confirmation.",
+    "Les paiements de cette session sont réessayés automatiquement jusqu'à ce qu'ils aboutissent.",
   "queue.statePending": "En file",
+  "queue.stateRetrying": "Nouvel essai",
   "queue.stateBroadcast": "Envoyée",
   "queue.stateFailed": "Échec",
   "queue.cancel": "Annuler",
@@ -3058,10 +3060,11 @@ const de: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Entsperre mit Touch ID / Windows Hello, einem Sicherheitsschlüssel oder deinem Telefon – auf diesem Gerät",
   "settings.notifications": "Benachrichtigungen aktivieren",
-  "queue.title": "Ausstehende Übertragungen",
+  "queue.title": "Zahlungen werden wiederholt",
   "queue.description":
-    "Zur Zustellung gespeicherte Transaktionen. Sie werden automatisch wiederholt, bis sie bestätigt sind.",
+    "Zahlungen dieser Sitzung werden automatisch wiederholt, bis sie durchgehen.",
   "queue.statePending": "In Warteschlange",
+  "queue.stateRetrying": "Wiederholung",
   "queue.stateBroadcast": "Gesendet",
   "queue.stateFailed": "Fehlgeschlagen",
   "queue.cancel": "Abbrechen",
@@ -4022,10 +4025,11 @@ const it: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Sblocca con Touch ID / Windows Hello, una chiave di sicurezza o il tuo telefono, su questo dispositivo",
   "settings.notifications": "Abilita le notifiche",
-  "queue.title": "Trasmissioni in sospeso",
+  "queue.title": "Pagamenti in ritentativo",
   "queue.description":
-    "Transazioni salvate per l'invio. Vengono riprovate automaticamente fino alla conferma.",
+    "I pagamenti di questa sessione vengono ritentati automaticamente fino al buon fine.",
   "queue.statePending": "In coda",
+  "queue.stateRetrying": "Ritentativo",
   "queue.stateBroadcast": "Inviata",
   "queue.stateFailed": "Non riuscita",
   "queue.cancel": "Annulla",
@@ -4986,10 +4990,11 @@ const pt: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Desbloqueie com Touch ID / Windows Hello, uma chave de segurança ou seu telefone, neste dispositivo",
   "settings.notifications": "Ativar notificações",
-  "queue.title": "Transmissões pendentes",
+  "queue.title": "Pagamentos a repetir",
   "queue.description":
-    "Transações guardadas para envio. São repetidas automaticamente até serem confirmadas.",
+    "Os pagamentos desta sessão são repetidos automaticamente até serem concluídos.",
   "queue.statePending": "Em fila",
+  "queue.stateRetrying": "A repetir",
   "queue.stateBroadcast": "Enviada",
   "queue.stateFailed": "Falhou",
   "queue.cancel": "Cancelar",
@@ -5943,10 +5948,10 @@ const ru: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Разблокируйте с помощью Touch ID / Windows Hello, ключа безопасности или телефона — на этом устройстве",
   "settings.notifications": "Включить уведомления",
-  "queue.title": "Ожидающие отправки",
-  "queue.description":
-    "Транзакции, сохранённые для отправки. Повторяются автоматически до подтверждения.",
+  "queue.title": "Повтор платежей",
+  "queue.description": "Платежи этой сессии повторяются автоматически, пока не пройдут.",
   "queue.statePending": "В очереди",
+  "queue.stateRetrying": "Повтор",
   "queue.stateBroadcast": "Отправлена",
   "queue.stateFailed": "Ошибка",
   "queue.cancel": "Отменить",
@@ -6898,9 +6903,10 @@ const zh: Dictionary = {
   "settings.passkeyUnlockDescription":
     "在本设备上使用 Touch ID / Windows Hello、安全密钥或手机解锁",
   "settings.notifications": "启用通知",
-  "queue.title": "待广播交易",
-  "queue.description": "已保存待发送的交易。它们会自动重试直到确认。",
+  "queue.title": "正在重试付款",
+  "queue.description": "本会话中的付款会自动重试，直到成功。",
   "queue.statePending": "排队中",
+  "queue.stateRetrying": "重试中",
   "queue.stateBroadcast": "已发送",
   "queue.stateFailed": "失败",
   "queue.cancel": "取消",
@@ -7821,9 +7827,10 @@ const ja: Dictionary = {
   "settings.passkeyUnlockDescription":
     "このデバイスで Touch ID / Windows Hello、セキュリティキー、またはスマートフォンを使ってロックを解除します",
   "settings.notifications": "通知を有効にする",
-  "queue.title": "送信待ちのブロードキャスト",
-  "queue.description": "送信用に保存された取引。確認されるまで自動的に再試行されます。",
+  "queue.title": "支払いを再試行中",
+  "queue.description": "このセッションの支払いは完了するまで自動的に再試行されます。",
   "queue.statePending": "待機中",
+  "queue.stateRetrying": "再試行中",
   "queue.stateBroadcast": "送信済み",
   "queue.stateFailed": "失敗",
   "queue.cancel": "キャンセル",
@@ -8766,9 +8773,10 @@ const ko: Dictionary = {
   "settings.passkeyUnlockDescription":
     "이 기기에서 Touch ID / Windows Hello, 보안 키 또는 휴대폰으로 잠금을 해제하세요",
   "settings.notifications": "알림 사용",
-  "queue.title": "대기 중인 브로드캐스트",
-  "queue.description": "전송을 위해 저장된 거래. 확인될 때까지 자동으로 재시도됩니다.",
+  "queue.title": "결제 재시도 중",
+  "queue.description": "이 세션의 결제는 완료될 때까지 자동으로 재시도됩니다.",
   "queue.statePending": "대기 중",
+  "queue.stateRetrying": "재시도 중",
   "queue.stateBroadcast": "전송됨",
   "queue.stateFailed": "실패",
   "queue.cancel": "취소",

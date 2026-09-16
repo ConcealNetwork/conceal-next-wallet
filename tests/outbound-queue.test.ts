@@ -3,10 +3,15 @@ import {
   createOutboundQueue,
   type transactions as txns,
 } from "conceal-wallet-sdk";
-import { describe, expect, it } from "vitest";
-import { mockTransactionService } from "@/lib/services/mock/transaction.service";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  _armMockSend,
+  _resetMockIntents,
+  mockTransactionService,
+} from "@/lib/services/mock/transaction.service";
 import { mapQueuedTransaction } from "@/lib/services/real-sdk/mappers";
 import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
+import type { QueuedTransaction } from "@/lib/types";
 
 /**
  * Durable outbound queue (#92): the pure UI mapper, the mock service surface, and a direct
@@ -22,6 +27,36 @@ function fakeBuilt(hash: string, keyImage: string): txns.BuiltTransaction {
     inputs: [{ keyImage }],
   } as unknown as txns.BuiltTransaction;
 }
+
+describe("QueuedTransaction intent shape", () => {
+  it("allows an auto intent with no hash", () => {
+    const row: QueuedTransaction = {
+      id: "intent-1",
+      kind: "auto",
+      state: "pending",
+      attempts: 0,
+      enqueuedAt: 1,
+    };
+    expect(row.hash).toBeUndefined();
+    expect(row.kind).toBe("auto");
+    expect(row.id).toBe("intent-1");
+  });
+
+  it("allows a hung intent with watched hash and sent", () => {
+    const row: QueuedTransaction = {
+      id: "intent-2",
+      hash: "watched-hash",
+      kind: "hung",
+      sent: false,
+      state: "hung",
+      attempts: 0,
+      enqueuedAt: 2,
+    };
+    expect(row.hash).toBe("watched-hash");
+    expect(row.state).toBe("hung");
+    expect(row.sent).toBe(false);
+  });
+});
 
 describe("mapQueuedTransaction", () => {
   it("maps required fields and omits absent optionals", () => {
@@ -67,9 +102,15 @@ describe("mapQueuedTransaction", () => {
 });
 
 describe("mock transaction queue", () => {
-  it("lists a demo entry, cancels it, and reports false for an unknown id", async () => {
+  afterEach(() => {
+    _resetMockIntents();
+  });
+
+  it("cancels an armed intent by id and reports false for an unknown id", async () => {
+    _armMockSend("decoy");
+    await mockTransactionService.sendTransaction({ address: "ccx7mockaddress", amount: 1 });
     const before = await mockTransactionService.listQueuedTransactions();
-    expect(before.length).toBeGreaterThan(0);
+    expect(before).toHaveLength(1);
     expect(await mockTransactionService.cancelQueuedTransaction("does-not-exist")).toBe(false);
     expect(await mockTransactionService.cancelQueuedTransaction(before[0].id)).toBe(true);
     const after = await mockTransactionService.listQueuedTransactions();

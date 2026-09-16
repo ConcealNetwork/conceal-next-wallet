@@ -206,6 +206,18 @@ export function useCancelQueuedTransaction() {
   });
 }
 
+export function useSubmitHungIntent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.transactions.submitHungIntent(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+    },
+  });
+}
+
 export function useMarketData() {
   return useQuery({
     queryKey: queryKeys.market,
