@@ -101,6 +101,25 @@ describe("wallets-index (#95)", () => {
     expect(newActive).toBe(other.id);
   });
 
+  it("unregistering the DEFAULT wallet drops leftover outbox keys so a later first wallet cannot inherit them", async () => {
+    const raw = getSdkWalletStorage();
+    const leftoverHash = "aa".repeat(32);
+    const leftoverKey = `outbox:${leftoverHash}`;
+    const def = await registerWallet({ label: "Default" });
+    await storageForWallet(def).setItem("wallet", "DEFAULT-BLOB");
+    await raw.setItem(leftoverKey, "signed-hex-from-deleted-wallet");
+
+    await unregisterWallet(def.id);
+
+    expect(await raw.getItem(leftoverKey)).toBeNull();
+    expect(await raw.getItem("wallet")).toBeNull();
+
+    const next = await registerWallet({ label: "New first" });
+    expect(next.id).toBe(DEFAULT_WALLET_ID);
+    expect(next.namespace).toBe("");
+    expect(await raw.getItem(leftoverKey)).toBeNull();
+  });
+
   it("unregister erases the wallet's storage and reassigns active", async () => {
     const a = await registerWallet({ label: "A" });
     const b = await registerWallet({ label: "B" }); // active

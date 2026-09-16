@@ -299,6 +299,8 @@ describe("real-sdk delete — removeWalletById vs in-flight sync", () => {
     await syncPromise;
 
     expect(sends).toBe(0);
-    expect((await queueForRuntime(rt).list()).map((entry) => entry.state)).toEqual(["pending"]);
+    // Delete wipes leftover `outbox:*` on the default keyspace so a later first
+    // wallet cannot inherit and re-broadcast. The race guard is "no submit".
+    expect(await queueForRuntime(rt).list()).toEqual([]);
   });
 });

@@ -78,6 +78,7 @@ import {
 } from "@/lib/services/real-sdk/runtime-registry";
 import {
   DEFAULT_WALLET_ID,
+  eraseDefaultKeys,
   getActiveWallet,
   getActiveWalletStorage,
   readWalletsIndex,
@@ -313,7 +314,7 @@ export async function removeStoredWallet(): Promise<void> {
     await unregisterWallet(active.id);
   } else {
     await dropAndSettle(DEFAULT_WALLET_ID);
-    await getActiveWalletStorage().then((storage) => storage.removeItem("wallet"));
+    await getActiveWalletStorage().then((storage) => eraseDefaultKeys(storage));
   }
 }
 
