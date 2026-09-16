@@ -1,6 +1,12 @@
 // @vitest-environment node
-import { createAccount, createWalletState, type RawWalletV1 } from "conceal-wallet-sdk";
+import {
+  createAccount,
+  createWalletState,
+  type RawWalletV1,
+  type transactions as txns,
+} from "conceal-wallet-sdk";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { coinbaseTxsFor } from "./test-helpers";
 
 /**
@@ -48,6 +54,39 @@ function hangDaemon(height: number, gate: Promise<void>, onEnter: () => void) {
       return [];
     },
   };
+}
+
+/** Hang only the mempool poll so sync reaches finalizeSyncPass, then stalls before drain. */
+function hangPoolDaemon(
+  height: number,
+  gate: Promise<void>,
+  onEnter: () => void,
+  onSend: () => void,
+) {
+  return {
+    nodeUrl: "https://node.test/",
+    getHeight: () => Promise.resolve(height),
+    getNodeFeeAddress: () => Promise.resolve(""),
+    sendRawTransaction: () => {
+      onSend();
+      return Promise.resolve({ status: "OK" });
+    },
+    getRandomOuts: () => Promise.resolve([]),
+    getWalletSyncData: async (start: number, end: number) => coinbaseTxsFor(start, end),
+    getTransactionsPool: async () => {
+      onEnter();
+      await gate;
+      return [];
+    },
+  };
+}
+
+function fakeBuilt(hash: string, keyImage: string): txns.BuiltTransaction {
+  return {
+    hash,
+    serialized: `${hash}-blob`,
+    inputs: [{ keyImage }],
+  } as unknown as txns.BuiltTransaction;
 }
 
 async function reset() {
@@ -225,5 +264,41 @@ describe("real-sdk delete — removeWalletById vs in-flight sync", () => {
     const opened = await openStoredWallet(raw, "pw-b");
     expect(opened).not.toBeNull();
     expect(opened?.keys.pub.spend).toBe(b.keys.spend.pub);
+  });
+
+  it("deleting during the pool await does not drain the outbound queue", async () => {
+    const runtime = await import("@/lib/services/real-sdk/runtime");
+    const index = await import("@/lib/services/real-sdk/wallets-index");
+
+    const account = createAccount("english");
+    await runtime.adopt({ raw: rawFor(account), keys: userKeysOf(account), password: "pw-a" });
+    const rt = runtime.getRuntime();
+    if (!rt) throw new Error("expected adopted runtime");
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let entered!: () => void;
+    const enteredPool = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    let sends = 0;
+    const height = 30;
+    rt.state = { ...rt.state, scannedHeight: height };
+    // biome-ignore lint/suspicious/noExplicitAny format: hang the pool poll until delete finishes
+    rt.daemon = hangPoolDaemon(height, gate, entered, () => { sends += 1; }) as any;
+
+    // Bind the queue AFTER swapping the daemon so drainOnce would hit onSend.
+    await queueForRuntime(rt).enqueue(fakeBuilt("deadbeef", "ki-dead"));
+
+    const syncPromise = runtime.syncRuntime(rt);
+    await enteredPool;
+    await runtime.removeWalletById(index.DEFAULT_WALLET_ID);
+    release();
+    await syncPromise;
+
+    expect(sends).toBe(0);
+    expect((await queueForRuntime(rt).list()).map((entry) => entry.state)).toEqual(["pending"]);
   });
 });

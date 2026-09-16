@@ -673,20 +673,19 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
   );
   try {
     const poolTxs = await rt.daemon.getTransactionsPool();
-    // The wallet may have been locked/torn down during the await — re-check before scanning.
-    if (rt.account) {
-      const poolScan = scanPoolForInbound(
-        poolTxs,
-        toScanTransaction,
-        txns.scanTransactionOutputs,
-        rt.account.keys,
-        nowMs,
-        sentHashesForPool,
-      );
-      scannedIncoming = poolScan.incoming;
-      for (const inbound of poolScan.receivedMessages) {
-        applyInboundScanToReceived(poolReceived, inbound.id, inbound);
-      }
+    // Locked/deleted during the await — skip scan, persist, and drain.
+    if (!isLiveRuntime(rt)) return;
+    const poolScan = scanPoolForInbound(
+      poolTxs,
+      toScanTransaction,
+      txns.scanTransactionOutputs,
+      rt.account.keys,
+      nowMs,
+      sentHashesForPool,
+    );
+    scannedIncoming = poolScan.incoming;
+    for (const inbound of poolScan.receivedMessages) {
+      applyInboundScanToReceived(poolReceived, inbound.id, inbound);
     }
   } catch (error) {
     // Warn once per runtime — a daemon lacking the pool RPC would otherwise log on every
@@ -729,6 +728,9 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
   if (incomingChanged || receivedListChanged || ttlDrop.changed) {
     await persistRuntime(rt);
   }
+
+  // Pool RPC throw + persist await both skip the check above — stop before drain.
+  if (!isLiveRuntime(rt)) return;
 
   // Durable outbound queue (#92): retry any due broadcasts (a send that hit a transient
   // network error stays queued until it relays), then drop entries whose tx has now mined
