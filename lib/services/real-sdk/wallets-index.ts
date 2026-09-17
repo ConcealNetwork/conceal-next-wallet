@@ -261,13 +261,19 @@ export async function unregisterWallet(id: string): Promise<string | null> {
   return wallets.length > 0 ? activeId : null;
 }
 
-/** Envelope + leftover #92 hex on the raw default keyspace. Never touches the index. */
-export async function eraseDefaultKeys(storage: StorageAdapter): Promise<void> {
-  await storage.removeItem(LEGACY_WALLET_KEY);
+/** Drop leftover #92 `outbox:*` hex. Never submits it. Safe on a live keyspace. */
+export async function sweepOutbox(storage?: StorageAdapter): Promise<void> {
+  if (!storage) return;
   const prefix = `${OUTBOUND_QUEUE_NAMESPACE}:`;
   for (const key of await storage.keys()) {
     if (key.startsWith(prefix)) await storage.removeItem(key);
   }
+}
+
+/** Envelope + leftover #92 hex on the raw default keyspace. Never touches the index. */
+export async function eraseDefaultKeys(storage: StorageAdapter): Promise<void> {
+  await storage.removeItem(LEGACY_WALLET_KEY);
+  await sweepOutbox(storage);
 }
 
 /** Test-only: wipe the registry record. */

@@ -12,7 +12,6 @@ import {
   getDustAmount,
   getTransactions,
   getUnspentOutputs,
-  type OutboundQueueEntry,
   type OwnedDeposit,
   type RawWalletV1,
   resolveWalletTransactionKind,
@@ -40,14 +39,7 @@ import {
   unminedPendingRecords,
 } from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime";
-import type {
-  CcxAmount,
-  Deposit,
-  QueuedTransaction,
-  Transaction,
-  TransactionType,
-  WalletInfo,
-} from "@/lib/types";
+import type { CcxAmount, Deposit, Transaction, TransactionType, WalletInfo } from "@/lib/types";
 import { isMappedMessageIn, isMappedMessageOut } from "@/lib/ui/transaction-kind";
 
 const SECONDS_PER_DAY = 86_400;
@@ -260,20 +252,6 @@ export function mapTransactions(
     })
     .map((record) => mapIncomingWithMessages(record, messages?.receivedByHash.get(record.hash)));
   return [...incomingTxs, ...pendingTxs, ...scanned];
-}
-
-/** Map a leftover SDK outbound-queue entry to {@link QueuedTransaction} (hash set). */
-export function mapQueuedTransaction(entry: OutboundQueueEntry): QueuedTransaction {
-  return {
-    id: entry.id,
-    hash: entry.hash,
-    state: entry.state,
-    attempts: entry.attempts,
-    enqueuedAt: entry.enqueuedAt,
-    ...(entry.label ? { label: entry.label } : {}),
-    ...(entry.lastError ? { lastError: entry.lastError } : {}),
-    ...(entry.failedReason ? { failedReason: entry.failedReason } : {}),
-  };
 }
 
 /** Map one owned deposit to the UI {@link Deposit}. */

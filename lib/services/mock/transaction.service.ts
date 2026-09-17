@@ -10,6 +10,7 @@ import {
   type FailCause,
   type FailNote,
   listIntents,
+  mapIntent,
   markHungSent,
   noteDecoyFail,
   noteSubmitFail,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/services/real-sdk/send-intent";
 import type { SendTransactionInput, TransactionService } from "@/lib/services/transaction.service";
 import { assertCanSpend } from "@/lib/services/view-only";
-import type { QueuedTransaction, Transaction } from "@/lib/types";
+import type { Transaction } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxAmount, ccxToNumber } from "@/lib/utils";
 
@@ -52,22 +53,6 @@ function mockSent(input: SendTransactionInput, hash?: string): Transaction {
 
 function stampEnqueue(id: string): void {
   enqueueAt.set(id, Date.now());
-}
-
-function mapIntent(row: SendIntent): QueuedTransaction {
-  const queued: QueuedTransaction = {
-    id: row.id,
-    kind: row.kind,
-    state: row.sent ? "sent" : row.kind === "hung" ? "hung" : "pending",
-    attempts: row.decoyFails + row.submitFails,
-    enqueuedAt: enqueueAt.get(row.id) ?? 0,
-  };
-  if (row.kind === "hung" && !row.sent && row.watchedHash) {
-    queued.hash = row.watchedHash;
-  }
-  if (row.sent !== undefined) queued.sent = row.sent;
-  if (row.lastError !== undefined) queued.lastError = row.lastError;
-  return queued;
 }
 
 /** Test-only reset so armed fails and session intents do not leak across suites. */
@@ -119,24 +104,24 @@ export const mockTransactionService: TransactionService = {
     if (kind === "decoy") {
       const row = enqueueAuto(mockRt, input, "decoy");
       stampEnqueue(row.id);
-      return mockSent(input);
+      return { ...mockSent(input), queued: "auto" };
     }
     if (kind === "submit") {
       const row = enqueueAuto(mockRt, input, "submit");
       stampEnqueue(row.id);
-      return mockSent(input);
+      return { ...mockSent(input), queued: "auto" };
     }
     if (kind === "hung") {
       const localHash = nextHung();
       const row = enqueueHung(mockRt, input, localHash);
       stampEnqueue(row.id);
-      return mockSent(input, localHash);
+      return { ...mockSent(input, localHash), queued: "hung" };
     }
     return mockSent(input);
   },
   async listQueuedTransactions() {
     await mockDelay();
-    return listIntents(mockRt).map(mapIntent);
+    return listIntents(mockRt).map((row) => mapIntent(row, enqueueAt.get(row.id) ?? 0));
   },
   async cancelQueuedTransaction(id: string) {
     await mockDelay();

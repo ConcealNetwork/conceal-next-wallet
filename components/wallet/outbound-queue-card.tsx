@@ -69,11 +69,9 @@ export function OutboundQueueCard() {
                   <p className="mt-0.5 text-xs text-muted-foreground">{queueCopy.hungBody}</p>
                 ) : entry.state === "failed" && entry.lastError ? (
                   <p className="mt-0.5 truncate text-xs text-destructive">{entry.lastError}</p>
-                ) : (
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {(entry.hash ?? entry.id).slice(0, 16)}…
-                  </p>
-                )}
+                ) : entry.hash ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{`${entry.hash.slice(0, 16)}…`}</p>
+                ) : null}
               </div>
               {hungOpen(entry) ? (
                 <Button

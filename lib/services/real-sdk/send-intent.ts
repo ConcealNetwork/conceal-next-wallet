@@ -7,7 +7,9 @@
  * watch a local hash only. Callers (send + finalize) land in later tasks.
  */
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
+import type { QueuedTransaction } from "@/lib/types";
 import { queueCopy } from "@/lib/ui/queue-copy";
+import { formatCcx, truncateAddress } from "@/lib/utils";
 
 const DECOY_CAP = 5;
 const SUBMIT_CAP = 3;
@@ -55,6 +57,28 @@ function rowsFor(rt: SdkRuntime): SendIntent[] {
   const rows: SendIntent[] = [];
   stores.set(rt, rows);
   return rows;
+}
+
+/** Amount + truncated address so two retrying sends are distinguishable. */
+export function intentLabel(input: Pick<IntentInput, "address" | "amount">): string {
+  return `${formatCcx(input.amount)} · ${truncateAddress(input.address)}`;
+}
+
+export function mapIntent(row: SendIntent, enqueuedAt = 0): QueuedTransaction {
+  const queued: QueuedTransaction = {
+    id: row.id,
+    kind: row.kind,
+    state: row.sent ? "sent" : row.kind === "hung" ? "hung" : "pending",
+    attempts: row.decoyFails + row.submitFails,
+    enqueuedAt,
+    label: intentLabel(row),
+  };
+  if (row.kind === "hung" && !row.sent && row.watchedHash) {
+    queued.hash = row.watchedHash;
+  }
+  if (row.sent !== undefined) queued.sent = row.sent;
+  if (row.lastError !== undefined) queued.lastError = row.lastError;
+  return queued;
 }
 
 function copyInput(input: IntentInput): IntentInput {

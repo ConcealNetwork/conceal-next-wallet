@@ -7,4 +7,6 @@ export const queueCopy = {
     "The node hung. The transaction may already be in the mempool. This intent is saved. Wait a few confirmations, then click Submit if the payment is still missing.",
   submit: "Submit",
   exhaustToast: "Resubmit failed due to connectivity. Try later or another remote node.",
+  queuedToast: "Payment not submitted. Saved to send after sync.",
+  hungToast: "Submit timed out. The payment may already be on the network.",
 } as const;

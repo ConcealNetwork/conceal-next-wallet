@@ -86,6 +86,25 @@ describe("OutboundQueueCard auto intents", () => {
     expect(mutate).toHaveBeenCalledWith("intent-auto-1", expect.any(Object));
   });
 
+  it("shows each row's label and does not fall back to the intent id", () => {
+    const first = autoIntent();
+    const second: QueuedTransaction = {
+      id: "intent-auto-2",
+      kind: "auto",
+      state: "pending",
+      attempts: 1,
+      enqueuedAt: 2,
+      label: "2.000000 CCX · ccx7other...address",
+    };
+    useQueuedTransactions.mockReturnValue({ data: [first, second] });
+    renderCard();
+
+    expect(screen.getByText("Send to Alice")).toBeInTheDocument();
+    expect(screen.getByText(second.label ?? "")).toBeInTheDocument();
+    expect(screen.queryByText(/intent-auto-1/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/intent-auto-2/)).not.toBeInTheDocument();
+  });
+
   it("renders nothing when the queue is empty", () => {
     useQueuedTransactions.mockReturnValue({ data: [] });
     const { container } = renderCard();

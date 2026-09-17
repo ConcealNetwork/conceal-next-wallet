@@ -1,12 +1,6 @@
 // @vitest-environment node
-import {
-  createAccount,
-  createWalletState,
-  type RawWalletV1,
-  type transactions as txns,
-} from "conceal-wallet-sdk";
+import { createAccount, createWalletState, type RawWalletV1 } from "conceal-wallet-sdk";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { coinbaseTxsFor } from "./test-helpers";
 
 /**
@@ -79,14 +73,6 @@ function hangPoolDaemon(
       return [];
     },
   };
-}
-
-function fakeBuilt(hash: string, keyImage: string): txns.BuiltTransaction {
-  return {
-    hash,
-    serialized: `${hash}-blob`,
-    inputs: [{ keyImage }],
-  } as unknown as txns.BuiltTransaction;
 }
 
 async function reset() {
@@ -289,8 +275,9 @@ describe("real-sdk delete — removeWalletById vs in-flight sync", () => {
     // biome-ignore lint/suspicious/noExplicitAny format: hang the pool poll until delete finishes
     rt.daemon = hangPoolDaemon(height, gate, entered, () => { sends += 1; }) as any;
 
-    // Bind the queue AFTER swapping the daemon so drainOnce would hit onSend.
-    await queueForRuntime(rt).enqueue(fakeBuilt("deadbeef", "ki-dead"));
+    if (!rt.storage) throw new Error("expected adopted storage");
+    const leftoverKey = "outbox:deadbeef";
+    await rt.storage.setItem(leftoverKey, "dead-hex");
 
     const syncPromise = runtime.syncRuntime(rt);
     await enteredPool;
@@ -301,6 +288,6 @@ describe("real-sdk delete — removeWalletById vs in-flight sync", () => {
     expect(sends).toBe(0);
     // Delete wipes leftover `outbox:*` on the default keyspace so a later first
     // wallet cannot inherit and re-broadcast. The race guard is "no submit".
-    expect(await queueForRuntime(rt).list()).toEqual([]);
+    expect(await rt.storage.getItem(leftoverKey)).toBeNull();
   });
 });

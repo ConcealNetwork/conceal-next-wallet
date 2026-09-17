@@ -13,7 +13,7 @@ import {
 } from "@/lib/services/mock/transaction.service";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
 import { enqueueAuto, noteDecoyFail, noteSubmitFail } from "@/lib/services/real-sdk/send-intent";
-import { ccxToNumber } from "@/lib/utils";
+import { ccxToNumber, formatCcx, truncateAddress } from "@/lib/utils";
 
 const PAY = { address: "ccx7mockaddress", amount: 1 };
 
@@ -84,6 +84,23 @@ describe("mock send intents", () => {
     expect(raw[0]?.decoyFails).toBe(1);
     expect(raw[0]?.submitFails).toBe(0);
     expect(raw[0]?.waitTicks).toBe(2);
+    expect(queued[0]?.label).toBe(`${formatCcx(PAY.amount)} · ${truncateAddress(PAY.address)}`);
+    expect(queued[0]?.label).not.toMatch(/^intent-/);
+  });
+
+  it("lists two auto intents with distinct human labels", async () => {
+    const other = { address: "ccx7otheraddress", amount: 2 };
+    _armMockSend("decoy");
+    await sendPay(1);
+    _armMockSend("decoy");
+    await flush(mockTransactionService.sendTransaction(other));
+
+    const queued = await listQueue();
+    expect(queued).toHaveLength(2);
+    expect(queued[0]?.label).toBe(`${formatCcx(1)} · ${truncateAddress(PAY.address)}`);
+    expect(queued[1]?.label).toBe(`${formatCcx(other.amount)} · ${truncateAddress(other.address)}`);
+    expect(queued[0]?.label).not.toBe(queued[1]?.label);
+    expect(queued.every((row) => row.label && !row.label.startsWith("intent-"))).toBe(true);
   });
 
   it("armed submit resolves with one auto row and submitFails 1", async () => {

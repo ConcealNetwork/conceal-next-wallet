@@ -193,9 +193,7 @@ export async function rebuildSend(rt: SdkRuntime, intent: SendIntent): Promise<R
   try {
     const result = await submitRawHex(rt.daemon, built.serialized);
     submitStatus = result?.status;
-  } catch (error) {
-    const hung = error instanceof Error && error.message === "submit hung";
-    if (hung) return { hung: built.hash };
+  } catch {
     return "submit";
   }
   if (submitStatus !== "OK") return "submit";

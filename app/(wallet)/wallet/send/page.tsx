@@ -47,6 +47,7 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
+import { queueCopy } from "@/lib/ui/queue-copy";
 import { deriveSendWarnings } from "@/lib/ui/send-review-warnings";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -193,8 +194,8 @@ export default function SendPage() {
       return;
     }
     send.mutate(review, {
-      onSuccess: () => {
-        toast.success(walletCopy.sendSuccess);
+      onSuccess: (tx) => {
+        toast.success(tx.queued ? queueCopy.queuedToast : walletCopy.sendSuccess);
         form.reset();
         setSelectedContactId(null);
         setReview(null);

@@ -9,6 +9,7 @@ import {
   registerWallet,
   setActiveWallet,
   storageForWallet,
+  sweepOutbox,
   takeWalletsIndexRecoveryNotice,
   unregisterWallet,
   updateWallet,
@@ -118,6 +119,19 @@ describe("wallets-index (#95)", () => {
     expect(next.id).toBe(DEFAULT_WALLET_ID);
     expect(next.namespace).toBe("");
     expect(await raw.getItem(leftoverKey)).toBeNull();
+  });
+
+  it("sweepOutbox removes leftover outbox keys on a live keyspace and leaves the envelope", async () => {
+    const leftoverKey = `outbox:${"bb".repeat(32)}`;
+    const live = await registerWallet({ label: "Live" });
+    const storage = storageForWallet(live);
+    await storage.setItem("wallet", "LIVE-BLOB");
+    await storage.setItem(leftoverKey, "signed-hex-still-parked");
+
+    await sweepOutbox(storage);
+
+    expect(await storage.getItem(leftoverKey)).toBeNull();
+    expect(await storage.getItem("wallet")).toBe("LIVE-BLOB");
   });
 
   it("unregister erases the wallet's storage and reassigns active", async () => {

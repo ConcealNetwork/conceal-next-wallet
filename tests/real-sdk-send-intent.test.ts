@@ -15,7 +15,15 @@ import {
   type transactions as txns,
 } from "conceal-wallet-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatCcx, truncateAddress } from "@/lib/utils";
 import { coinbaseTxsFor } from "./test-helpers";
+
+const OUTBOX_PREFIX = "outbox:";
+
+async function outboxKeys(storage?: { keys(): Promise<string[]> }): Promise<string[]> {
+  if (!storage) return [];
+  return (await storage.keys()).filter((key) => key.startsWith(OUTBOX_PREFIX));
+}
 
 /** A fake spendable output that account `owner` genuinely owns (real key image). */
 function fundOwnedOutput(owner: Account, amount: number): txns.SpendableOutput {
@@ -45,14 +53,6 @@ function emptyRaw(account: Account, lastHeight: number): RawWalletV1 {
   };
 }
 
-function leftoverHex(hash: string, keyImage: string): txns.BuiltTransaction {
-  return {
-    hash,
-    serialized: `${hash}-blob`,
-    inputs: [{ keyImage }],
-  } as unknown as txns.BuiltTransaction;
-}
-
 function decoyReply(amounts: number[], count: number) {
   return amounts.map((amount) => ({
     amount,
@@ -67,6 +67,7 @@ type DaemonHooks = {
   getRandomOuts?: (amounts: number[], count: number) => Promise<ReturnType<typeof decoyReply>>;
   sendRawTransaction?: (hex: string) => Promise<{ status: string }>;
   getNodeFeeAddress?: () => Promise<string>;
+  getHeight?: () => Promise<number>;
 };
 
 async function installFundedSender(fundAtomic: number, hooks: DaemonHooks = {}) {
@@ -84,7 +85,7 @@ async function installFundedSender(fundAtomic: number, hooks: DaemonHooks = {}) 
   const getNodeFeeAddress = vi.fn(hooks.getNodeFeeAddress ?? (() => Promise.resolve("")));
   const fakeDaemon = {
     nodeUrl: "https://node.test/",
-    getHeight: () => Promise.resolve(networkHeight),
+    getHeight: hooks.getHeight ?? (() => Promise.resolve(networkHeight)),
     getNodeFeeAddress,
     sendRawTransaction,
     getRandomOuts,
@@ -122,6 +123,7 @@ async function installFundedSender(fundAtomic: number, hooks: DaemonHooks = {}) 
 
 afterEach(async () => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   const { getRuntime, _setRuntimeForTest } = await import("@/lib/services/real-sdk/runtime");
   const rt = getRuntime();
   if (rt) {
@@ -142,7 +144,6 @@ describe("real-sdk sendTransaction intent enqueue", () => {
       "@/lib/services/real-sdk/transaction.service"
     );
     const { enqueueAuto, listIntents } = await import("@/lib/services/real-sdk/send-intent");
-    const { queueForRuntime } = await import("@/lib/services/real-sdk/outbound-queue");
     const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
 
     const sent = await realSdkTransactionService.sendTransaction({
@@ -166,8 +167,92 @@ describe("real-sdk sendTransaction intent enqueue", () => {
     expect(rows[0]?.address).toBe(bob.address);
     expect(rows[0]?.amount).toBe(sendAmount);
     expect(sendRawTransaction).toHaveBeenCalledTimes(0);
-    expect(await queueForRuntime(rt).list()).toEqual([]);
+    expect(await outboxKeys(rt.storage)).toEqual([]);
     expect(readPendingRecords(rt.raw)).toEqual([]);
+  });
+
+  it("enqueues after 10s with no status when the browser is offline", async () => {
+    const { connectHangMs } = await import("@/lib/services/real-sdk/spend");
+    vi.stubGlobal("navigator", { onLine: false });
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
+      getNodeFeeAddress: () => new Promise(() => {}),
+    });
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+
+    vi.useFakeTimers();
+    const pending = realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: sendAmount,
+    });
+    await vi.advanceTimersByTimeAsync(connectHangMs);
+    const sent = await pending;
+
+    expect(sent.queued).toBe("auto");
+    expect(listIntents(rt)).toHaveLength(1);
+    expect(listIntents(rt)[0]?.kind).toBe("auto");
+    expect(sendRawTransaction).toHaveBeenCalledTimes(0);
+  });
+
+  it("enqueues after 10s with no status when the daemon probe also hangs", async () => {
+    const { connectHangMs, probeHangMs } = await import("@/lib/services/real-sdk/spend");
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
+      getNodeFeeAddress: () => new Promise(() => {}),
+      getHeight: () => new Promise(() => {}),
+    });
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+
+    vi.useFakeTimers();
+    const pending = realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: sendAmount,
+    });
+    await vi.advanceTimersByTimeAsync(connectHangMs + probeHangMs);
+    const sent = await pending;
+
+    expect(sent.queued).toBe("auto");
+    expect(listIntents(rt)).toHaveLength(1);
+    expect(sendRawTransaction).toHaveBeenCalledTimes(0);
+  });
+
+  it("does not submit when a hung fee RPC returns after the offline enqueue", async () => {
+    const { connectHangMs } = await import("@/lib/services/real-sdk/spend");
+    vi.stubGlobal("navigator", { onLine: false });
+    let resolveFee: ((value: string) => void) | undefined;
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
+      getNodeFeeAddress: () =>
+        new Promise((resolve) => {
+          resolveFee = resolve;
+        }),
+    });
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+
+    vi.useFakeTimers();
+    const pending = realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: sendAmount,
+    });
+    await vi.advanceTimersByTimeAsync(connectHangMs);
+    await pending;
+    resolveFee?.("");
+    await Promise.resolve();
+
+    expect(listIntents(rt)).toHaveLength(1);
+    expect(sendRawTransaction).toHaveBeenCalledTimes(0);
   });
 
   it("resolves a submit auto intent when the daemon returns a non-OK status", async () => {
@@ -180,7 +265,6 @@ describe("real-sdk sendTransaction intent enqueue", () => {
       "@/lib/services/real-sdk/transaction.service"
     );
     const { enqueueAuto, listIntents } = await import("@/lib/services/real-sdk/send-intent");
-    const { queueForRuntime } = await import("@/lib/services/real-sdk/outbound-queue");
     const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
 
     await realSdkTransactionService.sendTransaction({
@@ -202,7 +286,7 @@ describe("real-sdk sendTransaction intent enqueue", () => {
     expect(rows[0]).not.toHaveProperty("serialized");
     expect(rows[0]).not.toHaveProperty("raw");
     expect(sendRawTransaction).toHaveBeenCalled();
-    expect(await queueForRuntime(rt).list()).toEqual([]);
+    expect(await outboxKeys(rt.storage)).toEqual([]);
     expect(readPendingRecords(rt.raw)).toEqual([]);
   });
 
@@ -216,7 +300,6 @@ describe("real-sdk sendTransaction intent enqueue", () => {
       "@/lib/services/real-sdk/transaction.service"
     );
     const { enqueueAuto, listIntents } = await import("@/lib/services/real-sdk/send-intent");
-    const { queueForRuntime } = await import("@/lib/services/real-sdk/outbound-queue");
     const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
 
     await realSdkTransactionService.sendTransaction({
@@ -240,49 +323,28 @@ describe("real-sdk sendTransaction intent enqueue", () => {
     expect(rows[0]).not.toHaveProperty("serialized");
     expect(rows[0]).not.toHaveProperty("raw");
     expect(sendRawTransaction).toHaveBeenCalled();
-    expect(await queueForRuntime(rt).list()).toEqual([]);
+    expect(await outboxKeys(rt.storage)).toEqual([]);
     expect(readPendingRecords(rt.raw)).toEqual([]);
   });
 
-  it("enqueues a hung intent when sendRawTransaction never settles", async () => {
-    const { submitHangMs } = await import("@/lib/services/real-sdk/spend");
-    expect(typeof submitHangMs).toBe("number");
-    expect(submitHangMs).toBeGreaterThan(0);
-
+  it("resolves after a successful submit when getHeight never settles", async () => {
     const fundAtomic = 5_000_000;
     const sendAmount = 0.5;
-    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
-      sendRawTransaction: () => new Promise(() => {}),
+    const { bob, sendRawTransaction } = await installFundedSender(fundAtomic, {
+      getHeight: () => new Promise(() => {}),
     });
     const { realSdkTransactionService } = await import(
       "@/lib/services/real-sdk/transaction.service"
     );
-    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
-    const { queueForRuntime } = await import("@/lib/services/real-sdk/outbound-queue");
-    const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
 
-    vi.useFakeTimers();
-    const pending = realSdkTransactionService.sendTransaction({
+    const sent = await realSdkTransactionService.sendTransaction({
       address: bob.address,
       amount: sendAmount,
     });
-    await vi.advanceTimersByTimeAsync(submitHangMs);
-    await pending;
 
-    const rows = listIntents(rt);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.kind).toBe("hung");
-    expect(rows[0]?.watchedHash).toEqual(expect.any(String));
-    expect(rows[0]?.watchedHash?.length).toBeGreaterThan(0);
-    const queued = await realSdkTransactionService.listQueuedTransactions();
-    expect(queued).toHaveLength(1);
-    expect(queued[0]?.hash).toBe(rows[0]?.watchedHash);
-    expect(rows[0]).not.toHaveProperty("hex");
-    expect(rows[0]).not.toHaveProperty("serialized");
-    expect(rows[0]).not.toHaveProperty("raw");
+    expect(sent.type).toBe("send");
+    expect(sent.hash.length).toBeGreaterThan(0);
     expect(sendRawTransaction).toHaveBeenCalled();
-    expect(await queueForRuntime(rt).list()).toEqual([]);
-    expect(readPendingRecords(rt.raw)).toEqual([]);
   });
 
   it("throws on first-try insufficient funds and does not enqueue", async () => {
@@ -374,6 +436,8 @@ describe("real-sdk sendTransaction intent enqueue", () => {
     expect(listed[0]?.id).toBe(id);
     expect(listed[0]?.kind).toBe("auto");
     expect(listed[0]?.hash).toBeUndefined();
+    expect(listed[0]?.label).toBe(`${formatCcx(sendAmount)} · ${truncateAddress(bob.address)}`);
+    expect(listed[0]?.label).not.toMatch(/^intent-/);
 
     expect(await realSdkTransactionService.cancelQueuedTransaction(id)).toBe(true);
     expect(await realSdkTransactionService.listQueuedTransactions()).toEqual([]);
@@ -381,33 +445,49 @@ describe("real-sdk sendTransaction intent enqueue", () => {
       false,
     );
   });
+
+  it("lists two auto intents with distinct human labels", async () => {
+    const fundAtomic = 10_000_000;
+    const firstAmount = 0.5;
+    const secondAmount = 1.25;
+    const { bob } = await installFundedSender(fundAtomic, {
+      getRandomOuts: () => Promise.reject(new Error("decoys down")),
+    });
+    const carol = createAccount("english");
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+
+    await realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: firstAmount,
+    });
+    await realSdkTransactionService.sendTransaction({
+      address: carol.address,
+      amount: secondAmount,
+    });
+
+    const listed = await realSdkTransactionService.listQueuedTransactions();
+    expect(listed).toHaveLength(2);
+    expect(listed[0]?.label).toBe(`${formatCcx(firstAmount)} · ${truncateAddress(bob.address)}`);
+    expect(listed[1]?.label).toBe(`${formatCcx(secondAmount)} · ${truncateAddress(carol.address)}`);
+    expect(listed[0]?.label).not.toBe(listed[1]?.label);
+    expect(listed.every((row) => row.label && !row.label.startsWith("intent-"))).toBe(true);
+  });
 });
 
 describe("real-sdk submitHungIntent", () => {
   it("marks sent and does not rebuild when watchedHash is already in history", async () => {
-    const { submitHangMs } = await import("@/lib/services/real-sdk/spend");
     const fundAtomic = 5_000_000;
     const sendAmount = 0.5;
-    const { bob, rt, sendRawTransaction, networkHeight } = await installFundedSender(fundAtomic, {
-      sendRawTransaction: () => new Promise(() => {}),
-    });
+    const firstHash = "hash-hung-seen";
+    const { bob, rt, sendRawTransaction, networkHeight } = await installFundedSender(fundAtomic);
     const { realSdkTransactionService } = await import(
       "@/lib/services/real-sdk/transaction.service"
     );
-    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+    const { enqueueHung, listIntents } = await import("@/lib/services/real-sdk/send-intent");
 
-    vi.useFakeTimers();
-    const pending = realSdkTransactionService.sendTransaction({
-      address: bob.address,
-      amount: sendAmount,
-    });
-    await vi.advanceTimersByTimeAsync(submitHangMs);
-    await pending;
-    vi.useRealTimers();
-
-    const hung = listIntents(rt)[0];
-    if (!hung?.watchedHash) throw new Error("expected hung watchedHash");
-    const firstHash = hung.watchedHash;
+    const hung = enqueueHung(rt, { address: bob.address, amount: sendAmount }, firstHash);
     const submitsBefore = sendRawTransaction.mock.calls.length;
 
     rt.state = {
@@ -426,32 +506,18 @@ describe("real-sdk submitHungIntent", () => {
   });
 
   it("rebuilds an unseen hung intent and drops it on OK submit", async () => {
-    const { submitHangMs } = await import("@/lib/services/real-sdk/spend");
     const fundAtomic = 5_000_000;
     const sendAmount = 0.5;
-    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
-      sendRawTransaction: () => new Promise(() => {}),
-    });
+    const firstHash = "hash-hung-unseen";
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic);
     const { realSdkTransactionService } = await import(
       "@/lib/services/real-sdk/transaction.service"
     );
-    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+    const { enqueueHung, listIntents } = await import("@/lib/services/real-sdk/send-intent");
     const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
 
-    vi.useFakeTimers();
-    const pending = realSdkTransactionService.sendTransaction({
-      address: bob.address,
-      amount: sendAmount,
-    });
-    await vi.advanceTimersByTimeAsync(submitHangMs);
-    await pending;
-    vi.useRealTimers();
-
-    const hung = listIntents(rt)[0];
-    if (!hung?.watchedHash) throw new Error("expected hung watchedHash");
-    const firstHash = hung.watchedHash;
+    const hung = enqueueHung(rt, { address: bob.address, amount: sendAmount }, firstHash);
     const submitsBefore = sendRawTransaction.mock.calls.length;
-    sendRawTransaction.mockImplementation(() => Promise.resolve({ status: "OK" }));
 
     expect(await realSdkTransactionService.submitHungIntent(hung.id)).toBe(true);
     expect(listIntents(rt).map((row) => row.id)).not.toContain(hung.id);
@@ -470,33 +536,19 @@ describe("real-sdk submitHungIntent", () => {
   });
 
   it("does not submit a hung intent while the wallet is catching up", async () => {
-    const { submitHangMs } = await import("@/lib/services/real-sdk/spend");
     const { isWalletHeightSyncing } = await import("@/lib/ui/wallet-sync");
     const fundAtomic = 5_000_000;
     const sendAmount = 0.5;
-    const { bob, rt, sendRawTransaction, networkHeight } = await installFundedSender(fundAtomic, {
-      sendRawTransaction: () => new Promise(() => {}),
-    });
+    const { bob, rt, sendRawTransaction, networkHeight } = await installFundedSender(fundAtomic);
     const { realSdkTransactionService } = await import(
       "@/lib/services/real-sdk/transaction.service"
     );
-    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+    const { enqueueHung, listIntents } = await import("@/lib/services/real-sdk/send-intent");
 
-    vi.useFakeTimers();
-    const pending = realSdkTransactionService.sendTransaction({
-      address: bob.address,
-      amount: sendAmount,
-    });
-    await vi.advanceTimersByTimeAsync(submitHangMs);
-    await pending;
-    vi.useRealTimers();
-
-    const hung = listIntents(rt)[0];
-    if (!hung) throw new Error("expected hung intent");
+    const hung = enqueueHung(rt, { address: bob.address, amount: sendAmount }, "hash-hung-lag");
     rt.state = { ...rt.state, scannedHeight: 0 };
     expect(isWalletHeightSyncing(rt.state.scannedHeight, networkHeight)).toBe(true);
     const submitsBefore = sendRawTransaction.mock.calls.length;
-    sendRawTransaction.mockImplementation(() => Promise.resolve({ status: "OK" }));
 
     expect(await realSdkTransactionService.submitHungIntent(hung.id)).toBe(false);
     expect(listIntents(rt).find((row) => row.id === hung.id)?.sent).not.toBe(true);
@@ -513,7 +565,6 @@ describe("real-sdk finalizeSyncPass intent drain", () => {
     const { enqueueAuto, listIntents, tickSynced } = await import(
       "@/lib/services/real-sdk/send-intent"
     );
-    const { queueForRuntime } = await import("@/lib/services/real-sdk/outbound-queue");
     const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
     const { isWalletHeightSyncing } = await import("@/lib/ui/wallet-sync");
 
@@ -533,7 +584,7 @@ describe("real-sdk finalizeSyncPass intent drain", () => {
     await runtimeMod.syncRuntime(rt);
 
     expect(sendRawTransaction).toHaveBeenCalled();
-    expect(await queueForRuntime(rt).list()).toEqual([]);
+    expect(await outboxKeys(rt.storage)).toEqual([]);
     expect(listIntents(rt).map((row) => row.id)).not.toContain(queued.id);
     const pendingAfter = readPendingRecords(rt.raw);
     expect(pendingAfter).toHaveLength(pendingBefore.length + 1);
@@ -559,25 +610,27 @@ describe("real-sdk finalizeSyncPass intent drain", () => {
   });
 });
 
-describe("real-sdk send path ignores leftover hex outbox", () => {
-  it("keeps a leftover-queued output selectable and does not enqueue a second hex", async () => {
+describe("real-sdk send path sweeps leftover hex outbox", () => {
+  it("drops leftover outbox hex on send without submitting it", async () => {
     const fundAtomic = 5_000_000;
     const leftoverHash = "leftover1";
-    const { bob, rt } = await installFundedSender(fundAtomic);
+    const leftoverKey = `${OUTBOX_PREFIX}${leftoverHash}`;
+    const leftoverBlob = `${leftoverHash}-blob`;
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic);
     const { FEE_ATOMIC, selectableOutputs } = await import("@/lib/services/real-sdk/spend");
     const { realSdkTransactionService } = await import(
       "@/lib/services/real-sdk/transaction.service"
     );
-    const { queueForRuntime } = await import("@/lib/services/real-sdk/outbound-queue");
 
     const funded = rt.state.outputs[0];
     if (!funded) throw new Error("expected funded output");
+    if (!rt.storage) throw new Error("expected test storage");
     expect(funded.amount).toBe(fundAtomic);
     expect(funded.amount).toBeGreaterThan(FEE_ATOMIC);
     const sendAmount = (funded.amount - FEE_ATOMIC) / 10 ** COIN_UNIT_PLACES;
 
-    await queueForRuntime(rt).enqueue(leftoverHex(leftoverHash, funded.keyImage));
-    expect((await queueForRuntime(rt).list()).map((row) => row.hash)).toEqual([leftoverHash]);
+    await rt.storage.setItem(leftoverKey, leftoverBlob);
+    expect(await outboxKeys(rt.storage)).toEqual([leftoverKey]);
 
     const selectable = await selectableOutputs(rt);
     expect(selectable.map((out) => out.keyImage)).toContain(funded.keyImage);
@@ -589,6 +642,8 @@ describe("real-sdk send path ignores leftover hex outbox", () => {
       }),
     ).resolves.toMatchObject({ type: "send", address: bob.address });
 
-    expect((await queueForRuntime(rt).list()).map((row) => row.hash)).toEqual([leftoverHash]);
+    expect(await outboxKeys(rt.storage)).toEqual([]);
+    expect(sendRawTransaction).not.toHaveBeenCalledWith(leftoverBlob);
+    expect(sendRawTransaction).toHaveBeenCalledTimes(1);
   });
 });

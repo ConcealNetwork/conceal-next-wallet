@@ -26,13 +26,15 @@ import {
   enqueueHung,
   type IntentInput,
   listIntents,
-  type SendIntent,
+  mapIntent,
 } from "@/lib/services/real-sdk/send-intent";
 import {
+  connectHangMs,
   decodeFeeRecipient,
   decodeRecipient,
   FEE_ATOMIC,
   fetchDecoys,
+  linkGone,
   MIXIN,
   ownKeys,
   paymentIdExtraForSend,
@@ -42,6 +44,7 @@ import {
   selectSpendInputs,
   submitRawHex,
 } from "@/lib/services/real-sdk/spend";
+import { sweepOutbox } from "@/lib/services/real-sdk/wallets-index";
 import type { SendTransactionInput, TransactionService } from "@/lib/services/transaction.service";
 import { assertCanSpend } from "@/lib/services/view-only";
 import type { QueuedTransaction, Transaction } from "@/lib/types";
@@ -58,7 +61,11 @@ function intentFromSend(input: SendTransactionInput): IntentInput {
   return row;
 }
 
-function queuedSend(input: SendTransactionInput, hash: string): Transaction {
+function queuedSend(
+  input: SendTransactionInput,
+  hash: string,
+  queued: "auto" | "hung",
+): Transaction {
   return {
     id: hash,
     hash,
@@ -70,6 +77,7 @@ function queuedSend(input: SendTransactionInput, hash: string): Transaction {
     confirmations: 0,
     paymentId: input.paymentId,
     message: input.message,
+    queued,
   };
 }
 
@@ -84,29 +92,13 @@ function queueAuto(
 ): Transaction {
   const row = enqueueAuto(rt, intentFromSend(input), cause);
   stampEnqueue(row.id);
-  return queuedSend(input, row.id);
+  return queuedSend(input, row.id, "auto");
 }
 
 function queueHung(rt: SdkRuntime, input: SendTransactionInput, hash: string): Transaction {
   const row = enqueueHung(rt, intentFromSend(input), hash);
   stampEnqueue(row.id);
-  return queuedSend(input, hash);
-}
-
-function mapIntent(row: SendIntent): QueuedTransaction {
-  const queued: QueuedTransaction = {
-    id: row.id,
-    kind: row.kind,
-    state: row.sent ? "sent" : row.kind === "hung" ? "hung" : "pending",
-    attempts: row.decoyFails + row.submitFails,
-    enqueuedAt: enqueueAt.get(row.id) ?? 0,
-  };
-  if (row.kind === "hung" && !row.sent && row.watchedHash) {
-    queued.hash = row.watchedHash;
-  }
-  if (row.sent !== undefined) queued.sent = row.sent;
-  if (row.lastError !== undefined) queued.lastError = row.lastError;
-  return queued;
+  return queuedSend(input, hash, "hung");
 }
 
 export const realSdkTransactionService: TransactionService = {
@@ -139,6 +131,7 @@ export const realSdkTransactionService: TransactionService = {
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlySendDisabled);
 
+    await sweepOutbox(rt.storage);
     const amountAtomic = Math.round(input.amount * ATOMIC_PER_CCX);
     if (!Number.isFinite(amountAtomic) || amountAtomic <= 0) {
       throw new Error("Enter a valid amount to send.");
@@ -173,162 +166,202 @@ export const realSdkTransactionService: TransactionService = {
     // safeNodeFeeAddress here; that helper swallows errors for other spenders).
     // The no-node-fee floor above still throws first so an unfunded first Send
     // cannot queue when the fee RPC is down.
-    let feeAddress: string;
-    try {
-      feeAddress = await rt.daemon.getNodeFeeAddress();
-    } catch {
-      return queueAuto(rt, input, "decoy");
-    }
-    let nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null = null;
-    if (feeAddress && feeAddress !== rt.account.address) {
-      const feeRecipient = decodeFeeRecipient(feeAddress);
-      nodeFee = {
-        spendPublicKey: feeRecipient.spendPublicKey,
-        viewPublicKey: feeRecipient.viewPublicKey,
-        amount: REMOTE_NODE_FEE_ATOMIC,
-      };
-    }
-    const nodeFeeAtomic = nodeFee ? REMOTE_NODE_FEE_ATOMIC : 0;
+    const gate = { live: true };
+    let builtHash: string | undefined;
 
-    if (amountAtomic + FEE_ATOMIC + nodeFeeAtomic > balance.spendable) {
-      throw new Error("Amount exceeds available balance.");
-    }
-
-    const outputs = await selectableOutputs(rt);
-    const target = amountAtomic + FEE_ATOMIC + nodeFeeAtomic;
-    const { selected } = selectSpendInputs(outputs, target);
-    let decoys: txns.DecoySet[];
-    try {
-      decoys = await fetchDecoys(rt, selected);
-    } catch {
-      return queueAuto(rt, input, "decoy");
-    }
-
-    // A transfer that carries a message is built as a message tx so the encrypted body
-    // rides in tx_extra (recipient surfaces it, and we keep a sender copy). The
-    // recipient still receives the full `amountAtomic` via `messageAmount`.
-    const built = hasMessage
-      ? txns.buildMessageTransaction({
-          keys: rt.account.keys,
-          recipient: {
-            spendPublicKey: recipient.spendPublicKey,
-            viewPublicKey: recipient.viewPublicKey,
-          },
-          body: message,
-          changeKeys: ownKeys(rt),
-          unspentOutputs: selected,
-          decoys,
-          fee: FEE_ATOMIC,
-          mixin: MIXIN,
-          ttlUnixSeconds: 0,
-          nodeFee,
-          messageAmount: amountAtomic,
-          ...(paymentId ? { paymentId: paymentId as txns.Hex } : {}),
-        })
-      : txns.buildTransaction({
-          keys: rt.account.keys,
-          destinations: plainDestinations(recipient, amountAtomic, nodeFee),
-          changeKeys: ownKeys(rt),
-          unspentOutputs: selected,
-          decoys,
-          fee: FEE_ATOMIC,
-          mixin: MIXIN,
-          ...(paymentId
-            ? {
-                buildExtraRecords: ({ secretKey }) =>
-                  paymentIdExtraForSend(paymentId, recipient.viewPublicKey, secretKey) as txns.Hex,
-              }
-            : {}),
-        });
-
-    let submitStatus: string | undefined;
-    try {
-      const result = await submitRawHex(rt.daemon, built.serialized);
-      submitStatus = result?.status;
-    } catch (error) {
-      const hung = error instanceof Error && error.message === "submit hung";
-      if (hung) return queueHung(rt, input, built.hash);
-      return queueAuto(rt, input, "submit");
-    }
-    if (submitStatus !== "OK") {
-      return queueAuto(rt, input, "submit");
-    }
-
-    // Optimistic pending entry (show the outgoing tx + hold the balance until it mines,
-    // and lock its inputs against re-selection) plus, if present, the sender's message
-    // copy — mutated together and persisted once. No parked hex.
-    recordTxPrivateKey(rt, built);
-    rt.raw = addPendingRecord(rt.raw, {
-      hash: built.hash,
-      amountAtomic:
-        input.address === rt.account.address
-          ? FEE_ATOMIC + nodeFeeAtomic
-          : amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
-      timestampIso: new Date().toISOString(),
-      address: input.address,
-      ...(paymentId ? { paymentId } : {}),
-      spentKeyImages: built.inputs.map((vin) => vin.keyImage),
-    });
-    if (hasMessage) {
-      rt.raw = withSentRecords(rt.raw, [
-        ...readSentRecords(rt.raw),
-        createSentMessageRecord({
-          hash: built.hash,
-          recipientAddress: input.address,
-          body: message,
-          paymentId,
-          timestampIso: new Date().toISOString(),
-        }),
-      ]);
-    }
-    try {
-      await persist();
-    } catch {
-      // Non-fatal: the tx is already relayed, so failing the send here would invite
-      // a retry → double-spend. Losing only the optimistic pending / message UI
-      // records is acceptable; sync reconciles them.
-    }
-
-    if (paymentId) {
+    const body = async (): Promise<Transaction | "abandoned"> => {
+      let feeAddress: string;
       try {
-        await sdkAddrBook.saveOutboundPid(input.address, paymentId);
+        feeAddress = await rt.daemon.getNodeFeeAddress();
       } catch {
-        // Non-fatal: payment already sent.
+        return gate.live ? queueAuto(rt, input, "decoy") : "abandoned";
       }
-    }
+      if (!gate.live) return "abandoned";
+      let nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null = null;
+      if (feeAddress && feeAddress !== rt.account.address) {
+        const feeRecipient = decodeFeeRecipient(feeAddress);
+        nodeFee = {
+          spendPublicKey: feeRecipient.spendPublicKey,
+          viewPublicKey: feeRecipient.viewPublicKey,
+          amount: REMOTE_NODE_FEE_ATOMIC,
+        };
+      }
+      const nodeFeeAtomic = nodeFee ? REMOTE_NODE_FEE_ATOMIC : 0;
 
-    const networkHeight = await rt.daemon.getHeight();
-    const fromHistory = mapTransactions(
-      rt.state,
-      networkHeight,
-      readPendingRecords(rt.raw),
-      readIncomingPendingRecords(rt.raw),
-      indexMessageRecords(rt.raw),
-    ).find((tx) => tx.hash === built.hash);
-    if (fromHistory) {
+      if (amountAtomic + FEE_ATOMIC + nodeFeeAtomic > balance.spendable) {
+        throw new Error("Amount exceeds available balance.");
+      }
+
+      const outputs = await selectableOutputs(rt);
+      const target = amountAtomic + FEE_ATOMIC + nodeFeeAtomic;
+      const { selected } = selectSpendInputs(outputs, target);
+      let decoys: txns.DecoySet[];
+      try {
+        decoys = await fetchDecoys(rt, selected);
+      } catch {
+        return gate.live ? queueAuto(rt, input, "decoy") : "abandoned";
+      }
+      if (!gate.live) return "abandoned";
+
+      // A transfer that carries a message is built as a message tx so the encrypted body
+      // rides in tx_extra (recipient surfaces it, and we keep a sender copy). The
+      // recipient still receives the full `amountAtomic` via `messageAmount`.
+      const built = hasMessage
+        ? txns.buildMessageTransaction({
+            keys: rt.account.keys,
+            recipient: {
+              spendPublicKey: recipient.spendPublicKey,
+              viewPublicKey: recipient.viewPublicKey,
+            },
+            body: message,
+            changeKeys: ownKeys(rt),
+            unspentOutputs: selected,
+            decoys,
+            fee: FEE_ATOMIC,
+            mixin: MIXIN,
+            ttlUnixSeconds: 0,
+            nodeFee,
+            messageAmount: amountAtomic,
+            ...(paymentId ? { paymentId: paymentId as txns.Hex } : {}),
+          })
+        : txns.buildTransaction({
+            keys: rt.account.keys,
+            destinations: plainDestinations(recipient, amountAtomic, nodeFee),
+            changeKeys: ownKeys(rt),
+            unspentOutputs: selected,
+            decoys,
+            fee: FEE_ATOMIC,
+            mixin: MIXIN,
+            ...(paymentId
+              ? {
+                  buildExtraRecords: ({ secretKey }) =>
+                    paymentIdExtraForSend(
+                      paymentId,
+                      recipient.viewPublicKey,
+                      secretKey,
+                    ) as txns.Hex,
+                }
+              : {}),
+          });
+
+      builtHash = built.hash;
+      if (!gate.live) return "abandoned";
+
+      let submitStatus: string | undefined;
+      try {
+        const result = await submitRawHex(rt.daemon, built.serialized);
+        submitStatus = result?.status;
+      } catch (error) {
+        if (!gate.live) return "abandoned";
+        const hung = error instanceof Error && error.message === "submit hung";
+        if (hung) return queueHung(rt, input, built.hash);
+        return queueAuto(rt, input, "submit");
+      }
+      if (!gate.live) return "abandoned";
+      if (submitStatus !== "OK") {
+        return queueAuto(rt, input, "submit");
+      }
+
+      // Optimistic pending entry (show the outgoing tx + hold the balance until it mines,
+      // and lock its inputs against re-selection) plus, if present, the sender's message
+      // copy — mutated together and persisted once. No parked hex.
+      recordTxPrivateKey(rt, built);
+      rt.raw = addPendingRecord(rt.raw, {
+        hash: built.hash,
+        amountAtomic:
+          input.address === rt.account.address
+            ? FEE_ATOMIC + nodeFeeAtomic
+            : amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
+        timestampIso: new Date().toISOString(),
+        address: input.address,
+        ...(paymentId ? { paymentId } : {}),
+        spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+      });
+      if (hasMessage) {
+        rt.raw = withSentRecords(rt.raw, [
+          ...readSentRecords(rt.raw),
+          createSentMessageRecord({
+            hash: built.hash,
+            recipientAddress: input.address,
+            body: message,
+            paymentId,
+            timestampIso: new Date().toISOString(),
+          }),
+        ]);
+      }
+      try {
+        await persist();
+      } catch {
+        // Non-fatal: the tx is already relayed, so failing the send here would invite
+        // a retry → double-spend. Losing only the optimistic pending / message UI
+        // records is acceptable; sync reconciles them.
+      }
+
+      if (paymentId) {
+        try {
+          await sdkAddrBook.saveOutboundPid(input.address, paymentId);
+        } catch {
+          // Non-fatal: payment already sent.
+        }
+      }
+
+      // Tip is display-only here. A live getHeight after relay can hang when the
+      // link drops, leaving Confirm on Sending… even though the hex already left.
+      const networkHeight = rt.state.scannedHeight;
+      const fromHistory = mapTransactions(
+        rt.state,
+        networkHeight,
+        readPendingRecords(rt.raw),
+        readIncomingPendingRecords(rt.raw),
+        indexMessageRecords(rt.raw),
+      ).find((tx) => tx.hash === built.hash);
+      if (fromHistory) {
+        return {
+          ...fromHistory,
+          address: input.address,
+          paymentId: input.paymentId,
+          message: input.message,
+        };
+      }
       return {
-        ...fromHistory,
+        ...mapTransaction(
+          { hash: built.hash, height: 0, amount: amountAtomic, direction: "out" },
+          networkHeight,
+        ),
+        type: "send",
         address: input.address,
         paymentId: input.paymentId,
         message: input.message,
       };
-    }
-    return {
-      ...mapTransaction(
-        { hash: built.hash, height: 0, amount: amountAtomic, direction: "out" },
-        networkHeight,
-      ),
-      type: "send",
-      address: input.address,
-      paymentId: input.paymentId,
-      message: input.message,
     };
+
+    const done = body();
+    let hangTimer: ReturnType<typeof setTimeout> | undefined;
+    const winner = await Promise.race([
+      done.then((row) => ({ kind: "done" as const, row })),
+      new Promise<{ kind: "timeout" }>((resolve) => {
+        hangTimer = setTimeout(() => resolve({ kind: "timeout" }), connectHangMs);
+      }),
+    ]);
+    if (hangTimer !== undefined) clearTimeout(hangTimer);
+
+    if (winner.kind === "done") {
+      return winner.row === "abandoned" ? queueAuto(rt, input, "decoy") : winner.row;
+    }
+    if (await linkGone(rt.daemon)) {
+      gate.live = false;
+      if (builtHash) return queueHung(rt, input, builtHash);
+      return queueAuto(rt, input, "decoy");
+    }
+    const late = await done;
+    return late === "abandoned" ? queueAuto(rt, input, "decoy") : late;
   },
 
   async listQueuedTransactions(): Promise<QueuedTransaction[]> {
     await ensureSdkReady();
     const rt = requireRuntime();
-    return listIntents(rt).map(mapIntent);
+    await sweepOutbox(rt.storage);
+    return listIntents(rt).map((row) => mapIntent(row, enqueueAt.get(row.id) ?? 0));
   },
 
   async cancelQueuedTransaction(id: string): Promise<boolean> {

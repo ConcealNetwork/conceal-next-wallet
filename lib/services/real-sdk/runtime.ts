@@ -85,6 +85,7 @@ import {
   registerWallet,
   setActiveWallet,
   storageForWallet,
+  sweepOutbox,
   unregisterWallet,
   updateWallet,
   type WalletMeta,
@@ -230,6 +231,7 @@ export async function unlock(password: string): Promise<SdkRuntime> {
   };
   setRuntime(id, rt);
   activateRuntime(id);
+  await sweepOutbox(storage);
   // Cache the address into the registry the first time we resolve it, so the
   // switcher can show a truncated address without unlocking each wallet.
   if (meta && !meta.address) {

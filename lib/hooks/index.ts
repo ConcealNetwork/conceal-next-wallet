@@ -179,8 +179,14 @@ export function useTransactions() {
 }
 
 export function useSendTransaction() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SendTransactionInput) => services.transactions.sendTransaction(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+    },
   });
 }
 

@@ -77,7 +77,7 @@ export type QueuedTransaction = {
   attempts: number;
   /** Wall-clock ms when first enqueued. */
   enqueuedAt: number;
-  /** Human-readable label (e.g. "Send to Alice"), when set. */
+  /** Human-readable label (amount · recipient). Always set for session intents. */
   label?: string;
   /** Last broadcast error, when any. */
   lastError?: string;
@@ -125,6 +125,8 @@ export type Transaction = {
   outgoing?: boolean;
   /** Mempool message TTL (unix seconds); used to refetch/hide after wall-clock expiry. */
   ttlExpiresAt?: number;
+  /** Set on Confirm when an intent was saved and hex was not submitted. */
+  queued?: "auto" | "hung";
 };
 
 export type DepositStatus = "active" | "unlocked" | "spent";
