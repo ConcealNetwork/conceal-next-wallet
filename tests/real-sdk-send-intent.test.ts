@@ -385,6 +385,36 @@ describe("real-sdk sendTransaction intent enqueue", () => {
     expect(sendRawTransaction).toHaveBeenCalledTimes(0);
   });
 
+  it("does not double-enqueue when a non-OK submit resolves during the linkGone probe", async () => {
+    const { connectHangMs, probeHangMs } = await import("@/lib/services/real-sdk/spend");
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
+      sendRawTransaction: () =>
+        new Promise<{ status: string }>((resolve) =>
+          setTimeout(() => resolve({ status: "BUSY" }), connectHangMs + 1),
+        ),
+      getHeight: () => new Promise(() => {}),
+    });
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+
+    vi.useFakeTimers();
+    const pending = realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: sendAmount,
+    });
+    await vi.advanceTimersByTimeAsync(connectHangMs + probeHangMs + 2);
+    const sent = await pending;
+
+    expect(sent.queued).toBe("auto");
+    expect(listIntents(rt)).toHaveLength(1);
+    expect(listIntents(rt)[0]?.kind).toBe("auto");
+    expect(sendRawTransaction).toHaveBeenCalledOnce();
+  });
+
   it("resolves after a successful submit when getHeight never settles", async () => {
     const fundAtomic = 5_000_000;
     const sendAmount = 0.5;
