@@ -270,7 +270,8 @@ export const realSdkTransactionService: TransactionService = {
       }
       if (!gate.live) return "abandoned";
       if (submitStatus !== "OK") {
-        return queueAuto(rt, input, "submit");
+        savedIntent = queueAuto(rt, input, "submit");
+        return savedIntent;
       }
 
       // Optimistic pending entry (show the outgoing tx + hold the balance until it mines,
