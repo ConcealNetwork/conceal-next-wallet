@@ -70,19 +70,22 @@ import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   activateRuntime,
   clearAllRuntimes,
-  dropCachedRuntime,
+  clearAndSettle,
+  dropAndSettle,
   getCachedRuntime,
   type SdkRuntime,
   setRuntime,
 } from "@/lib/services/real-sdk/runtime-registry";
 import {
   DEFAULT_WALLET_ID,
+  eraseDefaultKeys,
   getActiveWallet,
   getActiveWalletStorage,
   readWalletsIndex,
   registerWallet,
   setActiveWallet,
   storageForWallet,
+  sweepOutbox,
   unregisterWallet,
   updateWallet,
   type WalletMeta,
@@ -97,6 +100,7 @@ export {
 // --- public façade: the extracted subsystems keep flowing through this module ---
 export {
   _setRuntimeForTest,
+  clearAndSettle,
   getRuntime,
   hasUnlockedRuntime,
   isUnlocked,
@@ -227,6 +231,7 @@ export async function unlock(password: string): Promise<SdkRuntime> {
   };
   setRuntime(id, rt);
   activateRuntime(id);
+  await sweepOutbox(storage);
   // Cache the address into the registry the first time we resolve it, so the
   // switcher can show a truncated address without unlocking each wallet.
   if (meta && !meta.address) {
@@ -295,7 +300,7 @@ export async function disconnect(): Promise<void> {
   } catch {
     // Best-effort — lock must still drop keys if the write fails.
   }
-  lock();
+  await clearAndSettle();
 }
 
 /**
@@ -306,11 +311,12 @@ export async function disconnect(): Promise<void> {
 export async function removeStoredWallet(): Promise<void> {
   const active = await getActiveWallet();
   if (active) {
+    // Drop first so an in-flight persist cannot recreate the envelope after erase.
+    await dropAndSettle(active.id);
     await unregisterWallet(active.id);
-    dropCachedRuntime(active.id);
   } else {
-    await getActiveWalletStorage().then((storage) => storage.removeItem("wallet"));
-    dropCachedRuntime(DEFAULT_WALLET_ID);
+    await dropAndSettle(DEFAULT_WALLET_ID);
+    await getActiveWalletStorage().then((storage) => eraseDefaultKeys(storage));
   }
 }
 
@@ -344,9 +350,9 @@ export async function renameWallet(id: string, label: string): Promise<void> {
   await updateWallet(id, { label });
 }
 
-/** Remove a wallet by id; drops its cached runtime (keys) before erasing it. */
+/** Remove a wallet by id; drop + settle persist, then erase so a late sync cannot resurrect it. */
 export async function removeWalletById(id: string): Promise<void> {
-  dropCachedRuntime(id);
+  await dropAndSettle(id);
   await unregisterWallet(id);
 }
 

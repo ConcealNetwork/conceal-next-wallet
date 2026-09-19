@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Conceal Network, Conceal Devs
+// SPDX-License-Identifier: BSD-3-Clause
+
 /**
  * Per-wallet runtime REGISTRY for the SDK wallet engine — the cache of unlocked
  * {@link SdkRuntime}s keyed by wallet id, plus the id of the currently `active`
@@ -200,4 +203,23 @@ export function dropCachedRuntime(id: string): void {
   if (activeId === id) {
     activeId = null;
   }
+}
+
+/** True when `rt` is the object currently cached for its id (stale post-delete handles fail). */
+export function isLiveRuntime(rt: SdkRuntime): boolean {
+  return getCachedRuntime(runtimeId(rt)) === rt;
+}
+
+/** Drop one cached runtime, then wait out a persist that already started. */
+export async function dropAndSettle(id: string): Promise<void> {
+  const persist = coordination.get(id)?.persistChain ?? Promise.resolve();
+  dropCachedRuntime(id);
+  await persist.catch(() => undefined);
+}
+
+/** Drop every cached runtime, then wait out persists that already started. */
+export async function clearAndSettle(): Promise<void> {
+  const persists = [...coordination.values()].map((c) => c.persistChain);
+  clearAllRuntimes();
+  await Promise.all(persists.map((p) => p.catch(() => undefined)));
 }

@@ -179,8 +179,14 @@ export function useTransactions() {
 }
 
 export function useSendTransaction() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SendTransactionInput) => services.transactions.sendTransaction(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+    },
   });
 }
 
@@ -200,6 +206,18 @@ export function useCancelQueuedTransaction() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
       // Cancelling a pending entry frees its reserved inputs + clears its optimistic row.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
+    },
+  });
+}
+
+export function useSubmitHungIntent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => services.transactions.submitHungIntent(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
     },

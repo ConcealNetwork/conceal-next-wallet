@@ -19,6 +19,7 @@ import {
   applyScannedTransaction,
   type DaemonClient,
   findWithdrawnDepRefs,
+  getBalance,
   isWithdrawShape,
   transactions as txns,
   type WalletState,
@@ -32,6 +33,7 @@ import {
   reconcileIncomingPending,
   withIncomingPendingRecords,
 } from "@/lib/services/real-sdk/incoming-pending-store";
+import { drainIntents, rebuildSend } from "@/lib/services/real-sdk/intent-drain";
 import {
   applyInboundScanToReceived,
   dropExpiredTtl,
@@ -50,7 +52,6 @@ import {
   type FetchSource,
   fetchRangeMultiSource,
 } from "@/lib/services/real-sdk/multi-source-fetch";
-import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import {
   prunePendingRecords,
   readPendingRecords,
@@ -61,6 +62,7 @@ import { scanPoolForInbound } from "@/lib/services/real-sdk/pool";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   coordinationFor,
+  isLiveRuntime,
   type RuntimeCoordination,
   requireRuntime,
   runtimeId,
@@ -539,7 +541,9 @@ async function runMultiSourceBulk(rt: SdkRuntime, ctx: SyncPassCtx): Promise<voi
             // awaited sequentially by the driver, so applies stay strictly ordered even though scans
             // run in parallel.
             onBatch: async (items, _batchStart, batchEnd) => {
+              if (!isLiveRuntime(rt)) return;
               const results = await scanBatch(items, rt.account.keys, ctx.profile.workers);
+              if (!isLiveRuntime(rt)) return;
               foldBatch(rt, ctx, results, batchEnd - 1);
               await maybeCheckpoint(rt, ctx.coord, ctx.useHeavyPath);
             },
@@ -606,8 +610,10 @@ async function runPipelinedHomeSync(rt: SdkRuntime, ctx: SyncPassCtx): Promise<v
 
   let pending = ctx.scanned < ctx.height ? fetchFrom(ctx.scanned) : null;
   while (pending) {
+    if (!isLiveRuntime(rt)) return;
     const { endBlock, data } = pending;
     const scanResults = await data;
+    if (!isLiveRuntime(rt)) return;
     // Kick off the next range's fetch + scan BEFORE applying, so it runs during the apply.
     pending = endBlock < ctx.height ? fetchFrom(endBlock) : null;
     foldBatch(rt, ctx, scanResults, endBlock);
@@ -616,6 +622,8 @@ async function runPipelinedHomeSync(rt: SdkRuntime, ctx: SyncPassCtx): Promise<v
 }
 
 async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void> {
+  // Wallet was deleted/locked while this pass was mid-flight — do not persist or drain.
+  if (!isLiveRuntime(rt)) return;
   // The per-batch publish advances rt.state only on real change, so `rt.state !==
   // startState` means this scan genuinely advanced/folded something — persist iff so.
   const stateChanged = rt.state !== ctx.startState;
@@ -666,20 +674,19 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
   );
   try {
     const poolTxs = await rt.daemon.getTransactionsPool();
-    // The wallet may have been locked/torn down during the await — re-check before scanning.
-    if (rt.account) {
-      const poolScan = scanPoolForInbound(
-        poolTxs,
-        toScanTransaction,
-        txns.scanTransactionOutputs,
-        rt.account.keys,
-        nowMs,
-        sentHashesForPool,
-      );
-      scannedIncoming = poolScan.incoming;
-      for (const inbound of poolScan.receivedMessages) {
-        applyInboundScanToReceived(poolReceived, inbound.id, inbound);
-      }
+    // Locked/deleted during the await — skip scan, persist, and drain.
+    if (!isLiveRuntime(rt)) return;
+    const poolScan = scanPoolForInbound(
+      poolTxs,
+      toScanTransaction,
+      txns.scanTransactionOutputs,
+      rt.account.keys,
+      nowMs,
+      sentHashesForPool,
+    );
+    scannedIncoming = poolScan.incoming;
+    for (const inbound of poolScan.receivedMessages) {
+      applyInboundScanToReceived(poolReceived, inbound.id, inbound);
     }
   } catch (error) {
     // Warn once per runtime — a daemon lacking the pool RPC would otherwise log on every
@@ -723,19 +730,21 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
     await persistRuntime(rt);
   }
 
-  // Durable outbound queue (#92): retry any due broadcasts (a send that hit a transient
-  // network error stays queued until it relays), then drop entries whose tx has now mined
-  // into state. Best-effort and on its own persisted namespace — never blocks mined sync.
+  // Pool RPC throw + persist await both skip the check above — stop before drain.
+  if (!isLiveRuntime(rt)) return;
+
+  // Session send intents: rebuild a due auto payment after synced wait ticks. Best-effort —
+  // a drain error must never throw out of finalize (same wrap as the old #92 hex drain).
   try {
-    const queue = queueForRuntime(rt);
-    await queue.drainOnce();
-    const entries = await queue.list();
-    if (entries.length > 0) {
-      const minedHashes = new Set(rt.state.transactions.map((tx) => tx.hash));
-      for (const entry of entries) {
-        if (minedHashes.has(entry.hash)) await queue.remove(entry.id);
-      }
-    }
+    const historyHashes = new Set([...minedHashes, ...activeMempoolHashes]);
+    await drainIntents(rt, {
+      scannedHeight: rt.state.scannedHeight,
+      networkHeight: ctx.height,
+      spendableAtomic: getBalance(rt.state).spendable,
+      historyHashes,
+      isLive: () => isLiveRuntime(rt),
+      rebuild: (intent) => rebuildSend(rt, intent),
+    });
   } catch (error) {
     if (!queueDrainWarned.has(rt)) {
       queueDrainWarned.add(rt);
@@ -768,8 +777,11 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
 
 async function syncOnce(rt: SdkRuntime): Promise<number> {
   const ctx = await prepareSyncPass(rt);
+  if (!isLiveRuntime(rt)) return ctx.height;
   await runMultiSourceBulk(rt, ctx);
+  if (!isLiveRuntime(rt)) return ctx.height;
   await runPipelinedHomeSync(rt, ctx);
+  if (!isLiveRuntime(rt)) return ctx.height;
   await finalizeSyncPass(rt, ctx);
   return ctx.height;
 }

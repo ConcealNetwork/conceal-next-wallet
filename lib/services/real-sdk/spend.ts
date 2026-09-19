@@ -16,13 +16,11 @@ import {
   getUnspentOutputs,
   isValidAddress,
   MINIMUM_FEE_V2,
-  type OutboundQueueState,
   type OwnedOutput,
   PRETTY_AMOUNTS,
   transactions as txns,
 } from "conceal-wallet-sdk";
 import { WALLET_DONATION_ADDRESS } from "@/lib/config/config";
-import { queueForRuntime } from "@/lib/services/real-sdk/outbound-queue";
 import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
 import { persistRuntime, type SdkRuntime, syncRuntime } from "@/lib/services/real-sdk/runtime";
 
@@ -131,11 +129,11 @@ export function unspentOutputs(runtime: SdkRuntime): OwnedOutput[] {
 }
 
 /**
- * Spendable outputs with BOTH the optimistic-pending (#96) and the durable-queue (#92)
- * reservations removed, so a new send never selects an input already committed to a queued
- * (not-yet-mined) broadcast. The queue is the durable source of truth for reservations; the
- * pending-store overlaps for the common send path but the two stay consistent (same tx →
- * same key images).
+ * Spendable outputs with optimistic-pending (#96) holds removed, then pretty-filtered.
+ * Leftover hex `outbox:` keys are swept on unlock/send (never submitted). The next
+ * rebuild selects current unspent or drops if funds are gone. Pending-store still
+ * excludes images from an OK optimistic send ({@link unspentOutputs} /
+ * `pendingSpentKeyImages`).
  *
  * Non-pretty amounts (not `{1..9}×10^k`) are skipped — unique leftovers (e.g. old withdraw
  * redeem outs) are unmixable and must not be selected as spend inputs. Dust (`< DUST_THRESHOLD`)
@@ -143,10 +141,7 @@ export function unspentOutputs(runtime: SdkRuntime): OwnedOutput[] {
  * {@link selectSpendInputs}.
  */
 export async function selectableOutputs(runtime: SdkRuntime): Promise<OwnedOutput[]> {
-  const reserved = await queueForRuntime(runtime).reservedKeyImages();
-  const outputs = unspentOutputs(runtime);
-  const free = reserved.size === 0 ? outputs : outputs.filter((out) => !reserved.has(out.keyImage));
-  return free.filter((out) => isPrettyAmount(out.amount));
+  return unspentOutputs(runtime).filter((out) => isPrettyAmount(out.amount));
 }
 
 /**
@@ -169,41 +164,6 @@ export function selectSpendInputs(
   targetAmount: number,
 ): { selected: OwnedOutput[]; total: number } {
   return txns.selectInputs(outputs, targetAmount, DUST_THRESHOLD);
-}
-
-/**
- * Durable send (#92): persist the built+signed tx into the outbound queue BEFORE any
- * network I/O (idempotent on hash), then attempt an immediate broadcast. A transient
- * failure leaves the entry `pending` for the sync-tick drainer to retry — the payment is
- * never lost to a dropped connection. Returns the post-drain lifecycle state
- * (`broadcast` = relayed, `pending` = queued for retry, `failed` = rejected/expired).
- */
-export async function enqueueAndBroadcast(
-  runtime: SdkRuntime,
-  built: BuiltTransaction,
-  opts: { label?: string; notBefore?: number; ttlUnixSeconds?: number } = {},
-): Promise<OutboundQueueState> {
-  const queue = queueForRuntime(runtime);
-  // Record the tx private key (export / message-decryption parity) and persist the wallet
-  // blob FIRST, bound to THIS runtime (#92 review — Codex/GLM #4): if persistence fails it
-  // throws BEFORE anything is enqueued/broadcast, so there's nothing to double-send on retry.
-  recordTxPrivateKey(runtime, built);
-  await persistRuntime(runtime);
-  await queue.enqueue(built, opts);
-  let state: OutboundQueueState = "pending";
-  try {
-    const results = await queue.drainOnce();
-    state = results.find((result) => result.hash === built.hash)?.state ?? "pending";
-  } catch {
-    // Transient network error — the entry stays `pending` and the sync drainer retries.
-  }
-  // Re-sync (bound to this runtime) so a freshly-broadcast tx lands in the wallet's history.
-  try {
-    await syncRuntime(runtime);
-  } catch {
-    // Non-fatal: the next refresh reconciles state.
-  }
-  return state;
 }
 
 /**
@@ -242,6 +202,54 @@ export async function fetchDecoys(
   return decoysFromDaemon(raw);
 }
 
+/** How long Confirm waits for a hash or daemon status before checking the link. */
+export const connectHangMs = 10_000;
+
+/** How long the post-hang connectivity probe waits on `getHeight`. */
+export const probeHangMs = 1_000;
+
+/** Grace for a still-running build after the probe says the link is up. */
+export const lateGraceMs = 3_000;
+
+export function linkDown(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+export async function raceHang<T>(work: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+/** True when the tab is offline or the daemon does not answer a short height probe. */
+export async function linkGone(daemon: { getHeight(): Promise<number> }): Promise<boolean> {
+  if (linkDown()) return true;
+  try {
+    await raceHang(daemon.getHeight(), probeHangMs, "probe hung");
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+type RawSubmit = { status?: string };
+
+/** Submit signed hex without parking it. */
+export async function submitRawHex(
+  daemon: { sendRawTransaction(hex: string): Promise<RawSubmit> },
+  serialized: string,
+): Promise<RawSubmit> {
+  return daemon.sendRawTransaction(serialized);
+}
+
 /**
  * Broadcast a built transaction, then re-sync so the new tx is reflected in state.
  * Throws a friendly error when the daemon rejects the relay.
@@ -267,7 +275,7 @@ export async function broadcast(runtime: SdkRuntime, built: BuiltTransaction): P
 }
 
 /** Persist the per-tx private key into the blob's `txPrivateKeys` map (immutably). */
-function recordTxPrivateKey(runtime: SdkRuntime, built: BuiltTransaction): void {
+export function recordTxPrivateKey(runtime: SdkRuntime, built: BuiltTransaction): void {
   const existing =
     runtime.raw.txPrivateKeys && typeof runtime.raw.txPrivateKeys === "object"
       ? runtime.raw.txPrivateKeys

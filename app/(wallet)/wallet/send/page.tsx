@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MAX_MESSAGE_BODY_BYTES } from "conceal-wallet-sdk";
+import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -47,6 +48,7 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
+import { queueCopy } from "@/lib/ui/queue-copy";
 import { deriveSendWarnings } from "@/lib/ui/send-review-warnings";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -102,6 +104,16 @@ export default function SendPage() {
   const [selfSendFromLink, setSelfSendFromLink] = useState<SendForm | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [paymentLinkApplied, setPaymentLinkApplied] = useState(false);
+  const [isSlow, setIsSlow] = useState(false);
+
+  useEffect(() => {
+    if (!send.isPending) {
+      setIsSlow(false);
+      return;
+    }
+    const t = setTimeout(() => setIsSlow(true), 9_000);
+    return () => clearTimeout(t);
+  }, [send.isPending]);
 
   const available = wallet.data ? ccxToNumber(wallet.data.available) : 0;
   const price = market.data?.price.value ?? 0;
@@ -193,8 +205,8 @@ export default function SendPage() {
       return;
     }
     send.mutate(review, {
-      onSuccess: () => {
-        toast.success(walletCopy.sendSuccess);
+      onSuccess: (tx) => {
+        toast.success(tx.queued ? queueCopy.queuedToast : walletCopy.sendSuccess);
         form.reset();
         setSelectedContactId(null);
         setReview(null);
@@ -414,7 +426,10 @@ export default function SendPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={review !== null} onOpenChange={(open) => !open && setReview(null)}>
+      <Dialog
+        open={review !== null}
+        onOpenChange={(open) => !open && !send.isPending && setReview(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("send.confirmTitle")}</DialogTitle>
@@ -451,11 +466,20 @@ export default function SendPage() {
               ) : null}
             </div>
           ) : null}
+          {isSlow && (
+            <p className="text-center text-xs text-muted-foreground">Waiting for node response…</p>
+          )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setReview(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReview(null)}
+              disabled={send.isPending}
+            >
               {t("action.cancel")}
             </Button>
             <Button type="button" onClick={confirmSend} disabled={send.isPending}>
+              {send.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
               {send.isPending ? t("send.sending") : t("send.confirmSend")}
             </Button>
           </DialogFooter>

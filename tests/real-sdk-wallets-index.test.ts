@@ -9,6 +9,7 @@ import {
   registerWallet,
   setActiveWallet,
   storageForWallet,
+  sweepOutbox,
   takeWalletsIndexRecoveryNotice,
   unregisterWallet,
   updateWallet,
@@ -99,6 +100,38 @@ describe("wallets-index (#95)", () => {
     const index = await readWalletsIndex();
     expect(index.wallets.map((w) => w.id)).toEqual([other.id]); // registry intact
     expect(newActive).toBe(other.id);
+  });
+
+  it("unregistering the DEFAULT wallet drops leftover outbox keys so a later first wallet cannot inherit them", async () => {
+    const raw = getSdkWalletStorage();
+    const leftoverHash = "aa".repeat(32);
+    const leftoverKey = `outbox:${leftoverHash}`;
+    const def = await registerWallet({ label: "Default" });
+    await storageForWallet(def).setItem("wallet", "DEFAULT-BLOB");
+    await raw.setItem(leftoverKey, "signed-hex-from-deleted-wallet");
+
+    await unregisterWallet(def.id);
+
+    expect(await raw.getItem(leftoverKey)).toBeNull();
+    expect(await raw.getItem("wallet")).toBeNull();
+
+    const next = await registerWallet({ label: "New first" });
+    expect(next.id).toBe(DEFAULT_WALLET_ID);
+    expect(next.namespace).toBe("");
+    expect(await raw.getItem(leftoverKey)).toBeNull();
+  });
+
+  it("sweepOutbox removes leftover outbox keys on a live keyspace and leaves the envelope", async () => {
+    const leftoverKey = `outbox:${"bb".repeat(32)}`;
+    const live = await registerWallet({ label: "Live" });
+    const storage = storageForWallet(live);
+    await storage.setItem("wallet", "LIVE-BLOB");
+    await storage.setItem(leftoverKey, "signed-hex-still-parked");
+
+    await sweepOutbox(storage);
+
+    expect(await storage.getItem(leftoverKey)).toBeNull();
+    expect(await storage.getItem("wallet")).toBe("LIVE-BLOB");
   });
 
   it("unregister erases the wallet's storage and reassigns active", async () => {

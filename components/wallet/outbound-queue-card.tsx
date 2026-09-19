@@ -1,26 +1,42 @@
 "use client";
 
 import { Loader2, RotateCw, TriangleAlert } from "lucide-react";
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCancelQueuedTransaction, useQueuedTransactions } from "@/lib/hooks";
+import {
+  useCancelQueuedTransaction,
+  useQueuedTransactions,
+  useSubmitHungIntent,
+} from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n/i18n-provider";
+import { takeDropToast } from "@/lib/services/real-sdk/send-intent";
 import type { QueuedTransaction } from "@/lib/types";
+import { queueCopy } from "@/lib/ui/queue-copy";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
 /**
- * Durable outbound-queue surface (#92): lists built+signed transactions awaiting (or
- * failed) broadcast, so a send stuck behind a dropped connection is visible and the user
- * can cancel a still-queued one (or dismiss a failed entry). Renders nothing when the queue
- * is empty. A `pending`/`broadcast` entry that mines is pruned by the sync drainer, so it
- * disappears on its own — only genuinely-stuck/failed entries linger here.
+ * Session send-intent surface: lists auto-retrying (or hung) payments from this unlock,
+ * not parked signed hex. Renders nothing when the queue is empty. Cancel drops the intent
+ * so it is not rebuilt.
  */
+function hungOpen(entry: QueuedTransaction): boolean {
+  return entry.kind === "hung" && entry.state !== "sent" && !entry.sent;
+}
+
 export function OutboundQueueCard() {
   const { t } = useI18n();
   const { data: entries } = useQueuedTransactions();
   const cancel = useCancelQueuedTransaction();
+  const submit = useSubmitHungIntent();
+
+  useEffect(() => {
+    if (entries === undefined) return;
+    const message = takeDropToast();
+    if (message) toast.error(message);
+  }, [entries]);
 
   if (!entries || entries.length === 0) return null;
 
@@ -47,14 +63,27 @@ export function OutboundQueueCard() {
               <QueueStateBadge entry={entry} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13.5px] font-medium text-foreground">
-                  {entry.label || `${entry.hash.slice(0, 10)}…`}
+                  {entry.label || `${(entry.hash ?? entry.id).slice(0, 10)}…`}
                 </p>
-                {entry.state === "failed" && entry.lastError ? (
+                {hungOpen(entry) ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{queueCopy.hungBody}</p>
+                ) : entry.state === "failed" && entry.lastError ? (
                   <p className="mt-0.5 truncate text-xs text-destructive">{entry.lastError}</p>
-                ) : (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{entry.hash.slice(0, 16)}…</p>
-                )}
+                ) : entry.hash ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{`${entry.hash.slice(0, 16)}…`}</p>
+                ) : null}
               </div>
+              {hungOpen(entry) ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={submit.isPending}
+                  onClick={() => submit.mutate(entry.id)}
+                >
+                  {queueCopy.submit}
+                </Button>
+              ) : null}
               {/* A "broadcast" entry is live on the network — it can't be cancelled (that
                   would free its inputs while the tx can still mine), so offer no control. */}
               {entry.state !== "broadcast" ? (
@@ -86,13 +115,14 @@ function QueueStateBadge({ entry }: { entry: QueuedTransaction }) {
       </Badge>
     );
   }
-  if (entry.state === "broadcast") {
+  if (entry.state === "broadcast" || entry.state === "sent" || entry.sent) {
     return (
       <Badge variant="outline" className="shrink-0 gap-1 text-wallet-incoming">
         {t("queue.stateBroadcast")}
       </Badge>
     );
   }
+  const retrying = entry.kind === "auto" && entry.state === "pending";
   return (
     <Badge variant="outline" className="shrink-0 gap-1 text-muted-foreground">
       {entry.attempts > 0 ? (
@@ -103,7 +133,7 @@ function QueueStateBadge({ entry }: { entry: QueuedTransaction }) {
       ) : (
         <Loader2 className="size-3 animate-spin motion-reduce:animate-none" aria-hidden="true" />
       )}
-      {t("queue.statePending")}
+      {t(retrying ? "queue.stateRetrying" : "queue.statePending")}
     </Badge>
   );
 }

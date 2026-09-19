@@ -15,7 +15,11 @@
  *
  * Pure storage plumbing — no runtime/network/`wallet-core` imports.
  */
-import { createNamespacedStorage, type StorageAdapter } from "conceal-wallet-sdk";
+import {
+  createNamespacedStorage,
+  OUTBOUND_QUEUE_NAMESPACE,
+  type StorageAdapter,
+} from "conceal-wallet-sdk";
 import { getSdkWalletStorage } from "@/lib/services/real-sdk/storage";
 
 /** Registry record key on the raw adapter (never namespaced). */
@@ -239,10 +243,11 @@ export async function unregisterWallet(id: string): Promise<string | null> {
 
   // Erase the wallet's records from its keyspace. The DEFAULT wallet's storage is the
   // RAW adapter (namespace ""), whose keys() returns the registry AND every other
-  // wallet's namespaced keys — so for the default we erase ONLY its envelope key, never
-  // iterate. A namespaced adapter's keys() is already scoped to that one wallet.
+  // wallet's namespaced keys — so for the default we erase the envelope plus leftover
+  // `outbox:*` hex (same raw keyspace a later first wallet inherits). Never iterate
+  // the rest. A namespaced adapter's keys() is already scoped to that one wallet.
   if (target.namespace === "") {
-    await storageForWallet(target).removeItem(LEGACY_WALLET_KEY);
+    await eraseDefaultKeys(storageForWallet(target));
   } else {
     const storage = storageForWallet(target);
     for (const key of await storage.keys()) {
@@ -254,6 +259,21 @@ export async function unregisterWallet(id: string): Promise<string | null> {
   const activeId = index.activeId === id ? (wallets[0]?.id ?? DEFAULT_WALLET_ID) : index.activeId;
   await writeWalletsIndex({ activeId, wallets });
   return wallets.length > 0 ? activeId : null;
+}
+
+/** Drop leftover #92 `outbox:*` hex. Never submits it. Safe on a live keyspace. */
+export async function sweepOutbox(storage?: StorageAdapter): Promise<void> {
+  if (!storage) return;
+  const prefix = `${OUTBOUND_QUEUE_NAMESPACE}:`;
+  for (const key of await storage.keys()) {
+    if (key.startsWith(prefix)) await storage.removeItem(key);
+  }
+}
+
+/** Envelope + leftover #92 hex on the raw default keyspace. Never touches the index. */
+export async function eraseDefaultKeys(storage: StorageAdapter): Promise<void> {
+  await storage.removeItem(LEGACY_WALLET_KEY);
+  await sweepOutbox(storage);
 }
 
 /** Test-only: wipe the registry record. */

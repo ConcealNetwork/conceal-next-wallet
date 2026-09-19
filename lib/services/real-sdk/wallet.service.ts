@@ -13,13 +13,13 @@ import {
   activeWalletId,
   adopt,
   buildDaemon,
+  clearAndSettle,
   disconnect as disconnectRuntime,
   flushSyncCheckpoint as flushCheckpointRuntime,
   friendlyMessage,
   getRuntime,
   hasUnlockedRuntime,
   listWalletMetas,
-  lock as lockRuntime,
   nodeUrlFromRaw,
   persist,
   removeStoredWallet,
@@ -184,9 +184,9 @@ export const realSdkWalletService: WalletService = {
 
   async panicWipe() {
     await ensureSdkReady();
-    // Lock first (no flush) so nothing re-persists after the erase, then remove
-    // the stored record. The SDK engine runs no workers/timers to terminate.
-    lockRuntime();
+    // Drop every cached runtime and settle in-flight persists before erase so a
+    // mid-flight sync cannot rewrite the blob. @see lib/services/real-sdk/persistence.ts
+    await clearAndSettle();
     try {
       await removeStoredWallet();
     } catch (error) {

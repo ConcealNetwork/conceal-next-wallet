@@ -21,6 +21,12 @@ export function WalletQueryProvider({ children }: { children: React.ReactNode })
           queries: {
             staleTime: 30_000,
           },
+          // Offline sends must reach the service layer: it owns the retry-intent
+          // queue. The default "online" mode parks a mutation until the browser
+          // reports online, which strands Confirm Send and later broadcasts it.
+          mutations: {
+            networkMode: "always",
+          },
         },
       }),
   );

@@ -56,23 +56,28 @@ export type WalletSummary = {
   balanceTotal?: CcxAmount;
 };
 
-/** Lifecycle of a durable outbound-queue entry (#92), mirrored from the SDK. */
+/** Legacy broadcast states from #92 / mock demo rows. */
 export type QueuedBroadcastState = "pending" | "broadcast" | "failed";
+
+export type QueuedIntentKind = "auto" | "hung";
 
 /** Why a queued broadcast failed (only set when state === "failed"). */
 type QueuedBroadcastFailReason = "rejected" | "expired" | "conflict";
 
-/** A built+signed transaction persisted in the durable outbound queue (#92). */
+/** Session send intent listed by TransactionService (hash only on hung watch). */
 export type QueuedTransaction = {
-  /** Queue id — equal to the tx hash. */
+  /** Intent id (not necessarily a tx hash). */
   id: string;
-  hash: string;
-  state: QueuedBroadcastState;
+  /** Hung watchedHash only. */
+  hash?: string;
+  kind?: QueuedIntentKind;
+  sent?: boolean;
+  state: QueuedBroadcastState | "hung" | "sent";
   /** Transient-error attempts so far. */
   attempts: number;
   /** Wall-clock ms when first enqueued. */
   enqueuedAt: number;
-  /** Human-readable label (e.g. "Send to Alice"), when set. */
+  /** Human-readable label (amount · recipient). Always set for session intents. */
   label?: string;
   /** Last broadcast error, when any. */
   lastError?: string;
@@ -120,6 +125,8 @@ export type Transaction = {
   outgoing?: boolean;
   /** Mempool message TTL (unix seconds); used to refetch/hide after wall-clock expiry. */
   ttlExpiresAt?: number;
+  /** Set on Confirm when an intent was saved and hex was not submitted. */
+  queued?: "auto" | "hung";
 };
 
 export type DepositStatus = "active" | "unlocked" | "spent";
