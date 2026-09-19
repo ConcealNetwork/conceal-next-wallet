@@ -6,7 +6,7 @@ import {
   messages,
   smartPulse,
 } from "conceal-wallet-sdk";
-import { ArrowLeft, Cog, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
+import { ArrowLeft, MailOpen, Plus, RefreshCw, Search, Send } from "lucide-react";
 import Link from "next/link";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AddressQrScanButton } from "@/components/qr/address-qr-scan-button";
@@ -26,7 +26,12 @@ import {
   AddressBookContactPicker,
   findAddressBookContactByAddress,
 } from "@/components/wallet/address-book-contact-picker";
-import { CopyButton, PageHeader, ViewOnlyBadge } from "@/components/wallet/common";
+import {
+  CopyButton,
+  PageHeader,
+  SmartMessageChip,
+  ViewOnlyBadge,
+} from "@/components/wallet/common";
 import { ContactAvatar } from "@/components/wallet/contact-avatar";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
@@ -749,18 +754,11 @@ function ThreadBubble({ message, threadViewMd }: { message: Message; threadViewM
         {message.hasBody ? (
           messages.isKnownSmartMessage(message.body) ? (
             message.direction === "received" && smartPulse.isStatusPulse(message.body) ? (
-              <Link
-                href="/wallet/pulse"
-                className="inline-flex items-center gap-1.5 font-medium italic opacity-90"
-              >
-                <Cog className="size-3.5" aria-hidden="true" />
-                {t("messages.smartMessage")}
+              <Link href="/wallet/pulse">
+                <SmartMessageChip />
               </Link>
             ) : (
-              <span className="inline-flex items-center gap-1.5 font-medium italic opacity-90">
-                <Cog className="size-3.5" aria-hidden="true" />
-                {t("messages.smartMessage")}
-              </span>
+              <SmartMessageChip />
             )
           ) : threadViewMd ? (
             <div className="[&_i]:italic [&_s]:line-through">

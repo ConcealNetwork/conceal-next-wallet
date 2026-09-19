@@ -1,8 +1,9 @@
 "use client";
 
+import { messages } from "conceal-wallet-sdk";
 import type { LucideIcon } from "lucide-react";
 import { CalendarClock, Download, Hash, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { TransactionsRail } from "@/components/layout/rails/transactions-rail";
 import { usePageRightRail, useRightRailCollapse } from "@/components/layout/right-rail";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ import {
   FilterTabs,
   PageHeader,
   SectionCard,
+  SmartMessageChip,
 } from "@/components/wallet/common";
 import {
   formatHeightWithConfirmations,
@@ -117,7 +119,11 @@ export default function TransactionsPageClient() {
           transaction.hash,
           transaction.type,
           transaction.paymentId,
-          transaction.message,
+          transaction.message
+            ? messages.isKnownSmartMessage(transaction.message)
+              ? t("messages.smartMessage")
+              : transaction.message
+            : undefined,
           fmt.formatCcx(transaction.amount),
         ]
           .filter(Boolean)
@@ -127,7 +133,7 @@ export default function TransactionsPageClient() {
         return matchesTab && matchesSearch;
       })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [active, data, search, fmt]);
+  }, [active, data, search, fmt, t]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / size));
   const safePage = Math.min(currentPage, totalPages);
@@ -691,7 +697,17 @@ function TransactionDetailsDialog({
           />
           <DetailRow
             label={t("rail.message")}
-            value={transaction.message ?? t("txn.notProvided")}
+            value={
+              transaction.message ? (
+                messages.isKnownSmartMessage(transaction.message) ? (
+                  <SmartMessageChip />
+                ) : (
+                  transaction.message
+                )
+              ) : (
+                t("txn.notProvided")
+              )
+            }
           />
           <DetailRow
             label={t("txn.detailHash")}
@@ -728,7 +744,7 @@ function DetailRow({
   copyValue,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   icon?: LucideIcon;
   mono?: boolean;
   copyValue?: string;

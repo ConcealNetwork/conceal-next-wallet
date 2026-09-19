@@ -1,10 +1,11 @@
 "use client";
 
+import { messages } from "conceal-wallet-sdk";
 import { ArrowLeft, CalendarClock, Hash, Receipt } from "lucide-react";
 import { RightRailHeader } from "@/components/layout/right-rail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
-import { CopyButton } from "@/components/wallet/common";
+import { CopyButton, SmartMessageChip } from "@/components/wallet/common";
 import {
   formatHeightWithConfirmations,
   formatSignedAmount,
@@ -194,7 +195,13 @@ function TransactionDetail({
           </DetailField>
         ) : null}
         {transaction.message ? (
-          <DetailField label={t("rail.message")}>{transaction.message}</DetailField>
+          <DetailField label={t("rail.message")}>
+            {messages.isKnownSmartMessage(transaction.message) ? (
+              <SmartMessageChip />
+            ) : (
+              transaction.message
+            )}
+          </DetailField>
         ) : null}
         <DetailField label={t("rail.to")} mono copyValue={transaction.address}>
           {truncateAddress(transaction.address, 8, 6)}

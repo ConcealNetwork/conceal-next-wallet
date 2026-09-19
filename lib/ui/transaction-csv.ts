@@ -1,3 +1,4 @@
+import { messages } from "conceal-wallet-sdk";
 import { TX_CONFIRMED_THRESHOLD } from "@/lib/config/config";
 import type { Transaction, TransactionType } from "@/lib/types";
 import { isUiMessageOut, resolveUiTransactionType } from "@/lib/ui/transaction-kind";
@@ -83,7 +84,11 @@ function transactionRow(transaction: Transaction): string[] {
     String(transaction.blockHeight),
     String(transaction.confirmations),
     transaction.confirmations >= TX_CONFIRMED_THRESHOLD ? "Confirmed" : "Pending",
-    transaction.message ?? "",
+    transaction.message
+      ? messages.isKnownSmartMessage(transaction.message)
+        ? "Smart message"
+        : transaction.message
+      : "",
   ];
 }
 
