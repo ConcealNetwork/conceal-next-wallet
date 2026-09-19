@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clipboard, EyeOff, Inbox } from "lucide-react";
+import { Check, Clipboard, Cog, EyeOff, Inbox } from "lucide-react";
 import { cloneElement, isValidElement, useState } from "react";
 import { DottedQrCode } from "@/components/qr/dotted-qr";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,22 @@ import {
 } from "@/components/ui/card";
 import { Sparkline } from "@/components/ui/sparkline";
 import { CcxAmount } from "@/components/wallet/ccx";
+import { useI18n } from "@/lib/i18n/i18n-provider";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, withBasePath } from "@/lib/utils";
+
+/** Same gear + label the conversation thread uses — never show a raw smart-message body. */
+export function SmartMessageChip({ className }: { className?: string }) {
+  const { t } = useI18n();
+  return (
+    <span
+      className={cn("inline-flex items-center gap-1.5 font-medium italic opacity-90", className)}
+    >
+      <Cog className="size-3.5" aria-hidden="true" />
+      {t("messages.smartMessage")}
+    </span>
+  );
+}
 
 export function PageHeader({
   title,

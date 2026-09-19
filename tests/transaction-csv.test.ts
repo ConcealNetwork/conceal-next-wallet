@@ -137,6 +137,11 @@ describe("transactionsToCsv — formula injection (CWE-1236)", () => {
     expect(row[COL.Message]).toBe("50% off");
     expect(row[COL.Address]).toBe("ccx7abc");
   });
+
+  it("redacts known smart-message bodies in the Message column", () => {
+    const cell = rows(transactionsToCsv([tx({ message: "{status,alive}" })]))[1][COL.Message];
+    expect(cell).toBe("Smart message");
+  });
 });
 
 describe("transactionsToCsv — purity", () => {
