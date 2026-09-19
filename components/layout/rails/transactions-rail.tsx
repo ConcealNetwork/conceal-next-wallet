@@ -1,8 +1,9 @@
 "use client";
 
 import { messages } from "conceal-wallet-sdk";
-import { ArrowLeft, CalendarClock, Hash, Receipt } from "lucide-react";
+import { ArrowLeft, CalendarClock, Globe, Hash, Receipt } from "lucide-react";
 import { RightRailHeader } from "@/components/layout/right-rail";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { CopyButton, SmartMessageChip } from "@/components/wallet/common";
@@ -206,7 +207,26 @@ function TransactionDetail({
         <DetailField label={t("rail.to")} mono copyValue={transaction.address}>
           {truncateAddress(transaction.address, 8, 6)}
         </DetailField>
-        <DetailField label={t("rail.txHash")} icon={Hash} mono copyValue={transaction.hash}>
+        <DetailField
+          label={t("rail.txHash")}
+          icon={Hash}
+          mono
+          copyValue={transaction.hash}
+          actions={
+            transaction.confirmations >= 1 ? (
+              <Button asChild variant="outline" size="icon" className="shrink-0">
+                <a
+                  href={`https://explorer.conceal.network/index.html?hash=${encodeURIComponent(transaction.hash)}#blockchain_transaction`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="View on explorer"
+                >
+                  <Globe className="size-4" aria-hidden="true" />
+                </a>
+              </Button>
+            ) : null
+          }
+        >
           {truncateAddress(transaction.hash, 8, 6)}
         </DetailField>
       </dl>
@@ -221,12 +241,14 @@ function DetailField({
   icon: Icon,
   mono,
   copyValue,
+  actions,
   children,
 }: {
   label: string;
   icon?: typeof Hash;
   mono?: boolean;
   copyValue?: string;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
@@ -243,8 +265,13 @@ function DetailField({
         )}
       >
         <span className="min-w-0 wrap-break-word">{children}</span>
-        {copyValue ? (
-          <CopyButton value={copyValue} label={t("action.copyField", { label })} iconOnly />
+        {actions || copyValue ? (
+          <span className="flex shrink-0 items-center gap-1.5">
+            {actions}
+            {copyValue ? (
+              <CopyButton value={copyValue} label={t("action.copyField", { label })} iconOnly />
+            ) : null}
+          </span>
         ) : null}
       </dd>
     </div>
