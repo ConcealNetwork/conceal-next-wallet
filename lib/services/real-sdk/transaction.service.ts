@@ -34,6 +34,8 @@ import {
   decodeRecipient,
   FEE_ATOMIC,
   fetchDecoys,
+  lateGraceMs,
+  linkDown,
   linkGone,
   MIXIN,
   ownKeys,
@@ -168,13 +170,20 @@ export const realSdkTransactionService: TransactionService = {
     // cannot queue when the fee RPC is down.
     const gate = { live: true };
     let builtHash: string | undefined;
+    let savedIntent: Transaction | undefined;
 
     const body = async (): Promise<Transaction | "abandoned"> => {
+      if (linkDown()) {
+        savedIntent = queueAuto(rt, input, "decoy");
+        return savedIntent;
+      }
       let feeAddress: string;
       try {
         feeAddress = await rt.daemon.getNodeFeeAddress();
       } catch {
-        return gate.live ? queueAuto(rt, input, "decoy") : "abandoned";
+        if (!gate.live) return "abandoned";
+        savedIntent = queueAuto(rt, input, "decoy");
+        return savedIntent;
       }
       if (!gate.live) return "abandoned";
       let nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null = null;
@@ -199,7 +208,9 @@ export const realSdkTransactionService: TransactionService = {
       try {
         decoys = await fetchDecoys(rt, selected);
       } catch {
-        return gate.live ? queueAuto(rt, input, "decoy") : "abandoned";
+        if (!gate.live) return "abandoned";
+        savedIntent = queueAuto(rt, input, "decoy");
+        return savedIntent;
       }
       if (!gate.live) return "abandoned";
 
@@ -253,9 +264,9 @@ export const realSdkTransactionService: TransactionService = {
         submitStatus = result?.status;
       } catch (error) {
         if (!gate.live) return "abandoned";
-        const hung = error instanceof Error && error.message === "submit hung";
-        if (hung) return queueHung(rt, input, built.hash);
-        return queueAuto(rt, input, "submit");
+        const timedOut = error instanceof Error && error.message.includes("timed out");
+        savedIntent = timedOut ? queueHung(rt, input, built.hash) : queueAuto(rt, input, "submit");
+        return savedIntent;
       }
       if (!gate.live) return "abandoned";
       if (submitStatus !== "OK") {
@@ -336,6 +347,7 @@ export const realSdkTransactionService: TransactionService = {
     };
 
     const done = body();
+    void done.catch(() => {});
     let hangTimer: ReturnType<typeof setTimeout> | undefined;
     const winner = await Promise.race([
       done.then((row) => ({ kind: "done" as const, row })),
@@ -348,13 +360,21 @@ export const realSdkTransactionService: TransactionService = {
     if (winner.kind === "done") {
       return winner.row === "abandoned" ? queueAuto(rt, input, "decoy") : winner.row;
     }
-    if (await linkGone(rt.daemon)) {
-      gate.live = false;
-      if (builtHash) return queueHung(rt, input, builtHash);
-      return queueAuto(rt, input, "decoy");
+    if (!(await linkGone(rt.daemon))) {
+      const late = await Promise.race([
+        done.then((r) => ({ kind: "done" as const, r })),
+        new Promise<{ kind: "timeout" }>((resolve) =>
+          setTimeout(() => resolve({ kind: "timeout" }), lateGraceMs),
+        ),
+      ]);
+      if (late.kind === "done") {
+        return late.r === "abandoned" ? queueAuto(rt, input, "decoy") : late.r;
+      }
     }
-    const late = await done;
-    return late === "abandoned" ? queueAuto(rt, input, "decoy") : late;
+    gate.live = false;
+    if (savedIntent) return savedIntent;
+    if (builtHash) return queueHung(rt, input, builtHash);
+    return queueAuto(rt, input, "decoy");
   },
 
   async listQueuedTransactions(): Promise<QueuedTransaction[]> {

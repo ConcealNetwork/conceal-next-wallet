@@ -208,6 +208,9 @@ export const connectHangMs = 10_000;
 /** How long the post-hang connectivity probe waits on `getHeight`. */
 export const probeHangMs = 1_000;
 
+/** Grace for a still-running build after the probe says the link is up. */
+export const lateGraceMs = 3_000;
+
 export function linkDown(): boolean {
   return typeof navigator !== "undefined" && navigator.onLine === false;
 }
