@@ -176,7 +176,7 @@ export default function ExportPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={downloading || !backupPassword}>
-                {downloading ? "Downloading…" : "Download"}
+                {downloading ? "Encrypting…" : "Download"}
               </Button>
             </DialogFooter>
           </form>

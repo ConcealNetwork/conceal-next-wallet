@@ -140,12 +140,23 @@ describe("import forms", () => {
   });
 
   describe("ImportFileForm", () => {
-    it("keeps submit disabled until a valid JSON file is selected", async () => {
+    it("keeps submit disabled until file, backup password, and new local password are set", async () => {
       renderI18n(<ImportFileForm />);
       expect(submit()).toBeDisabled();
       const file = new File(['{"version":1}'], "wallet.json", { type: "application/json" });
       fireEvent.change(screen.getByLabelText("JSON backup file"), { target: { files: [file] } });
       await waitFor(() => expect(screen.getByText(/Selected: wallet\.json/)).toBeInTheDocument());
+      expect(submit()).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Backup password"), {
+        target: { value: "legacy-backup-pw" },
+      });
+      expect(submit()).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("New local password"), {
+        target: { value: PASSWORD },
+      });
+      fireEvent.change(screen.getByLabelText("Confirm new local password"), {
+        target: { value: PASSWORD },
+      });
       expect(submit()).toBeEnabled();
     });
   });

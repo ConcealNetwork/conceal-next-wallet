@@ -179,7 +179,7 @@ async function runSyncChain(rt: SdkRuntime, coord: RuntimeCoordination): Promise
  */
 export async function maybeCheckpoint(
   rt: SdkRuntime,
-  coord: RuntimeCoordination,
+  coord: Pick<RuntimeCoordination, "lastCheckpointHeight">,
   useHeavyPath: boolean,
 ): Promise<void> {
   if (!useHeavyPath) return;

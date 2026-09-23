@@ -76,6 +76,13 @@ export interface SdkRuntime {
  * is never shared between cached wallets. A sync started for wallet A coalesces only
  * against other A syncs; A's persists chain only behind other A persists.
  */
+/** A persist deferred while {@link RuntimeCoordination.persistPaused} is set. */
+export type PausedPersist = {
+  rt: SdkRuntime;
+  resolve: () => void;
+  reject: (error: unknown) => void;
+};
+
 export interface RuntimeCoordination {
   /** The in-flight scan promise for this wallet, or null when idle. */
   inFlightSync: Promise<number> | null;
@@ -85,6 +92,13 @@ export interface RuntimeCoordination {
   persistChain: Promise<void>;
   /** Last scannedHeight written as a mid-sync checkpoint; reset at sync chain start. */
   lastCheckpointHeight: number;
+  /**
+   * Exclusive pause for atomic changePassword — queued persists drain later.
+   * @see openspec/changes/envelope-3-sdk/specs/wallet-change-password/spec.md
+   */
+  persistPaused: boolean;
+  /** Persists requested while {@link persistPaused} is true. */
+  pausedQueue: PausedPersist[];
 }
 
 /** Cache of every UNLOCKED wallet runtime, keyed by registry id. */
@@ -108,6 +122,8 @@ export function coordinationFor(id: string): RuntimeCoordination {
       pendingSync: false,
       persistChain: Promise.resolve(),
       lastCheckpointHeight: 0,
+      persistPaused: false,
+      pausedQueue: [],
     };
     coordination.set(id, state);
   }

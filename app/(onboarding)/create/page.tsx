@@ -68,6 +68,11 @@ export default function CreateWalletPage() {
     try {
       const wallet = await services.wallet.finalizeCreateWallet({ password });
       setMnemonicDialogOpen(false);
+      setPassword("");
+      setConfirmPassword("");
+      setMnemonic(null);
+      setAcknowledged(false);
+      setCopied(false);
       openSession(wallet, "/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save wallet.");
@@ -207,7 +212,7 @@ export default function CreateWalletPage() {
               disabled={!acknowledged || finalizing}
               onClick={() => void handleFinish()}
             >
-              {finalizing ? "Saving…" : "OK"}
+              {finalizing ? "Encrypting…" : "OK"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -36,6 +36,12 @@ export const walletCopy = {
   exportPdfSuccess: "PDF backup downloaded.",
   exportPdfButton: "Export as PDF",
   passwordChanged: env.useMockWallet ? "Mock password changed." : "Wallet password updated.",
+  changePasswordSubtitle: env.useMockWallet
+    ? "Update the local mock wallet password"
+    : "Update the password that encrypts this wallet on this device",
+  changePasswordDescription: env.useMockWallet
+    ? "Choose a strong password for this mock wallet"
+    : "Choose a strong password. You will need it to unlock and to open backups.",
   sendConfirm: env.useMockWallet
     ? "Confirm this mock send? No transaction will be broadcast."
     : "Confirm and broadcast this transaction?",

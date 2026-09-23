@@ -67,7 +67,12 @@ describe("real-sdk importWallet file (#102)", () => {
   it("rejects a non-JSON file with a friendly error", async () => {
     const { realSdkWalletService } = await import("@/lib/services/real-sdk/wallet.service");
     await expect(
-      realSdkWalletService.importWallet({ method: "file", file: "not json at all", password: "x" }),
+      realSdkWalletService.importWallet({
+        method: "file",
+        file: "not json at all",
+        password: "x",
+        newPassword: "LocalPass-Strong1!",
+      }),
     ).rejects.toThrow(/not valid JSON/i);
   });
 
@@ -79,6 +84,7 @@ describe("real-sdk importWallet file (#102)", () => {
         method: "file",
         file: backup,
         password: "wrong-password",
+        newPassword: "LocalPass-Strong1!",
       }),
     ).rejects.toThrow(/Invalid wallet file or password/i);
   });

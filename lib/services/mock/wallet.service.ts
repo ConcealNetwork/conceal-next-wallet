@@ -96,6 +96,11 @@ export const mockWalletService: WalletService = {
   async importWallet(input) {
     // TODO(backend): replace with real Conceal RPC/walletd call
     await mockDelay();
+    // Mirror real-sdk: file restore needs a new local password (mock has no encrypt,
+    // but still enforce the contract so UI/type callers can't skip it).
+    if (input.method === "file" && !input.newPassword) {
+      throw new Error("A new local password is required to import a wallet file.");
+    }
     mockViewOnly = input.method === "keys" && input.viewOnly === true;
     return currentWalletInfo();
   },

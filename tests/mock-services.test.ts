@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { services } from "@/lib/services";
+import type { ImportWalletInput } from "@/lib/services/wallet.service";
 
 describe("mock services", () => {
   it("returns valid typed data from every mock service", async () => {
@@ -103,5 +104,27 @@ describe("mock services", () => {
     await expect(services.messages.markRead("does-not-exist")).rejects.toThrow(
       "Message not found.",
     );
+  });
+
+  // Envelope 3 spine: file import requires newPassword (same contract as real-sdk).
+  it("file import rejects missing newPassword", async () => {
+    const input = {
+      method: "file" as const,
+      file: "{}",
+      password: "backup-pass",
+    } as ImportWalletInput;
+    await expect(services.wallet.importWallet(input)).rejects.toThrow(
+      "A new local password is required to import a wallet file.",
+    );
+  });
+
+  it("file import succeeds with newPassword", async () => {
+    const info = await services.wallet.importWallet({
+      method: "file",
+      file: "{}",
+      password: "backup-pass",
+      newPassword: "LocalPass-Strong1!",
+    });
+    expect(info.address).toMatch(/^ccx7/);
   });
 });
