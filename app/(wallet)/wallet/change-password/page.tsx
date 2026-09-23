@@ -13,6 +13,7 @@ import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { forgetBiometricEnrollment } from "@/components/wallet/open-wallet-form";
 import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
+import { omitPassword } from "@/lib/services/real-sdk/omit-password";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 
@@ -32,6 +33,7 @@ type PasswordForm = z.infer<typeof passwordSchema>;
 export default function ChangePasswordPage() {
   const router = useRouter();
   const [show, setShow] = useState(false);
+  const [encrypting, setEncrypting] = useState(false);
   const form = useForm<PasswordForm>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
@@ -40,26 +42,37 @@ export default function ChangePasswordPage() {
   const newPassword = useWatch({ control: form.control, name: "newPassword" }) || "";
 
   async function submit(values: PasswordForm) {
+    const { currentPassword, newPassword } = values;
+    setEncrypting(true);
     try {
-      await services.wallet.changePassword(values);
+      await services.wallet.changePassword({ currentPassword, newPassword });
       // The biometric enrollment encrypts the OLD password — drop it so the user
       // re-enrols against the new one (otherwise biometric unlock would fail).
       forgetBiometricEnrollment();
       toast.success(walletCopy.passwordChanged);
+      // DTO hygiene: wipe RHF state without retaining password fields from `values`.
+      form.reset({
+        ...omitPassword(values),
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
       router.push("/wallet/settings");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to change password.");
+    } finally {
+      setEncrypting(false);
     }
   }
 
   return (
     <>
-      <PageHeader title="Change Password" subtitle="Update the local mock wallet password" />
+      <PageHeader title="Change Password" subtitle={walletCopy.changePasswordSubtitle} />
       <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
         <SectionCard
           className="max-w-xl"
           title="Wallet password"
-          description="Choose a strong password for this mock wallet"
+          description={walletCopy.changePasswordDescription}
         >
           <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
             <div className="space-y-2">
@@ -112,8 +125,12 @@ export default function ChangePasswordPage() {
                 </p>
               )}
             </div>
-            <Button type="submit" className="active:scale-[0.98] motion-reduce:active:scale-100">
-              Change Password
+            <Button
+              type="submit"
+              className="active:scale-[0.98] motion-reduce:active:scale-100"
+              disabled={encrypting}
+            >
+              {encrypting ? "Encrypting…" : "Change Password"}
             </Button>
           </form>
         </SectionCard>

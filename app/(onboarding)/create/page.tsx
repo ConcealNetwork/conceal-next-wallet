@@ -20,6 +20,7 @@ import {
   walletPasswordIsAcceptable,
 } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
+import { omitPassword } from "@/lib/services/real-sdk/omit-password";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -68,6 +69,16 @@ export default function CreateWalletPage() {
     try {
       const wallet = await services.wallet.finalizeCreateWallet({ password });
       setMnemonicDialogOpen(false);
+      // DTO hygiene — residual post-finalize state must not retain the password.
+      const residual = omitPassword({ password, acknowledged });
+      setPassword("");
+      setConfirmPassword("");
+      setMnemonic(null);
+      setAcknowledged(false);
+      setCopied(false);
+      if ("password" in residual) {
+        throw new Error("Password leaked into residual create state.");
+      }
       openSession(wallet, "/wallet/account");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save wallet.");
@@ -207,7 +218,7 @@ export default function CreateWalletPage() {
               disabled={!acknowledged || finalizing}
               onClick={() => void handleFinish()}
             >
-              {finalizing ? "Saving…" : "OK"}
+              {finalizing ? "Encrypting…" : "OK"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

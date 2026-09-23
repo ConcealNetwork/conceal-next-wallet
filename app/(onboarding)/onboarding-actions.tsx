@@ -21,6 +21,7 @@ import {
   walletPasswordIsAcceptable,
 } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
+import { omitPassword } from "@/lib/services/real-sdk/omit-password";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import {
@@ -416,6 +417,11 @@ export function ImportKeysForm() {
         scanHeight,
       };
       const wallet = await services.wallet.importWallet(input);
+      setPassword("");
+      setConfirmPassword("");
+      setPrivateSpendKey("");
+      setPrivateViewKey("");
+      setAddress("");
       openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
     } catch (error) {
@@ -758,6 +764,9 @@ export function ImportMnemonicForm() {
         language,
         scanHeight: normalizeImportHeight(importHeight),
       });
+      setMnemonic("");
+      setPassword("");
+      setConfirmPassword("");
       openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
     } catch (error) {
@@ -861,8 +870,18 @@ export function ImportFileForm() {
   const { openSession } = useWalletSession();
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [file, setFile] = useState<ArrayBuffer | null>(null);
   const [fileName, setFileName] = useState("");
+
+  const passwordsMatch = newPassword !== "" && newPassword === confirmPassword;
+  const canSubmit =
+    !!file &&
+    password !== "" &&
+    passwordsMatch &&
+    walletPasswordIsAcceptable(newPassword) &&
+    !loading;
 
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0];
@@ -891,13 +910,24 @@ export function ImportFileForm() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!file) {
-      toast.error("Select a wallet backup file first.");
+    if (!canSubmit || !file) {
+      if (!file) toast.error("Select a wallet backup file first.");
       return;
     }
     setLoading(true);
     try {
-      const wallet = await services.wallet.importWallet({ method: "file", file, password });
+      const wallet = await services.wallet.importWallet({
+        method: "file",
+        file,
+        password,
+        newPassword,
+      });
+      // Residual UI meta must not keep backup / new-local secrets.
+      const residual = omitPassword({ method: "file" as const, fileName, password, newPassword });
+      setPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setFileName(residual.fileName);
       openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
     } catch (error) {
@@ -921,16 +951,51 @@ export function ImportFileForm() {
         {fileName ? <p className="text-sm text-muted-foreground">Selected: {fileName}</p> : null}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="file-password">File password</Label>
+        <Label htmlFor="file-password">Backup password</Label>
         <Input
           id="file-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
           required
         />
+        <p className="text-sm text-muted-foreground">
+          Password that encrypts the selected backup file (opens the file only).
+        </p>
       </div>
-      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} disabled={!file} />
+      <div className="space-y-2">
+        <Label htmlFor="file-new-password">New local password</Label>
+        <Input
+          id="file-new-password"
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          autoComplete="new-password"
+          required
+        />
+        <WalletPasswordStrengthPanel password={newPassword} />
+        {newPassword.length > 0 && !walletPasswordIsAcceptable(newPassword) ? (
+          <p className="text-sm text-wallet-outgoing">
+            Use at least 8 characters with a mix of letters, numbers, or symbols.
+          </p>
+        ) : null}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="file-confirm-password">Confirm new local password</Label>
+        <Input
+          id="file-confirm-password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          autoComplete="new-password"
+          required
+        />
+        {confirmPassword !== "" && !passwordsMatch && (
+          <p className="text-sm text-wallet-outgoing">Passwords do not match.</p>
+        )}
+      </div>
+      <ImportSubmitButton label={walletCopy.importWallet} loading={loading} disabled={!canSubmit} />
     </form>
   );
 }
@@ -969,6 +1034,8 @@ export function ImportQrForm() {
     setLoading(true);
     try {
       const wallet = await services.wallet.importWallet({ method: "qr", payload, password });
+      setPayload("");
+      setPassword("");
       openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
     } catch (error) {

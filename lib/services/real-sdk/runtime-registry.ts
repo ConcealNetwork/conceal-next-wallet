@@ -76,6 +76,13 @@ export interface SdkRuntime {
  * is never shared between cached wallets. A sync started for wallet A coalesces only
  * against other A syncs; A's persists chain only behind other A persists.
  */
+/** A persist deferred while {@link RuntimeCoordination.persistPaused} is set. */
+export type PausedPersist = {
+  rt: SdkRuntime;
+  resolve: () => void;
+  reject: (error: unknown) => void;
+};
+
 export interface RuntimeCoordination {
   /** The in-flight scan promise for this wallet, or null when idle. */
   inFlightSync: Promise<number> | null;
@@ -85,6 +92,13 @@ export interface RuntimeCoordination {
   persistChain: Promise<void>;
   /** Last scannedHeight written as a mid-sync checkpoint; reset at sync chain start. */
   lastCheckpointHeight: number;
+  /**
+   * Exclusive pause for atomic changePassword — queued persists drain later.
+   * @see openspec/changes/envelope-3-sdk/specs/wallet-change-password/spec.md
+   */
+  persistPaused: boolean;
+  /** Persists requested while {@link persistPaused} is true. */
+  pausedQueue: PausedPersist[];
 }
 
 /** Cache of every UNLOCKED wallet runtime, keyed by registry id. */
@@ -108,6 +122,8 @@ export function coordinationFor(id: string): RuntimeCoordination {
       pendingSync: false,
       persistChain: Promise.resolve(),
       lastCheckpointHeight: 0,
+      persistPaused: false,
+      pausedQueue: [],
     };
     coordination.set(id, state);
   }
@@ -174,8 +190,23 @@ export function activateRuntime(id: string): void {
   }
 }
 
+/** True when a coordination entry already exists (does not lazily create one). */
+export function hasCoordination(id: string): boolean {
+  return coordination.has(id);
+}
+
+/** Settle paused persist waiters before dropping a coordination entry. */
+function rejectPausedQueue(coord: RuntimeCoordination, reason: Error): void {
+  for (const entry of coord.pausedQueue.splice(0)) {
+    entry.reject(reason);
+  }
+}
+
 /** Clear ALL cached runtimes + coordination + active id (used by lock/disconnect). */
 export function clearAllRuntimes(): void {
+  for (const coord of coordination.values()) {
+    rejectPausedQueue(coord, new Error("Persist cancelled — wallet locked."));
+  }
   runtimes.clear();
   coordination.clear();
   activeId = null;
@@ -198,6 +229,10 @@ export function _setRuntimeForTest(next: SdkRuntime | null): void {
 
 /** Drop a single wallet's cached runtime + coordination (e.g. on remove). */
 export function dropCachedRuntime(id: string): void {
+  const coord = coordination.get(id);
+  if (coord) {
+    rejectPausedQueue(coord, new Error("Persist cancelled — wallet removed."));
+  }
   runtimes.delete(id);
   coordination.delete(id);
   if (activeId === id) {

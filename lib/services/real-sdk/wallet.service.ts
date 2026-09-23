@@ -1,13 +1,27 @@
 import {
   type EncryptedWalletEnvelope,
   encodeAddress,
-  openEncryptedWallet,
   type RawWalletV1,
-  saveEncryptedWallet,
   userKeysFromPriv,
 } from "conceal-wallet-sdk";
+import { clearPasskeyEnrollment, getPasskeyEnrollment } from "@/lib/auth/biometric-store";
+import { signalUnlockRemoved } from "@/lib/auth/platform-unlock";
+import {
+  omitMnemonic,
+  openEncryptedWallet,
+  parseEncryptedWalletJson,
+  saveEncryptedWallet,
+} from "@/lib/services/real-sdk/envelope";
 import { mapWalletInfo } from "@/lib/services/real-sdk/mappers";
 import { dropExpiredTtl, readReceivedRecords } from "@/lib/services/real-sdk/messages-store";
+import {
+  blobOpensWith,
+  discardPaused,
+  drainPaused,
+  setPersistPaused,
+  withArgonMutex,
+  writeWalletBlob,
+} from "@/lib/services/real-sdk/persistence";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   activeWalletId,
@@ -21,7 +35,6 @@ import {
   hasUnlockedRuntime,
   listWalletMetas,
   nodeUrlFromRaw,
-  persist,
   removeStoredWallet,
   removeWalletById,
   renameWallet as renameWalletRuntime,
@@ -33,6 +46,7 @@ import {
   unlockedNonActiveRuntimes,
   unlock as unlockRuntime,
 } from "@/lib/services/real-sdk/runtime";
+import { hasCoordination, runtimeId } from "@/lib/services/real-sdk/runtime-registry";
 import {
   type BuiltWallet,
   buildFromMnemonic,
@@ -61,6 +75,45 @@ import { backupDownloadFilename } from "@/lib/ui/download-json-file";
 let pendingDraft: BuiltWallet | null = null;
 /** Mnemonic for the just-created/restored wallet, surfaced once for the export screen. */
 let createdMnemonic: string | null = null;
+
+/** Max UTF-8 bytes for a new local Envelope-3 password (SDK write cap). */
+const MAX_LOCAL_PW = 1024;
+
+/** Reject oversize new-local passwords with a distinct too-long error. */
+function assertLocalPw(password: string): void {
+  if (new TextEncoder().encode(password).length > MAX_LOCAL_PW) {
+    throw new Error("Password is too long.");
+  }
+}
+
+/** Map SDK encrypt RangeError to the distinct too-long error (no raw RangeError text). */
+function mapPwError(error: unknown): never {
+  if (error instanceof RangeError && /password UTF-8 length/i.test(error.message)) {
+    throw new Error("Password is too long.");
+  }
+  throw error;
+}
+
+/**
+ * Best-effort passkey clear after password assign — must not throw / fail the op.
+ * @see wallet-change-password spec
+ */
+async function clearPasskeysSafe(walletId: string): Promise<void> {
+  try {
+    const enrollment = getPasskeyEnrollment(walletId);
+    clearPasskeyEnrollment(walletId);
+    if (!enrollment) return;
+    for (const cred of enrollment.credentials) {
+      try {
+        await signalUnlockRemoved(cred.credentialId);
+      } catch {
+        // Best-effort provider cleanup.
+      }
+    }
+  } catch {
+    // Clear must never fail changePassword after assign.
+  }
+}
 
 /** Long hex runs in an error likely carry key material — never surface them. */
 const SENSITIVE_ERROR_PATTERN = /[0-9a-fA-F]{32,}/;
@@ -161,10 +214,30 @@ export const realSdkWalletService: WalletService = {
     if (!input.password) {
       throw new Error("Password is required to finalize wallet creation.");
     }
+    assertLocalPw(input.password);
     const draft = pendingDraft;
     pendingDraft = null;
     createdMnemonic = draft.mnemonic ?? null;
-    await adopt({ raw: draft.raw, keys: draft.keys, password: input.password, label: input.label });
+    // One-shot reveal kept in createdMnemonic; long-lived account must not retain phrase.
+    const account = omitMnemonic({
+      address: draft.address,
+      keys: {
+        spend: { sec: draft.keys.priv.spend, pub: draft.keys.pub.spend },
+        view: { sec: draft.keys.priv.view, pub: draft.keys.pub.view },
+      },
+      mnemonic: draft.mnemonic,
+    });
+    try {
+      await adopt({
+        raw: draft.raw,
+        keys: draft.keys,
+        password: input.password,
+        label: input.label,
+      });
+    } catch (error) {
+      mapPwError(error);
+    }
+    requireRuntime().account = account;
     // A new wallet is seeded at ~the current tip, so there's little to catch up (just a brief banner
     // if the tip advanced while the user was on the create screen) — return instantly from seeded
     // state rather than awaiting a sync (consistent with import/open; never blocks).
@@ -206,32 +279,37 @@ export const realSdkWalletService: WalletService = {
       return openedInfo();
     }
 
-    // Restore from an encrypted backup file: decode the envelope with the file
-    // password, then adopt the recovered wallet (its embedded creation/synced height
-    // drives the scan via buildState). Adopt registers it, so this also adds a wallet.
+    // Restore from an encrypted backup: backup `password` opens the file only;
+    // adopt under `newPassword` as freshly salted Envelope 3. Source file is never written.
     if (input.method === "file") {
       try {
+        if (!input.newPassword) {
+          throw new Error("A new local password is required to import a wallet file.");
+        }
+        assertLocalPw(input.newPassword);
         // Strip a UTF-8 BOM + surrounding whitespace from BOTH branches \u2014 a string
         // read via FileReader.readAsText can carry a leading \uFEFF too.
         const decoded =
           typeof input.file === "string" ? input.file : new TextDecoder().decode(input.file);
         const text = decoded.replace(/^\uFEFF/, "").trim();
-        let envelope: unknown;
-        try {
-          envelope = JSON.parse(text);
-        } catch {
+        const envelope = parseEncryptedWalletJson(text);
+        if (envelope === null) {
           throw new Error("The selected file is not valid JSON.");
         }
         const opened = openEncryptedWallet(envelope as EncryptedWalletEnvelope, input.password);
         if (opened === null) {
           throw new Error("Invalid wallet file or password.");
         }
-        await adopt({
-          raw: opened.raw,
-          keys: opened.keys,
-          password: input.password,
-          label: input.label,
-        });
+        try {
+          await adopt({
+            raw: opened.raw,
+            keys: opened.keys,
+            password: input.newPassword,
+            label: input.label,
+          });
+        } catch (error) {
+          mapPwError(error);
+        }
         // Land in the wallet IMMEDIATELY from the adopted (seeded) state; the shell's live-sync
         // closes the gap to the tip in the background (WalletSyncingBanner). Awaiting a full
         // `syncedInfo()` here froze the import on "Importing…" for the entire mainnet catch-up.
@@ -279,12 +357,29 @@ export const realSdkWalletService: WalletService = {
         default:
           throw new Error("This import method is not supported by the SDK engine.");
       }
-      await adopt({
-        raw: built.raw,
-        keys: built.keys,
-        password: input.password,
-        label: input.label,
-      });
+      assertLocalPw(input.password);
+      try {
+        await adopt({
+          raw: built.raw,
+          keys: built.keys,
+          password: input.password,
+          label: input.label,
+        });
+      } catch (error) {
+        mapPwError(error);
+      }
+      // Seed/QR mnemonic imports: capture for one-shot reveal, strip from long-lived account.
+      if (built.mnemonic) {
+        createdMnemonic = built.mnemonic;
+        requireRuntime().account = omitMnemonic({
+          address: built.address,
+          keys: {
+            spend: { sec: built.keys.priv.spend, pub: built.keys.pub.spend },
+            view: { sec: built.keys.priv.view, pub: built.keys.pub.view },
+          },
+          mnemonic: built.mnemonic,
+        });
+      }
       // Land in the wallet immediately; the background live-sync catches up from the creation
       // height (mnemonic/keys/qr start with zero balance + a syncing banner, not a frozen screen).
       return openedInfo();
@@ -353,14 +448,20 @@ export const realSdkWalletService: WalletService = {
     if (ttlDrop.changed) {
       rt.raw = ttlDrop.raw;
     }
-    // Persist the latest in-memory state, then encrypt the current blob with the
-    // verified password — the payload IS the new-format encrypted envelope.
-    await persist();
-    const envelope = saveEncryptedWallet(rt.raw, input.password);
-    return {
-      filename: backupDownloadFilename(input.filename),
-      payload: envelope,
-    };
+    // Persist + encrypt under the Argon2 mutex (Encrypting… UX waits here).
+    return withArgonMutex(async () => {
+      await writeWalletBlob(rt, rt.password);
+      let envelope: ReturnType<typeof saveEncryptedWallet>;
+      try {
+        envelope = saveEncryptedWallet(rt.raw, input.password);
+      } catch (error) {
+        mapPwError(error);
+      }
+      return {
+        filename: backupDownloadFilename(input.filename),
+        payload: envelope,
+      };
+    });
   },
 
   async changePassword(input) {
@@ -369,29 +470,107 @@ export const realSdkWalletService: WalletService = {
     if (!input.currentPassword || !input.newPassword) {
       throw new Error("Both the current and new password are required.");
     }
-    const ok = await this.verifyPassword(input.currentPassword);
-    if (!ok) {
-      throw new Error("Current password is incorrect.");
+    assertLocalPw(input.newPassword);
+
+    const id = runtimeId(rt);
+    let hardInconsistent = false;
+    let assigned = false;
+
+    try {
+      await withArgonMutex(async () => {
+        setPersistPaused(id, true);
+        const storage = rt.storage ?? (await getActiveWalletStorage());
+
+        // Verify current via lock-free typed parse/open (not the service helper).
+        const stored = await storage.getItem("wallet");
+        if (stored === null) {
+          throw new Error("Current password is incorrect.");
+        }
+        let currentOk = false;
+        try {
+          const text = stored.replace(/^\uFEFF/, "").trim();
+          const envelope = parseEncryptedWalletJson(text);
+          currentOk =
+            envelope !== null &&
+            openEncryptedWallet(envelope as EncryptedWalletEnvelope, input.currentPassword) !==
+              null;
+        } catch {
+          currentOk = false;
+        }
+        if (!currentOk) {
+          throw new Error("Current password is incorrect.");
+        }
+
+        // Encrypt+write with newPassword as explicit arg — do NOT assign rt.password first.
+        try {
+          await writeWalletBlob(rt, input.newPassword);
+        } catch (error) {
+          mapPwError(error);
+        }
+
+        // Verify reopen FROM STORAGE with newPassword.
+        if (!(await blobOpensWith(storage, input.newPassword))) {
+          // Keep old rt.password; do NOT drain yet — verified rollback with old password.
+          try {
+            await writeWalletBlob(rt, input.currentPassword);
+            if (!(await blobOpensWith(storage, input.currentPassword))) {
+              throw new Error("rollback reopen failed");
+            }
+          } catch {
+            // Failed rollback → discard queue only (keep pause while mutex held).
+            discardPaused(id);
+            hardInconsistent = true;
+            throw new Error(
+              "Wallet blob is inconsistent after a failed password change. Unlock may require the new password.",
+            );
+          }
+          throw new Error(
+            "Password change failed — storage could not be verified with the new password.",
+          );
+        }
+
+        // Last in-memory commit.
+        rt.password = input.newPassword;
+        assigned = true;
+      });
+    } finally {
+      // Release order: mutex already dropped → clear pause → drain (or not).
+      // Never await drain while holding either lock. Hard-inconsistent: clear pause
+      // only here (after mutex), discard any stragglers, never drain/write.
+      // If delete/lock dropped coordination mid-flight, paused waiters were already
+      // rejected on drop — do not recreate an empty entry via coordinationFor.
+      if (hasCoordination(id)) {
+        if (hardInconsistent) {
+          discardPaused(id);
+          setPersistPaused(id, false);
+        } else {
+          setPersistPaused(id, false);
+          await drainPaused(id);
+        }
+      }
     }
-    rt.password = input.newPassword;
-    await persist();
+
+    if (!assigned) {
+      throw new Error("Password change failed.");
+    }
+    // Best-effort passkey clear AFTER both locks are released — a hung Cordova/
+    // WebAuthn signal must never wedge persistPaused or the Argon2 FIFO.
+    void clearPasskeysSafe(id);
     return { ok: true as const };
   },
 
   async verifyPassword(password) {
     await ensureSdkReady();
     if (!password) return false;
-    // Verify against the ACTIVE wallet's keyspace (#95).
+    // Verify against the ACTIVE wallet's keyspace (#95). Typed parse only —
+    // never ad-hoc parse of ciphertext; device migrate stays in openStoredWallet.
     const stored = await (await getActiveWalletStorage()).getItem("wallet");
     if (stored === null) return false;
-    let envelope: EncryptedWalletEnvelope;
     try {
-      envelope = JSON.parse(stored) as EncryptedWalletEnvelope;
-    } catch {
-      return false;
-    }
-    try {
-      return openEncryptedWallet(envelope, password) !== null;
+      const text = stored.replace(/^\uFEFF/, "").trim();
+      const envelope = parseEncryptedWalletJson(text);
+      if (envelope === null) return false;
+      return openEncryptedWallet(envelope as EncryptedWalletEnvelope, password) !== null;
     } catch {
       return false;
     }

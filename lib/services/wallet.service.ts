@@ -35,7 +35,15 @@ export type ImportWalletInput =
       scanHeight?: number;
       label?: string;
     }
-  | { method: "file"; file: ArrayBuffer | string; password: string; label?: string }
+  | {
+      method: "file";
+      file: ArrayBuffer | string;
+      /** Backup password — opens the selected Envelope 1/2/3 file only. */
+      password: string;
+      /** New local password — first persist is freshly salted Envelope 3. */
+      newPassword: string;
+      label?: string;
+    }
   | { method: "qr"; payload: string; password: string; label?: string }
   | { method: "open"; password: string; label?: string };
 

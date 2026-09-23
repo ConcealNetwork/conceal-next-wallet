@@ -53,13 +53,13 @@ import {
   createWalletState,
   deserializeWalletState,
   encodeAddress,
-  openStoredWallet,
   type RawWalletV1,
   type UserKeys,
   type WalletKeys,
   type WalletState,
 } from "conceal-wallet-sdk";
 import { buildDaemon, nodeUrlFromRaw } from "@/lib/services/real-sdk/daemon-node";
+import { openStoredWallet } from "@/lib/services/real-sdk/envelope";
 import { seedStateFromLegacyBlob } from "@/lib/services/real-sdk/legacy-state-seed";
 import {
   flushSyncCheckpoint as flushSyncCheckpointInternal,
