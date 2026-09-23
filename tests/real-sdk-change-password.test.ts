@@ -414,6 +414,7 @@ describe("atomic changePassword", () => {
   it("post-assign passkey-clear failure still reports success", async () => {
     const bio = await import("@/lib/auth/biometric-store");
     const unlock = await import("@/lib/auth/platform-unlock");
+    const { coordinationFor } = await import("@/lib/services/real-sdk/runtime-registry");
     const { realSdkWalletService } = await import("@/lib/services/real-sdk/wallet.service");
 
     const current = "old-password-5";
@@ -432,7 +433,9 @@ describe("atomic changePassword", () => {
         },
       ],
     });
+    let pauseDuringClear: boolean | null = null;
     vi.spyOn(bio, "clearPasskeyEnrollment").mockImplementation(() => {
+      pauseDuringClear = coordinationFor("default").persistPaused;
       throw new Error("clear failed");
     });
     vi.spyOn(unlock, "signalUnlockRemoved").mockRejectedValue(new Error("signal failed"));
@@ -443,5 +446,28 @@ describe("atomic changePassword", () => {
 
     expect(runtime.requireRuntime().password).toBe(next);
     expect(bio.clearPasskeyEnrollment).toHaveBeenCalled();
+    // Clear must run after persistPaused is released (never inside the pause window).
+    expect(pauseDuringClear).toBe(false);
+  });
+
+  it("dropCachedRuntime rejects paused persist waiters", async () => {
+    const { persistRuntime, setPersistPaused } = await import(
+      "@/lib/services/real-sdk/persistence"
+    );
+    const { coordinationFor, dropCachedRuntime } = await import(
+      "@/lib/services/real-sdk/runtime-registry"
+    );
+
+    const current = "old-password-drop";
+    const { runtime } = await installWallet(current);
+    const rt = runtime.requireRuntime();
+
+    setPersistPaused("default", true);
+    const queued = persistRuntime(rt);
+    expect(coordinationFor("default").pausedQueue).toHaveLength(1);
+
+    dropCachedRuntime("default");
+    await expect(queued).rejects.toThrow(/wallet removed/i);
+    expect(coordinationFor("default").pausedQueue).toHaveLength(0);
   });
 });

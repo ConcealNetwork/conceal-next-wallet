@@ -21,6 +21,7 @@ import {
   walletPasswordIsAcceptable,
 } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
+import { omitPassword } from "@/lib/services/real-sdk/omit-password";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
 import {
@@ -921,9 +922,12 @@ export function ImportFileForm() {
         password,
         newPassword,
       });
+      // Residual UI meta must not keep backup / new-local secrets.
+      const residual = omitPassword({ method: "file" as const, fileName, password, newPassword });
       setPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setFileName(residual.fileName);
       openSession(wallet, "/wallet/account");
       toast.success("Wallet imported.");
     } catch (error) {

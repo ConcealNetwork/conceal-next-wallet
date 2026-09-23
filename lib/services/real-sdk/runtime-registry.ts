@@ -190,8 +190,23 @@ export function activateRuntime(id: string): void {
   }
 }
 
+/** True when a coordination entry already exists (does not lazily create one). */
+export function hasCoordination(id: string): boolean {
+  return coordination.has(id);
+}
+
+/** Settle paused persist waiters before dropping a coordination entry. */
+function rejectPausedQueue(coord: RuntimeCoordination, reason: Error): void {
+  for (const entry of coord.pausedQueue.splice(0)) {
+    entry.reject(reason);
+  }
+}
+
 /** Clear ALL cached runtimes + coordination + active id (used by lock/disconnect). */
 export function clearAllRuntimes(): void {
+  for (const coord of coordination.values()) {
+    rejectPausedQueue(coord, new Error("Persist cancelled — wallet locked."));
+  }
   runtimes.clear();
   coordination.clear();
   activeId = null;
@@ -214,6 +229,10 @@ export function _setRuntimeForTest(next: SdkRuntime | null): void {
 
 /** Drop a single wallet's cached runtime + coordination (e.g. on remove). */
 export function dropCachedRuntime(id: string): void {
+  const coord = coordination.get(id);
+  if (coord) {
+    rejectPausedQueue(coord, new Error("Persist cancelled — wallet removed."));
+  }
   runtimes.delete(id);
   coordination.delete(id);
   if (activeId === id) {

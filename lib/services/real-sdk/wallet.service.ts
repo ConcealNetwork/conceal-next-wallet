@@ -46,7 +46,7 @@ import {
   unlockedNonActiveRuntimes,
   unlock as unlockRuntime,
 } from "@/lib/services/real-sdk/runtime";
-import { runtimeId } from "@/lib/services/real-sdk/runtime-registry";
+import { hasCoordination, runtimeId } from "@/lib/services/real-sdk/runtime-registry";
 import {
   type BuiltWallet,
   buildFromMnemonic,
@@ -532,26 +532,30 @@ export const realSdkWalletService: WalletService = {
         // Last in-memory commit.
         rt.password = input.newPassword;
         assigned = true;
-
-        // Best-effort passkey clear — must not fail the op / must not throw after assign.
-        await clearPasskeysSafe(id);
       });
     } finally {
       // Release order: mutex already dropped → clear pause → drain (or not).
       // Never await drain while holding either lock. Hard-inconsistent: clear pause
       // only here (after mutex), discard any stragglers, never drain/write.
-      if (hardInconsistent) {
-        discardPaused(id);
-        setPersistPaused(id, false);
-      } else {
-        setPersistPaused(id, false);
-        await drainPaused(id);
+      // If delete/lock dropped coordination mid-flight, paused waiters were already
+      // rejected on drop — do not recreate an empty entry via coordinationFor.
+      if (hasCoordination(id)) {
+        if (hardInconsistent) {
+          discardPaused(id);
+          setPersistPaused(id, false);
+        } else {
+          setPersistPaused(id, false);
+          await drainPaused(id);
+        }
       }
     }
 
     if (!assigned) {
       throw new Error("Password change failed.");
     }
+    // Best-effort passkey clear AFTER both locks are released — a hung Cordova/
+    // WebAuthn signal must never wedge persistPaused or the Argon2 FIFO.
+    void clearPasskeysSafe(id);
     return { ok: true as const };
   },
 

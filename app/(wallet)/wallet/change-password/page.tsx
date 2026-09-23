@@ -13,6 +13,7 @@ import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { forgetBiometricEnrollment } from "@/components/wallet/open-wallet-form";
 import { WalletPasswordStrengthPanel } from "@/components/wallet/password-strength-bars";
 import { services } from "@/lib/services";
+import { omitPassword } from "@/lib/services/real-sdk/omit-password";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 
@@ -41,13 +42,21 @@ export default function ChangePasswordPage() {
   const newPassword = useWatch({ control: form.control, name: "newPassword" }) || "";
 
   async function submit(values: PasswordForm) {
+    const { currentPassword, newPassword } = values;
     setEncrypting(true);
     try {
-      await services.wallet.changePassword(values);
+      await services.wallet.changePassword({ currentPassword, newPassword });
       // The biometric enrollment encrypts the OLD password — drop it so the user
       // re-enrols against the new one (otherwise biometric unlock would fail).
       forgetBiometricEnrollment();
       toast.success(walletCopy.passwordChanged);
+      // DTO hygiene: wipe RHF state without retaining password fields from `values`.
+      form.reset({
+        ...omitPassword(values),
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
       router.push("/wallet/settings");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to change password.");
