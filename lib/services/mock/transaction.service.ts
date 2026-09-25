@@ -23,7 +23,6 @@ import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxAmount, ccxToNumber } from "@/lib/utils";
 
 const mockRt = {} as SdkRuntime;
-const enqueueAt = new Map<string, number>();
 
 type MockSendKind = "decoy" | "submit" | "hung" | "unfunded" | "ok";
 
@@ -51,14 +50,9 @@ function mockSent(input: SendTransactionInput, hash?: string): Transaction {
   };
 }
 
-function stampEnqueue(id: string): void {
-  enqueueAt.set(id, Date.now());
-}
-
 /** Test-only reset so armed fails and session intents do not leak across suites. */
 export function _resetMockIntents(): void {
   clearIntents(mockRt);
-  enqueueAt.clear();
   armedKind = undefined;
   seenHashes.clear();
 }
@@ -75,9 +69,7 @@ export function _armMockSend(kind: MockSendKind = "ok"): void {
 
 /** Test-only stand-in for a failed rebuild so mock caps are not library-only. */
 export function _failMockRebuild(id: string, cause: FailCause): FailNote {
-  const note = cause === "decoy" ? noteDecoyFail(mockRt, id) : noteSubmitFail(mockRt, id);
-  if (note === "dropped") enqueueAt.delete(id);
-  return note;
+  return cause === "decoy" ? noteDecoyFail(mockRt, id) : noteSubmitFail(mockRt, id);
 }
 
 /** Test-only raw store rows for the dummy mock runtime. */
@@ -102,30 +94,26 @@ export const mockTransactionService: TransactionService = {
     }
 
     if (kind === "decoy") {
-      const row = enqueueAuto(mockRt, input, "decoy");
-      stampEnqueue(row.id);
+      enqueueAuto(mockRt, input, "decoy");
       return { ...mockSent(input), queued: "auto" };
     }
     if (kind === "submit") {
-      const row = enqueueAuto(mockRt, input, "submit");
-      stampEnqueue(row.id);
+      enqueueAuto(mockRt, input, "submit");
       return { ...mockSent(input), queued: "auto" };
     }
     if (kind === "hung") {
       const localHash = nextHung();
-      const row = enqueueHung(mockRt, input, localHash);
-      stampEnqueue(row.id);
+      enqueueHung(mockRt, input, localHash);
       return { ...mockSent(input, localHash), queued: "hung" };
     }
     return mockSent(input);
   },
   async listQueuedTransactions() {
     await mockDelay();
-    return listIntents(mockRt).map((row) => mapIntent(row, enqueueAt.get(row.id) ?? 0));
+    return listIntents(mockRt).map((row) => mapIntent(row));
   },
   async cancelQueuedTransaction(id: string) {
     await mockDelay();
-    enqueueAt.delete(id);
     return cancelIntent(mockRt, id);
   },
   async submitHungIntent(id: string) {
@@ -144,11 +132,10 @@ export const mockTransactionService: TransactionService = {
       return true;
     }
     if (kind === "decoy" || kind === "submit") {
-      const note = kind === "decoy" ? noteDecoyFail(mockRt, id) : noteSubmitFail(mockRt, id);
-      if (note === "dropped") enqueueAt.delete(id);
+      if (kind === "decoy") noteDecoyFail(mockRt, id);
+      else noteSubmitFail(mockRt, id);
       return true;
     }
-    enqueueAt.delete(id);
     cancelIntent(mockRt, id);
     return true;
   },
