@@ -37,26 +37,44 @@ export type SendIntent = {
   decoyFails: number;
   submitFails: number;
   waitTicks: number;
+  /** Wall-clock ms when the row was (re)enqueued — display metadata, dies with the row. */
+  enqueuedAt: number;
   lastError?: string;
   sent?: boolean;
 };
 
-const stores = new WeakMap<SdkRuntime, SendIntent[]>();
+/**
+ * Per-runtime intent store: the session rows plus the runtime-scoped exhaust-toast
+ * slot. Everything dies with the runtime object (WeakMap) and is cleared eagerly by
+ * {@link clearIntents} on lock/switch — no process-global side channels.
+ */
+type IntentStore = {
+  rows: SendIntent[];
+  dropToast?: string;
+};
+
+const stores = new WeakMap<SdkRuntime, IntentStore>();
+
+/** Most recent store that raised a drop toast, so the UI can take it without a runtime handle. */
+let lastToastStore: IntentStore | undefined;
 
 let nextSeq = 0;
-let dropToast: string | undefined;
 
 function nextId(): string {
   nextSeq += 1;
   return `intent-${nextSeq}`;
 }
 
-function rowsFor(rt: SdkRuntime): SendIntent[] {
+function storeFor(rt: SdkRuntime): IntentStore {
   const cached = stores.get(rt);
   if (cached) return cached;
-  const rows: SendIntent[] = [];
-  stores.set(rt, rows);
-  return rows;
+  const store: IntentStore = { rows: [] };
+  stores.set(rt, store);
+  return store;
+}
+
+function rowsFor(rt: SdkRuntime): SendIntent[] {
+  return storeFor(rt).rows;
 }
 
 /** Amount + truncated address so two retrying sends are distinguishable. */
@@ -64,13 +82,13 @@ export function intentLabel(input: Pick<IntentInput, "address" | "amount">): str
   return `${formatCcx(input.amount)} · ${truncateAddress(input.address)}`;
 }
 
-export function mapIntent(row: SendIntent, enqueuedAt = 0): QueuedTransaction {
+export function mapIntent(row: SendIntent): QueuedTransaction {
   const queued: QueuedTransaction = {
     id: row.id,
     kind: row.kind,
     state: row.sent ? "sent" : row.kind === "hung" ? "hung" : "pending",
     attempts: row.decoyFails + row.submitFails,
-    enqueuedAt,
+    enqueuedAt: row.enqueuedAt,
     label: intentLabel(row),
   };
   if (row.kind === "hung" && !row.sent && row.watchedHash) {
@@ -111,7 +129,7 @@ function noteFail(
   row[field] += 1;
   if (row[field] >= cap) {
     removeRow(rt, id);
-    noteDropToast(queueCopy.exhaustToast);
+    noteDropToast(rt, queueCopy.exhaustToast);
     return "dropped";
   }
   return "kept";
@@ -125,6 +143,7 @@ export function enqueueAuto(rt: SdkRuntime, input: IntentInput, cause: FailCause
     decoyFails: cause === "decoy" ? 1 : 0,
     submitFails: cause === "submit" ? 1 : 0,
     waitTicks: AUTO_WAIT,
+    enqueuedAt: Date.now(),
   };
   rowsFor(rt).push(row);
   return row;
@@ -139,6 +158,7 @@ export function enqueueHung(rt: SdkRuntime, input: IntentInput, watchedHash: str
     decoyFails: 0,
     submitFails: 0,
     waitTicks: 0,
+    enqueuedAt: Date.now(),
   };
   rowsFor(rt).push(row);
   return row;
@@ -153,17 +173,29 @@ export function cancelIntent(rt: SdkRuntime, id: string): boolean {
 }
 
 export function clearIntents(rt: SdkRuntime): void {
+  const store = stores.get(rt);
+  if (store && lastToastStore === store) lastToastStore = undefined;
   stores.delete(rt);
-  dropToast = undefined;
 }
 
-export function noteDropToast(message: string): void {
-  dropToast = message;
+function noteDropToast(rt: SdkRuntime, message: string): void {
+  const store = storeFor(rt);
+  store.dropToast = message;
+  lastToastStore = store;
 }
 
-export function takeDropToast(): string | undefined {
-  const message = dropToast;
-  dropToast = undefined;
+/**
+ * Take the runtime-scoped exhaust toast, if any. Pass an explicit runtime to read
+ * its slot; without one, falls back to the store that last raised a toast (the UI
+ * has no runtime handle). Locked/switched-away stores return nothing.
+ */
+export function takeDropToast(rt?: SdkRuntime): string | undefined {
+  const store = rt ? stores.get(rt) : lastToastStore;
+  const message = store?.dropToast;
+  if (store) {
+    store.dropToast = undefined;
+    if (lastToastStore === store) lastToastStore = undefined;
+  }
   return message;
 }
 

@@ -1,21 +1,8 @@
 // Copyright (c) 2026 Conceal Network, Conceal Devs
 // SPDX-License-Identifier: BSD-3-Clause
 
-import {
-  COIN_UNIT_PLACES,
-  getBalance,
-  isValidAddress,
-  REMOTE_NODE_FEE_ATOMIC,
-  transactions as txns,
-} from "conceal-wallet-sdk";
+import { COIN_UNIT_PLACES, isValidAddress } from "conceal-wallet-sdk";
 import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
-import {
-  createSentMessageRecord,
-  readSentRecords,
-  withSentRecords,
-} from "@/lib/services/real-sdk/messages-store";
-import { addPendingRecord } from "@/lib/services/real-sdk/pending-store";
-import { persistRuntime } from "@/lib/services/real-sdk/persistence";
 import { isLiveRuntime, type SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
 import {
   cancelIntent,
@@ -31,18 +18,9 @@ import {
   tickSynced,
 } from "@/lib/services/real-sdk/send-intent";
 import {
-  decodeFeeRecipient,
   decodeRecipient,
-  FEE_ATOMIC,
-  fetchDecoys,
-  MIXIN,
-  ownKeys,
-  paymentIdExtraForSend,
-  recordTxPrivateKey,
   resolveOutboundPaymentId,
-  selectableOutputs,
-  selectSpendInputs,
-  submitRawHex,
+  runSendPipeline,
 } from "@/lib/services/real-sdk/spend";
 import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
 
@@ -86,29 +64,18 @@ function applyRebuild(rt: SdkRuntime, intent: SendIntent, result: RebuildResult)
   enqueueHung(rt, intentInput(intent), result.hung);
 }
 
-function sendDests(
-  recipient: { spendPublicKey: string; viewPublicKey: string },
-  amountAtomic: number,
-  nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null,
-): txns.Destination[] {
-  const destinations: txns.Destination[] = [
-    {
-      spendPublicKey: recipient.spendPublicKey,
-      viewPublicKey: recipient.viewPublicKey,
-      amount: amountAtomic,
-    },
-  ];
-  if (nodeFee) destinations.push(nodeFee);
-  return destinations;
-}
-
+/**
+ * Rebuild + resubmit a queued send through the SAME shared pipeline the
+ * interactive send uses (spend.ts runSendPipeline) — fee logic, builder, submit,
+ * and post-OK records can no longer drift between the two paths. Only the input
+ * validation and the failure→retry classification are drain-specific here.
+ */
 export async function rebuildSend(rt: SdkRuntime, intent: SendIntent): Promise<RebuildResult> {
   const amountAtomic = Math.round(intent.amount * ATOMIC_PER_CCX);
   if (!Number.isFinite(amountAtomic) || amountAtomic <= 0) return "unfunded";
   if (!isValidAddress(intent.address)) return "unfunded";
 
   const message = intent.message?.trim() ?? "";
-  const hasMessage = message.length > 0;
   let recipient: ReturnType<typeof decodeRecipient>;
   try {
     recipient = decodeRecipient(intent.address);
@@ -117,115 +84,24 @@ export async function rebuildSend(rt: SdkRuntime, intent: SendIntent): Promise<R
   }
   const paymentId = resolveOutboundPaymentId(intent.paymentId, recipient);
 
-  const balance = getBalance(rt.state);
-  if (amountAtomic + FEE_ATOMIC > balance.spendable) return "unfunded";
-
-  let feeAddress: string;
-  try {
-    feeAddress = await rt.daemon.getNodeFeeAddress();
-  } catch {
-    return "decoy";
-  }
-  let nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null = null;
-  if (feeAddress && feeAddress !== rt.account.address) {
-    const feeRecipient = decodeFeeRecipient(feeAddress);
-    nodeFee = {
-      spendPublicKey: feeRecipient.spendPublicKey,
-      viewPublicKey: feeRecipient.viewPublicKey,
-      amount: REMOTE_NODE_FEE_ATOMIC,
-    };
-  }
-  const nodeFeeAtomic = nodeFee ? REMOTE_NODE_FEE_ATOMIC : 0;
-  if (amountAtomic + FEE_ATOMIC + nodeFeeAtomic > balance.spendable) return "unfunded";
-
-  let selected: Awaited<ReturnType<typeof selectableOutputs>>;
-  try {
-    const outputs = await selectableOutputs(rt);
-    selected = selectSpendInputs(outputs, amountAtomic + FEE_ATOMIC + nodeFeeAtomic).selected;
-  } catch {
-    return "unfunded";
-  }
-
-  let decoys: txns.DecoySet[];
-  try {
-    decoys = await fetchDecoys(rt, selected);
-  } catch {
-    return "decoy";
-  }
-
-  const built = hasMessage
-    ? txns.buildMessageTransaction({
-        keys: rt.account.keys,
-        recipient: {
-          spendPublicKey: recipient.spendPublicKey,
-          viewPublicKey: recipient.viewPublicKey,
-        },
-        body: message,
-        changeKeys: ownKeys(rt),
-        unspentOutputs: selected,
-        decoys,
-        fee: FEE_ATOMIC,
-        mixin: MIXIN,
-        ttlUnixSeconds: 0,
-        nodeFee,
-        messageAmount: amountAtomic,
-        ...(paymentId ? { paymentId: paymentId as txns.Hex } : {}),
-      })
-    : txns.buildTransaction({
-        keys: rt.account.keys,
-        destinations: sendDests(recipient, amountAtomic, nodeFee),
-        changeKeys: ownKeys(rt),
-        unspentOutputs: selected,
-        decoys,
-        fee: FEE_ATOMIC,
-        mixin: MIXIN,
-        ...(paymentId
-          ? {
-              buildExtraRecords: ({ secretKey }) =>
-                paymentIdExtraForSend(paymentId, recipient.viewPublicKey, secretKey) as txns.Hex,
-            }
-          : {}),
-      });
-
-  if (!isLiveRuntime(rt)) return "skip";
-
-  let submitStatus: string | undefined;
-  try {
-    const result = await submitRawHex(rt.daemon, built.serialized);
-    submitStatus = result?.status;
-  } catch {
+  const result = await runSendPipeline(
+    rt,
+    {
+      address: intent.address,
+      amountAtomic,
+      recipient,
+      ...(paymentId ? { paymentId } : {}),
+      hasMessage: message.length > 0,
+      message,
+    },
+    { gate: () => isLiveRuntime(rt) },
+  );
+  if (!result.ok) {
+    const failure = result.failure;
+    if (failure.reason === "unfunded" || failure.reason === "select") return "unfunded";
+    if (failure.reason === "decoy") return "decoy";
+    if (failure.reason === "skip") return "skip";
     return "submit";
-  }
-  if (submitStatus !== "OK") return "submit";
-
-  recordTxPrivateKey(rt, built);
-  rt.raw = addPendingRecord(rt.raw, {
-    hash: built.hash,
-    amountAtomic:
-      intent.address === rt.account.address
-        ? FEE_ATOMIC + nodeFeeAtomic
-        : amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
-    timestampIso: new Date().toISOString(),
-    address: intent.address,
-    ...(paymentId ? { paymentId } : {}),
-    spentKeyImages: built.inputs.map((vin) => vin.keyImage),
-  });
-  if (hasMessage) {
-    rt.raw = withSentRecords(rt.raw, [
-      ...readSentRecords(rt.raw),
-      createSentMessageRecord({
-        hash: built.hash,
-        recipientAddress: intent.address,
-        body: message,
-        paymentId,
-        timestampIso: new Date().toISOString(),
-      }),
-    ]);
-  }
-  try {
-    await persistRuntime(rt);
-  } catch {
-    // Non-fatal: the tx is already relayed.
   }
   return "ok";
 }
