@@ -12,7 +12,12 @@ export function backupDownloadFilename(name: string): string {
   return stem.endsWith(".json") ? stem : `${stem}.json`;
 }
 
-export function downloadJsonFile(filename: string, data: unknown): Promise<void> {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+/** Download pre-serialized JSON text verbatim. */
+export function downloadJsonText(filename: string, json: string): Promise<void> {
+  const blob = new Blob([json], { type: "application/json" });
   return triggerBlobDownload(backupDownloadFilename(filename), blob);
+}
+
+export function downloadJsonFile(filename: string, data: unknown): Promise<void> {
+  return downloadJsonText(filename, JSON.stringify(data, null, 2));
 }

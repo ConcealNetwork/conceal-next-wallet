@@ -18,7 +18,7 @@ import { CopyButton, PageHeader, SectionCard } from "@/components/wallet/common"
 import { useWalletViewOnly } from "@/lib/hooks";
 import { services } from "@/lib/services";
 import type { ExportWalletData } from "@/lib/services/wallet.service";
-import { backupDownloadFilename, downloadJsonFile } from "@/lib/ui/download-json-file";
+import { backupDownloadFilename, downloadJsonText } from "@/lib/ui/download-json-file";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { formatWalletBackupMarkdown } from "@/lib/ui/wallet-export-backup";
@@ -50,7 +50,7 @@ export default function ExportPage() {
         filename: backupName,
         password: backupPassword,
       });
-      await downloadJsonFile(result.filename, result.payload);
+      await downloadJsonText(result.filename, result.json);
       toast.success(walletCopy.downloadBackupSuccess);
       setDownloadOpen(false);
       setBackupPassword("");

@@ -123,10 +123,11 @@ export const mockWalletService: WalletService = {
     await mockDelay();
     return {
       filename: backupDownloadFilename(input.filename),
-      payload: {
-        mock: true,
-        note: "Placeholder encrypted wallet backup for UI review.",
-      },
+      json: JSON.stringify(
+        { mock: true, note: "Placeholder encrypted wallet backup for UI review." },
+        null,
+        2,
+      ),
     };
   },
   async changePassword() {

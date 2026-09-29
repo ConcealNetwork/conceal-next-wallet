@@ -72,7 +72,8 @@ export type DownloadWalletBackupInput = {
 
 export type DownloadWalletBackupResult = {
   filename: string;
-  payload: unknown;
+  /** Backup file text, written as-is (real: SDK `stringifyEncryptedWallet`). */
+  json: string;
 };
 
 export interface WalletService {
