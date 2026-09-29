@@ -16,4 +16,5 @@ export {
   parseEncryptedWalletJson,
   saveEncryptedWallet,
   saveStoredWallet,
+  stringifyEncryptedWallet,
 } from "conceal-wallet-sdk";

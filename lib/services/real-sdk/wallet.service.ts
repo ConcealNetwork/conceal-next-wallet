@@ -11,6 +11,7 @@ import {
   openEncryptedWallet,
   parseEncryptedWalletJson,
   saveEncryptedWallet,
+  stringifyEncryptedWallet,
 } from "@/lib/services/real-sdk/envelope";
 import { mapWalletInfo } from "@/lib/services/real-sdk/mappers";
 import { dropExpiredTtl, readReceivedRecords } from "@/lib/services/real-sdk/messages-store";
@@ -459,7 +460,7 @@ export const realSdkWalletService: WalletService = {
       }
       return {
         filename: backupDownloadFilename(input.filename),
-        payload: envelope,
+        json: stringifyEncryptedWallet(envelope),
       };
     });
   },

@@ -17,6 +17,7 @@ describe("real-sdk envelope typed exports", () => {
       saveEncryptedWallet,
       openStoredWallet,
       saveStoredWallet,
+      stringifyEncryptedWallet,
       omitMnemonic,
       MAX_ENVELOPE_JSON_CHARS,
     } = await import("@/lib/services/real-sdk/envelope");
@@ -26,6 +27,7 @@ describe("real-sdk envelope typed exports", () => {
     expect(typeof saveEncryptedWallet).toBe("function");
     expect(typeof openStoredWallet).toBe("function");
     expect(typeof saveStoredWallet).toBe("function");
+    expect(typeof stringifyEncryptedWallet).toBe("function");
     expect(typeof omitMnemonic).toBe("function");
     expect(typeof MAX_ENVELOPE_JSON_CHARS).toBe("number");
     expect(MAX_ENVELOPE_JSON_CHARS).toBeGreaterThan(0);
