@@ -24,6 +24,7 @@ import { services } from "@/lib/services";
 import { omitPassword } from "@/lib/services/real-sdk/omit-password";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { checkWalletBackupText } from "@/lib/ui/backup-file-parse";
 import {
   describeScanHeight,
   estimateScanHeight,
@@ -893,18 +894,24 @@ export function ImportFileForm() {
 
     try {
       const buffer = await selected.arrayBuffer();
-      const text = new TextDecoder()
-        .decode(buffer)
-        .replace(/^\uFEFF/, "")
-        .trim();
-      JSON.parse(text);
+      // Bounded pre-read (same gate as the SDK's parseEncryptedWalletJson):
+      // rejects oversized or non-JSON picks before any unbounded main-thread
+      // parse; real wallet backups (tens of MB) pass through unchanged.
+      const check = checkWalletBackupText(new TextDecoder().decode(buffer));
+      if (check !== "ok") {
+        throw new Error(
+          check === "too-large"
+            ? "The selected file is too large to be a wallet backup."
+            : "The selected file is not valid JSON.",
+        );
+      }
       setFile(buffer);
       setFileName(selected.name);
-    } catch {
+    } catch (error) {
       event.target.value = "";
       setFile(null);
       setFileName("");
-      toast.error("The selected file is not valid JSON.");
+      toast.error(error instanceof Error ? error.message : "The selected file is not valid JSON.");
     }
   }
 
