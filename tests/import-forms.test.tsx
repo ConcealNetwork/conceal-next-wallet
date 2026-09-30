@@ -8,6 +8,7 @@ const renderI18n = (ui: Parameters<typeof render>[0]) => render(<I18nProvider>{u
 const importWallet = vi.fn();
 const openSession = vi.fn();
 const decodeQrFromFile = vi.fn();
+const toastError = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/services", () => ({
   services: {
@@ -24,6 +25,9 @@ vi.mock("@/lib/session/wallet-session", () => ({
 vi.mock("@/lib/ui/qr-decode", () => ({
   decodeQrFromFile: (file: File) => decodeQrFromFile(file),
   decodeQrFromImageData: vi.fn(),
+}));
+vi.mock("@/lib/ui/toast", () => ({
+  toast: { error: toastError, success: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }));
 
 import {
@@ -46,6 +50,7 @@ describe("import forms", () => {
     importWallet.mockReset().mockResolvedValue({ address: "ccx7test", balance: { atomic: 0 } });
     openSession.mockReset();
     decodeQrFromFile.mockReset();
+    toastError.mockReset();
   });
 
   describe("ImportMnemonicForm", () => {
@@ -158,6 +163,27 @@ describe("import forms", () => {
         target: { value: PASSWORD },
       });
       expect(submit()).toBeEnabled();
+    });
+
+    it("rejects a non-JSON pick with a friendly error and clears the selection", async () => {
+      renderI18n(<ImportFileForm />);
+      const file = new File(["{ not json"], "notes.json", { type: "application/json" });
+      fireEvent.change(screen.getByLabelText("JSON backup file"), { target: { files: [file] } });
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith("The selected file is not valid JSON."),
+      );
+      expect(screen.queryByText(/Selected:/)).not.toBeInTheDocument();
+      expect(submit()).toBeDisabled();
+    });
+
+    it("rejects a non-object JSON pick (array) the same way", async () => {
+      renderI18n(<ImportFileForm />);
+      const file = new File(["[1,2,3]"], "list.json", { type: "application/json" });
+      fireEvent.change(screen.getByLabelText("JSON backup file"), { target: { files: [file] } });
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith("The selected file is not valid JSON."),
+      );
+      expect(submit()).toBeDisabled();
     });
   });
 });
