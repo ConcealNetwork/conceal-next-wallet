@@ -13,15 +13,23 @@ import {
   DEFAULT_MIXIN,
   DUST_THRESHOLD,
   decodeAddress,
+  getBalance,
   getUnspentOutputs,
   isValidAddress,
   MINIMUM_FEE_V2,
   type OwnedOutput,
   PRETTY_AMOUNTS,
+  REMOTE_NODE_FEE_ATOMIC,
   transactions as txns,
 } from "conceal-wallet-sdk";
 import { WALLET_DONATION_ADDRESS } from "@/lib/config/config";
-import { pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
+import { saveOutboundPidForRuntime } from "@/lib/services/real-sdk/address-book.service";
+import {
+  createSentMessageRecord,
+  readSentRecords,
+  withSentRecords,
+} from "@/lib/services/real-sdk/messages-store";
+import { addPendingRecord, pendingSpentKeyImages } from "@/lib/services/real-sdk/pending-store";
 import { persistRuntime, type SdkRuntime, syncRuntime } from "@/lib/services/real-sdk/runtime";
 
 /** Local aliases for types that live inside the SDK's `transactions` namespace. */
@@ -284,4 +292,261 @@ export function recordTxPrivateKey(runtime: SdkRuntime, built: BuiltTransaction)
     ...runtime.raw,
     txPrivateKeys: { ...existing, [built.hash]: built.txSecretKey },
   };
+}
+
+// --- shared send build+submit pipeline --------------------------------------
+// ONE copy of the fund-safety-critical send sequence (fee fetch → node fee →
+// balance gates → input selection → decoys → build → submit → optimistic
+// records → persist → outbound payment-id trail), used by BOTH the interactive
+// send (transaction.service sendTransaction) and the session-intent drain
+// (intent-drain rebuildSend). Callers keep only their own input validation and
+// map the classified failures onto their own retry semantics.
+
+/** Everything the pipeline needs after the caller's input validation. */
+export type SendPipelineRequest = {
+  address: string;
+  amountAtomic: number;
+  recipient: DecodedRecipient;
+  /** Already resolved through {@link resolveOutboundPaymentId}. */
+  paymentId?: string;
+  hasMessage: boolean;
+  /** Trimmed message body; empty when {@link SendPipelineRequest.hasMessage} is false. */
+  message: string;
+};
+
+/**
+ * Classified pipeline failure. `unfunded` = balance/input-pool short, `select`
+ * carries the raw selectableOutputs error (the interactive path rethrows it),
+ * `decoy` = link/fee/decoy-fetch failure, `skip` = the caller's gate went dead
+ * (lock/switch/offline) at a checkpoint, `submit` = relay error or non-OK status
+ * (`timedOut` lets the interactive path park a hung intent watching the hash).
+ */
+export type SendPipelineFailure =
+  | { reason: "unfunded" }
+  | { reason: "select"; error: unknown }
+  | { reason: "decoy" }
+  | { reason: "skip" }
+  | { reason: "submit"; timedOut: boolean; hash: string };
+
+export type SendPipelineSuccess = {
+  hash: string;
+  amountAtomic: number;
+  nodeFeeAtomic: number;
+  address: string;
+  paymentId?: string;
+  hasMessage: boolean;
+};
+
+export type SendPipelineResult =
+  | { ok: true; sent: SendPipelineSuccess }
+  | { ok: false; failure: SendPipelineFailure };
+
+/**
+ * Run the shared build+submit pipeline on `rt`.
+ *
+ * `gate` is the caller's liveness check (`gate.live` for the interactive race,
+ * `isLiveRuntime` for the drain). It is polled at the same checkpoints the
+ * interactive path has always used — after the fee fetch, after the decoy
+ * fetch, after the build, and after the submit — and at each failure point, so
+ * a gate-dead pipeline never queues, submits, or records. Build errors
+ * propagate to the caller (unchanged from both former copies).
+ */
+export async function runSendPipeline(
+  rt: SdkRuntime,
+  req: SendPipelineRequest,
+  opts: {
+    gate: () => boolean;
+    /** Called as soon as the tx is built so the interactive timeout path can park a hung intent. */
+    onBuilt?: (hash: string) => void;
+  },
+): Promise<SendPipelineResult> {
+  const deadGate = (): SendPipelineFailure => ({ reason: "skip" });
+
+  const balance = getBalance(rt.state);
+  if (req.amountAtomic + FEE_ATOMIC > balance.spendable) {
+    return { ok: false, failure: { reason: "unfunded" } };
+  }
+
+  let feeAddress: string;
+  try {
+    feeAddress = await rt.daemon.getNodeFeeAddress();
+  } catch {
+    return { ok: false, failure: opts.gate() ? { reason: "decoy" } : deadGate() };
+  }
+  if (!opts.gate()) return { ok: false, failure: deadGate() };
+
+  let nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null = null;
+  if (feeAddress && feeAddress !== rt.account.address) {
+    const feeRecipient = decodeFeeRecipient(feeAddress);
+    nodeFee = {
+      spendPublicKey: feeRecipient.spendPublicKey,
+      viewPublicKey: feeRecipient.viewPublicKey,
+      amount: REMOTE_NODE_FEE_ATOMIC,
+    };
+  }
+  const nodeFeeAtomic = nodeFee ? REMOTE_NODE_FEE_ATOMIC : 0;
+
+  if (req.amountAtomic + FEE_ATOMIC + nodeFeeAtomic > balance.spendable) {
+    return { ok: false, failure: { reason: "unfunded" } };
+  }
+
+  let outputs: OwnedOutput[];
+  try {
+    outputs = await selectableOutputs(rt);
+  } catch (error) {
+    return { ok: false, failure: { reason: "select", error } };
+  }
+  const target = req.amountAtomic + FEE_ATOMIC + nodeFeeAtomic;
+  const { selected } = selectSpendInputs(outputs, target);
+
+  let decoys: txns.DecoySet[];
+  try {
+    decoys = await fetchDecoys(rt, selected);
+  } catch {
+    return { ok: false, failure: opts.gate() ? { reason: "decoy" } : deadGate() };
+  }
+  if (!opts.gate()) return { ok: false, failure: deadGate() };
+
+  // A transfer that carries a message is built as a message tx so the encrypted body
+  // rides in tx_extra (recipient surfaces it, and we keep a sender copy). The
+  // recipient still receives the full amount via `messageAmount`. Build throws
+  // propagate — both former copies behaved that way.
+  const built = req.hasMessage
+    ? txns.buildMessageTransaction({
+        keys: rt.account.keys,
+        recipient: {
+          spendPublicKey: req.recipient.spendPublicKey,
+          viewPublicKey: req.recipient.viewPublicKey,
+        },
+        body: req.message,
+        changeKeys: ownKeys(rt),
+        unspentOutputs: selected,
+        decoys,
+        fee: FEE_ATOMIC,
+        mixin: MIXIN,
+        ttlUnixSeconds: 0,
+        nodeFee,
+        messageAmount: req.amountAtomic,
+        ...(req.paymentId ? { paymentId: req.paymentId as txns.Hex } : {}),
+      })
+    : txns.buildTransaction({
+        keys: rt.account.keys,
+        destinations: plainSendDestinations(req.recipient, req.amountAtomic, nodeFee),
+        changeKeys: ownKeys(rt),
+        unspentOutputs: selected,
+        decoys,
+        fee: FEE_ATOMIC,
+        mixin: MIXIN,
+        ...(req.paymentId
+          ? {
+              buildExtraRecords: ({ secretKey }) =>
+                paymentIdExtraForSend(
+                  req.paymentId,
+                  req.recipient.viewPublicKey,
+                  secretKey,
+                ) as txns.Hex,
+            }
+          : {}),
+      });
+
+  opts.onBuilt?.(built.hash);
+  if (!opts.gate()) return { ok: false, failure: deadGate() };
+
+  let submitStatus: string | undefined;
+  try {
+    const result = await submitRawHex(rt.daemon, built.serialized);
+    submitStatus = result?.status;
+  } catch (error) {
+    if (!opts.gate()) return { ok: false, failure: deadGate() };
+    const timedOut = error instanceof Error && error.message.includes("timed out");
+    return { ok: false, failure: { reason: "submit", timedOut, hash: built.hash } };
+  }
+  if (!opts.gate()) return { ok: false, failure: deadGate() };
+  if (submitStatus !== "OK") {
+    return { ok: false, failure: { reason: "submit", timedOut: false, hash: built.hash } };
+  }
+
+  await finalizeSentSend(rt, built, req, nodeFeeAtomic);
+
+  return {
+    ok: true,
+    sent: {
+      hash: built.hash,
+      amountAtomic: req.amountAtomic,
+      nodeFeeAtomic,
+      address: req.address,
+      ...(req.paymentId ? { paymentId: req.paymentId } : {}),
+      hasMessage: req.hasMessage,
+    },
+  };
+}
+
+/**
+ * Post-OK optimistic records, shared verbatim by both send paths: tx private key +
+ * pending hold (+ sender's message copy) persisted once, then the outbound
+ * payment-id trail in the address book (parity fix — the drain retry previously
+ * skipped it). Every failure here is non-fatal — the tx is already relayed, and
+ * failing the send would invite a retry → double-spend.
+ */
+async function finalizeSentSend(
+  rt: SdkRuntime,
+  built: BuiltTransaction,
+  req: SendPipelineRequest,
+  nodeFeeAtomic: number,
+): Promise<void> {
+  recordTxPrivateKey(rt, built);
+  rt.raw = addPendingRecord(rt.raw, {
+    hash: built.hash,
+    amountAtomic:
+      req.address === rt.account.address
+        ? FEE_ATOMIC + nodeFeeAtomic
+        : req.amountAtomic + FEE_ATOMIC + nodeFeeAtomic,
+    timestampIso: new Date().toISOString(),
+    address: req.address,
+    ...(req.paymentId ? { paymentId: req.paymentId } : {}),
+    spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+  });
+  if (req.hasMessage) {
+    rt.raw = withSentRecords(rt.raw, [
+      ...readSentRecords(rt.raw),
+      createSentMessageRecord({
+        hash: built.hash,
+        recipientAddress: req.address,
+        body: req.message,
+        paymentId: req.paymentId,
+        timestampIso: new Date().toISOString(),
+      }),
+    ]);
+  }
+  try {
+    await persistRuntime(rt);
+  } catch {
+    // Non-fatal: the tx is already relayed, so failing the send here would invite
+    // a retry → double-spend. Losing only the optimistic pending / message UI
+    // records is acceptable; sync reconciles them.
+  }
+  if (req.paymentId) {
+    try {
+      await saveOutboundPidForRuntime(rt, req.address, req.paymentId);
+    } catch {
+      // Non-fatal: payment already sent.
+    }
+  }
+}
+
+/** Destinations for a plain (no-message) transfer: recipient + optional node fee. */
+function plainSendDestinations(
+  recipient: { spendPublicKey: string; viewPublicKey: string },
+  amountAtomic: number,
+  nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null,
+): txns.Destination[] {
+  const destinations: txns.Destination[] = [
+    {
+      spendPublicKey: recipient.spendPublicKey,
+      viewPublicKey: recipient.viewPublicKey,
+      amount: amountAtomic,
+    },
+  ];
+  if (nodeFee) destinations.push(nodeFee);
+  return destinations;
 }

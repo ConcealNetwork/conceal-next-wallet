@@ -69,6 +69,7 @@ import {
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   activateRuntime,
+  allUnlockedRuntimes,
   clearAllRuntimes,
   clearAndSettle,
   dropAndSettle,
@@ -76,6 +77,7 @@ import {
   type SdkRuntime,
   setRuntime,
 } from "@/lib/services/real-sdk/runtime-registry";
+import { clearIntents } from "@/lib/services/real-sdk/send-intent";
 import {
   DEFAULT_WALLET_ID,
   eraseDefaultKeys,
@@ -287,9 +289,11 @@ export async function adopt(input: {
  * Lock the wallet — drop ALL cached runtimes (keys are never kept in session).
  * SECURITY: clears EVERY unlocked wallet's keys, not just the active one, so a lock
  * leaves no decrypted material in memory. Resets all per-wallet sync/persist state;
- * any in-flight scan settles on its own and then `requireRuntime()` throws.
+ * any in-flight scan settles on its own and then `requireRuntime()` throws. Session
+ * send intents (and their toast/timestamp side state) are cleared with them.
  */
 export function lock(): void {
+  clearSessionIntents();
   clearAllRuntimes();
 }
 
@@ -300,7 +304,15 @@ export async function disconnect(): Promise<void> {
   } catch {
     // Best-effort — lock must still drop keys if the write fails.
   }
+  clearSessionIntents();
   await clearAndSettle();
+}
+
+/** Drop every unlocked wallet's session send intents (rows + toast/timestamp state). */
+function clearSessionIntents(): void {
+  for (const rt of allUnlockedRuntimes()) {
+    clearIntents(rt);
+  }
 }
 
 /**

@@ -735,3 +735,70 @@ describe("real-sdk send path sweeps leftover hex outbox", () => {
     expect(sendRawTransaction).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("real-sdk send path outbound payment-id parity (address book)", () => {
+  const PAYMENT_ID = "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+  // saveOutboundPid patches only P2P contacts (an inbound payment id is set).
+  const INBOUND_PID = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+  async function createBobEntry(bob: Account) {
+    const { sdkAddrBook } = await import("@/lib/services/real-sdk/address-book.service");
+    await sdkAddrBook.createEntry({
+      label: "Bob",
+      address: bob.address,
+      paymentId: INBOUND_PID,
+    });
+    return sdkAddrBook;
+  }
+
+  function outboundPidOf(
+    entries: { address: string; paymentIdTo?: string }[],
+    address: string,
+  ): string | undefined {
+    return entries.find((entry) => entry.address === address)?.paymentIdTo;
+  }
+
+  it("direct OK send records the outbound payment id in the address book", async () => {
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt } = await installFundedSender(fundAtomic);
+    const sdkAddrBook = await createBobEntry(bob);
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+
+    await realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: sendAmount,
+      paymentId: PAYMENT_ID,
+    });
+
+    expect(outboundPidOf(await sdkAddrBook.listEntries(), bob.address)).toBe(PAYMENT_ID);
+    expect(rt.raw.addressBook).toBeTruthy();
+  });
+
+  it("drain-retry OK submit records the outbound payment id too (parity with direct send)", async () => {
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt, runtimeMod, sendRawTransaction } = await installFundedSender(fundAtomic);
+    const sdkAddrBook = await createBobEntry(bob);
+    const { enqueueAuto, listIntents, tickSynced } = await import(
+      "@/lib/services/real-sdk/send-intent"
+    );
+
+    const queued = enqueueAuto(
+      rt,
+      { address: bob.address, amount: sendAmount, paymentId: PAYMENT_ID },
+      "decoy",
+    );
+    const ticksLeft = listIntents(rt).find((row) => row.id === queued.id)?.waitTicks;
+    if (ticksLeft === undefined) throw new Error("auto enqueue missing waitTicks");
+    for (let i = 0; i < ticksLeft; i++) tickSynced(rt);
+
+    await runtimeMod.syncRuntime(rt);
+
+    expect(sendRawTransaction).toHaveBeenCalled();
+    expect(listIntents(rt).map((row) => row.id)).not.toContain(queued.id);
+    expect(outboundPidOf(await sdkAddrBook.listEntries(), bob.address)).toBe(PAYMENT_ID);
+  });
+});

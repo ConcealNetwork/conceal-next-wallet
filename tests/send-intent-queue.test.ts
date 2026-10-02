@@ -234,14 +234,14 @@ describe("send intent store", () => {
       expect(noteSubmitFail(rt, queued.id)).toBe("kept");
     }
     expect(noteSubmitFail(rt, queued.id)).toBe("dropped");
-    expect(takeDropToast()).toBe(queueCopy.exhaustToast);
-    expect(takeDropToast()).toBeUndefined();
+    expect(takeDropToast(rt)).toBe(queueCopy.exhaustToast);
+    expect(takeDropToast(rt)).toBeUndefined();
 
     const shortNeed = 5_500_000;
     const shortHave = 5_499_999;
     const short = enqueueAuto(rt, payInput("ccx7toastFund", shortNeed), "decoy");
     expect(dropUnfunded(rt, short.id, shortHave, shortNeed)).toBe(true);
-    expect(takeDropToast()).toBeUndefined();
+    expect(takeDropToast(rt)).toBeUndefined();
 
     const decoyCap = 5;
     const decoy = enqueueAuto(rt, payInput("ccx7toastDecoy", 7_700_000), "decoy");
@@ -256,6 +256,32 @@ describe("send intent store", () => {
     }
     expect(noteDecoyFail(rt, decoy.id)).toBe("dropped");
     clearIntents(rt);
-    expect(takeDropToast()).toBeUndefined();
+    expect(takeDropToast(rt)).toBeUndefined();
+  });
+
+  it("scopes the drop toast to its runtime and clears it with the store", () => {
+    const rtA = fakeRuntime();
+    const rtB = fakeRuntime();
+    const queued = enqueueAuto(rtA, payInput("ccx7toastScope", 8_800_000), "submit");
+    let note: "kept" | "dropped" = "kept";
+    while (note === "kept") {
+      const next = noteSubmitFail(rtA, queued.id);
+      note = next;
+    }
+    expect(note).toBe("dropped");
+
+    expect(takeDropToast(rtB)).toBeUndefined();
+    expect(takeDropToast(rtA)).toBe(queueCopy.exhaustToast);
+    expect(takeDropToast(rtA)).toBeUndefined();
+  });
+
+  it("stamps enqueuedAt on the row and drops it with the row", () => {
+    const rt = fakeRuntime();
+    const before = Date.now();
+    const queued = enqueueAuto(rt, payInput("ccx7stamp", 9_900_000), "decoy");
+    expect(queued.enqueuedAt).toBeGreaterThanOrEqual(before);
+
+    expect(cancelIntent(rt, queued.id)).toBe(true);
+    expect(listIntents(rt)).toEqual([]);
   });
 });
