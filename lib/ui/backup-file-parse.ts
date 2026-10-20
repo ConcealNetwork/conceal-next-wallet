@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 /**
- * Engine-free bounded pre-read for picked wallet backup files.
+ * Engine-free bounded pre-read for picked wallet backup files, mirroring the
+ * conceal-wallet-sdk `parseEncryptedWalletJson` gate.
  *
- * Mirrors the conceal-wallet-sdk Envelope-3 gate (`parseEncryptedWalletJson`:
- * BOM strip + trim, raw text-length cap, non-whitespace JSON char cap, parse,
- * plain-object check) WITHOUT importing the engine, so mock mode and tests
- * never pull it in. tests/backup-file-parse.test.ts asserts parity with the
- * SDK gate so the two cannot drift apart.
+ * @see docs/decisions/002-bounded-backup-file-pick.md
  */
 
 /** Mirrors conceal-wallet-sdk MAX_ENVELOPE_JSON_CHARS. */
@@ -29,9 +26,19 @@ function exceedsJsonChars(text: string, max: number): boolean {
 }
 
 /**
- * Size-gated check for wallet backup file text. Same gate as the SDK's
- * `parseEncryptedWalletJson`, but distinguishes "too large" from "not valid
- * JSON" so the import form can show an accurate message.
+ * Byte-size check to run before reading the file.
+ *
+ * @see docs/decisions/002-bounded-backup-file-pick.md
+ */
+export function isBackupFileTooLarge(byteSize: number): boolean {
+  return byteSize > MAX_TEXT_CHARS;
+}
+
+/**
+ * Same gate as the SDK's `parseEncryptedWalletJson`, but distinguishes
+ * "too large" from "not valid JSON".
+ *
+ * @see docs/decisions/002-bounded-backup-file-pick.md
  */
 export function checkWalletBackupText(text: string): WalletBackupFileCheck {
   if (typeof text !== "string" || text.length > MAX_TEXT_CHARS) return "too-large";

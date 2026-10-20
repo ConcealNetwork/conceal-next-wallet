@@ -3,7 +3,7 @@
 
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { checkWalletBackupText } from "@/lib/ui/backup-file-parse";
+import { checkWalletBackupText, isBackupFileTooLarge } from "@/lib/ui/backup-file-parse";
 
 /**
  * The import form's pre-read helper must stay in lockstep with the SDK's
@@ -29,16 +29,7 @@ describe("checkWalletBackupText parity with parseEncryptedWalletJson", () => {
 
   it("rejects non-JSON and non-object JSON exactly like the SDK gate", async () => {
     const { parseEncryptedWalletJson } = await import("conceal-wallet-sdk");
-    for (const text of [
-      "{oops",
-      "[1,2,3]",
-      "42",
-      '"a string"',
-      "null",
-      "true",
-      "",
-      "   ",
-    ]) {
+    for (const text of ["{oops", "[1,2,3]", "42", '"a string"', "null", "true", "", "   "]) {
       expect(checkWalletBackupText(text)).toBe("invalid-json");
       expect(parseEncryptedWalletJson(text)).toBeNull();
     }
@@ -56,12 +47,19 @@ describe("checkWalletBackupText parity with parseEncryptedWalletJson", () => {
     expect(parseEncryptedWalletJson(sparse)).toBeNull();
   });
 
-  it("still accepts a tens-of-MB realistic wallet backup (cap headroom, not a size wall)", async () => {
+  it("still accepts a multi-MB realistic wallet backup (cap headroom, not a size wall)", async () => {
     const { parseEncryptedWalletJson } = await import("conceal-wallet-sdk");
     // A few MB of pretty-printed envelope: well within the gate.
     const pretty = `${JSON.stringify({ envelope: 3, kdf: {}, nonce: "", data: [] }, null, 2).slice(0, -2)},"data": [${"1,".repeat(1_000_000)}1]}`;
     expect(checkWalletBackupText(pretty)).toBe("ok");
     expect(parseEncryptedWalletJson(pretty)).not.toBeNull();
+  });
+
+  it("rejects a file by byte size only above the SDK raw-text cap", async () => {
+    const { MAX_ENVELOPE_TEXT_CHARS } = await import("conceal-wallet-sdk");
+    expect(isBackupFileTooLarge(0)).toBe(false);
+    expect(isBackupFileTooLarge(MAX_ENVELOPE_TEXT_CHARS)).toBe(false);
+    expect(isBackupFileTooLarge(MAX_ENVELOPE_TEXT_CHARS + 1)).toBe(true);
   });
 
   it("keeps its caps in sync with the SDK constants", async () => {

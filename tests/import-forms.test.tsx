@@ -185,5 +185,35 @@ describe("import forms", () => {
       );
       expect(submit()).toBeDisabled();
     });
+
+    it("rejects an oversized pick from its byte size without reading it", async () => {
+      const { MAX_ENVELOPE_TEXT_CHARS } = await import("conceal-wallet-sdk");
+      renderI18n(<ImportFileForm />);
+      const file = new File(["{}"], "huge.json", { type: "application/json" });
+      Object.defineProperty(file, "size", { value: MAX_ENVELOPE_TEXT_CHARS + 1 });
+      const read = vi.fn();
+      file.arrayBuffer = read;
+      fireEvent.change(screen.getByLabelText("JSON backup file"), { target: { files: [file] } });
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith(
+          "The selected file is too large to be a wallet backup.",
+        ),
+      );
+      expect(read).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Selected:/)).not.toBeInTheDocument();
+      expect(submit()).toBeDisabled();
+    });
+
+    it("shows a friendly error when the picked file cannot be read", async () => {
+      renderI18n(<ImportFileForm />);
+      const file = new File(["{}"], "gone.json", { type: "application/json" });
+      file.arrayBuffer = vi.fn().mockRejectedValue(new DOMException("raw", "NotReadableError"));
+      fireEvent.change(screen.getByLabelText("JSON backup file"), { target: { files: [file] } });
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith("The selected file could not be read."),
+      );
+      expect(screen.queryByText(/Selected:/)).not.toBeInTheDocument();
+      expect(submit()).toBeDisabled();
+    });
   });
 });
