@@ -32,6 +32,18 @@ engine (`conceal-wallet-sdk`) just to reuse its gate.
 The form shows one fixed toast per outcome (too large / not valid JSON / could
 not be read) and never surfaces raw browser error text.
 
+### Also applies to: local-data vault restore
+
+The Settings vault restore picker (`components/wallet/vault-backup.tsx`) had the
+same unbounded read + `JSON.parse`. It now goes through `readVaultFile(file)` in
+`lib/storage/vault.ts`: reject over `MAX_VAULT_FILE_BYTES` (32 MiB) before
+reading, map a read failure to a friendly message, then `parseVaultFile`.
+
+The vault gets its own, smaller cap instead of the SDK's: a vault holds only
+transaction notes (≤ 280 chars each) and a few allowlisted preferences, so even
+tens of thousands of max-length multibyte notes, encrypted and base64-encoded,
+stay well under 32 MiB.
+
 ## Consequences
 
 - Oversized picks are rejected instantly, without reading the file.

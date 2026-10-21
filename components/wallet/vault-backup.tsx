@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import {
   buildVaultFile,
   openVaultFile,
-  parseVaultFile,
+  readVaultFile,
   restoreVaultData,
   type VaultFile,
 } from "@/lib/storage/vault";
@@ -72,7 +72,7 @@ export function VaultBackup() {
     event.target.value = ""; // allow re-selecting the same file
     if (!file) return;
     try {
-      const parsed = parseVaultFile(await file.text());
+      const parsed = await readVaultFile(file);
       setPendingFile(parsed);
       setPassword("");
       setMode("import");
