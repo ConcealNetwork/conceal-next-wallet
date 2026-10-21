@@ -6,7 +6,12 @@ import {
 } from "@/lib/messages/relationship";
 import type { AddressBookService, AddressEntryInput } from "@/lib/services/address-book.service";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { persist, requireRuntime, type SdkRuntime } from "@/lib/services/real-sdk/runtime";
+import {
+  persist,
+  persistRuntime,
+  requireRuntime,
+  type SdkRuntime,
+} from "@/lib/services/real-sdk/runtime";
 import type { AddressEntry, RawAddressEntry } from "@/lib/types";
 import { normalizePaymentId, paymentIdIsValid } from "@/lib/validation/ccx";
 
@@ -99,7 +104,7 @@ export async function saveOutboundPidForRuntime(
     runtime,
     entries.map((entry, i) => (i === index ? next : entry)),
   );
-  await persist();
+  await persistRuntime(runtime);
 }
 
 export const sdkAddrBook: AddressBookService = {
