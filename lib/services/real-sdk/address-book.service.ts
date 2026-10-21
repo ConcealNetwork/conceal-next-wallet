@@ -69,6 +69,39 @@ function findByAddress(entries: StoredAddressEntry[], recipientAddress: string) 
   return entries.findIndex((entry) => entry.address === target);
 }
 
+/**
+ * Record the payment id actually used for an outbound payment on an EXPLICIT
+ * runtime — the shared send pipeline calls this for both the interactive send and
+ * the drain retry so both paths leave the same outbound trail. No init/runtime
+ * resolution here; the caller owns those.
+ */
+export async function saveOutboundPidForRuntime(
+  runtime: SdkRuntime,
+  recipientAddress: string,
+  paymentId: string,
+): Promise<void> {
+  const normalized = normalizePaymentId(paymentId);
+  if (!normalized) return;
+
+  const entries = readEntries(runtime);
+  const index = findByAddress(entries, recipientAddress);
+  if (index < 0) return;
+
+  const patched = patchOutboundPid(toAddressEntry(entries[index]), normalized);
+  if (!patched) return;
+
+  const next: StoredAddressEntry = {
+    ...entries[index],
+    paymentIdTo: patched.paymentIdTo,
+    relationship: patched.relationship,
+  };
+  writeEntries(
+    runtime,
+    entries.map((entry, i) => (i === index ? next : entry)),
+  );
+  await persist();
+}
+
 export const sdkAddrBook: AddressBookService = {
   async listEntries(): Promise<AddressEntry[]> {
     await ensureSdkReady();
@@ -126,26 +159,7 @@ export const sdkAddrBook: AddressBookService = {
   async saveOutboundPid(recipientAddress, paymentId): Promise<void> {
     await ensureSdkReady();
     const rt = requireRuntime();
-    const normalized = normalizePaymentId(paymentId);
-    if (!normalized) return;
-
-    const entries = readEntries(rt);
-    const index = findByAddress(entries, recipientAddress);
-    if (index < 0) return;
-
-    const patched = patchOutboundPid(toAddressEntry(entries[index]), normalized);
-    if (!patched) return;
-
-    const next: StoredAddressEntry = {
-      ...entries[index],
-      paymentIdTo: patched.paymentIdTo,
-      relationship: patched.relationship,
-    };
-    writeEntries(
-      rt,
-      entries.map((entry, i) => (i === index ? next : entry)),
-    );
-    await persist();
+    await saveOutboundPidForRuntime(rt, recipientAddress, paymentId);
   },
 
   async fillOutboundPid(recipientAddress, paymentId): Promise<void> {
