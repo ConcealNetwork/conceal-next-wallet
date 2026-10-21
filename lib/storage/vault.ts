@@ -79,6 +79,32 @@ function isRecordOfStrings(value: unknown): value is Record<string, string> {
   );
 }
 
+/**
+ * Upper bound for a picked vault file, checked before it is read.
+ *
+ * @see docs/decisions/002-bounded-backup-file-pick.md
+ */
+export const MAX_VAULT_FILE_BYTES = 32 * 1024 * 1024;
+
+/**
+ * Size-gate, read, and shape-validate a picked vault file. Every throw carries a
+ * user-facing message.
+ *
+ * @see docs/decisions/002-bounded-backup-file-pick.md
+ */
+export async function readVaultFile(file: Blob): Promise<VaultFile> {
+  if (file.size > MAX_VAULT_FILE_BYTES) {
+    throw new Error("That file is too large to be a Conceal local-data backup.");
+  }
+  let text: string;
+  try {
+    text = await file.text();
+  } catch {
+    throw new Error("That file couldn't be read.");
+  }
+  return parseVaultFile(text);
+}
+
 /** Parse + shape-validate an uploaded file before any decryption is attempted. */
 export function parseVaultFile(json: string): VaultFile {
   let parsed: unknown;

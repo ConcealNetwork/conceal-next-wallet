@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { bytesToBase64url } from "@/lib/auth/webauthn-crypto";
 import { createTxNotesStore, inMemoryTxNotesBackend, txNotes } from "@/lib/storage/tx-notes";
 import {
   buildVaultFile,
+  MAX_VAULT_FILE_BYTES,
   openVaultFile,
   parseVaultFile,
+  readVaultFile,
   restoreVaultData,
 } from "@/lib/storage/vault";
 import { decryptVault, encryptVault } from "@/lib/storage/vault-crypto";
@@ -148,5 +150,34 @@ describe("vault build → parse → open → restore", () => {
   it("rejects a file that isn't a Conceal vault", () => {
     expect(() => parseVaultFile('{"app":"something-else"}')).toThrow(/Conceal local-data backup/i);
     expect(() => parseVaultFile("not json")).toThrow(/not JSON/i);
+  });
+});
+
+describe("readVaultFile (picked-file gate)", () => {
+  it("reads and parses a genuine vault file", async () => {
+    const file = await buildVaultFile("pw123", "2026-06-17T00:00:00.000Z");
+    const blob = new Blob([JSON.stringify(file)], { type: "application/json" });
+    expect(await readVaultFile(blob)).toEqual(file);
+  });
+
+  it("rejects an oversized file from its byte size without reading it", async () => {
+    const blob = new Blob(["{}"]);
+    Object.defineProperty(blob, "size", { value: MAX_VAULT_FILE_BYTES + 1 });
+    const read = vi.fn();
+    blob.text = read;
+    await expect(readVaultFile(blob)).rejects.toThrow(/too large/i);
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("accepts a file exactly at the byte cap (then validates its shape)", async () => {
+    const blob = new Blob(["not json"]);
+    Object.defineProperty(blob, "size", { value: MAX_VAULT_FILE_BYTES });
+    await expect(readVaultFile(blob)).rejects.toThrow(/not JSON/i);
+  });
+
+  it("maps a read failure to a friendly error, not the raw browser error", async () => {
+    const blob = new Blob(["{}"]);
+    blob.text = vi.fn().mockRejectedValue(new DOMException("raw", "NotReadableError"));
+    await expect(readVaultFile(blob)).rejects.toThrow("That file couldn't be read.");
   });
 });

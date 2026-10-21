@@ -24,6 +24,7 @@ import { services } from "@/lib/services";
 import { omitPassword } from "@/lib/services/real-sdk/omit-password";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 import { useWalletSession } from "@/lib/session/wallet-session";
+import { checkWalletBackupText, isBackupFileTooLarge } from "@/lib/ui/backup-file-parse";
 import {
   describeScanHeight,
   estimateScanHeight,
@@ -866,6 +867,10 @@ export function ImportMnemonicForm() {
   );
 }
 
+const BACKUP_TOO_LARGE = "The selected file is too large to be a wallet backup.";
+const BACKUP_NOT_JSON = "The selected file is not valid JSON.";
+const BACKUP_UNREADABLE = "The selected file could not be read.";
+
 export function ImportFileForm() {
   const { openSession } = useWalletSession();
   const [loading, setLoading] = useState(false);
@@ -891,21 +896,31 @@ export function ImportFileForm() {
       return;
     }
 
-    try {
-      const buffer = await selected.arrayBuffer();
-      const text = new TextDecoder()
-        .decode(buffer)
-        .replace(/^\uFEFF/, "")
-        .trim();
-      JSON.parse(text);
-      setFile(buffer);
-      setFileName(selected.name);
-    } catch {
+    const rejectPick = (message: string) => {
       event.target.value = "";
       setFile(null);
       setFileName("");
-      toast.error("The selected file is not valid JSON.");
+      toast.error(message);
+    };
+
+    if (isBackupFileTooLarge(selected.size)) {
+      rejectPick(BACKUP_TOO_LARGE);
+      return;
     }
+    let buffer: ArrayBuffer;
+    try {
+      buffer = await selected.arrayBuffer();
+    } catch {
+      rejectPick(BACKUP_UNREADABLE);
+      return;
+    }
+    const check = checkWalletBackupText(new TextDecoder().decode(buffer));
+    if (check !== "ok") {
+      rejectPick(check === "too-large" ? BACKUP_TOO_LARGE : BACKUP_NOT_JSON);
+      return;
+    }
+    setFile(buffer);
+    setFileName(selected.name);
   }
 
   async function submit(event: React.FormEvent) {
