@@ -248,7 +248,18 @@ export async function linkGone(daemon: { getHeight(): Promise<number> }): Promis
   }
 }
 
-type RawSubmit = { status?: string };
+type RawSubmit = { status?: string; reason?: string };
+
+/** True when the daemon accepted the relay (`OK` or local accept without gossip). */
+export function relayAccepted(status: string): boolean {
+  return status === "OK" || status === "Not relayed";
+}
+
+/** Human-readable reject text from a non-accept `/sendrawtransaction` status. */
+export function formatRelayReject(result: { status: string; reason?: string }): string {
+  const { status, reason } = result;
+  return reason ? `${status} (${reason})` : status;
+}
 
 /** Submit signed hex without parking it. */
 export async function submitRawHex(
@@ -263,11 +274,18 @@ export async function submitRawHex(
  * Throws a friendly error when the daemon rejects the relay.
  */
 export async function broadcast(runtime: SdkRuntime, built: BuiltTransaction): Promise<void> {
+  let result: RawSubmit;
   try {
-    await runtime.daemon.sendRawTransaction(built.serialized);
+    result = await runtime.daemon.sendRawTransaction(built.serialized);
   } catch (error) {
     throw new Error(
       `Failed to broadcast the transaction. ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  const status = result.status ?? "";
+  if (!relayAccepted(status)) {
+    throw new Error(
+      `Failed to broadcast the transaction. ${formatRelayReject({ status, reason: result.reason })}`,
     );
   }
   // Record the tx private key for later (export / message decryption parity).
@@ -462,7 +480,7 @@ export async function runSendPipeline(
     return { ok: false, failure: { reason: "submit", timedOut, hash: built.hash } };
   }
   if (!opts.gate()) return { ok: false, failure: deadGate() };
-  if (submitStatus !== "OK") {
+  if (!relayAccepted(submitStatus ?? "")) {
     return { ok: false, failure: { reason: "submit", timedOut: false, hash: built.hash } };
   }
 
@@ -482,7 +500,7 @@ export async function runSendPipeline(
 }
 
 /**
- * Post-OK optimistic records, shared verbatim by both send paths: tx private key +
+ * Post-accept optimistic records, shared verbatim by both send paths: tx private key +
  * pending hold (+ sender's message copy) persisted once, then the outbound
  * payment-id trail in the address book (parity fix — the drain retry previously
  * skipped it). Every failure here is non-fatal — the tx is already relayed, and

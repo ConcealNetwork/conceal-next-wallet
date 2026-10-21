@@ -290,6 +290,78 @@ describe("real-sdk sendTransaction intent enqueue", () => {
     expect(readPendingRecords(rt.raw)).toEqual([]);
   });
 
+  it("resolves a submit auto intent when the daemon returns Failed", async () => {
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
+      sendRawTransaction: () => Promise.resolve({ status: "Failed" }),
+    });
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { enqueueAuto, listIntents } = await import("@/lib/services/real-sdk/send-intent");
+    const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
+
+    const sent = await realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: sendAmount,
+    });
+
+    const sample = enqueueAuto(
+      {} as typeof rt,
+      { address: bob.address, amount: sendAmount },
+      "submit",
+    );
+    const rows = listIntents(rt);
+    expect(sent.queued).toBe("auto");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("auto");
+    expect(rows[0]?.submitFails).toBe(sample.submitFails);
+    expect(rows[0]?.decoyFails).toBe(0);
+    expect(rows[0]).not.toHaveProperty("hex");
+    expect(rows[0]).not.toHaveProperty("serialized");
+    expect(rows[0]).not.toHaveProperty("raw");
+    expect(sendRawTransaction).toHaveBeenCalled();
+    expect(await outboxKeys(rt.storage)).toEqual([]);
+    expect(readPendingRecords(rt.raw)).toEqual([]);
+  });
+
+  it("resolves a submit auto intent when the daemon returns Too big", async () => {
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
+      sendRawTransaction: () => Promise.resolve({ status: "Too big" }),
+    });
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { enqueueAuto, listIntents } = await import("@/lib/services/real-sdk/send-intent");
+    const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
+
+    const sent = await realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: sendAmount,
+    });
+
+    const sample = enqueueAuto(
+      {} as typeof rt,
+      { address: bob.address, amount: sendAmount },
+      "submit",
+    );
+    const rows = listIntents(rt);
+    expect(sent.queued).toBe("auto");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("auto");
+    expect(rows[0]?.submitFails).toBe(sample.submitFails);
+    expect(rows[0]?.decoyFails).toBe(0);
+    expect(rows[0]).not.toHaveProperty("hex");
+    expect(rows[0]).not.toHaveProperty("serialized");
+    expect(rows[0]).not.toHaveProperty("raw");
+    expect(sendRawTransaction).toHaveBeenCalled();
+    expect(await outboxKeys(rt.storage)).toEqual([]);
+    expect(readPendingRecords(rt.raw)).toEqual([]);
+  });
+
   it("resolves a submit auto intent when sendRawTransaction throws the SDK reject", async () => {
     const fundAtomic = 5_000_000;
     const sendAmount = 0.5;
@@ -497,6 +569,32 @@ describe("real-sdk sendTransaction intent enqueue", () => {
 
     expect(readPendingRecords(rt.raw)).toHaveLength(1);
     expect(listIntents(rt)).toEqual([]);
+  });
+
+  it("keeps the Not relayed pending hold and does not enqueue an intent", async () => {
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const { bob, rt, sendRawTransaction } = await installFundedSender(fundAtomic, {
+      sendRawTransaction: () => Promise.resolve({ status: "Not relayed" }),
+    });
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+    const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
+
+    const sent = await realSdkTransactionService.sendTransaction({
+      address: bob.address,
+      amount: sendAmount,
+    });
+
+    expect(sent.hash.length).toBeGreaterThan(0);
+    expect(sent.queued).toBeUndefined();
+    expect(sendRawTransaction).toHaveBeenCalled();
+    expect(readPendingRecords(rt.raw)).toHaveLength(1);
+    expect(readPendingRecords(rt.raw)[0]?.hash).toBe(sent.hash);
+    expect(listIntents(rt)).toEqual([]);
+    expect(await outboxKeys(rt.storage)).toEqual([]);
   });
 
   it("lists and cancels the decoy intent by id", async () => {
