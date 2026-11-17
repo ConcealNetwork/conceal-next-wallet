@@ -28,6 +28,7 @@ export function GoalsRail({ embedded = false }: { embedded?: boolean }) {
   let onTrackCount = 0;
   let behindCount = 0;
   for (const { c } of computed) {
+    // biome-ignore lint/complexity/useMathMinMax: operands are bigint; Math.min throws on bigint
     totalSaved += c.saved > c.target ? c.target : c.saved;
     totalTarget += c.target;
     if (c.status === "on-track" || c.status === "due-soon") onTrackCount += 1;

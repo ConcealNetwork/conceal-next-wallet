@@ -66,6 +66,7 @@ export function estimateScanHeight(
   const anchor = tipHeight != null && tipHeight > 0 ? tipHeight : extrapolatedTip(now);
   const blocksSinceTarget = (now.getTime() - target.getTime()) / 1000 / AVG_BLOCK_TIME_SECONDS;
   const height = Math.floor(anchor - blocksSinceTarget);
+  // biome-ignore lint/complexity/useMathMinMax: Math.max would propagate NaN; here NaN falls back to 0 (genesis)
   return height > 0 ? height : 0;
 }
 

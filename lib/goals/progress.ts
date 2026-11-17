@@ -128,6 +128,7 @@ function computePace(
   // 2% of target, or 1 CCX, whichever is larger.
   const buffer = (() => {
     const twoPct = (target * BigInt(2)) / BigInt(100);
+    // biome-ignore lint/complexity/useMathMinMax: operands are bigint; Math.max throws on bigint
     return twoPct > ATOMIC_PER_CCX ? twoPct : ATOMIC_PER_CCX;
   })();
   const onTrack = saved + buffer >= expectedSaved;
