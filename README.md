@@ -39,10 +39,10 @@ Found a vulnerability? See [SECURITY.md](SECURITY.md) — please report privatel
 
 ## Two modes
 
-| Mode | Env | Behavior |
-|------|-----|----------|
-| Mock (default) | unset or `NEXT_PUBLIC_USE_MOCK=true` | UI with mock data only — safe for design/E2E |
-| Real wallet | `NEXT_PUBLIC_USE_MOCK=false` | In-browser engine (`lib/wallet-core`) + Conceal daemons |
+| Mode           | Env                                  | Behavior                                                |
+| -------------- | ------------------------------------ | ------------------------------------------------------- |
+| Mock (default) | unset or `NEXT_PUBLIC_USE_MOCK=true` | UI with mock data only — safe for design/E2E            |
+| Real wallet    | `NEXT_PUBLIC_USE_MOCK=false`         | In-browser engine (`lib/wallet-core`) + Conceal daemons |
 
 ## Development
 
@@ -105,10 +105,10 @@ See [`CLAUDE.md`](CLAUDE.md) for a full architecture tour and
 
 Cordova Mobile is a **two-repo** integration:
 
-| Repo | Role |
-|------|------|
-| **conceal-next-wallet** (this repo) | Next static export, WebView path patches, TS adapter (`lib/auth/platform-unlock.ts`, `lib/cordova/biometric-unlock.ts`) |
-| **[conceal-wallet-cordova](../conceal-wallet-cordova)** | Cordova shell, APK build, and the **native** `cordova-plugin-biometric-unlock` under `cordova-plugins/` |
+| Repo                                                    | Role                                                                                                                    |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **conceal-next-wallet** (this repo)                     | Next static export, WebView path patches, TS adapter (`lib/auth/platform-unlock.ts`, `lib/cordova/biometric-unlock.ts`) |
+| **[conceal-wallet-cordova](../conceal-wallet-cordova)** | Cordova shell, APK build, and the **native** `cordova-plugin-biometric-unlock` under `cordova-plugins/`                 |
 
 Build a Cordova-ready export (real wallet, WebView-safe paths) and copy it into the
 sibling project’s `www/` folder:

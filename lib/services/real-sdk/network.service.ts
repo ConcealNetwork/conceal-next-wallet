@@ -47,7 +47,7 @@ export const realSdkNetworkService: NetworkService = {
       difficulty: info.difficulty,
       hashrate,
       mempool: info.txPoolSize,
-      tipBlockTimestamp: info.lastBlockTimestamp > 0 ? info.lastBlockTimestamp : 0,
+      tipBlockTimestamp: Math.max(info.lastBlockTimestamp, 0),
       tipBlockAgeSeconds,
       heightHistory: [networkHeight],
       hashrateHistory: [hashrate],
