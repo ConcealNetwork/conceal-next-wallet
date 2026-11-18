@@ -61,6 +61,9 @@ export type QueuedBroadcastState = "pending" | "broadcast" | "failed";
 
 export type QueuedIntentKind = "auto" | "hung";
 
+/** The wallet operation a session intent rebuilds — the tagged-union discriminator. */
+export type WalletIntentKind = "send" | "deposit" | "withdraw" | "message" | "fusion";
+
 /** Why a queued broadcast failed (only set when state === "failed"). */
 type QueuedBroadcastFailReason = "rejected" | "expired";
 
@@ -71,6 +74,8 @@ export type QueuedTransaction = {
   /** Hung watchedHash only. */
   hash?: string;
   kind?: QueuedIntentKind;
+  /** The wallet operation this intent rebuilds (send/deposit/withdraw/message/fusion). */
+  intentKind?: WalletIntentKind;
   sent?: boolean;
   state: QueuedBroadcastState | "hung" | "sent";
   /** Transient-error attempts so far. */

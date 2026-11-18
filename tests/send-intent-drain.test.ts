@@ -10,7 +10,7 @@ import {
   enqueueAuto,
   enqueueHung,
   listIntents,
-  type SendIntent,
+  type WalletIntent,
 } from "@/lib/services/real-sdk/send-intent";
 import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
 
@@ -22,7 +22,7 @@ type DrainArgs = {
   spendableAtomic: number;
   historyHashes: ReadonlySet<string>;
   isLive: () => boolean;
-  rebuild: (intent: SendIntent) => Promise<RebuildResult>;
+  rebuild: (intent: WalletIntent) => Promise<RebuildResult>;
 };
 
 function fakeRuntime(): SdkRuntime {
@@ -30,7 +30,7 @@ function fakeRuntime(): SdkRuntime {
 }
 
 function payInput(address: string, amount: number) {
-  return { address, amount };
+  return { kind: "send" as const, address, amount };
 }
 
 function syncPair(wantSyncing: boolean): { scannedHeight: number; networkHeight: number } {
@@ -50,7 +50,7 @@ function autoWait(): number {
 function hashTracker() {
   const hashes: string[] = [];
   let seq = 0;
-  async function rebuild(intent: SendIntent): Promise<RebuildResult> {
+  async function rebuild(intent: WalletIntent): Promise<RebuildResult> {
     seq += 1;
     hashes.push(`hash-${intent.id}-${seq}`);
     return "decoy";
@@ -60,7 +60,7 @@ function hashTracker() {
 
 function drainArgs(
   heights: { scannedHeight: number; networkHeight: number },
-  rebuild: (intent: SendIntent) => Promise<RebuildResult>,
+  rebuild: (intent: WalletIntent) => Promise<RebuildResult>,
   extra: Partial<DrainArgs> = {},
 ): DrainArgs {
   return {
@@ -235,7 +235,7 @@ describe("drainIntents", () => {
     expect(isWalletHeightSyncing(synced.scannedHeight, synced.networkHeight)).toBe(false);
 
     const rebuiltIds: string[] = [];
-    const rebuild = async (intent: SendIntent): Promise<RebuildResult> => {
+    const rebuild = async (intent: WalletIntent): Promise<RebuildResult> => {
       rebuiltIds.push(intent.id);
       return "decoy";
     };

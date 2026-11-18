@@ -9,12 +9,13 @@ import {
   enqueueHung,
   type FailCause,
   type FailNote,
+  type IntentDraft,
   listIntents,
   mapIntent,
   markHungSent,
   noteDecoyFail,
   noteSubmitFail,
-  type SendIntent,
+  type WalletIntent,
 } from "@/lib/services/real-sdk/send-intent";
 import type { SendTransactionInput, TransactionService } from "@/lib/services/transaction.service";
 import { assertCanSpend } from "@/lib/services/view-only";
@@ -73,9 +74,16 @@ export function _failMockRebuild(id: string, cause: FailCause): FailNote {
 }
 
 /** Test-only raw store rows for the dummy mock runtime. */
-export function _listMockIntents(): SendIntent[] {
+export function _listMockIntents(): WalletIntent[] {
   return listIntents(mockRt);
 }
+
+const sendDraft = (input: SendTransactionInput): IntentDraft => {
+  const draft: IntentDraft = { kind: "send", address: input.address, amount: input.amount };
+  if (input.paymentId !== undefined) draft.paymentId = input.paymentId;
+  if (input.message !== undefined) draft.message = input.message;
+  return draft;
+};
 
 export const mockTransactionService: TransactionService = {
   async listTransactions() {
@@ -94,16 +102,16 @@ export const mockTransactionService: TransactionService = {
     }
 
     if (kind === "decoy") {
-      enqueueAuto(mockRt, input, "decoy");
+      enqueueAuto(mockRt, sendDraft(input), "decoy");
       return { ...mockSent(input), queued: "auto" };
     }
     if (kind === "submit") {
-      enqueueAuto(mockRt, input, "submit");
+      enqueueAuto(mockRt, sendDraft(input), "submit");
       return { ...mockSent(input), queued: "auto" };
     }
     if (kind === "hung") {
       const localHash = nextHung();
-      enqueueHung(mockRt, input, localHash);
+      enqueueHung(mockRt, sendDraft(input), localHash);
       return { ...mockSent(input, localHash), queued: "hung" };
     }
     return mockSent(input);
@@ -119,7 +127,7 @@ export const mockTransactionService: TransactionService = {
   async submitHungIntent(id: string) {
     await mockDelay();
     const row = listIntents(mockRt).find((intent) => intent.id === id);
-    if (row?.kind !== "hung") return false;
+    if (row?.state !== "hung") return false;
     if (row.sent) return true;
     if (row.watchedHash && seenHashes.has(row.watchedHash)) {
       markHungSent(mockRt, id);

@@ -8,14 +8,14 @@ import {
   cancelIntent,
   dueAutoIntents,
   enqueueHung,
-  type IntentInput,
+  type IntentDraft,
   listIntents,
   markHungSent,
   noteDecoyFail,
   noteSubmitFail,
   resetAutoWait,
-  type SendIntent,
   tickSynced,
+  type WalletIntent,
 } from "@/lib/services/real-sdk/send-intent";
 import {
   decodeRecipient,
@@ -34,17 +34,14 @@ export type DrainArgs = {
   spendableAtomic: number;
   historyHashes: ReadonlySet<string>;
   isLive: () => boolean;
-  rebuild: (intent: SendIntent) => Promise<RebuildResult>;
+  rebuild: (intent: WalletIntent) => Promise<RebuildResult>;
 };
 
-function intentInput(row: SendIntent): IntentInput {
-  const input: IntentInput = { address: row.address, amount: row.amount };
-  if (row.paymentId !== undefined) input.paymentId = row.paymentId;
-  if (row.message !== undefined) input.message = row.message;
-  return input;
+function draftOf(intent: WalletIntent): IntentDraft {
+  return { kind: intent.kind, ...intent.payload } as IntentDraft;
 }
 
-function applyRebuild(rt: SdkRuntime, intent: SendIntent, result: RebuildResult): void {
+function applyRebuild(rt: SdkRuntime, intent: WalletIntent, result: RebuildResult): void {
   if (result === "skip") {
     return;
   }
@@ -61,7 +58,7 @@ function applyRebuild(rt: SdkRuntime, intent: SendIntent, result: RebuildResult)
     return;
   }
   cancelIntent(rt, intent.id);
-  enqueueHung(rt, intentInput(intent), result.hung);
+  enqueueHung(rt, draftOf(intent), result.hung);
 }
 
 /**
@@ -70,24 +67,26 @@ function applyRebuild(rt: SdkRuntime, intent: SendIntent, result: RebuildResult)
  * and post-OK records can no longer drift between the two paths. Only the input
  * validation and the failure→retry classification are drain-specific here.
  */
-export async function rebuildSend(rt: SdkRuntime, intent: SendIntent): Promise<RebuildResult> {
-  const amountAtomic = Math.round(intent.amount * ATOMIC_PER_CCX);
+export async function rebuildSend(rt: SdkRuntime, intent: WalletIntent): Promise<RebuildResult> {
+  if (intent.kind !== "send") return "skip";
+  const payload = intent.payload;
+  const amountAtomic = Math.round(payload.amount * ATOMIC_PER_CCX);
   if (!Number.isFinite(amountAtomic) || amountAtomic <= 0) return "unfunded";
-  if (!isValidAddress(intent.address)) return "unfunded";
+  if (!isValidAddress(payload.address)) return "unfunded";
 
-  const message = intent.message?.trim() ?? "";
+  const message = payload.message?.trim() ?? "";
   let recipient: ReturnType<typeof decodeRecipient>;
   try {
-    recipient = decodeRecipient(intent.address);
+    recipient = decodeRecipient(payload.address);
   } catch {
     return "unfunded";
   }
-  const paymentId = resolveOutboundPaymentId(intent.paymentId, recipient);
+  const paymentId = resolveOutboundPaymentId(payload.paymentId, recipient);
 
   const result = await runSendPipeline(
     rt,
     {
-      address: intent.address,
+      address: payload.address,
       amountAtomic,
       recipient,
       ...(paymentId ? { paymentId } : {}),
@@ -115,7 +114,7 @@ function historyHashes(rt: SdkRuntime): Set<string> {
 
 export async function submitHung(rt: SdkRuntime, id: string): Promise<boolean> {
   const row = listIntents(rt).find((intent) => intent.id === id);
-  if (row?.kind !== "hung") return false;
+  if (row?.state !== "hung") return false;
   if (row.sent) return true;
   if (row.watchedHash && historyHashes(rt).has(row.watchedHash)) {
     markHungSent(rt, id);
@@ -131,7 +130,7 @@ export async function submitHung(rt: SdkRuntime, id: string): Promise<boolean> {
 
 export async function drainIntents(rt: SdkRuntime, args: DrainArgs): Promise<void> {
   for (const row of listIntents(rt)) {
-    if (row.kind === "hung" && row.watchedHash && args.historyHashes.has(row.watchedHash)) {
+    if (row.state === "hung" && row.watchedHash && args.historyHashes.has(row.watchedHash)) {
       markHungSent(rt, row.id);
     }
   }

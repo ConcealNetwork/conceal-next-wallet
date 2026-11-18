@@ -12,7 +12,9 @@ import {
   dueAutoIntents,
   enqueueAuto,
   enqueueHung,
+  intentLabel,
   listIntents,
+  mapIntent,
   markHungSent,
   noteDecoyFail,
   noteSubmitFail,
@@ -20,6 +22,7 @@ import {
   tickSynced,
 } from "@/lib/services/real-sdk/send-intent";
 import { queueCopy } from "@/lib/ui/queue-copy";
+import { truncateAddress } from "@/lib/utils";
 
 function fakeRuntime(): SdkRuntime {
   return {} as SdkRuntime;
@@ -30,12 +33,139 @@ function payInput(
   amount: number,
   extra: { paymentId?: string; message?: string } = {},
 ) {
-  return { address, amount, ...extra };
+  return { kind: "send", address, amount, ...extra } as const;
 }
 
 function dueIds(rt: SdkRuntime): string[] {
   return dueAutoIntents(rt).map((row) => row.id);
 }
+
+describe("wallet intent kinds", () => {
+  it("stores deposit/withdraw/message/fusion drafts with per-kind payloads", () => {
+    const rt = fakeRuntime();
+    const deposit = enqueueAuto(rt, { kind: "deposit", amount: 100, durationMonths: 12 }, "decoy");
+    const withdraw = enqueueHung(
+      rt,
+      { kind: "withdraw", txHash: "dep-tx-hash-aa", globalOutputIndex: 3 },
+      "hash-withdraw-aa",
+    );
+    const message = enqueueAuto(
+      rt,
+      {
+        kind: "message",
+        recipientAddress: "ccx7messageDestinationAddress",
+        body: "hello",
+        paymentId: "pid-msg-aa",
+        ttlUnixSeconds: 1_800_000_000,
+      },
+      "submit",
+    );
+    const fusion = enqueueAuto(rt, { kind: "fusion" }, "decoy");
+
+    const listed = listIntents(rt);
+    expect(listed.map((row) => row.kind)).toEqual(["deposit", "withdraw", "message", "fusion"]);
+    expect(listed.find((row) => row.id === deposit.id)?.payload).toEqual({
+      amount: 100,
+      durationMonths: 12,
+    });
+    expect(listed.find((row) => row.id === withdraw.id)?.payload).toEqual({
+      txHash: "dep-tx-hash-aa",
+      globalOutputIndex: 3,
+    });
+    expect(listed.find((row) => row.id === message.id)?.payload).toEqual({
+      recipientAddress: "ccx7messageDestinationAddress",
+      body: "hello",
+      paymentId: "pid-msg-aa",
+      ttlUnixSeconds: 1_800_000_000,
+    });
+    expect(listed.find((row) => row.id === fusion.id)?.payload).toEqual({});
+
+    for (const row of listed) {
+      expect(row).not.toHaveProperty("hex");
+      expect(row).not.toHaveProperty("serialized");
+      expect(row).not.toHaveProperty("raw");
+    }
+  });
+
+  it("labels each kind so parked rows are distinguishable on the card", () => {
+    const rt = fakeRuntime();
+    const deposit = enqueueAuto(rt, { kind: "deposit", amount: 100, durationMonths: 12 }, "decoy");
+    const withdraw = enqueueAuto(
+      rt,
+      { kind: "withdraw", txHash: "abcdef1234567890abcdef", globalOutputIndex: 1 },
+      "submit",
+    );
+    const message = enqueueAuto(
+      rt,
+      { kind: "message", recipientAddress: "ccx7messageDestinationAddress", body: "hi" },
+      "decoy",
+    );
+    const fusion = enqueueAuto(rt, { kind: "fusion" }, "decoy");
+
+    expect(intentLabel(deposit)).toBe("Deposit 100.000000 CCX · 12 mo");
+    expect(intentLabel(withdraw)).toBe("Withdraw deposit abcdef123456…");
+    expect(intentLabel(message)).toBe(
+      `Message to ${truncateAddress("ccx7messageDestinationAddress")}`,
+    );
+    expect(intentLabel(fusion)).toBe("Fusion transaction");
+
+    const labels = listIntents(rt).map((row) => mapIntent(row).label);
+    expect(labels.every((label) => label && !label.startsWith("intent-"))).toBe(true);
+    expect(new Set(labels).size).toBe(4);
+  });
+
+  it("maps every kind onto the queued view with intentKind and shared retry state", () => {
+    const rt = fakeRuntime();
+    const deposit = enqueueAuto(rt, { kind: "deposit", amount: 5, durationMonths: 6 }, "decoy");
+    const withdraw = enqueueHung(
+      rt,
+      { kind: "withdraw", txHash: "dep-tx-hash-bb", globalOutputIndex: 2 },
+      "hash-withdraw-bb",
+    );
+
+    const depositRow = listIntents(rt).find((row) => row.id === deposit.id);
+    if (!depositRow) throw new Error("deposit intent missing from list");
+    const depositView = mapIntent(depositRow);
+    expect(depositView.kind).toBe("auto");
+    expect(depositView.intentKind).toBe("deposit");
+    expect(depositView.state).toBe("pending");
+    expect(depositView.hash).toBeUndefined();
+
+    const withdrawRow = listIntents(rt).find((row) => row.id === withdraw.id);
+    if (!withdrawRow) throw new Error("withdraw intent missing from list");
+    const withdrawView = mapIntent(withdrawRow);
+    expect(withdrawView.kind).toBe("hung");
+    expect(withdrawView.intentKind).toBe("withdraw");
+    expect(withdrawView.state).toBe("hung");
+    expect(withdrawView.hash).toBe("hash-withdraw-bb");
+  });
+
+  it("applies the same caps, waits, and unfunded drops to non-send kinds", () => {
+    const rt = fakeRuntime();
+    const fusion = enqueueAuto(rt, { kind: "fusion" }, "submit");
+    expect(fusion.waitTicks).toBe(2);
+    expect(fusion.submitFails).toBe(1);
+    expect(noteSubmitFail(rt, fusion.id)).toBe("kept");
+    expect(noteSubmitFail(rt, fusion.id)).toBe("dropped");
+    expect(listIntents(rt)).toEqual([]);
+    expect(takeDropToast(rt)).toBe(queueCopy.exhaustToast);
+
+    const deposit = enqueueAuto(rt, { kind: "deposit", amount: 5, durationMonths: 6 }, "decoy");
+    expect(dropUnfunded(rt, deposit.id, 4, 5)).toBe(true);
+    expect(takeDropToast(rt)).toBeUndefined();
+  });
+
+  it("names each kind in the queue copy", () => {
+    expect(queueCopy.queuedToast.send).toMatch(/Payment/);
+    expect(queueCopy.queuedToast.deposit).toMatch(/Deposit/);
+    expect(queueCopy.queuedToast.withdraw).toMatch(/Withdrawal/);
+    expect(queueCopy.queuedToast.message).toMatch(/Message/);
+    expect(queueCopy.queuedToast.fusion).toMatch(/Fusion/);
+    for (const kind of ["send", "deposit", "withdraw", "message", "fusion"] as const) {
+      expect(queueCopy.hungBody[kind]).toContain("The node hung");
+    }
+  });
+});
 
 describe("send intent store", () => {
   it("lists an auto decoy enqueue with decoyFails 1 and waitTicks 2", () => {
@@ -51,11 +181,14 @@ describe("send intent store", () => {
     expect(listed).toHaveLength(1);
     expect(listed[0]?.id).toBe(queued.id);
     expect(listed[0]).toMatchObject({
-      address: input.address,
-      amount: input.amount,
-      paymentId: input.paymentId,
-      message: input.message,
-      kind: "auto",
+      kind: "send",
+      payload: {
+        address: input.address,
+        amount: input.amount,
+        paymentId: input.paymentId,
+        message: input.message,
+      },
+      state: "auto",
       decoyFails: 1,
       submitFails: 0,
       waitTicks: 2,
@@ -74,10 +207,13 @@ describe("send intent store", () => {
     expect(listed).toHaveLength(1);
     expect(listed[0]?.id).toBe(queued.id);
     expect(listed[0]).toMatchObject({
-      address: input.address,
-      amount: input.amount,
-      paymentId: input.paymentId,
-      kind: "auto",
+      kind: "send",
+      payload: {
+        address: input.address,
+        amount: input.amount,
+        paymentId: input.paymentId,
+      },
+      state: "auto",
       decoyFails: 0,
       submitFails: 1,
       waitTicks: 2,
@@ -90,7 +226,7 @@ describe("send intent store", () => {
     const watchedHash = "hash-hung-aa";
     const queued = enqueueHung(rt, input, watchedHash);
 
-    expect(queued.kind).toBe("hung");
+    expect(queued.state).toBe("hung");
     expect(queued.watchedHash).toBe(watchedHash);
     expect(queued).not.toHaveProperty("hex");
     expect(queued).not.toHaveProperty("serialized");

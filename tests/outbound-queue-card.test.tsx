@@ -111,6 +111,40 @@ describe("OutboundQueueCard auto intents", () => {
     expect(screen.queryByText(DICTIONARIES.en["queue.title"])).not.toBeInTheDocument();
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("shows every intent kind with cancel, using per-kind labels and hung copy", () => {
+    useQueuedTransactions.mockReturnValue({
+      data: [
+        autoIntent(),
+        { ...autoIntent(), id: "intent-dep-1", intentKind: "deposit", label: "Deposit 100.000000 CCX · 12 mo" },
+        { ...autoIntent(), id: "intent-withdraw-1", intentKind: "withdraw", label: "Withdraw deposit abcdef123456…" },
+        { ...autoIntent(), id: "intent-msg-1", intentKind: "message", label: "Message to ccx7mess..." },
+        { ...autoIntent(), id: "intent-fusion-1", intentKind: "fusion", label: "Fusion transaction" },
+        {
+          ...hungIntent(),
+          id: "intent-hung-dep",
+          intentKind: "deposit",
+          label: "Deposit 5.000000 CCX · 6 mo",
+        },
+      ],
+    });
+    renderCard();
+
+    expect(screen.getByText("Deposit 100.000000 CCX · 12 mo")).toBeInTheDocument();
+    expect(screen.getByText("Withdraw deposit abcdef123456…")).toBeInTheDocument();
+    expect(screen.getByText("Message to ccx7mess...")).toBeInTheDocument();
+    expect(screen.getByText("Fusion transaction")).toBeInTheDocument();
+    // Per-kind hung body for the parked deposit, not the send copy.
+    expect(screen.getByText(queueCopy.hungBody.deposit)).toBeInTheDocument();
+    expect(screen.queryByText(queueCopy.hungBody.send)).not.toBeInTheDocument();
+
+    const cancels = screen.getAllByRole("button", { name: DICTIONARIES.en["queue.cancel"] });
+    expect(cancels).toHaveLength(6);
+    const withdrawCancel = cancels[2];
+    if (!withdrawCancel) throw new Error("expected a cancel button");
+    fireEvent.click(withdrawCancel);
+    expect(mutate).toHaveBeenCalledWith("intent-withdraw-1", expect.any(Object));
+  });
 });
 
 describe("OutboundQueueCard hung submit", () => {
@@ -131,7 +165,7 @@ describe("OutboundQueueCard hung submit", () => {
     useQueuedTransactions.mockReturnValue({ data: [hung] });
     renderCard();
 
-    expect(screen.getByText(queueCopy.hungBody)).toBeInTheDocument();
+    expect(screen.getByText(queueCopy.hungBody.send)).toBeInTheDocument();
     const submit = screen.getByRole("button", { name: queueCopy.submit });
     fireEvent.click(submit);
     expect(submitMutate).toHaveBeenCalledWith(hung.id);
@@ -150,13 +184,13 @@ describe("OutboundQueueCard hung submit", () => {
     useQueuedTransactions.mockReturnValue({ data: [autoIntent()] });
     renderCard();
 
-    expect(screen.queryByText(queueCopy.hungBody)).not.toBeInTheDocument();
+    expect(screen.queryByText(queueCopy.hungBody.send)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: queueCopy.submit })).not.toBeInTheDocument();
   });
 
   it("toasts the English exhaust copy after a cap drop", async () => {
     const rt = {} as SdkRuntime;
-    const queued = enqueueAuto(rt, { address: "ccx7cardToast", amount: 1 }, "submit");
+    const queued = enqueueAuto(rt, { kind: "send", address: "ccx7cardToast", amount: 1 }, "submit");
     let note: "kept" | "dropped" = "kept";
     while (note === "kept") {
       note = noteSubmitFail(rt, queued.id);

@@ -206,7 +206,7 @@ export default function SendPage() {
     }
     send.mutate(review, {
       onSuccess: (tx) => {
-        toast.success(tx.queued ? queueCopy.queuedToast : walletCopy.sendSuccess);
+        toast.success(tx.queued ? queueCopy.queuedToast.send : walletCopy.sendSuccess);
         form.reset();
         setSelectedContactId(null);
         setReview(null);

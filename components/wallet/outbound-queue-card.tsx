@@ -18,12 +18,16 @@ import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
 /**
- * Session send-intent surface: lists auto-retrying (or hung) payments from this unlock,
- * not parked signed hex. Renders nothing when the queue is empty. Cancel drops the intent
- * so it is not rebuilt.
+ * Session wallet-intent surface: lists auto-retrying (or hung) parked broadcasts from
+ * this unlock — sends, deposits, withdrawals, messages, fusion — not parked signed hex.
+ * Renders nothing when the queue is empty. Cancel drops the intent so it is not rebuilt.
  */
 function hungOpen(entry: QueuedTransaction): boolean {
   return entry.kind === "hung" && entry.state !== "sent" && !entry.sent;
+}
+
+function hungBodyFor(entry: QueuedTransaction): string {
+  return queueCopy.hungBody[entry.intentKind ?? "send"];
 }
 
 export function OutboundQueueCard() {
@@ -66,7 +70,7 @@ export function OutboundQueueCard() {
                   {entry.label || `${(entry.hash ?? entry.id).slice(0, 10)}…`}
                 </p>
                 {hungOpen(entry) ? (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{queueCopy.hungBody}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{hungBodyFor(entry)}</p>
                 ) : entry.state === "failed" && entry.lastError ? (
                   <p className="mt-0.5 truncate text-xs text-destructive">{entry.lastError}</p>
                 ) : entry.hash ? (
