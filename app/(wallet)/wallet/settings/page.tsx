@@ -67,6 +67,7 @@ import {
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
 import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
+import { queueCopy } from "@/lib/ui/queue-copy";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
@@ -499,6 +500,10 @@ export default function SettingsPage() {
     }
     optimizeWallet.mutate(undefined, {
       onSuccess: (result) => {
+        if (result.queued) {
+          toast.success(queueCopy.queuedToast.fusion);
+          return;
+        }
         if (result.optimized) {
           toast.success(
             isMock ? t("settings.toastMockOptimizeComplete") : t("settings.toastOptimizeComplete"),

@@ -1,13 +1,10 @@
 import {
-  FUSION_TX_MIN_INPUT_COUNT,
-  fusion,
   getBalance,
   isOptimizationNeeded,
-  OPTIMIZE_THRESHOLD,
   type RawWalletV1,
-  selectFusionInputs,
 } from "conceal-wallet-sdk";
 import { clearReceivedRecords } from "@/lib/services/real-sdk/messages-store";
+import { enqueueAuto, enqueueHung, type IntentDraft } from "@/lib/services/real-sdk/send-intent";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   buildDaemon,
@@ -16,13 +13,7 @@ import {
   requireRuntime,
   sync,
 } from "@/lib/services/real-sdk/runtime";
-import {
-  broadcast,
-  fetchDecoys,
-  MIXIN,
-  ownKeys,
-  selectableOutputs,
-} from "@/lib/services/real-sdk/spend";
+import { runFusionPipeline, selectableOutputs } from "@/lib/services/real-sdk/spend";
 import type { SettingsService } from "@/lib/services/settings.service";
 import { assertCanSpend } from "@/lib/services/view-only";
 import { resetPulseDismissed } from "@/lib/storage/pulse-dismiss-store";
@@ -185,35 +176,24 @@ export const realSdkSettingsService: SettingsService = {
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyOptimizeDisabled);
 
-    const blockchainHeight = await rt.daemon.getHeight();
-    const balance = getBalance(rt.state);
-    const outputs = await selectableOutputs(rt);
-
-    const status = isOptimizationNeeded({
-      unspentOutputs: outputs,
-      balance: balance.spendable,
-      blockchainHeight,
-    });
-    if (!status.isNeeded) {
-      return { ok: true, optimized: false };
+    // Classified fusion pipeline shared with the intent drain: it re-runs the
+    // optimization checks on fresh state, so "nothing to optimize" stays a normal
+    // result while transient failures park a session intent.
+    const result = await runFusionPipeline(rt, { gate: () => true });
+    if (!result.ok) {
+      const failure = result.failure;
+      if (failure.reason === "select") {
+        throw failure.error;
+      }
+      const draft: IntentDraft = { kind: "fusion" };
+      if (failure.reason === "submit" && failure.timedOut) {
+        enqueueHung(rt, draft, failure.hash);
+        return { ok: true, optimized: false, queued: "hung" };
+      }
+      enqueueAuto(rt, draft, failure.reason === "decoy" ? "decoy" : "submit");
+      return { ok: true, optimized: false, queued: "auto" };
     }
-
-    const selection = selectFusionInputs(outputs, OPTIMIZE_THRESHOLD, blockchainHeight);
-    if (selection === null || selection.selected.length < FUSION_TX_MIN_INPUT_COUNT) {
-      return { ok: true, optimized: false };
-    }
-
-    const decoys = await fetchDecoys(rt, selection.selected);
-    const built = fusion.buildFusionTransaction({
-      keys: rt.account.keys,
-      selfKeys: ownKeys(rt),
-      fusionInputs: selection.selected,
-      decoys,
-      mixin: MIXIN,
-    });
-
-    await broadcast(rt, built);
-    return { ok: true, optimized: true };
+    return { ok: true, optimized: result.sent.optimized };
   },
 
   async resetAndRescan(): Promise<{ ok: true }> {

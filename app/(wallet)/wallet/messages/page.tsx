@@ -61,6 +61,7 @@ import { missThreadPid } from "@/lib/messages/relationship";
 import { buildConversationThreadKey } from "@/lib/messages/thread-key";
 import type { AddressEntry, Message } from "@/lib/types";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
+import { queueCopy } from "@/lib/ui/queue-copy";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, truncateAddress } from "@/lib/utils";
@@ -253,7 +254,9 @@ export default function MessagesPage() {
         { recipientAddress: thread.address, body, paymentId },
         {
           onSuccess: (sent) => {
-            toast.success(walletCopy.messageSendSuccess);
+            toast.success(
+              sent.queued ? queueCopy.queuedToast.message : walletCopy.messageSendSuccess,
+            );
             setDraft("");
             setPendingOutgoing({ threadKey: sent.threadKey, txHash: sent.id });
           },
@@ -303,7 +306,9 @@ export default function MessagesPage() {
       },
       {
         onSuccess: (sent) => {
-          toast.success(walletCopy.messageSendSuccess);
+          toast.success(
+            sent.queued ? queueCopy.queuedToast.message : walletCopy.messageSendSuccess,
+          );
           setCompose(false);
           resetComposeForm();
           setPendingOutgoing({ threadKey: sent.threadKey, txHash: sent.id });

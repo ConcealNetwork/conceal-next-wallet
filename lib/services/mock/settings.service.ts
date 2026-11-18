@@ -1,12 +1,35 @@
 import { mockSettings } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
 import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
+import { mockIntentRuntime } from "@/lib/services/mock/transaction.service";
+import {
+  clearIntents,
+  enqueueAuto,
+  enqueueHung,
+  type IntentDraft,
+} from "@/lib/services/real-sdk/send-intent";
 import type { SettingsService } from "@/lib/services/settings.service";
 import { assertCanSpend } from "@/lib/services/view-only";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { validateNodeUrlFormat } from "@/lib/validation/node-url";
 
 let currentSettings = clone(mockSettings);
+
+type MockFusionKind = "ok" | "decoy" | "hung";
+
+let armedFusion: MockFusionKind | undefined;
+let fusionParkSeq = 0;
+
+/** Test-only: next optimizeWallet parks an intent instead of succeeding. */
+export function _armMockFusion(kind: MockFusionKind = "ok"): void {
+  armedFusion = kind === "ok" ? undefined : kind;
+}
+
+/** Test-only disarm (parked rows live on the shared mock runtime store). */
+export function _disarmMockFusion(): void {
+  armedFusion = undefined;
+  clearIntents(mockIntentRuntime);
+}
 
 export const mockSettingsService: SettingsService = {
   async getSettings() {
@@ -50,7 +73,20 @@ export const mockSettingsService: SettingsService = {
   async optimizeWallet() {
     await mockDelay();
     assertCanSpend(isMockViewOnly(), walletCopy.viewOnlyOptimizeDisabled);
-    return { ok: true, optimized: true };
+    const kind = armedFusion ?? "ok";
+    armedFusion = undefined;
+    if (kind !== "ok") {
+      const draft: IntentDraft = { kind: "fusion" };
+      if (kind === "hung") {
+        const hash = `mock-hung-fusion-${fusionParkSeq + 1}`;
+        fusionParkSeq += 1;
+        enqueueHung(mockIntentRuntime, draft, hash);
+        return { ok: true as const, optimized: false, queued: "hung" as const };
+      }
+      enqueueAuto(mockIntentRuntime, draft, kind);
+      return { ok: true as const, optimized: false, queued: "auto" as const };
+    }
+    return { ok: true as const, optimized: true };
   },
   async resetAndRescan() {
     await mockDelay();

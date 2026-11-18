@@ -1,7 +1,15 @@
 // Copyright (c) 2026 Conceal Network, Conceal Devs
 // SPDX-License-Identifier: BSD-3-Clause
 
-import { COIN_UNIT_PLACES, isValidAddress } from "conceal-wallet-sdk";
+import {
+  COIN_UNIT_PLACES,
+  DEPOSIT_MAX_TERM_MONTH,
+  DEPOSIT_MIN_AMOUNT_COIN,
+  DEPOSIT_MIN_TERM_BLOCK,
+  DEPOSIT_MIN_TERM_MONTH,
+  isValidAddress,
+  MAX_MESSAGE_BODY_BYTES,
+} from "conceal-wallet-sdk";
 import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
 import { isLiveRuntime, type SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
 import {
@@ -20,13 +28,50 @@ import {
 import {
   decodeRecipient,
   resolveOutboundPaymentId,
+  runDepositPipeline,
+  runFusionPipeline,
+  runMessagePipeline,
   runSendPipeline,
+  runWithdrawPipeline,
+  resolveWithdrawableDeposit,
+  type SpendPipelineResult,
 } from "@/lib/services/real-sdk/spend";
 import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
 
 const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
 
 export type RebuildResult = "ok" | "decoy" | "submit" | "unfunded" | "skip" | { hung: string };
+
+/**
+ * Rebuild + resubmit any queued intent through the SAME classified pipeline its
+ * interactive flow uses. Every rebuild re-validates its payload against fresh
+ * state: anything that can no longer be funded or executed (spent/locked deposit,
+ * gone fusion dust, expired TTL, invalid payload) maps to "unfunded" and is
+ * dropped silently — no toast.
+ */
+export async function rebuildIntent(rt: SdkRuntime, intent: WalletIntent): Promise<RebuildResult> {
+  switch (intent.kind) {
+    case "send":
+      return rebuildSend(rt, intent);
+    case "deposit":
+      return rebuildDeposit(rt, intent);
+    case "withdraw":
+      return rebuildWithdraw(rt, intent);
+    case "message":
+      return rebuildMessage(rt, intent);
+    case "fusion":
+      return rebuildFusion(rt, intent);
+  }
+}
+
+function pipelineToRebuildResult<Sent>(result: SpendPipelineResult<Sent>): RebuildResult {
+  if (result.ok) return "ok";
+  const failure = result.failure;
+  if (failure.reason === "unfunded" || failure.reason === "select") return "unfunded";
+  if (failure.reason === "decoy") return "decoy";
+  if (failure.reason === "skip") return "skip";
+  return "submit";
+}
 
 export type DrainArgs = {
   scannedHeight: number;
@@ -123,7 +168,7 @@ export async function submitHung(rt: SdkRuntime, id: string): Promise<boolean> {
   if (!isLiveRuntime(rt)) return false;
   const networkHeight = await rt.daemon.getHeight();
   if (isWalletHeightSyncing(rt.state.scannedHeight, networkHeight)) return false;
-  const result = await rebuildSend(rt, row);
+  const result = await rebuildIntent(rt, row);
   applyRebuild(rt, row, result);
   return result !== "skip";
 }
@@ -147,4 +192,83 @@ export async function drainIntents(rt: SdkRuntime, args: DrainArgs): Promise<voi
     const result = await args.rebuild(intent);
     applyRebuild(rt, intent, result);
   }
+}
+
+/** Re-validate + rebuild a queued deposit-create against fresh balance/inputs. */
+export async function rebuildDeposit(rt: SdkRuntime, intent: WalletIntent): Promise<RebuildResult> {
+  if (intent.kind !== "deposit") return "skip";
+  const { amount, durationMonths } = intent.payload;
+  const amountCoins = Math.floor(amount);
+  if (
+    !Number.isFinite(amountCoins) ||
+    amountCoins < DEPOSIT_MIN_AMOUNT_COIN ||
+    durationMonths < DEPOSIT_MIN_TERM_MONTH ||
+    durationMonths > DEPOSIT_MAX_TERM_MONTH
+  ) {
+    return "unfunded";
+  }
+  const result = await runDepositPipeline(
+    rt,
+    {
+      amountAtomic: amountCoins * ATOMIC_PER_CCX,
+      termBlocks: durationMonths * DEPOSIT_MIN_TERM_BLOCK,
+    },
+    { gate: () => isLiveRuntime(rt) },
+  );
+  return pipelineToRebuildResult(result);
+}
+
+/**
+ * Re-validate + rebuild a queued withdraw: the deposit must STILL be present,
+ * unspent, and unlocked. Anything else (spent elsewhere, locked again, already
+ * pending, gone after a rescan) is a silent unfunded drop — the chain state took
+ * the opportunity away, so there is nothing to retry.
+ */
+export async function rebuildWithdraw(rt: SdkRuntime, intent: WalletIntent): Promise<RebuildResult> {
+  if (intent.kind !== "withdraw") return "skip";
+  const { txHash, globalOutputIndex } = intent.payload;
+  if (!isLiveRuntime(rt)) return "skip";
+  const networkHeight = await rt.daemon.getHeight();
+  const check = resolveWithdrawableDeposit(rt, { txHash, globalOutputIndex }, networkHeight);
+  if (!check.ok) return "unfunded";
+  const result = await runWithdrawPipeline(
+    rt,
+    { deposit: check.deposit, txHash, globalOutputIndex },
+    { gate: () => isLiveRuntime(rt) },
+  );
+  return pipelineToRebuildResult(result);
+}
+
+/** Re-validate + rebuild a queued message; an expired TTL is dropped, never sent. */
+export async function rebuildMessage(rt: SdkRuntime, intent: WalletIntent): Promise<RebuildResult> {
+  if (intent.kind !== "message") return "skip";
+  const payload = intent.payload;
+  const body = payload.body.trim();
+  if (!body) return "unfunded";
+  if (new TextEncoder().encode(body).length > MAX_MESSAGE_BODY_BYTES) return "unfunded";
+  if (!isValidAddress(payload.recipientAddress)) return "unfunded";
+  const ttl = payload.ttlUnixSeconds ?? 0;
+  if (ttl > 0 && Date.now() / 1000 >= ttl) return "unfunded";
+  const result = await runMessagePipeline(
+    rt,
+    {
+      recipientAddress: payload.recipientAddress,
+      body,
+      ...(payload.paymentId !== undefined ? { paymentId: payload.paymentId } : {}),
+      ttlUnixSeconds: ttl,
+    },
+    { gate: () => isLiveRuntime(rt) },
+  );
+  return pipelineToRebuildResult(result);
+}
+
+/**
+ * Re-validate + rebuild a queued fusion: re-run the optimization checks on fresh
+ * state — once the fuseable dust is gone the intent is dropped silently.
+ */
+export async function rebuildFusion(rt: SdkRuntime, intent: WalletIntent): Promise<RebuildResult> {
+  if (intent.kind !== "fusion") return "skip";
+  const result = await runFusionPipeline(rt, { gate: () => isLiveRuntime(rt) });
+  if (result.ok) return result.sent.optimized ? "ok" : "unfunded";
+  return pipelineToRebuildResult(result);
 }

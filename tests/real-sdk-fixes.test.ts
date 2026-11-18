@@ -751,7 +751,7 @@ describe("inbound message classification by decryptability (review #6 / #97)", (
 });
 
 describe("sendMessage broadcast failure (review #5)", () => {
-  it("does not persist a sent record when broadcast throws", async () => {
+  it("parks an intent and never persists a sent record when broadcast fails", async () => {
     const alice = createAccount("english");
     const bob = createAccount("english");
 
@@ -794,12 +794,22 @@ describe("sendMessage broadcast failure (review #5)", () => {
     const { realSdkMessageService } = await import("@/lib/services/real-sdk/message.service");
     const { readSentRecords } = await import("@/lib/services/real-sdk/messages-store");
 
-    await expect(
-      realSdkMessageService.sendMessage({ recipientAddress: bob.address, body: "hi" }),
-    ).rejects.toThrow();
+    // A relay reject parks a session intent and resolves queued (no throw).
+    const sent = await realSdkMessageService.sendMessage({
+      recipientAddress: bob.address,
+      body: "hi",
+    });
+    expect(sent.queued).toBe("auto");
 
     // No phantom sent record left behind on the blob.
     expect(readSentRecords(runtimeMod.getRuntime()?.raw as RawWalletV1)).toHaveLength(0);
+
+    const { listIntents, clearIntents } = await import(
+      "@/lib/services/real-sdk/send-intent"
+    );
+    const rt = runtimeMod.getRuntime();
+    expect(listIntents(rt as never)).toHaveLength(1);
+    if (rt) clearIntents(rt);
   });
 });
 

@@ -33,7 +33,7 @@ import {
   reconcileIncomingPending,
   withIncomingPendingRecords,
 } from "@/lib/services/real-sdk/incoming-pending-store";
-import { drainIntents, rebuildSend } from "@/lib/services/real-sdk/intent-drain";
+import { drainIntents, rebuildIntent } from "@/lib/services/real-sdk/intent-drain";
 import {
   applyInboundScanToReceived,
   dropExpiredTtl,
@@ -743,7 +743,7 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
       spendableAtomic: getBalance(rt.state).spendable,
       historyHashes,
       isLive: () => isLiveRuntime(rt),
-      rebuild: (intent) => rebuildSend(rt, intent),
+      rebuild: (intent) => rebuildIntent(rt, intent),
     });
   } catch (error) {
     if (!queueDrainWarned.has(rt)) {

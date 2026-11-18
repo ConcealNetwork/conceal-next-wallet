@@ -6,6 +6,7 @@ import { RightRailProvider, useRightRailContent } from "@/components/layout/righ
 import { Sidebar } from "@/components/layout/sidebar";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
 import { useWalletDisconnect } from "@/components/wallet/open-wallet-form";
+import { OutboundQueueCard } from "@/components/wallet/outbound-queue-card";
 import { StorageWarningBanner } from "@/components/wallet/storage-warning-banner";
 import { UnlockWalletProvider } from "@/components/wallet/unlock-wallet-provider";
 import { useWalletLiveSync, useWalletSettings, useWalletSyncStatus } from "@/lib/hooks";
@@ -132,6 +133,11 @@ function WalletShellLayout({
             )}
           >
             <StorageWarningBanner />
+            {/* One session-intent surface for every wallet route: parked sends,
+                deposits, withdrawals, messages, and fusion stay visible (and
+                cancellable) wherever the user is, not only on the send page.
+                Renders nothing while the queue is empty. */}
+            <OutboundQueueCard />
             {children}
           </div>
         </div>

@@ -19,6 +19,7 @@ type PulseKind = smartPulse.PulseKind;
 
 import { usePulseDismissed } from "@/lib/hooks/use-pulse-dismissed";
 import type { AddressEntry } from "@/lib/types";
+import { queueCopy } from "@/lib/ui/queue-copy";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -130,7 +131,12 @@ export default function PulsePage() {
     sendMessage.mutate(
       { recipientAddress: contact.address, body, paymentId: paymentIdTo },
       {
-        onSuccess: () => toast.success(t("pulse.sentTo", { label: contact.label })),
+        onSuccess: (sent) =>
+          toast.success(
+            sent.queued
+              ? queueCopy.queuedToast.message
+              : t("pulse.sentTo", { label: contact.label }),
+          ),
         onError: (error: unknown) =>
           toast.error(error instanceof Error ? error.message : t("pulse.errSend")),
       },

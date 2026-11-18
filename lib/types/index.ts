@@ -149,6 +149,8 @@ export type Deposit = {
   progressPct: number;
   address: string;
   withdrawPending?: boolean;
+  /** Set on the parked-intent return only — never stored on listed deposits. */
+  queued?: "auto" | "hung";
 };
 
 export type Message = {
@@ -171,6 +173,8 @@ export type Message = {
   threadKey: string;
   /** Mempool TTL expiry (unix seconds); set when blockHeight === 0 and tx.ttl > 0. */
   ttlExpiresAt?: number;
+  /** Set on the parked-intent return only — never stored on SdkMessageRecord. */
+  queued?: "auto" | "hung";
 };
 
 export type MarketData = {
@@ -281,4 +285,6 @@ export type OptimizationStatus = {
 export type OptimizeWalletResult = {
   ok: true;
   optimized: boolean;
+  /** Set when the fusion tx was parked as a session intent instead of broadcasting. */
+  queued?: "auto" | "hung";
 };

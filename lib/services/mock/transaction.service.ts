@@ -25,6 +25,9 @@ import { ccxAmount, ccxToNumber } from "@/lib/utils";
 
 const mockRt = {} as SdkRuntime;
 
+/** Shared dummy runtime so every mock service parks intents in the one session store. */
+export const mockIntentRuntime = mockRt;
+
 type MockSendKind = "decoy" | "submit" | "hung" | "unfunded" | "ok";
 
 let armedKind: MockSendKind | undefined;

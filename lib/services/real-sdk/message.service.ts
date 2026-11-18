@@ -1,12 +1,8 @@
 import {
   isValidAddress,
   MAX_MESSAGE_BODY_BYTES,
-  MESSAGE_TX_AMOUNT_ATOMIC,
-  REMOTE_NODE_FEE_ATOMIC,
-  transactions as txns,
 } from "conceal-wallet-sdk";
 import type { MessageService, SendMessageInput } from "@/lib/services/message.service";
-import { sdkAddrBook } from "@/lib/services/real-sdk/address-book.service";
 import {
   createSentMessageRecord,
   dropExpiredTtl,
@@ -17,21 +13,13 @@ import {
   withReceivedRecords,
   withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
-import { addPendingRecord } from "@/lib/services/real-sdk/pending-store";
+import { enqueueAuto, enqueueHung, type IntentDraft } from "@/lib/services/real-sdk/send-intent";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime, type SdkRuntime, sync } from "@/lib/services/real-sdk/runtime";
 import {
-  broadcast,
-  decodeFeeRecipient,
   decodeRecipient,
-  FEE_ATOMIC,
-  fetchDecoys,
-  MIXIN,
-  ownKeys,
   resolveOutboundPaymentId,
-  safeNodeFeeAddress,
-  selectableOutputs,
-  selectSpendInputs,
+  runMessagePipeline,
 } from "@/lib/services/real-sdk/spend";
 import { assertCanSpend } from "@/lib/services/view-only";
 import type { Message } from "@/lib/types";
@@ -84,89 +72,61 @@ export const realSdkMessageService: MessageService = {
     const recipient = decodeRecipient(destinationAddress);
     const paymentId = resolveOutboundPaymentId(input.paymentId, recipient);
     const ttlUnixSeconds = input.ttlUnix && input.ttlUnix > 0 ? input.ttlUnix : 0;
-    const hasTtl = ttlUnixSeconds > 0;
 
-    // Node fee only applies to a non-TTL (mined) message; decode defensively.
-    let nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null = null;
-    if (!hasTtl) {
-      const feeAddress = await safeNodeFeeAddress(rt.daemon);
-      if (feeAddress && feeAddress !== rt.account.address) {
-        const decoded = decodeFeeRecipient(feeAddress);
-        nodeFee = {
-          spendPublicKey: decoded.spendPublicKey,
-          viewPublicKey: decoded.viewPublicKey,
-          amount: REMOTE_NODE_FEE_ATOMIC,
-        };
-      }
-    }
-
-    const outputs = await selectableOutputs(rt);
-    const messageAmount = MESSAGE_TX_AMOUNT_ATOMIC;
-    const feeForSelect = hasTtl ? 0 : FEE_ATOMIC;
-    const nodeFeeAtomic = nodeFee ? REMOTE_NODE_FEE_ATOMIC : 0;
-    const { selected } = selectSpendInputs(outputs, messageAmount + feeForSelect + nodeFeeAtomic);
-    const decoys = await fetchDecoys(rt, selected);
-    const built = txns.buildMessageTransaction({
-      keys: rt.account.keys,
-      recipient: {
-        spendPublicKey: recipient.spendPublicKey,
-        viewPublicKey: recipient.viewPublicKey,
-      },
-      body,
-      changeKeys: ownKeys(rt),
-      unspentOutputs: selected,
-      decoys,
-      fee: FEE_ATOMIC,
-      mixin: MIXIN,
-      ttlUnixSeconds,
-      nodeFee,
-      messageAmount,
-      ...(paymentId ? { paymentId: paymentId as txns.Hex } : {}),
-    });
-
-    const record: SdkMessageRecord = createSentMessageRecord({
-      hash: built.hash,
+    const draft: IntentDraft = {
+      kind: "message",
       recipientAddress: destinationAddress,
       body,
-      paymentId,
-      timestampIso: new Date().toISOString(),
-      ...(hasTtl ? { ttlExpiresAt: ttlUnixSeconds } : {}),
-    });
+      ...(input.paymentId !== undefined ? { paymentId: input.paymentId } : {}),
+      ...(ttlUnixSeconds > 0 ? { ttlUnixSeconds } : {}),
+    };
 
-    // Broadcast FIRST; only record the sent copy AFTER the relay succeeds so a
-    // broadcast failure can't leave a phantom sent message persisted in the blob.
-    // (Our own outbound is never misclassified as inbound: the body was encrypted to
-    // the RECIPIENT's spend key, so it never decrypts as ours during scan, and its
-    // hash joins `sentMessages` before it mines as a backstop.)
-    await broadcast(rt, built);
-    rt.raw = addPendingRecord(rt.raw, {
-      hash: built.hash,
-      type: "message",
-      amountAtomic:
-        destinationAddress === rt.account.address ? built.fee : built.sentAmount + built.fee,
-      timestampIso: new Date().toISOString(),
-      address: destinationAddress,
-      ...(paymentId ? { paymentId } : {}),
-      spentKeyImages: built.inputs.map((vin) => vin.keyImage),
-      ...(hasTtl ? { ttlExpiresAt: ttlUnixSeconds } : {}),
-    });
-    rt.raw = withSentRecords(rt.raw, [...readSentRecords(rt.raw), record]);
-    try {
-      await persist();
-    } catch {
-      // Non-fatal: the message is already relayed, so failing here would invite a
-      // retry → double-spend. Only the sender's UI copy is lost; sync reconciles it.
-    }
-
-    if (paymentId) {
-      try {
-        await sdkAddrBook.saveOutboundPid(destinationAddress, paymentId);
-      } catch {
-        // Non-fatal: message already sent; contact row can be repaired on next send.
+    // Build + submit through the SAME classified pipeline the intent drain uses:
+    // a transient failure parks a session intent and returns a queued Message
+    // (the UI toasts "saved to send after sync"), while validation failures above
+    // and a short balance stay visible errors. The sent copy + pending record are
+    // written only after the relay accepted.
+    const result = await runMessagePipeline(
+      rt,
+      {
+        recipientAddress: destinationAddress,
+        body,
+        ...(paymentId ? { paymentId } : {}),
+        ttlUnixSeconds,
+      },
+      { gate: () => true },
+    );
+    if (!result.ok) {
+      const failure = result.failure;
+      if (failure.reason === "unfunded") {
+        throw new Error("Not enough unlocked balance to send a message.");
       }
+      if (failure.reason === "select") {
+        throw failure.error;
+      }
+      if (failure.reason === "submit" && failure.timedOut) {
+        enqueueHung(rt, draft, failure.hash);
+        return queuedMessageView(
+          destinationAddress,
+          body,
+          paymentId,
+          ttlUnixSeconds,
+          "hung",
+          failure.hash,
+        );
+      }
+      const row = enqueueAuto(rt, draft, failure.reason === "decoy" ? "decoy" : "submit");
+      return queuedMessageView(
+        destinationAddress,
+        body,
+        paymentId,
+        ttlUnixSeconds,
+        "auto",
+        row.id,
+      );
     }
 
-    return toMessage(record);
+    return toMessage(result.sent.record);
   },
 
   async markRead(id: string): Promise<Message> {
@@ -192,3 +152,27 @@ export const realSdkMessageService: MessageService = {
     return toMessage({ ...match, unread: false });
   },
 };
+
+/**
+ * Transient queued view for a merely-parked message: display-only (the page
+ * toasts "saved to send after sync"). The record is built in memory — never
+ * persisted, and `queued` never lands on a stored SdkMessageRecord.
+ */
+function queuedMessageView(
+  recipientAddress: string,
+  body: string,
+  paymentId: string | undefined,
+  ttlUnixSeconds: number,
+  queued: "auto" | "hung",
+  id: string,
+): Message {
+  const record = createSentMessageRecord({
+    hash: id,
+    recipientAddress,
+    body,
+    paymentId,
+    timestampIso: new Date().toISOString(),
+    ...(ttlUnixSeconds > 0 ? { ttlExpiresAt: ttlUnixSeconds } : {}),
+  });
+  return { ...toMessage(record), id, queued };
+}
