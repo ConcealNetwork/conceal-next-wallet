@@ -13,6 +13,7 @@ import {
   DEFAULT_MIXIN,
   DUST_THRESHOLD,
   decodeAddress,
+  formatRelayReject,
   getBalance,
   getUnspentOutputs,
   isValidAddress,
@@ -20,6 +21,8 @@ import {
   type OwnedOutput,
   PRETTY_AMOUNTS,
   REMOTE_NODE_FEE_ATOMIC,
+  relayAccepted,
+  type SendRawTransactionResult,
   transactions as txns,
 } from "conceal-wallet-sdk";
 import { WALLET_DONATION_ADDRESS } from "@/lib/config/config";
@@ -248,24 +251,11 @@ export async function linkGone(daemon: { getHeight(): Promise<number> }): Promis
   }
 }
 
-type RawSubmit = { status?: string; reason?: string };
-
-/** True when the daemon accepted the relay (`OK` or local accept without gossip). */
-export function relayAccepted(status: string): boolean {
-  return status === "OK" || status === "Not relayed";
-}
-
-/** Human-readable reject text from a non-accept `/sendrawtransaction` status. */
-export function formatRelayReject(result: { status: string; reason?: string }): string {
-  const { status, reason } = result;
-  return reason ? `${status} (${reason})` : status;
-}
-
 /** Submit signed hex without parking it. */
 export async function submitRawHex(
-  daemon: { sendRawTransaction(hex: string): Promise<RawSubmit> },
+  daemon: { sendRawTransaction(hex: string): Promise<SendRawTransactionResult> },
   serialized: string,
-): Promise<RawSubmit> {
+): Promise<SendRawTransactionResult> {
   return daemon.sendRawTransaction(serialized);
 }
 
@@ -274,7 +264,7 @@ export async function submitRawHex(
  * Throws a friendly error when the daemon rejects the relay.
  */
 export async function broadcast(runtime: SdkRuntime, built: BuiltTransaction): Promise<void> {
-  let result: RawSubmit;
+  let result: SendRawTransactionResult;
   try {
     result = await runtime.daemon.sendRawTransaction(built.serialized);
   } catch (error) {
