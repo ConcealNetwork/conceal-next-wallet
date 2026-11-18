@@ -62,7 +62,7 @@ export type QueuedBroadcastState = "pending" | "broadcast" | "failed";
 export type QueuedIntentKind = "auto" | "hung";
 
 /** Why a queued broadcast failed (only set when state === "failed"). */
-type QueuedBroadcastFailReason = "rejected" | "expired" | "conflict";
+type QueuedBroadcastFailReason = "rejected" | "expired";
 
 /** Session send intent listed by TransactionService (hash only on hung watch). */
 export type QueuedTransaction = {
