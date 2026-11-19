@@ -16,15 +16,8 @@ import {
 } from "conceal-wallet-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
-import {
-  clearIntents,
-  listIntents,
-} from "@/lib/services/real-sdk/send-intent";
-import {
-  connectHangMs,
-  lateGraceMs,
-  probeHangMs,
-} from "@/lib/services/real-sdk/spend";
+import { clearIntents, listIntents } from "@/lib/services/real-sdk/send-intent";
+import { connectHangMs, lateGraceMs, probeHangMs } from "@/lib/services/real-sdk/spend";
 
 function fundOwnedOutput(
   owner: ReturnType<typeof createAccount>,
@@ -96,8 +89,9 @@ async function install(opts: InstallOpts) {
       getHeight: () => Promise.resolve(10),
       getNodeFeeAddress: () => Promise.resolve(""),
       sendRawTransaction: opts.sendRawTransaction,
-      getRandomOuts: opts.getRandomOuts ?? ((amounts: number[], count: number) =>
-        Promise.resolve(decoyReply(amounts, count))),
+      getRandomOuts:
+        opts.getRandomOuts ??
+        ((amounts: number[], count: number) => Promise.resolve(decoyReply(amounts, count))),
       getWalletSyncData: () => Promise.resolve([]),
       getTransactionsPool: () => Promise.resolve([]),
       // biome-ignore lint/suspicious/noExplicitAny: minimal daemon stub
@@ -113,9 +107,7 @@ async function install(opts: InstallOpts) {
   });
   const rt = runtimeMod.getRuntime();
   if (!rt) throw new Error("runtime missing");
-  const { realSdkTransactionService } = await import(
-    "@/lib/services/real-sdk/transaction.service"
-  );
+  const { realSdkTransactionService } = await import("@/lib/services/real-sdk/transaction.service");
   return { alice, bob, rt, send: realSdkTransactionService.sendTransaction };
 }
 
@@ -230,10 +222,11 @@ describe("sendTransaction hang-window parity (#402)", () => {
     // The body races a submit that never answers; the window kills the gate and
     // parks hung on the built hash. The late submit error then resolves the body
     // "abandoned" — it must not enqueue or change anything observable.
-    const sendRawTransaction = vi.fn(() =>
-      new Promise<{ status: string }>((_, reject) => {
-        setTimeout(() => reject(new Error("daemon went away")), connectHangMs * 3);
-      }),
+    const sendRawTransaction = vi.fn(
+      () =>
+        new Promise<{ status: string }>((_, reject) => {
+          setTimeout(() => reject(new Error("daemon went away")), connectHangMs * 3);
+        }),
     );
     const { bob, rt, send } = await install({ sendRawTransaction });
 
