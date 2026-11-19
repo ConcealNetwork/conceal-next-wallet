@@ -8,7 +8,6 @@ import type { SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
 import {
   cancelIntent,
   clearIntents,
-  dropUnfunded,
   dueAutoIntents,
   enqueueAuto,
   enqueueHung,
@@ -140,7 +139,7 @@ describe("wallet intent kinds", () => {
     expect(withdrawView.hash).toBe("hash-withdraw-bb");
   });
 
-  it("applies the same caps, waits, and unfunded drops to non-send kinds", () => {
+  it("applies the same caps, waits, and silent cancels to non-send kinds", () => {
     const rt = fakeRuntime();
     const fusion = enqueueAuto(rt, { kind: "fusion" }, "submit");
     expect(fusion.waitTicks).toBe(2);
@@ -151,7 +150,8 @@ describe("wallet intent kinds", () => {
     expect(takeDropToast(rt)).toBe(queueCopy.exhaustToast);
 
     const deposit = enqueueAuto(rt, { kind: "deposit", amount: 5, durationMonths: 6 }, "decoy");
-    expect(dropUnfunded(rt, deposit.id, 4, 5)).toBe(true);
+    cancelIntent(rt, deposit.id);
+    expect(listIntents(rt)).toEqual([]);
     expect(takeDropToast(rt)).toBeUndefined();
   });
 
@@ -262,24 +262,6 @@ describe("send intent store", () => {
     expect(dueIds(rt)).toContain(queued.id);
   });
 
-  it("dropUnfunded removes when spendable is below need and keeps when funded", () => {
-    const rt = fakeRuntime();
-    const shortNeed = 5_500_000;
-    const shortHave = 5_499_999;
-    const fundedNeed = 6_600_000;
-    const fundedHave = 6_600_000;
-    const short = enqueueAuto(rt, payInput("ccx7shortFund", shortNeed), "decoy");
-    const funded = enqueueAuto(rt, payInput("ccx7keepFund", fundedNeed), "submit");
-
-    expect(shortHave < shortNeed).toBe(true);
-    expect(dropUnfunded(rt, short.id, shortHave, shortNeed)).toBe(true);
-    expect(listIntents(rt).map((row) => row.id)).not.toContain(short.id);
-
-    expect(fundedHave >= fundedNeed).toBe(true);
-    expect(dropUnfunded(rt, funded.id, fundedHave, fundedNeed)).toBe(false);
-    expect(listIntents(rt).map((row) => row.id)).toContain(funded.id);
-  });
-
   it("drops an auto decoy intent when decoyFails reaches the connect cap", () => {
     const rt = fakeRuntime();
     const decoyCap = 5;
@@ -373,10 +355,8 @@ describe("send intent store", () => {
     expect(takeDropToast(rt)).toBe(queueCopy.exhaustToast);
     expect(takeDropToast(rt)).toBeUndefined();
 
-    const shortNeed = 5_500_000;
-    const shortHave = 5_499_999;
-    const short = enqueueAuto(rt, payInput("ccx7toastFund", shortNeed), "decoy");
-    expect(dropUnfunded(rt, short.id, shortHave, shortNeed)).toBe(true);
+    const short = enqueueAuto(rt, payInput("ccx7toastFund", 5_500_000), "decoy");
+    cancelIntent(rt, short.id);
     expect(takeDropToast(rt)).toBeUndefined();
 
     const decoyCap = 5;

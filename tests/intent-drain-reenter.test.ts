@@ -33,7 +33,6 @@ describe("drainIntents re-entry", () => {
     const heights = syncedHeights();
     const base: DrainArgs = {
       ...heights,
-      spendableAtomic: 50_000_000,
       historyHashes: new Set<string>(),
       isLive: () => true,
       rebuild: async () => "skip",

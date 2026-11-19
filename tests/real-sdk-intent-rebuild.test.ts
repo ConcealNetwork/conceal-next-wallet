@@ -225,7 +225,6 @@ async function drainOne(
   await drainIntents(rt, {
     scannedHeight: rt.state.scannedHeight,
     networkHeight: NETWORK_HEIGHT,
-    spendableAtomic: Number.MAX_SAFE_INTEGER / 4,
     historyHashes: new Set<string>(),
     isLive: () => true,
     rebuild: (row) => rebuild(rt, row),

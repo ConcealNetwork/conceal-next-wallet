@@ -326,7 +326,6 @@ describe("cancel during a drain", () => {
     const args = {
       scannedHeight: 1_000,
       networkHeight: 1_000,
-      spendableAtomic: 50_000_000,
       historyHashes: new Set<string>(),
       isLive: () => true,
       rebuild,

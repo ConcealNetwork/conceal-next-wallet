@@ -331,16 +331,6 @@ export function noteSubmitFail(rt: SdkRuntime, id: string): FailNote {
   return noteFail(rt, id, "submitFails", SUBMIT_CAP);
 }
 
-export function dropUnfunded(
-  rt: SdkRuntime,
-  id: string,
-  spendableAtomic: number,
-  needAtomic: number,
-): boolean {
-  if (spendableAtomic >= needAtomic) return false;
-  return removeRow(rt, id);
-}
-
 export function markHungSent(rt: SdkRuntime, id: string): void {
   const row = findRow(rt, id);
   if (row) row.sent = true;

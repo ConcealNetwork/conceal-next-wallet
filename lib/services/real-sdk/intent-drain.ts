@@ -80,7 +80,6 @@ function pipelineToRebuildResult<Sent>(result: SpendPipelineResult<Sent>): Rebui
 export type DrainArgs = {
   scannedHeight: number;
   networkHeight: number;
-  spendableAtomic: number;
   historyHashes: ReadonlySet<string>;
   isLive: () => boolean;
   rebuild: (intent: WalletIntent) => Promise<RebuildResult>;

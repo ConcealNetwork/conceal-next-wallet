@@ -20,7 +20,6 @@ type RebuildResult = "ok" | "decoy" | "submit" | "unfunded" | "skip" | { hung: s
 type DrainArgs = {
   scannedHeight: number;
   networkHeight: number;
-  spendableAtomic: number;
   historyHashes: ReadonlySet<string>;
   isLive: () => boolean;
   rebuild: (intent: WalletIntent) => Promise<RebuildResult>;
@@ -67,7 +66,6 @@ function drainArgs(
   return {
     scannedHeight: heights.scannedHeight,
     networkHeight: heights.networkHeight,
-    spendableAtomic: 50_000_000,
     historyHashes: new Set<string>(),
     isLive: () => true,
     rebuild,
@@ -109,7 +107,7 @@ describe("drainIntents", () => {
     expect(isWalletHeightSyncing(catching.scannedHeight, catching.networkHeight)).toBe(true);
 
     const { hashes, rebuild } = hashTracker();
-    await drainIntents(rt, drainArgs(catching, rebuild, { spendableAtomic: amount + 1 }));
+    await drainIntents(rt, drainArgs(catching, rebuild));
 
     expect(hashes).toHaveLength(0);
     expect(listIntents(rt)[0]?.waitTicks).toBe(waitAfterEnqueue);
@@ -129,7 +127,7 @@ describe("drainIntents", () => {
     expect(isWalletHeightSyncing(synced.scannedHeight, synced.networkHeight)).toBe(false);
 
     const { hashes, rebuild } = hashTracker();
-    const args = drainArgs(synced, rebuild, { spendableAtomic: amount + 1 });
+    const args = drainArgs(synced, rebuild);
     const sampleWait = autoWait();
 
     await tickDown(rt, args, ticksLeft, hashes);
@@ -159,7 +157,7 @@ describe("drainIntents", () => {
     expect(isWalletHeightSyncing(synced.scannedHeight, synced.networkHeight)).toBe(false);
 
     const { hashes, rebuild } = hashTracker();
-    const args = drainArgs(synced, rebuild, { spendableAtomic: amount + 1 });
+    const args = drainArgs(synced, rebuild);
     for (let i = 0; i < sampleWait * 3; i++) {
       await drainIntents(rt, args);
     }
@@ -228,7 +226,6 @@ describe("drainIntents", () => {
     await drainIntents(
       rt,
       drainArgs(synced, rebuild, {
-        spendableAtomic: amount + 1,
         historyHashes: new Set([watchedHash]),
       }),
     );
@@ -252,7 +249,6 @@ describe("drainIntents", () => {
     const { hashes, rebuild } = hashTracker();
     let live = true;
     const args = drainArgs(synced, rebuild, {
-      spendableAtomic: amount + 1,
       isLive: () => live,
     });
 
@@ -283,7 +279,7 @@ describe("drainIntents", () => {
       rebuiltIds.push(intent.id);
       return "decoy";
     };
-    const args = drainArgs(synced, rebuild, { spendableAtomic: amountA + amountB + 1 });
+    const args = drainArgs(synced, rebuild);
 
     await tickDown(rt, args, ticksA, rebuiltIds);
     expect(listIntents(rt).find((row) => row.id === queuedA.id)?.waitTicks).toBe(0);
@@ -300,10 +296,7 @@ describe("drainIntents", () => {
     const catching = syncPair(true);
     expect(isWalletHeightSyncing(catching.scannedHeight, catching.networkHeight)).toBe(true);
     const waitACatch = listIntents(rt).find((row) => row.id === queuedA.id)?.waitTicks;
-    await drainIntents(
-      rt,
-      drainArgs(catching, rebuild, { spendableAtomic: amountA + amountB + 1 }),
-    );
+    await drainIntents(rt, drainArgs(catching, rebuild));
     expect(rebuiltIds).toHaveLength(0);
     expect(listIntents(rt).find((row) => row.id === queuedA.id)?.waitTicks).toBe(waitACatch);
     expect(listIntents(rt).find((row) => row.id === queuedB.id)?.waitTicks).toBe(waitB);
@@ -326,7 +319,7 @@ describe("drainIntents", () => {
     expect(isWalletHeightSyncing(synced.scannedHeight, synced.networkHeight)).toBe(false);
 
     const { hashes, rebuild } = hashTracker();
-    const args = drainArgs(synced, rebuild, { spendableAtomic: amount + 1 });
+    const args = drainArgs(synced, rebuild);
     await tickDown(rt, args, ticksLeft, hashes);
     expect(listIntents(rt)[0]?.waitTicks).toBe(0);
 
@@ -339,12 +332,32 @@ describe("drainIntents", () => {
 
     await drainIntents(
       rt,
-      drainArgs(synced, async () => "skip", { spendableAtomic: amount + 1 }),
+      drainArgs(synced, async () => "skip"),
     );
 
     const after = listIntents(rt).find((row) => row.id === queued.id);
     expect(after?.id).toBe(queued.id);
     expect(after?.submitFails).toBe(failsBefore);
     expect(after?.waitTicks).toBe(waitBefore);
+  });
+
+  it("drops an intent whose rebuild is unfunded", async () => {
+    const rt = fakeRuntime();
+    const queued = enqueueAuto(rt, payInput("ccx7unfundedDrop", 7_700_000), "submit");
+    const ticksLeft = listIntents(rt).find((row) => row.id === queued.id)?.waitTicks;
+    if (ticksLeft === undefined) {
+      throw new Error("auto enqueue missing waitTicks");
+    }
+
+    const synced = syncPair(false);
+    const { hashes, rebuild } = hashTracker();
+    await tickDown(rt, drainArgs(synced, rebuild), ticksLeft, hashes);
+
+    await drainIntents(
+      rt,
+      drainArgs(synced, async () => "unfunded"),
+    );
+
+    expect(listIntents(rt).map((row) => row.id)).not.toContain(queued.id);
   });
 });

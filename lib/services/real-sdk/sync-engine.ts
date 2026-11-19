@@ -19,7 +19,6 @@ import {
   applyScannedTransaction,
   type DaemonClient,
   findWithdrawnDepRefs,
-  getBalance,
   isWithdrawShape,
   transactions as txns,
   type WalletState,
@@ -739,7 +738,6 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
     await drainIntents(rt, {
       scannedHeight: rt.state.scannedHeight,
       networkHeight: ctx.height,
-      spendableAtomic: getBalance(rt.state).spendable,
       historyHashes: knownTxHashes(rt),
       isLive: () => isLiveRuntime(rt),
       rebuild: (intent) => rebuildIntent(rt, intent),
