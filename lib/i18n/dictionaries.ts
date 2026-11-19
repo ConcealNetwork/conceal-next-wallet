@@ -181,8 +181,9 @@ const en: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Unlock with Touch ID / Windows Hello, a security key, or your phone — on this device",
   "settings.notifications": "Enable notifications",
-  "queue.title": "Retrying payments",
-  "queue.description": "Payments in this session retry automatically until they go through.",
+  "queue.title": "Saved intents",
+  "queue.description":
+    "This session rebuilds each intent a few times, then drops it if the funds are gone or the node still fails.",
   "queue.statePending": "Queued",
   "queue.stateRetrying": "Retrying",
   "queue.stateBroadcast": "Sent",
@@ -190,7 +191,7 @@ const en: Dictionary = {
   "queue.cancel": "Cancel",
   "queue.dismiss": "Dismiss",
   "queue.toastRemoved": "Removed from the queue.",
-  "queue.toastRemoveError": "Couldn't remove this transaction.",
+  "queue.toastRemoveError": "Couldn't remove this intent.",
   "settings.watchWallets": "Watch other wallets",
   "settings.watchWalletsDescription":
     "Background-sync your other unlocked wallets and notify you when funds or messages arrive in them.",
@@ -1130,9 +1131,9 @@ const es: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Desbloquea con Touch ID / Windows Hello, una llave de seguridad o tu teléfono, en este dispositivo",
   "settings.notifications": "Activar notificaciones",
-  "queue.title": "Pagos en reintento",
+  "queue.title": "Intenciones guardadas",
   "queue.description":
-    "Los pagos de esta sesión se reintentan automáticamente hasta que se completen.",
+    "Esta sesión reconstruye cada intención unas pocas veces y la descarta si ya no hay fondos o el nodo sigue fallando.",
   "queue.statePending": "En cola",
   "queue.stateRetrying": "Reintentando",
   "queue.stateBroadcast": "Enviada",
@@ -1140,7 +1141,7 @@ const es: Dictionary = {
   "queue.cancel": "Cancelar",
   "queue.dismiss": "Descartar",
   "queue.toastRemoved": "Eliminada de la cola.",
-  "queue.toastRemoveError": "No se pudo eliminar esta transacción.",
+  "queue.toastRemoveError": "No se pudo quitar esta intención.",
   "settings.watchWallets": "Vigilar otras carteras",
   "settings.watchWalletsDescription":
     "Sincroniza en segundo plano tus otras carteras desbloqueadas y te avisa cuando reciben fondos o mensajes.",
@@ -2091,9 +2092,9 @@ const fr: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Déverrouillez avec Touch ID / Windows Hello, une clé de sécurité ou votre téléphone, sur cet appareil",
   "settings.notifications": "Activer les notifications",
-  "queue.title": "Paiements en nouvel essai",
+  "queue.title": "Intentions enregistrées",
   "queue.description":
-    "Les paiements de cette session sont réessayés automatiquement jusqu'à ce qu'ils aboutissent.",
+    "Cette session reconstruit chaque intention quelques fois, puis l'abandonne si les fonds ont disparu ou si le nœud échoue encore.",
   "queue.statePending": "En file",
   "queue.stateRetrying": "Nouvel essai",
   "queue.stateBroadcast": "Envoyée",
@@ -2101,7 +2102,7 @@ const fr: Dictionary = {
   "queue.cancel": "Annuler",
   "queue.dismiss": "Ignorer",
   "queue.toastRemoved": "Retirée de la file.",
-  "queue.toastRemoveError": "Impossible de retirer cette transaction.",
+  "queue.toastRemoveError": "Impossible de retirer cette intention.",
   "settings.watchWallets": "Surveiller les autres portefeuilles",
   "settings.watchWalletsDescription":
     "Synchronise en arrière-plan vos autres portefeuilles déverrouillés et vous prévient lorsqu'ils reçoivent des fonds ou des messages.",
@@ -3060,9 +3061,9 @@ const de: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Entsperre mit Touch ID / Windows Hello, einem Sicherheitsschlüssel oder deinem Telefon – auf diesem Gerät",
   "settings.notifications": "Benachrichtigungen aktivieren",
-  "queue.title": "Zahlungen werden wiederholt",
+  "queue.title": "Gespeicherte Vorhaben",
   "queue.description":
-    "Zahlungen dieser Sitzung werden automatisch wiederholt, bis sie durchgehen.",
+    "Diese Sitzung baut jedes Vorhaben einige Male neu und verwirft es, wenn das Guthaben weg ist oder der Knoten weiter fehlschlägt.",
   "queue.statePending": "In Warteschlange",
   "queue.stateRetrying": "Wiederholung",
   "queue.stateBroadcast": "Gesendet",
@@ -3070,7 +3071,7 @@ const de: Dictionary = {
   "queue.cancel": "Abbrechen",
   "queue.dismiss": "Verwerfen",
   "queue.toastRemoved": "Aus der Warteschlange entfernt.",
-  "queue.toastRemoveError": "Diese Transaktion konnte nicht entfernt werden.",
+  "queue.toastRemoveError": "Dieses Vorhaben konnte nicht entfernt werden.",
   "settings.watchWallets": "Andere Wallets überwachen",
   "settings.watchWalletsDescription":
     "Synchronisiert deine anderen entsperrten Wallets im Hintergrund und benachrichtigt dich, wenn dort Gelder oder Nachrichten eingehen.",
@@ -4025,9 +4026,9 @@ const it: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Sblocca con Touch ID / Windows Hello, una chiave di sicurezza o il tuo telefono, su questo dispositivo",
   "settings.notifications": "Abilita le notifiche",
-  "queue.title": "Pagamenti in ritentativo",
+  "queue.title": "Intenti salvati",
   "queue.description":
-    "I pagamenti di questa sessione vengono ritentati automaticamente fino al buon fine.",
+    "Questa sessione ricostruisce ogni intento alcune volte, poi lo scarta se i fondi non ci sono più o il nodo fallisce ancora.",
   "queue.statePending": "In coda",
   "queue.stateRetrying": "Ritentativo",
   "queue.stateBroadcast": "Inviata",
@@ -4035,7 +4036,7 @@ const it: Dictionary = {
   "queue.cancel": "Annulla",
   "queue.dismiss": "Ignora",
   "queue.toastRemoved": "Rimossa dalla coda.",
-  "queue.toastRemoveError": "Impossibile rimuovere questa transazione.",
+  "queue.toastRemoveError": "Impossibile rimuovere questo intento.",
   "settings.watchWallets": "Monitora altri portafogli",
   "settings.watchWalletsDescription":
     "Sincronizza in background gli altri portafogli sbloccati e ti avvisa quando ricevono fondi o messaggi.",
@@ -4990,9 +4991,9 @@ const pt: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Desbloqueie com Touch ID / Windows Hello, uma chave de segurança ou seu telefone, neste dispositivo",
   "settings.notifications": "Ativar notificações",
-  "queue.title": "Pagamentos a repetir",
+  "queue.title": "Intenções guardadas",
   "queue.description":
-    "Os pagamentos desta sessão são repetidos automaticamente até serem concluídos.",
+    "Esta sessão reconstrói cada intenção algumas vezes e descarta-a se os fundos acabaram ou o nó continua a falhar.",
   "queue.statePending": "Em fila",
   "queue.stateRetrying": "A repetir",
   "queue.stateBroadcast": "Enviada",
@@ -5000,7 +5001,7 @@ const pt: Dictionary = {
   "queue.cancel": "Cancelar",
   "queue.dismiss": "Dispensar",
   "queue.toastRemoved": "Removida da fila.",
-  "queue.toastRemoveError": "Não foi possível remover esta transação.",
+  "queue.toastRemoveError": "Não foi possível remover esta intenção.",
   "settings.watchWallets": "Monitorar outras carteiras",
   "settings.watchWalletsDescription":
     "Sincroniza em segundo plano as suas outras carteiras desbloqueadas e avisa quando recebem fundos ou mensagens.",
@@ -5948,8 +5949,9 @@ const ru: Dictionary = {
   "settings.passkeyUnlockDescription":
     "Разблокируйте с помощью Touch ID / Windows Hello, ключа безопасности или телефона — на этом устройстве",
   "settings.notifications": "Включить уведомления",
-  "queue.title": "Повтор платежей",
-  "queue.description": "Платежи этой сессии повторяются автоматически, пока не пройдут.",
+  "queue.title": "Сохранённые намерения",
+  "queue.description":
+    "Сессия несколько раз заново собирает каждое намерение и отбрасывает его, если средств нет или узел по-прежнему не отвечает.",
   "queue.statePending": "В очереди",
   "queue.stateRetrying": "Повтор",
   "queue.stateBroadcast": "Отправлена",
@@ -5957,7 +5959,7 @@ const ru: Dictionary = {
   "queue.cancel": "Отменить",
   "queue.dismiss": "Убрать",
   "queue.toastRemoved": "Удалено из очереди.",
-  "queue.toastRemoveError": "Не удалось удалить эту транзакцию.",
+  "queue.toastRemoveError": "Не удалось удалить это намерение.",
   "settings.watchWallets": "Следить за другими кошельками",
   "settings.watchWalletsDescription":
     "Фоновая синхронизация других разблокированных кошельков и уведомления о поступлении средств или сообщений.",
@@ -6903,8 +6905,8 @@ const zh: Dictionary = {
   "settings.passkeyUnlockDescription":
     "在本设备上使用 Touch ID / Windows Hello、安全密钥或手机解锁",
   "settings.notifications": "启用通知",
-  "queue.title": "正在重试付款",
-  "queue.description": "本会话中的付款会自动重试，直到成功。",
+  "queue.title": "已保存的意图",
+  "queue.description": "本次会话会把每条意图重建几次，若资金已用完或节点仍然失败就丢弃。",
   "queue.statePending": "排队中",
   "queue.stateRetrying": "重试中",
   "queue.stateBroadcast": "已发送",
@@ -6912,7 +6914,7 @@ const zh: Dictionary = {
   "queue.cancel": "取消",
   "queue.dismiss": "忽略",
   "queue.toastRemoved": "已从队列中移除。",
-  "queue.toastRemoveError": "无法移除此交易。",
+  "queue.toastRemoveError": "无法移除此意图。",
   "settings.watchWallets": "监视其他钱包",
   "settings.watchWalletsDescription":
     "在后台同步您其他已解锁的钱包，并在它们收到资金或消息时通知您。",
@@ -7827,8 +7829,9 @@ const ja: Dictionary = {
   "settings.passkeyUnlockDescription":
     "このデバイスで Touch ID / Windows Hello、セキュリティキー、またはスマートフォンを使ってロックを解除します",
   "settings.notifications": "通知を有効にする",
-  "queue.title": "支払いを再試行中",
-  "queue.description": "このセッションの支払いは完了するまで自動的に再試行されます。",
+  "queue.title": "保存された意図",
+  "queue.description":
+    "このセッションは各意図を数回作り直し、資金がない、またはノードが失敗し続ける場合は破棄します。",
   "queue.statePending": "待機中",
   "queue.stateRetrying": "再試行中",
   "queue.stateBroadcast": "送信済み",
@@ -7836,7 +7839,7 @@ const ja: Dictionary = {
   "queue.cancel": "キャンセル",
   "queue.dismiss": "消去",
   "queue.toastRemoved": "キューから削除しました。",
-  "queue.toastRemoveError": "この取引を削除できませんでした。",
+  "queue.toastRemoveError": "この意図を削除できませんでした。",
   "settings.watchWallets": "他のウォレットを監視",
   "settings.watchWalletsDescription":
     "ロック解除済みの他のウォレットをバックグラウンドで同期し、入金やメッセージが届いたら通知します。",
@@ -8773,8 +8776,9 @@ const ko: Dictionary = {
   "settings.passkeyUnlockDescription":
     "이 기기에서 Touch ID / Windows Hello, 보안 키 또는 휴대폰으로 잠금을 해제하세요",
   "settings.notifications": "알림 사용",
-  "queue.title": "결제 재시도 중",
-  "queue.description": "이 세션의 결제는 완료될 때까지 자동으로 재시도됩니다.",
+  "queue.title": "저장된 의도",
+  "queue.description":
+    "이 세션은 각 의도를 몇 번 다시 만든 뒤, 자금이 없거나 노드가 계속 실패하면 버립니다.",
   "queue.statePending": "대기 중",
   "queue.stateRetrying": "재시도 중",
   "queue.stateBroadcast": "전송됨",
@@ -8782,7 +8786,7 @@ const ko: Dictionary = {
   "queue.cancel": "취소",
   "queue.dismiss": "닫기",
   "queue.toastRemoved": "대기열에서 제거되었습니다.",
-  "queue.toastRemoveError": "이 거래를 제거할 수 없습니다.",
+  "queue.toastRemoveError": "이 의도를 제거할 수 없습니다.",
   "settings.watchWallets": "다른 지갑 모니터링",
   "settings.watchWalletsDescription":
     "잠금 해제된 다른 지갑을 백그라운드에서 동기화하고 자금이나 메시지가 도착하면 알립니다.",

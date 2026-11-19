@@ -61,8 +61,11 @@ export type QueuedBroadcastState = "pending" | "broadcast" | "failed";
 
 export type QueuedIntentKind = "auto" | "hung";
 
+/** The wallet operation a session intent rebuilds — the tagged-union discriminator. */
+export type WalletIntentKind = "send" | "deposit" | "withdraw" | "message" | "fusion";
+
 /** Why a queued broadcast failed (only set when state === "failed"). */
-type QueuedBroadcastFailReason = "rejected" | "expired" | "conflict";
+type QueuedBroadcastFailReason = "rejected" | "expired";
 
 /** Session send intent listed by TransactionService (hash only on hung watch). */
 export type QueuedTransaction = {
@@ -71,6 +74,8 @@ export type QueuedTransaction = {
   /** Hung watchedHash only. */
   hash?: string;
   kind?: QueuedIntentKind;
+  /** The wallet operation this intent rebuilds (send/deposit/withdraw/message/fusion). */
+  intentKind?: WalletIntentKind;
   sent?: boolean;
   state: QueuedBroadcastState | "hung" | "sent";
   /** Transient-error attempts so far. */
@@ -144,6 +149,8 @@ export type Deposit = {
   progressPct: number;
   address: string;
   withdrawPending?: boolean;
+  /** Set on the parked-intent return only — never stored on listed deposits. */
+  queued?: "auto" | "hung";
 };
 
 export type Message = {
@@ -166,6 +173,8 @@ export type Message = {
   threadKey: string;
   /** Mempool TTL expiry (unix seconds); set when blockHeight === 0 and tx.ttl > 0. */
   ttlExpiresAt?: number;
+  /** Set on the parked-intent return only — never stored on SdkMessageRecord. */
+  queued?: "auto" | "hung";
 };
 
 export type MarketData = {
@@ -271,9 +280,13 @@ export type WalletSettings = {
 export type OptimizationStatus = {
   isNeeded: boolean;
   unspentOutputs: number;
+  /** A fusion intent is already saved; it sends on its own once the node is reachable. */
+  intentSaved?: boolean;
 };
 
 export type OptimizeWalletResult = {
   ok: true;
   optimized: boolean;
+  /** Set when the fusion tx was parked as a session intent instead of broadcasting. */
+  queued?: "auto" | "hung";
 };

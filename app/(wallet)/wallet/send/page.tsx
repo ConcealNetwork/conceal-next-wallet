@@ -27,7 +27,6 @@ import {
 } from "@/components/wallet/address-book-contact-picker";
 import { CcxAmount } from "@/components/wallet/ccx";
 import { PageHeader, SectionCard, ViewOnlyBadge } from "@/components/wallet/common";
-import { OutboundQueueCard } from "@/components/wallet/outbound-queue-card";
 import { SendReviewWarnings } from "@/components/wallet/send-review-warnings";
 import { WalletSyncingBanner } from "@/components/wallet/syncing-banner";
 import { ViewOnlyBanner } from "@/components/wallet/view-only-banner";
@@ -48,7 +47,7 @@ import { useI18n } from "@/lib/i18n/i18n-provider";
 import type { AddressEntry } from "@/lib/types";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
 import { parsePaymentSendDraft } from "@/lib/ui/payment-link";
-import { queueCopy } from "@/lib/ui/queue-copy";
+import { queueToast } from "@/lib/ui/queue-copy";
 import { deriveSendWarnings } from "@/lib/ui/send-review-warnings";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -206,7 +205,7 @@ export default function SendPage() {
     }
     send.mutate(review, {
       onSuccess: (tx) => {
-        toast.success(tx.queued ? queueCopy.queuedToast : walletCopy.sendSuccess);
+        toast.success(queueToast("send", tx.queued) ?? walletCopy.sendSuccess);
         form.reset();
         setSelectedContactId(null);
         setReview(null);
@@ -227,7 +226,6 @@ export default function SendPage() {
       <WalletSyncingBanner />
       <ViewOnlyBanner />
       <div className="mx-auto max-w-2xl space-y-5">
-        <OutboundQueueCard />
         <div className="animate-rise-in motion-reduce:animate-none motion-reduce:translate-y-0 motion-reduce:opacity-100">
           <SectionCard title={t("send.formTitle")} description={t("send.formDescription")}>
             <form

@@ -19,7 +19,7 @@ const PAY = { address: "ccx7mockaddress", amount: 1 };
 
 function probeCap(cause: "decoy" | "submit"): number {
   const rt = {} as SdkRuntime;
-  const probe = enqueueAuto(rt, { address: "ccx7probeCap", amount: 1 }, cause);
+  const probe = enqueueAuto(rt, { kind: "send", address: "ccx7probeCap", amount: 1 }, cause);
   const note = cause === "decoy" ? noteDecoyFail : noteSubmitFail;
   let cap = cause === "decoy" ? probe.decoyFails : probe.submitFails;
   while (note(rt, probe.id) === "kept") {
@@ -129,7 +129,7 @@ describe("mock send intents", () => {
     const queued = await listQueue();
     expect(queued).toHaveLength(1);
     expect(queued[0]?.kind).toBe("hung");
-    expect(queued[0]?.state).toBe("hung");
+    expect(queued[0]?.intentKind).toBe("send");
     expect(queued[0]?.hash).toEqual(expect.any(String));
     expect(queued[0]?.hash?.length).toBeGreaterThan(0);
     expect(queued[0]).not.toHaveProperty("hex");
@@ -137,7 +137,8 @@ describe("mock send intents", () => {
     expect(queued[0]).not.toHaveProperty("raw");
 
     const raw = _listMockIntents();
-    expect(raw[0]?.kind).toBe("hung");
+    expect(raw[0]?.state).toBe("hung");
+    expect(raw[0]?.kind).toBe("send");
     expect(raw[0]?.watchedHash).toBe(queued[0]?.hash);
     expect(raw[0]).not.toHaveProperty("hex");
     expect(raw[0]).not.toHaveProperty("serialized");
@@ -214,7 +215,7 @@ describe("mock send intents", () => {
     expect(after[0]?.id).toBe(firstId);
     expect(after[0]?.sent).toBe(true);
     expect(after[0]?.watchedHash).toBe(firstHash);
-    expect(after.filter((row) => row.kind === "hung")).toHaveLength(1);
+    expect(after.filter((row) => row.state === "hung")).toHaveLength(1);
   });
 
   it("rebuilds a hung intent with a new watched hash when history still lacks it", async () => {
@@ -230,10 +231,12 @@ describe("mock send intents", () => {
 
     const after = _listMockIntents();
     const rebuilt = after.find((row) => row.id === firstId);
-    expect(rebuilt?.kind).toBe("hung");
+    expect(rebuilt?.state).toBe("hung");
+    expect(rebuilt?.kind).toBe("send");
     expect(rebuilt?.watchedHash).toEqual(expect.any(String));
     expect(rebuilt?.watchedHash).not.toBe(firstHash);
-    expect(after.filter((row) => row.kind === "hung")).toHaveLength(1);
+    expect(rebuilt?.watchedHashes).toContain(firstHash);
+    expect(after.filter((row) => row.state === "hung")).toHaveLength(1);
   });
 
   it("drops the hung row when Submit rebuilds successfully", async () => {

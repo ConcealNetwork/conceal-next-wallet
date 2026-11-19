@@ -1,12 +1,4 @@
-import {
-  FUSION_TX_MIN_INPUT_COUNT,
-  fusion,
-  getBalance,
-  isOptimizationNeeded,
-  OPTIMIZE_THRESHOLD,
-  type RawWalletV1,
-  selectFusionInputs,
-} from "conceal-wallet-sdk";
+import { getBalance, isOptimizationNeeded, type RawWalletV1 } from "conceal-wallet-sdk";
 import { clearReceivedRecords } from "@/lib/services/real-sdk/messages-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
@@ -17,10 +9,15 @@ import {
   sync,
 } from "@/lib/services/real-sdk/runtime";
 import {
-  broadcast,
-  fetchDecoys,
-  MIXIN,
-  ownKeys,
+  enqueueAuto,
+  enqueueHung,
+  fusionSaved,
+  type IntentDraft,
+} from "@/lib/services/real-sdk/send-intent";
+import {
+  linkDown,
+  raceLinkHang,
+  runFusionPipeline,
   selectableOutputs,
 } from "@/lib/services/real-sdk/spend";
 import type { SettingsService } from "@/lib/services/settings.service";
@@ -170,6 +167,7 @@ export const realSdkSettingsService: SettingsService = {
   async getOptimizationStatus(): Promise<OptimizationStatus> {
     await ensureSdkReady();
     const rt = requireRuntime();
+    if (fusionSaved(rt)) return { isNeeded: false, unspentOutputs: 0, intentSaved: true };
     const blockchainHeight = await rt.daemon.getHeight();
     const balance = getBalance(rt.state);
     const status = isOptimizationNeeded({
@@ -184,36 +182,58 @@ export const realSdkSettingsService: SettingsService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyOptimizeDisabled);
+    if (fusionSaved(rt)) throw new Error(walletCopy.fusionAlreadySaved);
 
-    const blockchainHeight = await rt.daemon.getHeight();
-    const balance = getBalance(rt.state);
-    const outputs = await selectableOutputs(rt);
+    // Same hang window as send. A height call that never returns parks an auto
+    // intent; "nothing to optimize" stays a normal result once height is known.
+    const draft: IntentDraft = { kind: "fusion" };
+    const gate = { live: true };
+    let builtHash: string | undefined;
+    let saved: OptimizeWalletResult | undefined;
 
-    const status = isOptimizationNeeded({
-      unspentOutputs: outputs,
-      balance: balance.spendable,
-      blockchainHeight,
+    const parkAuto = (cause: "decoy" | "submit" = "decoy"): OptimizeWalletResult => {
+      if (saved) return saved;
+      enqueueAuto(rt, draft, cause);
+      saved = { ok: true, optimized: false, queued: "auto" };
+      return saved;
+    };
+
+    const body = async (): Promise<OptimizeWalletResult | "abandoned"> => {
+      if (linkDown()) return parkAuto();
+      const result = await runFusionPipeline(rt, {
+        gate: () => gate.live,
+        onBuilt: (hash) => {
+          builtHash = hash;
+        },
+      });
+      if (!result.ok) {
+        if (!gate.live || result.failure.reason === "skip") return "abandoned";
+        if (result.failure.reason === "select") throw result.failure.error;
+        if (result.failure.reason === "submit" && result.failure.timedOut) {
+          enqueueHung(rt, draft, result.failure.hash);
+          saved = { ok: true, optimized: false, queued: "hung" };
+          return saved;
+        }
+        return parkAuto(result.failure.reason === "submit" ? "submit" : "decoy");
+      }
+      return { ok: true, optimized: result.sent.optimized };
+    };
+
+    return raceLinkHang({
+      done: body(),
+      daemon: rt.daemon,
+      killGate: () => {
+        gate.live = false;
+      },
+      saved: () => saved,
+      parkAuto,
+      parkHung: () => {
+        if (!builtHash) return undefined;
+        enqueueHung(rt, draft, builtHash);
+        saved = { ok: true, optimized: false, queued: "hung" };
+        return saved;
+      },
     });
-    if (!status.isNeeded) {
-      return { ok: true, optimized: false };
-    }
-
-    const selection = selectFusionInputs(outputs, OPTIMIZE_THRESHOLD, blockchainHeight);
-    if (selection === null || selection.selected.length < FUSION_TX_MIN_INPUT_COUNT) {
-      return { ok: true, optimized: false };
-    }
-
-    const decoys = await fetchDecoys(rt, selection.selected);
-    const built = fusion.buildFusionTransaction({
-      keys: rt.account.keys,
-      selfKeys: ownKeys(rt),
-      fusionInputs: selection.selected,
-      decoys,
-      mixin: MIXIN,
-    });
-
-    await broadcast(rt, built);
-    return { ok: true, optimized: true };
   },
 
   async resetAndRescan(): Promise<{ ok: true }> {

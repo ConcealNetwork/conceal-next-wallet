@@ -1,12 +1,48 @@
 // Copyright (c) 2026 Conceal Network, Conceal Devs
 // SPDX-License-Identifier: BSD-3-Clause
 
-/** English-only send-queue consequence copy. Not i18n — do not add these to dictionaries. */
+import type { WalletIntentKind } from "@/lib/types";
+
+/**
+ * English-only queue consequence copy. Not i18n — do not add these to dictionaries.
+ * Toast/body copy is per intent kind so a parked deposit never reads as a "payment".
+ */
 export const queueCopy = {
-  hungBody:
-    "The node hung. The transaction may already be in the mempool. This intent is saved. Wait a few confirmations, then click Submit if the payment is still missing.",
   submit: "Submit",
   exhaustToast: "Resubmit failed due to connectivity. Try later or another remote node.",
-  queuedToast: "Payment not submitted. Saved to send after sync.",
-  hungToast: "Submit timed out. The payment may already be on the network.",
-} as const;
+  hungToast: {
+    send: "Submit timed out. The payment may already be on the network.",
+    deposit: "Submit timed out. The deposit may already be on the network.",
+    withdraw: "Submit timed out. The withdrawal may already be on the network.",
+    message: "Submit timed out. The message may already be on the network.",
+    fusion: "Submit timed out. The fusion transaction may already be on the network.",
+  },
+  queuedToast: {
+    send: "Payment not submitted. Saved to send after sync.",
+    deposit: "Deposit not submitted. Saved to create after sync.",
+    withdraw: "Withdrawal not submitted. Saved to send after sync.",
+    message: "Message not submitted. Saved to send after sync.",
+    fusion: "Fusion transaction not submitted. Saved to run after sync.",
+  },
+  hungBody: {
+    send: "The node hung. The transaction may already be in the mempool. This intent is saved. Wait a few confirmations, then click Submit if the payment is still missing.",
+    deposit:
+      "The node hung. The deposit may already be in the mempool. This intent is saved. Wait a few confirmations, then click Submit if the deposit is still missing.",
+    withdraw:
+      "The node hung. The withdrawal may already be in the mempool. This intent is saved. Wait a few confirmations, then click Submit if the withdrawal is still missing.",
+    message:
+      "The node hung. The message may already be in the mempool. This intent is saved. Wait a few confirmations, then click Submit if the message is still missing.",
+    fusion:
+      "The node hung. The fusion transaction may already be in the mempool. This intent is saved. Wait a few confirmations, then click Submit if it is still missing.",
+  },
+} as const satisfies Record<string, string | Record<WalletIntentKind, string>>;
+
+/** Toast for a spend that ended as an intent, or undefined after a relay accept. */
+export function queueToast(
+  kind: WalletIntentKind,
+  queued: "auto" | "hung" | undefined,
+): string | undefined {
+  if (queued === "hung") return queueCopy.hungToast[kind];
+  if (queued === "auto") return queueCopy.queuedToast[kind];
+  return undefined;
+}

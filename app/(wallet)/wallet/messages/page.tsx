@@ -60,7 +60,9 @@ import {
 import { missThreadPid } from "@/lib/messages/relationship";
 import { buildConversationThreadKey } from "@/lib/messages/thread-key";
 import type { AddressEntry, Message } from "@/lib/types";
+import { messageComposeDone, messageSendBlock, planMessageSend } from "@/lib/ui/message-send-plan";
 import type { ScannedSendDraft } from "@/lib/ui/parse-scanned-send-payload";
+import { queueToast } from "@/lib/ui/queue-copy";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn, truncateAddress } from "@/lib/utils";
@@ -89,6 +91,7 @@ export default function MessagesPage() {
   const wallet = useWalletInfo();
   const { isSyncing } = useWalletSyncStatus();
   const viewOnly = useWalletViewOnly();
+  const sendBlock = messageSendBlock({ viewOnly, isSyncing });
   const [query, setQuery] = useState("");
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [readThreads, setReadThreads] = useState<Set<string>>(new Set());
@@ -226,8 +229,8 @@ export default function MessagesPage() {
 
   function sendReply() {
     if (!active || !draft.trim()) return;
-    if (viewOnly) {
-      toast.error(walletCopy.viewOnlyMessageDisabled);
+    if (sendBlock) {
+      toast.error(sendBlock);
       return;
     }
     if (!canReplyToConversation(active)) {
@@ -253,8 +256,12 @@ export default function MessagesPage() {
         { recipientAddress: thread.address, body, paymentId },
         {
           onSuccess: (sent) => {
-            toast.success(walletCopy.messageSendSuccess);
+            toast.success(queueToast("message", sent.queued) ?? walletCopy.messageSendSuccess);
             setDraft("");
+            if (planMessageSend(sent.queued) === "parked") {
+              setPendingOutgoing(null);
+              return;
+            }
             setPendingOutgoing({ threadKey: sent.threadKey, txHash: sent.id });
           },
           onError: (error) => {
@@ -269,8 +276,8 @@ export default function MessagesPage() {
   }
 
   function sendCompose() {
-    if (viewOnly) {
-      toast.error(walletCopy.viewOnlyMessageDisabled);
+    if (sendBlock) {
+      toast.error(sendBlock);
       return;
     }
     if (!recipient.trim() || !composeBody.trim()) {
@@ -303,9 +310,14 @@ export default function MessagesPage() {
       },
       {
         onSuccess: (sent) => {
-          toast.success(walletCopy.messageSendSuccess);
-          setCompose(false);
-          resetComposeForm();
+          toast.success(queueToast("message", sent.queued) ?? walletCopy.messageSendSuccess);
+          const done = messageComposeDone(sent.queued);
+          if (done.close) setCompose(false);
+          if (done.clearForm) resetComposeForm();
+          if (!done.openThread) {
+            setPendingOutgoing(null);
+            return;
+          }
           setPendingOutgoing({ threadKey: sent.threadKey, txHash: sent.id });
           openMessage(sent);
         },
@@ -328,8 +340,8 @@ export default function MessagesPage() {
             type="button"
             className="gap-2"
             onClick={() => setCompose(true)}
-            disabled={isSyncing || viewOnly}
-            title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
+            disabled={!!sendBlock}
+            title={sendBlock}
           >
             <Plus className="size-4" aria-hidden="true" />
             {t("messages.newMessage")}
@@ -428,8 +440,8 @@ export default function MessagesPage() {
                 <Button
                   type="button"
                   onClick={sendReply}
-                  disabled={!replyEnabled || !draft.trim() || send.isPending || viewOnly}
-                  title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
+                  disabled={!replyEnabled || !draft.trim() || send.isPending || !!sendBlock}
+                  title={sendBlock}
                   className="gap-2 active:scale-[0.98] motion-reduce:active:scale-100"
                 >
                   <Send className="size-4" aria-hidden="true" />
@@ -564,8 +576,8 @@ export default function MessagesPage() {
             <Button
               type="button"
               onClick={sendCompose}
-              disabled={send.isPending || composeByteLength > MAX_MESSAGE_BODY_BYTES || viewOnly}
-              title={viewOnly ? walletCopy.viewOnlyMessageDisabled : undefined}
+              disabled={send.isPending || composeByteLength > MAX_MESSAGE_BODY_BYTES || !!sendBlock}
+              title={sendBlock}
             >
               {send.isPending ? t("messages.sending") : t("nav.send")}
             </Button>

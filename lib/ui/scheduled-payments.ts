@@ -61,17 +61,6 @@ export function belongsToWallet(
   return scheduleOwnerId(schedule) === (walletId ?? DEFAULT_WALLET_ID);
 }
 
-const CADENCE_LABELS: Record<Cadence, string> = {
-  weekly: "Weekly",
-  monthly: "Monthly",
-  quarterly: "Quarterly",
-  yearly: "Yearly",
-};
-
-export function formatCadence(cadence: Cadence): string {
-  return CADENCE_LABELS[cadence];
-}
-
 export function isCadence(value: unknown): value is Cadence {
   return typeof value === "string" && (CADENCES as readonly string[]).includes(value);
 }
