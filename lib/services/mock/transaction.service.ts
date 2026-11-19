@@ -9,12 +9,14 @@ import {
   enqueueHung,
   type FailCause,
   type FailNote,
+  hungHashes,
+  type IntentDraft,
   listIntents,
   mapIntent,
   markHungSent,
   noteDecoyFail,
   noteSubmitFail,
-  type SendIntent,
+  type WalletIntent,
 } from "@/lib/services/real-sdk/send-intent";
 import type { SendTransactionInput, TransactionService } from "@/lib/services/transaction.service";
 import { assertCanSpend } from "@/lib/services/view-only";
@@ -23,6 +25,9 @@ import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxAmount, ccxToNumber } from "@/lib/utils";
 
 const mockRt = {} as SdkRuntime;
+
+/** Shared dummy runtime so every mock service parks intents in the one session store. */
+export const mockIntentRuntime = mockRt;
 
 type MockSendKind = "decoy" | "submit" | "hung" | "unfunded" | "ok";
 
@@ -73,9 +78,16 @@ export function _failMockRebuild(id: string, cause: FailCause): FailNote {
 }
 
 /** Test-only raw store rows for the dummy mock runtime. */
-export function _listMockIntents(): SendIntent[] {
+export function _listMockIntents(): WalletIntent[] {
   return listIntents(mockRt);
 }
+
+const sendDraft = (input: SendTransactionInput): IntentDraft => {
+  const draft: IntentDraft = { kind: "send", address: input.address, amount: input.amount };
+  if (input.paymentId !== undefined) draft.paymentId = input.paymentId;
+  if (input.message !== undefined) draft.message = input.message;
+  return draft;
+};
 
 export const mockTransactionService: TransactionService = {
   async listTransactions() {
@@ -94,16 +106,16 @@ export const mockTransactionService: TransactionService = {
     }
 
     if (kind === "decoy") {
-      enqueueAuto(mockRt, input, "decoy");
+      enqueueAuto(mockRt, sendDraft(input), "decoy");
       return { ...mockSent(input), queued: "auto" };
     }
     if (kind === "submit") {
-      enqueueAuto(mockRt, input, "submit");
+      enqueueAuto(mockRt, sendDraft(input), "submit");
       return { ...mockSent(input), queued: "auto" };
     }
     if (kind === "hung") {
       const localHash = nextHung();
-      enqueueHung(mockRt, input, localHash);
+      enqueueHung(mockRt, sendDraft(input), localHash);
       return { ...mockSent(input, localHash), queued: "hung" };
     }
     return mockSent(input);
@@ -119,16 +131,18 @@ export const mockTransactionService: TransactionService = {
   async submitHungIntent(id: string) {
     await mockDelay();
     const row = listIntents(mockRt).find((intent) => intent.id === id);
-    if (row?.kind !== "hung") return false;
+    if (row?.state !== "hung") return false;
     if (row.sent) return true;
-    if (row.watchedHash && seenHashes.has(row.watchedHash)) {
+    if (hungHashes(row).some((hash) => seenHashes.has(hash))) {
       markHungSent(mockRt, id);
       return true;
     }
     const kind = armedKind ?? "ok";
     armedKind = undefined;
     if (kind === "hung") {
-      row.watchedHash = nextHung();
+      const next = nextHung();
+      row.watchedHashes = [...hungHashes(row), next];
+      row.watchedHash = next;
       return true;
     }
     if (kind === "decoy" || kind === "submit") {

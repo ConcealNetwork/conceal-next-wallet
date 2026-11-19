@@ -296,19 +296,21 @@ export function mapDeposits(
   state: WalletState,
   networkHeight: number,
   raw?: RawWalletV1,
+  savedKeys: ReadonlySet<string> = new Set(),
 ): Deposit[] {
   const pendingKeys = raw ? pendingWithdrawnDepositKeys(raw) : new Set<string>();
   const spendMap = buildSpendTxMap(state, raw, pendingKeys);
-  return state.deposits.map((deposit) =>
-    mapDeposit(
+  return state.deposits.map((deposit) => {
+    const ref = depRef(deposit);
+    return mapDeposit(
       deposit,
       networkHeight,
       state.address,
       state,
       spendMap,
-      pendingKeys.has(depRef(deposit)),
-    ),
-  );
+      pendingKeys.has(ref) || savedKeys.has(ref),
+    );
+  });
 }
 
 /** Indicative annualized rate from principal / earned interest / term (blocks). */

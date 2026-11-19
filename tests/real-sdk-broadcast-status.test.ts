@@ -3,9 +3,15 @@
 // Copyright (c) 2026 Conceal Network, Conceal Devs
 // SPDX-License-Identifier: BSD-3-Clause
 
-import { createAccount, createWalletState, type RawWalletV1 } from "conceal-wallet-sdk";
+import {
+  createAccount,
+  createWalletState,
+  formatRelayReject,
+  type RawWalletV1,
+  relayAccepted,
+} from "conceal-wallet-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { broadcast, formatRelayReject, relayAccepted } from "@/lib/services/real-sdk/spend";
+import { broadcast } from "@/lib/services/real-sdk/spend";
 
 const TX_HASH = "aa".repeat(32);
 const TX_SECRET = "bb".repeat(32);

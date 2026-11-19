@@ -149,19 +149,34 @@ export function useWalletLiveSync() {
   // only when something actually changed. The poll cadence (≥2.5s) self-throttles this:
   // `liveHeight` can't change faster than the wallet query refetches, so there's no
   // burst to coalesce and no risk of a 14k-tx re-walk storm. The SDK engine's runtime
-  // emits no sync events, so this polled-height watch is what keeps the lists live.
-  const liveHeight = useWalletInfo().data?.currentHeight;
-  const lastHeightRef = useRef<number | undefined>(undefined);
+  // emits no sync events, so this polled watch is what keeps the lists live. The balance
+  // buckets are part of the key because a mempool receive or a relayed send changes the
+  // lists without moving the height.
+  const liveKey = walletChangeKey(useWalletInfo().data);
+  const lastKeyRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (liveHeight === undefined) return;
-    const previous = lastHeightRef.current;
-    lastHeightRef.current = liveHeight;
-    if (previous === undefined || liveHeight <= previous) return;
+    if (liveKey === undefined) return;
+    const previous = lastKeyRef.current;
+    lastKeyRef.current = liveKey;
+    if (previous === undefined || liveKey === previous) return;
     void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
     void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
     void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
     void queryClient.invalidateQueries({ queryKey: queryKeys.optimizationStatus });
-  }, [liveHeight, queryClient]);
+  }, [liveKey, queryClient]);
+}
+
+function walletChangeKey(info: WalletInfo | undefined): string | undefined {
+  if (!info) return undefined;
+  return [
+    info.currentHeight,
+    info.balanceTotal.atomic,
+    info.available.atomic,
+    info.pending.atomic,
+    info.incomingPending?.atomic ?? 0,
+    info.lockedDeposits.atomic,
+    info.withdrawable.atomic,
+  ].join(":");
 }
 
 export function useTransactions() {
@@ -192,11 +207,32 @@ export function useSendTransaction() {
 
 /** Durable outbound queue (#92). Polls so retry/mine transitions surface without a refresh. */
 export function useQueuedTransactions() {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey: queryKeys.queuedTransactions,
     queryFn: () => services.transactions.listQueuedTransactions(),
     refetchInterval: 8000,
   });
+  const rowIds = query.data?.map((row) => `${row.id}:${row.state}`).join(",");
+  const lastIds = useRef<string | undefined>(undefined);
+
+  // A row sent or dropped by the background drain changes balances and deposit status.
+  useEffect(() => {
+    if (rowIds === undefined) return;
+    const previous = lastIds.current;
+    lastIds.current = rowIds;
+    if (previous === undefined || previous === rowIds) return;
+    for (const queryKey of [
+      queryKeys.deposits,
+      queryKeys.transactions,
+      queryKeys.wallet,
+      queryKeys.optimizationStatus,
+    ]) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  }, [rowIds, queryClient]);
+
+  return query;
 }
 
 export function useCancelQueuedTransaction() {
@@ -260,11 +296,14 @@ export function useSendMessage() {
   return useMutation({
     mutationFn: (input: SendMessageInput) => services.messages.sendMessage(input),
     onSuccess: (sent) => {
-      queryClient.setQueryData<Message[]>(queryKeys.messages, (current) => {
-        const list = current ?? [];
-        if (list.some((message) => message.id === sent.id)) return list;
-        return sortMessagesNewestFirst([...list, sent]);
-      });
+      if (!sent.queued) {
+        queryClient.setQueryData<Message[]>(queryKeys.messages, (current) => {
+          const list = current ?? [];
+          if (list.some((message) => message.id === sent.id)) return list;
+          return sortMessagesNewestFirst([...list, sent]);
+        });
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.messages });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
@@ -325,6 +364,7 @@ export function useCreateDeposit() {
   return useMutation({
     mutationFn: (input: CreateDepositInput) => services.deposits.createDeposit(input),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
@@ -337,6 +377,7 @@ export function useWithdrawDeposit() {
   return useMutation({
     mutationFn: (input: WithdrawDepositInput) => services.deposits.withdrawDeposit(input),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.deposits });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
@@ -461,6 +502,7 @@ export function useOptimizeWallet() {
   return useMutation({
     mutationFn: () => services.settings.optimizeWallet(),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.queuedTransactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.wallet });
       void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       void queryClient.invalidateQueries({ queryKey: queryKeys.optimizationStatus });

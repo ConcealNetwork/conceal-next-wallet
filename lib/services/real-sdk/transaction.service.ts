@@ -15,7 +15,7 @@ import {
   cancelIntent,
   enqueueAuto,
   enqueueHung,
-  type IntentInput,
+  type IntentDraft,
   listIntents,
   mapIntent,
 } from "@/lib/services/real-sdk/send-intent";
@@ -38,11 +38,11 @@ import { ccxAmount } from "@/lib/utils";
 
 const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
 
-function intentFromSend(input: SendTransactionInput): IntentInput {
-  const row: IntentInput = { address: input.address, amount: input.amount };
-  if (input.paymentId !== undefined) row.paymentId = input.paymentId;
-  if (input.message !== undefined) row.message = input.message;
-  return row;
+function intentFromSend(input: SendTransactionInput): IntentDraft {
+  const draft: IntentDraft = { kind: "send", address: input.address, amount: input.amount };
+  if (input.paymentId !== undefined) draft.paymentId = input.paymentId;
+  if (input.message !== undefined) draft.message = input.message;
+  return draft;
 }
 
 function queuedSend(
