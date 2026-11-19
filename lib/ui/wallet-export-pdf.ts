@@ -166,5 +166,3 @@ export async function downloadWalletExportPdf(data: ExportWalletData): Promise<s
   }
   return PDF_FILENAME;
 }
-
-export { PDF_FILENAME as walletExportPdfFilename };

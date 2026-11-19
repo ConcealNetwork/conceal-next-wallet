@@ -174,12 +174,6 @@ export function storageForWallet(meta: Pick<WalletMeta, "namespace">): StorageAd
   return meta.namespace === "" ? raw : createNamespacedStorage(raw, meta.namespace);
 }
 
-/** Find a wallet by id, or `null`. */
-export async function findWallet(id: string): Promise<WalletMeta | null> {
-  const { wallets } = await readWalletsIndex();
-  return wallets.find((w) => w.id === id) ?? null;
-}
-
 /** The active wallet's metadata (or `null` when no wallet is registered). */
 export async function getActiveWallet(): Promise<WalletMeta | null> {
   const { activeId, wallets } = await readWalletsIndex();
