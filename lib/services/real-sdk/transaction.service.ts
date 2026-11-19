@@ -20,12 +20,10 @@ import {
   mapIntent,
 } from "@/lib/services/real-sdk/send-intent";
 import {
-  connectHangMs,
   decodeRecipient,
   FEE_ATOMIC,
-  lateGraceMs,
   linkDown,
-  linkGone,
+  raceLinkHang,
   resolveOutboundPaymentId,
   runSendPipeline,
 } from "@/lib/services/real-sdk/spend";
@@ -219,34 +217,16 @@ export const realSdkTransactionService: TransactionService = {
     };
 
     const done = body();
-    void done.catch(() => {});
-    let hangTimer: ReturnType<typeof setTimeout> | undefined;
-    const winner = await Promise.race([
-      done.then((row) => ({ kind: "done" as const, row })),
-      new Promise<{ kind: "timeout" }>((resolve) => {
-        hangTimer = setTimeout(() => resolve({ kind: "timeout" }), connectHangMs);
-      }),
-    ]);
-    if (hangTimer !== undefined) clearTimeout(hangTimer);
-
-    if (winner.kind === "done") {
-      return winner.row === "abandoned" ? queueAuto(rt, input, "decoy") : winner.row;
-    }
-    if (!(await linkGone(rt.daemon))) {
-      const late = await Promise.race([
-        done.then((r) => ({ kind: "done" as const, r })),
-        new Promise<{ kind: "timeout" }>((resolve) =>
-          setTimeout(() => resolve({ kind: "timeout" }), lateGraceMs),
-        ),
-      ]);
-      if (late.kind === "done") {
-        return late.r === "abandoned" ? queueAuto(rt, input, "decoy") : late.r;
-      }
-    }
-    gate.live = false;
-    if (savedIntent) return savedIntent;
-    if (builtHash) return queueHung(rt, input, builtHash);
-    return queueAuto(rt, input, "decoy");
+    return raceLinkHang({
+      done,
+      daemon: rt.daemon,
+      killGate: () => {
+        gate.live = false;
+      },
+      saved: () => savedIntent,
+      parkAuto: () => queueAuto(rt, input, "decoy"),
+      parkHung: () => (builtHash ? queueHung(rt, input, builtHash) : undefined),
+    });
   },
 
   async listQueuedTransactions(): Promise<QueuedTransaction[]> {
