@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "app/**/{page,layout}.tsx!",
+    "lib/services/real-sdk/index.ts!",
+    "lib/services/real-sdk/scan-worker.ts!"
+  ],
+  "project": ["{app,components,lib}/**/*.{ts,tsx}!"]
+}
