@@ -21,12 +21,19 @@ import {
   estimateDepositUnlockDays,
   getDepositApr,
 } from "@/lib/services/deposit.service";
-import { enqueueAuto, enqueueHung, type IntentDraft } from "@/lib/services/real-sdk/send-intent";
 import { deriveApr, mapDeposit, mapDeposits } from "@/lib/services/real-sdk/mappers";
 import { unminedPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
-import { requireRuntime } from "@/lib/services/real-sdk/runtime";
+import { requireRuntime, type SdkRuntime } from "@/lib/services/real-sdk/runtime";
 import {
+  enqueueAuto,
+  enqueueHung,
+  type IntentDraft,
+  savedWithdrawKeys,
+} from "@/lib/services/real-sdk/send-intent";
+import {
+  linkDown,
+  raceLinkHang,
   resolveWithdrawableDeposit,
   runDepositPipeline,
   runWithdrawPipeline,
@@ -37,8 +44,8 @@ import {
 import { assertCanSpend } from "@/lib/services/view-only";
 import type { Deposit, Transaction } from "@/lib/types";
 import { walletCopy } from "@/lib/ui/wallet-copy";
-import { ccxAmount } from "@/lib/utils";
 import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
+import { ccxAmount } from "@/lib/utils";
 
 const ATOMIC_PER_CCX = 10 ** COIN_UNIT_PLACES;
 
@@ -47,7 +54,7 @@ export const realSdkDepositService: DepositService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     const networkHeight = await rt.daemon.getHeight();
-    return mapDeposits(rt.state, networkHeight, rt.raw);
+    return mapDeposits(rt.state, networkHeight, rt.raw, savedWithdrawKeys(rt));
   },
 
   async getDepositConstraints(): Promise<DepositConstraints> {
@@ -124,84 +131,70 @@ export const realSdkDepositService: DepositService = {
     const amountAtomic = amountCoins * ATOMIC_PER_CCX;
     const termBlocks = months * DEPOSIT_MIN_TERM_BLOCK;
 
-    // Build + submit through the SAME classified pipeline the intent drain uses,
-    // so a transient failure parks a session intent (queuedDepositView below)
-    // instead of erroring, and the retry path cannot drift. Validation failures
-    // above and a short balance still throw visibly.
-    const result = await runDepositPipeline(
-      rt,
-      { amountAtomic, termBlocks },
-      { gate: () => true },
-    );
-    if (!result.ok) {
-      const failure = result.failure;
-      if (failure.reason === "unfunded") {
-        throw new Error("Not enough unlocked balance for deposit and network fee.");
-      }
-      if (failure.reason === "select") {
-        throw failure.error;
-      }
-      const draft: IntentDraft = { kind: "deposit", amount: amountCoins, durationMonths: months };
-      if (failure.reason === "submit" && failure.timedOut) {
-        enqueueHung(rt, draft, failure.hash);
-        return queuedDepositView(input, months, "hung", failure.hash);
-      }
-      // A decoy/connect failure (and an unreachable skip — the gate is always live
-      // interactively) parks an auto intent.
-      const row = enqueueAuto(rt, draft, failure.reason === "decoy" ? "decoy" : "submit");
-      return queuedDepositView(input, months, "auto", row.id);
-    }
-    const builtHash = result.sent.hash;
+    // Same hang window as send. A lost link before a hash exists parks one auto
+    // intent. A submit timeout after a hash exists parks hung. Validation failures
+    // above and a short balance still throw.
+    const draft: IntentDraft = { kind: "deposit", amount: amountCoins, durationMonths: months };
+    const gate = { live: true };
+    let builtHash: string | undefined;
+    let saved: Deposit | undefined;
 
-    const networkHeight = await rt.daemon.getHeight();
-    const matched = mapDeposits(rt.state, networkHeight, rt.raw).find(
-      (deposit) => deposit.txHash === builtHash,
-    );
-    if (matched) return matched;
+    const parkAuto = (cause: "decoy" | "submit" = "decoy"): Deposit => {
+      if (saved) return saved;
+      const row = enqueueAuto(rt, draft, cause);
+      saved = queuedDepositView(input, months, "auto", row.id);
+      return saved;
+    };
 
-    // Optimistic pending entry until the deposit confirms and scans in.
-    const interestAtomic = calculateDepositInterest({
-      amount: amountAtomic,
-      term: termBlocks,
-      lockHeight: networkHeight,
-    });
-    return mapDeposit(
-      {
-        amount: amountAtomic,
-        globalIndex: 0,
-        outputIndex: 0,
-        txPublicKey: "",
-        publicKey: "",
-        keys: [],
-        term: termBlocks,
-        blockHeight: 0,
-        txHash: builtHash,
-        interest: interestAtomic,
-        unlockHeight: termBlocks,
+    const parkHung = (hash: string): Deposit => {
+      enqueueHung(rt, draft, hash);
+      saved = queuedDepositView(input, months, "hung", hash);
+      return saved;
+    };
+
+    const attempt = async (): Promise<Deposit | "abandoned"> => {
+      if (linkDown()) return parkAuto();
+      const result = await runDepositPipeline(
+        rt,
+        { amountAtomic, termBlocks },
+        {
+          gate: () => gate.live,
+          onBuilt: (hash) => {
+            builtHash = hash;
+          },
+        },
+      );
+      if (!result.ok) {
+        if (!gate.live || result.failure.reason === "skip") return "abandoned";
+        const failure = result.failure;
+        if (failure.reason === "unfunded") {
+          throw new Error("Not enough unlocked balance for deposit and network fee.");
+        }
+        if (failure.reason === "select") throw failure.error;
+        if (failure.reason === "submit" && failure.timedOut) return parkHung(failure.hash);
+        return parkAuto(failure.reason === "submit" ? "submit" : "decoy");
+      }
+      return acceptedDeposit(rt, result.sent.hash, amountAtomic, termBlocks);
+    };
+
+    return raceLinkHang({
+      done: attempt(),
+      daemon: rt.daemon,
+      killGate: () => {
+        gate.live = false;
       },
-      networkHeight,
-      rt.account.address,
-      rt.state,
-      buildSpendTxMap(rt.state, rt.raw),
-    );
+      saved: () => saved,
+      parkAuto,
+      parkHung: () => (builtHash ? parkHung(builtHash) : undefined),
+    });
   },
 
   async withdrawDeposit(input: WithdrawDepositInput): Promise<Transaction> {
     await ensureSdkReady();
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyDepositDisabled);
-
-    const networkHeight = await rt.daemon.getHeight();
-    const check = resolveWithdrawableDeposit(rt, input, networkHeight);
-    if (!check.ok) {
-      // Visible interactive errors — the drain maps these to silent unfunded drops.
-      if (check.reason === "pending") {
-        throw new Error("A withdrawal for this deposit is already pending confirmation.");
-      }
-      if (check.reason === "locked") {
-        throw new Error("Deposit is still locked.");
-      }
-      throw new Error("Deposit not found or already withdrawn.");
+    if (savedWithdrawKeys(rt).has(`${input.txHash}:${input.globalOutputIndex}`)) {
+      throw new Error(walletCopy.withdrawAlreadyPending);
     }
 
     const draft: IntentDraft = {
@@ -209,37 +202,137 @@ export const realSdkDepositService: DepositService = {
       txHash: input.txHash,
       globalOutputIndex: input.globalOutputIndex,
     };
-    const result = await runWithdrawPipeline(
-      rt,
-      { deposit: check.deposit, txHash: input.txHash, globalOutputIndex: input.globalOutputIndex },
-      { gate: () => true },
-    );
-    if (!result.ok) {
-      const failure = result.failure;
-      if (failure.reason === "skip") {
+    const gate = { live: true };
+    let builtHash: string | undefined;
+    let saved: Transaction | undefined;
+
+    const parkAuto = (): Transaction => {
+      if (saved) return saved;
+      const row = enqueueAuto(rt, draft, "decoy");
+      saved = queuedWithdrawView("auto", row.id);
+      return saved;
+    };
+
+    const body = async (): Promise<Transaction | "abandoned"> => {
+      if (linkDown()) return parkAuto();
+      let networkHeight: number;
+      try {
+        networkHeight = await rt.daemon.getHeight();
+      } catch {
+        if (!gate.live) return "abandoned";
+        return parkAuto();
+      }
+      if (!gate.live) return "abandoned";
+
+      const check = resolveWithdrawableDeposit(rt, input, networkHeight);
+      if (!check.ok) {
+        // Visible interactive errors — the drain maps these to silent unfunded drops.
+        if (check.reason === "pending") {
+          throw new Error(walletCopy.withdrawAlreadyPending);
+        }
+        if (check.reason === "locked") {
+          throw new Error("Deposit is still locked.");
+        }
         throw new Error("Deposit not found or already withdrawn.");
       }
-      if (failure.reason === "submit" && failure.timedOut) {
-        enqueueHung(rt, draft, failure.hash);
-        return queuedWithdrawView("hung", failure.hash);
-      }
-      const row = enqueueAuto(rt, draft, failure.reason === "decoy" ? "decoy" : "submit");
-      return queuedWithdrawView("auto", row.id);
-    }
-    const builtHash = result.sent.hash;
 
-    return {
-      id: builtHash,
-      hash: builtHash,
-      type: "withdrawal",
-      amount: { atomic: result.sent.sentAmount },
-      address: rt.account.address,
-      timestamp: new Date().toISOString(),
-      blockHeight: 0,
-      confirmations: 0,
+      const result = await runWithdrawPipeline(
+        rt,
+        {
+          deposit: check.deposit,
+          txHash: input.txHash,
+          globalOutputIndex: input.globalOutputIndex,
+        },
+        {
+          gate: () => gate.live,
+          onBuilt: (hash) => {
+            builtHash = hash;
+          },
+        },
+      );
+      if (!result.ok) {
+        if (!gate.live || result.failure.reason === "skip") return "abandoned";
+        const failure = result.failure;
+        if (failure.reason === "submit" && failure.timedOut) {
+          enqueueHung(rt, draft, failure.hash);
+          saved = queuedWithdrawView("hung", failure.hash);
+          return saved;
+        }
+        const row = enqueueAuto(rt, draft, failure.reason === "decoy" ? "decoy" : "submit");
+        saved = queuedWithdrawView("auto", row.id);
+        return saved;
+      }
+
+      return {
+        id: result.sent.hash,
+        hash: result.sent.hash,
+        type: "withdrawal",
+        amount: { atomic: result.sent.sentAmount },
+        address: rt.account.address,
+        timestamp: new Date().toISOString(),
+        blockHeight: 0,
+        confirmations: 0,
+      };
     };
+
+    return raceLinkHang({
+      done: body(),
+      daemon: rt.daemon,
+      killGate: () => {
+        gate.live = false;
+      },
+      saved: () => saved,
+      parkAuto,
+      parkHung: () => {
+        if (!builtHash) return undefined;
+        enqueueHung(rt, draft, builtHash);
+        saved = queuedWithdrawView("hung", builtHash);
+        return saved;
+      },
+    });
   },
 };
+
+/**
+ * The relayed deposit as the UI shows it. Uses the scanned height, not a live
+ * getHeight, so a dropped link after the relay accepted cannot hang or throw.
+ */
+function acceptedDeposit(
+  rt: SdkRuntime,
+  txHash: string,
+  amountAtomic: number,
+  termBlocks: number,
+): Deposit {
+  const height = rt.state.scannedHeight;
+  const matched = mapDeposits(rt.state, height, rt.raw).find(
+    (deposit) => deposit.txHash === txHash,
+  );
+  if (matched) return matched;
+  const interest = calculateDepositInterest({
+    amount: amountAtomic,
+    term: termBlocks,
+    lockHeight: height,
+  });
+  return mapDeposit(
+    {
+      amount: amountAtomic,
+      globalIndex: 0,
+      outputIndex: 0,
+      txPublicKey: "",
+      publicKey: "",
+      keys: [],
+      term: termBlocks,
+      blockHeight: 0,
+      txHash,
+      interest,
+      unlockHeight: termBlocks,
+    },
+    height,
+    rt.account.address,
+    rt.state,
+    buildSpendTxMap(rt.state, rt.raw),
+  );
+}
 
 /**
  * Transient view for a merely-parked deposit: display-only (the page toasts and

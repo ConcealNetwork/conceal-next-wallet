@@ -6,13 +6,14 @@ import {
   getDepositApr,
 } from "@/lib/services/deposit.service";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
-import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import { mockIntentRuntime } from "@/lib/services/mock/transaction.service";
+import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import {
   clearIntents,
   enqueueAuto,
   enqueueHung,
   type IntentDraft,
+  savedWithdrawKeys,
 } from "@/lib/services/real-sdk/send-intent";
 import { assertCanSpend } from "@/lib/services/view-only";
 import { walletCopy } from "@/lib/ui/wallet-copy";
@@ -52,7 +53,12 @@ function mockDepositView(input: { amount: number; durationMonths: number }) {
 export const mockDepositService: DepositService = {
   async listDeposits() {
     await mockDelay();
-    return clone(mockDeposits);
+    const saved = savedWithdrawKeys(mockIntentRuntime);
+    return clone(mockDeposits).map((deposit) =>
+      saved.has(`${deposit.txHash}:${deposit.globalOutputIndex}`)
+        ? { ...deposit, withdrawPending: true }
+        : deposit,
+    );
   },
   async getDepositConstraints() {
     await mockDelay();
@@ -106,6 +112,9 @@ export const mockDepositService: DepositService = {
   async withdrawDeposit(input) {
     await mockDelay();
     assertCanSpend(isMockViewOnly(), walletCopy.viewOnlyDepositDisabled);
+    if (savedWithdrawKeys(mockIntentRuntime).has(`${input.txHash}:${input.globalOutputIndex}`)) {
+      throw new Error(walletCopy.withdrawAlreadyPending);
+    }
     const kind = armedDeposit ?? "ok";
     armedDeposit = undefined;
     if (kind !== "ok") {

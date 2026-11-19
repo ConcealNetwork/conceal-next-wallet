@@ -64,8 +64,8 @@ import {
 } from "@/lib/services/deposit.service";
 import type { Deposit } from "@/lib/types";
 import { CHART_DRAW_MS, CHART_EASING } from "@/lib/ui/animation";
+import { queueToast } from "@/lib/ui/queue-copy";
 import { toast } from "@/lib/ui/toast";
-import { queueCopy } from "@/lib/ui/queue-copy";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { ccxToNumber, cn, truncateAddress, usdSubline } from "@/lib/utils";
 import { InterestCalculatorDialog } from "./interest-calculator-dialog";
@@ -264,7 +264,7 @@ export default function DepositsPageClient() {
           createDeposit.mutate(input, {
             onSuccess: (deposit) => {
               toast.success(
-                deposit.queued ? queueCopy.queuedToast.deposit : walletCopy.depositCreateSuccess,
+                queueToast("deposit", deposit.queued) ?? walletCopy.depositCreateSuccess,
               );
               setOpen(false);
             },
@@ -1259,9 +1259,7 @@ function DepositWithdrawButton({
       { txHash: deposit.txHash, globalOutputIndex: deposit.globalOutputIndex },
       {
         onSuccess: (tx) => {
-          toast.success(
-            tx.queued ? queueCopy.queuedToast.withdraw : walletCopy.depositWithdrawSuccess,
-          );
+          toast.success(queueToast("withdraw", tx.queued) ?? walletCopy.depositWithdrawSuccess);
           setOpen(false);
         },
         onError: (error) => {

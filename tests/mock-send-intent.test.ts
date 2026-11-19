@@ -235,6 +235,7 @@ describe("mock send intents", () => {
     expect(rebuilt?.kind).toBe("send");
     expect(rebuilt?.watchedHash).toEqual(expect.any(String));
     expect(rebuilt?.watchedHash).not.toBe(firstHash);
+    expect(rebuilt?.watchedHashes).toContain(firstHash);
     expect(after.filter((row) => row.state === "hung")).toHaveLength(1);
   });
 

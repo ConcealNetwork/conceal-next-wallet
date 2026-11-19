@@ -1,11 +1,12 @@
 import { mockSettings } from "@/lib/mock-data/wallet";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
-import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import { mockIntentRuntime } from "@/lib/services/mock/transaction.service";
+import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import {
   clearIntents,
   enqueueAuto,
   enqueueHung,
+  fusionSaved,
   type IntentDraft,
 } from "@/lib/services/real-sdk/send-intent";
 import type { SettingsService } from "@/lib/services/settings.service";
@@ -68,11 +69,15 @@ export const mockSettingsService: SettingsService = {
   },
   async getOptimizationStatus() {
     await mockDelay();
+    if (fusionSaved(mockIntentRuntime)) {
+      return { isNeeded: false, unspentOutputs: 0, intentSaved: true };
+    }
     return { isNeeded: true, unspentOutputs: 142 };
   },
   async optimizeWallet() {
     await mockDelay();
     assertCanSpend(isMockViewOnly(), walletCopy.viewOnlyOptimizeDisabled);
+    if (fusionSaved(mockIntentRuntime)) throw new Error(walletCopy.fusionAlreadySaved);
     const kind = armedFusion ?? "ok";
     armedFusion = undefined;
     if (kind !== "ok") {

@@ -674,7 +674,11 @@ describe("real-sdk submitHungIntent", () => {
     );
     const { enqueueHung, listIntents } = await import("@/lib/services/real-sdk/send-intent");
 
-    const hung = enqueueHung(rt, { kind: "send", address: bob.address, amount: sendAmount }, firstHash);
+    const hung = enqueueHung(
+      rt,
+      { kind: "send", address: bob.address, amount: sendAmount },
+      firstHash,
+    );
     const submitsBefore = sendRawTransaction.mock.calls.length;
 
     rt.state = {
@@ -703,7 +707,11 @@ describe("real-sdk submitHungIntent", () => {
     const { enqueueHung, listIntents } = await import("@/lib/services/real-sdk/send-intent");
     const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
 
-    const hung = enqueueHung(rt, { kind: "send", address: bob.address, amount: sendAmount }, firstHash);
+    const hung = enqueueHung(
+      rt,
+      { kind: "send", address: bob.address, amount: sendAmount },
+      firstHash,
+    );
     const submitsBefore = sendRawTransaction.mock.calls.length;
 
     expect(await realSdkTransactionService.submitHungIntent(hung.id)).toBe(true);
@@ -732,7 +740,11 @@ describe("real-sdk submitHungIntent", () => {
     );
     const { enqueueHung, listIntents } = await import("@/lib/services/real-sdk/send-intent");
 
-    const hung = enqueueHung(rt, { kind: "send", address: bob.address, amount: sendAmount }, "hash-hung-lag");
+    const hung = enqueueHung(
+      rt,
+      { kind: "send", address: bob.address, amount: sendAmount },
+      "hash-hung-lag",
+    );
     rt.state = { ...rt.state, scannedHeight: 0 };
     expect(isWalletHeightSyncing(rt.state.scannedHeight, networkHeight)).toBe(true);
     const submitsBefore = sendRawTransaction.mock.calls.length;
@@ -740,6 +752,41 @@ describe("real-sdk submitHungIntent", () => {
     expect(await realSdkTransactionService.submitHungIntent(hung.id)).toBe(false);
     expect(listIntents(rt).find((row) => row.id === hung.id)?.sent).not.toBe(true);
     expect(sendRawTransaction).toHaveBeenCalledTimes(submitsBefore);
+  });
+
+  it("keeps the first hash when Submit times out again and marks sent when that hash lands", async () => {
+    const fundAtomic = 5_000_000;
+    const sendAmount = 0.5;
+    const firstHash = "hash-hung-first";
+    const { bob, rt, sendRawTransaction, networkHeight } = await installFundedSender(fundAtomic, {
+      sendRawTransaction: () => Promise.reject(new Error("Daemon request timed out after 10000ms")),
+    });
+    const { realSdkTransactionService } = await import(
+      "@/lib/services/real-sdk/transaction.service"
+    );
+    const { enqueueHung, listIntents } = await import("@/lib/services/real-sdk/send-intent");
+
+    const hung = enqueueHung(
+      rt,
+      { kind: "send", address: bob.address, amount: sendAmount },
+      firstHash,
+    );
+    expect(await realSdkTransactionService.submitHungIntent(hung.id)).toBe(true);
+    const afterTimeout = listIntents(rt).find((row) => row.id === hung.id);
+    expect(afterTimeout?.watchedHashes).toContain(firstHash);
+    expect(afterTimeout?.watchedHash).not.toBe(firstHash);
+    expect(sendRawTransaction).toHaveBeenCalledTimes(1);
+
+    rt.state = {
+      ...rt.state,
+      transactions: [
+        ...rt.state.transactions,
+        { hash: firstHash, height: networkHeight, amount: 1, direction: "out" },
+      ],
+    };
+    expect(await realSdkTransactionService.submitHungIntent(hung.id)).toBe(true);
+    expect(listIntents(rt).find((row) => row.id === hung.id)?.sent).toBe(true);
+    expect(sendRawTransaction).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -755,7 +802,11 @@ describe("real-sdk finalizeSyncPass intent drain", () => {
     const { readPendingRecords } = await import("@/lib/services/real-sdk/pending-store");
     const { isWalletHeightSyncing } = await import("@/lib/ui/wallet-sync");
 
-    const queued = enqueueAuto(rt, { kind: "send", address: bob.address, amount: sendAmount }, "decoy");
+    const queued = enqueueAuto(
+      rt,
+      { kind: "send", address: bob.address, amount: sendAmount },
+      "decoy",
+    );
     const ticksLeft = listIntents(rt).find((row) => row.id === queued.id)?.waitTicks;
     if (ticksLeft === undefined) {
       throw new Error("auto enqueue missing waitTicks");
@@ -777,6 +828,28 @@ describe("real-sdk finalizeSyncPass intent drain", () => {
     expect(pendingAfter).toHaveLength(pendingBefore.length + 1);
   });
 
+  it("submits a due message intent through syncRuntime and drops the row", async () => {
+    const { bob, rt, runtimeMod, sendRawTransaction } = await installFundedSender(5_000_000);
+    const { enqueueAuto, listIntents, tickSynced } = await import(
+      "@/lib/services/real-sdk/send-intent"
+    );
+
+    const queued = enqueueAuto(
+      rt,
+      { kind: "message", recipientAddress: bob.address, body: "saved" },
+      "decoy",
+    );
+    const ticksLeft = listIntents(rt).find((row) => row.id === queued.id)?.waitTicks;
+    if (ticksLeft === undefined) throw new Error("auto enqueue missing waitTicks");
+    for (let i = 0; i < ticksLeft; i++) tickSynced(rt);
+    expect(sendRawTransaction).toHaveBeenCalledTimes(0);
+
+    await runtimeMod.syncRuntime(rt);
+
+    expect(sendRawTransaction).toHaveBeenCalledTimes(1);
+    expect(listIntents(rt).map((row) => row.id)).not.toContain(queued.id);
+  });
+
   it("does not count a locked runtime as a submit fail", async () => {
     const fundAtomic = 5_000_000;
     const sendAmount = 0.5;
@@ -784,7 +857,11 @@ describe("real-sdk finalizeSyncPass intent drain", () => {
     const { enqueueAuto, listIntents } = await import("@/lib/services/real-sdk/send-intent");
     const { rebuildSend } = await import("@/lib/services/real-sdk/intent-drain");
 
-    const queued = enqueueAuto(rt, { kind: "send", address: bob.address, amount: sendAmount }, "submit");
+    const queued = enqueueAuto(
+      rt,
+      { kind: "send", address: bob.address, amount: sendAmount },
+      "submit",
+    );
     const failsBefore = listIntents(rt).find((row) => row.id === queued.id)?.submitFails;
     if (failsBefore === undefined) {
       throw new Error("auto enqueue missing submitFails");
@@ -794,6 +871,22 @@ describe("real-sdk finalizeSyncPass intent drain", () => {
     const result = await rebuildSend(rt, queued);
     expect(result).toBe("skip");
     expect(listIntents(rt).find((row) => row.id === queued.id)?.submitFails).toBe(failsBefore);
+  });
+});
+
+describe("createDeposit after the node accepts", () => {
+  it("resolves from the scanned height when getHeight rejects and stores no intent", async () => {
+    const { rt } = await installFundedSender(5_000_000, {
+      getHeight: () => Promise.reject(new Error("height down")),
+    });
+    const { realSdkDepositService } = await import("@/lib/services/real-sdk/deposit.service");
+    const { listIntents } = await import("@/lib/services/real-sdk/send-intent");
+
+    const deposit = await realSdkDepositService.createDeposit({ amount: 1, durationMonths: 1 });
+
+    expect(deposit.queued).toBeUndefined();
+    expect(deposit.txHash).not.toBe("");
+    expect(listIntents(rt)).toEqual([]);
   });
 });
 

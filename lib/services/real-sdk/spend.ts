@@ -24,17 +24,17 @@ import {
   isValidAddress,
   MESSAGE_TX_AMOUNT_ATOMIC,
   MINIMUM_FEE_V2,
-  type OwnedOutput,
   OPTIMIZE_THRESHOLD,
+  type OwnedOutput,
   PRETTY_AMOUNTS,
-  relayAccepted,
   REMOTE_NODE_FEE_ATOMIC,
-  selectFusionInputs,
+  relayAccepted,
   type SendRawTransactionResult,
+  selectFusionInputs,
   transactions as txns,
 } from "conceal-wallet-sdk";
-import { buildSpendTxMap, isDepSpent, uiDepStatus } from "@/lib/deposits/deposit-status";
 import { WALLET_DONATION_ADDRESS } from "@/lib/config/config";
+import { buildSpendTxMap, isDepSpent, uiDepStatus } from "@/lib/deposits/deposit-status";
 import { saveOutboundPidForRuntime } from "@/lib/services/real-sdk/address-book.service";
 import {
   createSentMessageRecord,
@@ -48,6 +48,7 @@ import {
   pendingWithdrawnDepositKeys,
 } from "@/lib/services/real-sdk/pending-store";
 import { persistRuntime, type SdkRuntime, syncRuntime } from "@/lib/services/real-sdk/runtime";
+import { isLiveRuntime } from "@/lib/services/real-sdk/runtime-registry";
 
 /** Local aliases for types that live inside the SDK's `transactions` namespace. */
 type BuiltTransaction = txns.BuiltTransaction;
@@ -254,6 +255,51 @@ export async function raceHang<T>(work: Promise<T>, ms: number, message: string)
   }
 }
 
+/**
+ * Send's hang window for a call that has not produced a hash yet. When the
+ * window expires, `killGate` stops a late RPC from also submitting. A body
+ * that already parked returns that result; otherwise `parkHung` (only when a
+ * hash exists) or `parkAuto` creates the row.
+ */
+export async function raceLinkHang<T>(args: {
+  done: Promise<T | "abandoned">;
+  daemon: { getHeight(): Promise<number> };
+  killGate: () => void;
+  saved: () => T | undefined;
+  parkAuto: () => T;
+  parkHung: () => T | undefined;
+}): Promise<T> {
+  const done = args.done;
+  void done.catch(() => {});
+  let hangTimer: ReturnType<typeof setTimeout> | undefined;
+  const winner = await Promise.race([
+    done.then((row) => ({ kind: "done" as const, row })),
+    new Promise<{ kind: "timeout" }>((resolve) => {
+      hangTimer = setTimeout(() => resolve({ kind: "timeout" }), connectHangMs);
+    }),
+  ]);
+  if (hangTimer !== undefined) clearTimeout(hangTimer);
+
+  const fromDone = (row: T | "abandoned"): T =>
+    row === "abandoned" ? (args.saved() ?? args.parkAuto()) : row;
+
+  if (winner.kind === "done") return fromDone(winner.row);
+
+  if (!(await linkGone(args.daemon))) {
+    let graceTimer: ReturnType<typeof setTimeout> | undefined;
+    const late = await Promise.race([
+      done.then((row) => ({ kind: "done" as const, row })),
+      new Promise<{ kind: "timeout" }>((resolve) => {
+        graceTimer = setTimeout(() => resolve({ kind: "timeout" }), lateGraceMs);
+      }),
+    ]);
+    if (graceTimer !== undefined) clearTimeout(graceTimer);
+    if (late.kind === "done") return fromDone(late.row);
+  }
+  args.killGate();
+  return args.saved() ?? args.parkHung() ?? args.parkAuto();
+}
+
 /** True when the tab is offline or the daemon does not answer a short height probe. */
 export async function linkGone(daemon: { getHeight(): Promise<number> }): Promise<boolean> {
   if (linkDown()) return true;
@@ -278,6 +324,10 @@ export async function submitRawHex(
  * message, fusion): submit the hex, then classify — `accepted` (relay OK), `skip`
  * (the gate went dead), or `submit` (`timedOut` marks a possible in-flight broadcast
  * so callers park a hash-watching hung intent instead of blind-retrying).
+ *
+ * A relay OK that lands after the gate died is still `accepted` while the runtime is
+ * unlocked: the pending hold must be written so the inputs stay held and the hung
+ * row can see the hash.
  */
 type SubmitStage = { kind: "accepted" } | { kind: "skip" } | { kind: "submit"; timedOut: boolean };
 
@@ -295,8 +345,10 @@ async function submitStage(
     const timedOut = error instanceof Error && error.message.includes("timed out");
     return { kind: "submit", timedOut };
   }
+  const accepted = relayAccepted(status ?? "");
+  if (accepted && isLiveRuntime(rt)) return { kind: "accepted" };
   if (!gate()) return { kind: "skip" };
-  if (!relayAccepted(status ?? "")) return { kind: "submit", timedOut: false };
+  if (!accepted) return { kind: "submit", timedOut: false };
   return { kind: "accepted" };
 }
 
@@ -647,11 +699,16 @@ export type DepositPipelineRequest = { amountAtomic: number; termBlocks: number 
 export async function runDepositPipeline(
   rt: SdkRuntime,
   req: DepositPipelineRequest,
-  opts: { gate: () => boolean },
+  opts: { gate: () => boolean; onBuilt?: (hash: string) => void },
 ): Promise<SpendPipelineResult<{ hash: string }>> {
   const deadGate = (): SendPipelineFailure => ({ reason: "skip" });
 
-  const feeAddress = await safeNodeFeeAddress(rt.daemon);
+  let feeAddress: string;
+  try {
+    feeAddress = await rt.daemon.getNodeFeeAddress();
+  } catch {
+    return { ok: false, failure: opts.gate() ? { reason: "decoy" } : deadGate() };
+  }
   if (!opts.gate()) return { ok: false, failure: deadGate() };
   let nodeFee: { spendPublicKey: string; viewPublicKey: string } | null = null;
   if (feeAddress && feeAddress !== rt.account.address) {
@@ -694,6 +751,7 @@ export async function runDepositPipeline(
     mixin: MIXIN,
     nodeFee,
   });
+  opts.onBuilt?.(built.hash);
   if (!opts.gate()) return { ok: false, failure: deadGate() };
 
   const stage = await submitStage(rt, built, opts.gate);
@@ -717,11 +775,6 @@ export async function runDepositPipeline(
   } catch {
     // Non-fatal: the deposit is already relayed; sync reconciles the records.
   }
-  try {
-    await syncRuntime(rt);
-  } catch {
-    // Non-fatal: the next sync reflects the deposit.
-  }
   return { ok: true, sent: { hash: built.hash } };
 }
 
@@ -739,7 +792,7 @@ export type WithdrawPipelineRequest = {
 export async function runWithdrawPipeline(
   rt: SdkRuntime,
   req: WithdrawPipelineRequest,
-  opts: { gate: () => boolean },
+  opts: { gate: () => boolean; onBuilt?: (hash: string) => void },
 ): Promise<SpendPipelineResult<{ hash: string; sentAmount: number }>> {
   const built = txns.buildWithdrawTransaction({
     keys: rt.account.keys,
@@ -749,6 +802,7 @@ export async function runWithdrawPipeline(
     // the withdraw fee stays correct even if the SDK default ever changes.
     withdrawFee: DEPOSIT_SMALL_WITHDRAW_FEE,
   });
+  opts.onBuilt?.(built.hash);
   if (!opts.gate()) return { ok: false, failure: { reason: "skip" } };
 
   const stage = await submitStage(rt, built, opts.gate);
@@ -771,11 +825,6 @@ export async function runWithdrawPipeline(
     await persistRuntime(rt);
   } catch {
     // Non-fatal: the withdrawal is already relayed; sync reconciles the records.
-  }
-  try {
-    await syncRuntime(rt);
-  } catch {
-    // Non-fatal: the next sync reflects the withdrawal.
   }
   return { ok: true, sent: { hash: built.hash, sentAmount: built.sentAmount } };
 }
@@ -803,7 +852,7 @@ export type MessagePipelineSent = {
 export async function runMessagePipeline(
   rt: SdkRuntime,
   req: MessagePipelineRequest,
-  opts: { gate: () => boolean },
+  opts: { gate: () => boolean; onBuilt?: (hash: string) => void },
 ): Promise<SpendPipelineResult<MessagePipelineSent>> {
   const deadGate = (): SendPipelineFailure => ({ reason: "skip" });
 
@@ -814,7 +863,12 @@ export async function runMessagePipeline(
 
   let nodeFee: { spendPublicKey: string; viewPublicKey: string; amount: number } | null = null;
   if (!hasTtl) {
-    const feeAddress = await safeNodeFeeAddress(rt.daemon);
+    let feeAddress: string;
+    try {
+      feeAddress = await rt.daemon.getNodeFeeAddress();
+    } catch {
+      return { ok: false, failure: opts.gate() ? { reason: "decoy" } : deadGate() };
+    }
     if (!opts.gate()) return { ok: false, failure: deadGate() };
     if (feeAddress && feeAddress !== rt.account.address) {
       const decoded = decodeFeeRecipient(feeAddress);
@@ -866,6 +920,7 @@ export async function runMessagePipeline(
     messageAmount: MESSAGE_TX_AMOUNT_ATOMIC,
     ...(paymentId ? { paymentId: paymentId as txns.Hex } : {}),
   });
+  opts.onBuilt?.(built.hash);
   if (!opts.gate()) return { ok: false, failure: deadGate() };
 
   const stage = await submitStage(rt, built, opts.gate);
@@ -879,7 +934,8 @@ export async function runMessagePipeline(
   rt.raw = addPendingRecord(rt.raw, {
     hash: built.hash,
     type: "message",
-    amountAtomic: req.recipientAddress === rt.account.address ? built.fee : built.sentAmount + built.fee,
+    amountAtomic:
+      req.recipientAddress === rt.account.address ? built.fee : built.sentAmount + built.fee,
     timestampIso: new Date().toISOString(),
     address: req.recipientAddress,
     ...(paymentId ? { paymentId } : {}),
@@ -907,11 +963,6 @@ export async function runMessagePipeline(
       // Non-fatal: message already sent; contact row can be repaired on next send.
     }
   }
-  try {
-    await syncRuntime(rt);
-  } catch {
-    // Non-fatal: the next sync reflects the message.
-  }
   return {
     ok: true,
     sent: { hash: built.hash, record, ...(paymentId ? { paymentId } : {}) },
@@ -927,11 +978,16 @@ export type FusionPipelineSent = { optimized: false } | { optimized: true; hash:
  */
 export async function runFusionPipeline(
   rt: SdkRuntime,
-  opts: { gate: () => boolean },
+  opts: { gate: () => boolean; onBuilt?: (hash: string) => void },
 ): Promise<SpendPipelineResult<FusionPipelineSent>> {
   const deadGate = (): SendPipelineFailure => ({ reason: "skip" });
 
-  const blockchainHeight = await rt.daemon.getHeight();
+  let blockchainHeight: number;
+  try {
+    blockchainHeight = await rt.daemon.getHeight();
+  } catch {
+    return { ok: false, failure: opts.gate() ? { reason: "decoy" } : deadGate() };
+  }
   if (!opts.gate()) return { ok: false, failure: deadGate() };
 
   let outputs: OwnedOutput[];
@@ -967,6 +1023,7 @@ export async function runFusionPipeline(
     decoys,
     mixin: MIXIN,
   });
+  opts.onBuilt?.(built.hash);
   if (!opts.gate()) return { ok: false, failure: deadGate() };
 
   const stage = await submitStage(rt, built, opts.gate);
@@ -975,16 +1032,21 @@ export async function runFusionPipeline(
     return { ok: false, failure: { reason: "submit", timedOut: stage.timedOut, hash: built.hash } };
   }
 
+  // Post-accept only. Fusion pays the fee to self; the hold is the fee, while the
+  // spent images stop the sync drain from building the same inputs again.
   recordTxPrivateKey(rt, built);
+  rt.raw = addPendingRecord(rt.raw, {
+    hash: built.hash,
+    type: "fusion",
+    amountAtomic: built.fee,
+    timestampIso: new Date().toISOString(),
+    address: rt.account.address,
+    spentKeyImages: built.inputs.map((vin) => vin.keyImage),
+  });
   try {
     await persistRuntime(rt);
   } catch {
     // Non-fatal: the fusion tx is already relayed.
-  }
-  try {
-    await syncRuntime(rt);
-  } catch {
-    // Non-fatal: the next sync reflects the fused outputs.
   }
   return { ok: true, sent: { optimized: true, hash: built.hash } };
 }

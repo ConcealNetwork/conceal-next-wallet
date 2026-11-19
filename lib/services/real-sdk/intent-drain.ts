@@ -11,15 +11,18 @@ import {
   MAX_MESSAGE_BODY_BYTES,
 } from "conceal-wallet-sdk";
 import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
+import { readPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import { isLiveRuntime, type SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
 import {
   cancelIntent,
   dueAutoIntents,
   enqueueHung,
+  hungHashes,
   type IntentDraft,
   listIntents,
   markHungSent,
   noteDecoyFail,
+  noteHungHash,
   noteSubmitFail,
   resetAutoWait,
   tickSynced,
@@ -28,12 +31,12 @@ import {
 import {
   decodeRecipient,
   resolveOutboundPaymentId,
+  resolveWithdrawableDeposit,
   runDepositPipeline,
   runFusionPipeline,
   runMessagePipeline,
   runSendPipeline,
   runWithdrawPipeline,
-  resolveWithdrawableDeposit,
   type SpendPipelineResult,
 } from "@/lib/services/real-sdk/spend";
 import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
@@ -70,6 +73,7 @@ function pipelineToRebuildResult<Sent>(result: SpendPipelineResult<Sent>): Rebui
   if (failure.reason === "unfunded" || failure.reason === "select") return "unfunded";
   if (failure.reason === "decoy") return "decoy";
   if (failure.reason === "skip") return "skip";
+  if (failure.reason === "submit" && failure.timedOut) return { hung: failure.hash };
   return "submit";
 }
 
@@ -100,6 +104,10 @@ function applyRebuild(rt: SdkRuntime, intent: WalletIntent, result: RebuildResul
   }
   if (result === "submit") {
     if (noteSubmitFail(rt, intent.id) === "kept") resetAutoWait(rt, intent.id);
+    return;
+  }
+  if (intent.state === "hung") {
+    noteHungHash(rt, intent.id, result.hung);
     return;
   }
   cancelIntent(rt, intent.id);
@@ -145,15 +153,21 @@ export async function rebuildSend(rt: SdkRuntime, intent: WalletIntent): Promise
     if (failure.reason === "unfunded" || failure.reason === "select") return "unfunded";
     if (failure.reason === "decoy") return "decoy";
     if (failure.reason === "skip") return "skip";
+    if (failure.reason === "submit" && failure.timedOut) return { hung: failure.hash };
     return "submit";
   }
   return "ok";
 }
 
-function historyHashes(rt: SdkRuntime): Set<string> {
+/**
+ * Hashes the node is known to hold: mined, seen in the pool, or relay-accepted by
+ * this wallet (pending hold). A hung row whose hash is here must never be rebuilt.
+ */
+export function knownTxHashes(rt: SdkRuntime): Set<string> {
   return new Set([
     ...rt.state.transactions.map((tx) => tx.hash),
     ...readIncomingPendingRecords(rt.raw).map((record) => record.hash),
+    ...readPendingRecords(rt.raw).map((record) => record.hash),
   ]);
 }
 
@@ -161,7 +175,8 @@ export async function submitHung(rt: SdkRuntime, id: string): Promise<boolean> {
   const row = listIntents(rt).find((intent) => intent.id === id);
   if (row?.state !== "hung") return false;
   if (row.sent) return true;
-  if (row.watchedHash && historyHashes(rt).has(row.watchedHash)) {
+  const known = knownTxHashes(rt);
+  if (hungHashes(row).some((hash) => known.has(hash))) {
     markHungSent(rt, id);
     return true;
   }
@@ -173,9 +188,25 @@ export async function submitHung(rt: SdkRuntime, id: string): Promise<boolean> {
   return result !== "skip";
 }
 
+/** Intents whose rebuild is already on the stack. A sync inside that rebuild must not start a second one. */
+const intentBusy = new WeakMap<SdkRuntime, Set<string>>();
+
+function busyIds(rt: SdkRuntime): Set<string> {
+  let ids = intentBusy.get(rt);
+  if (!ids) {
+    ids = new Set();
+    intentBusy.set(rt, ids);
+  }
+  return ids;
+}
+
 export async function drainIntents(rt: SdkRuntime, args: DrainArgs): Promise<void> {
   for (const row of listIntents(rt)) {
-    if (row.state === "hung" && row.watchedHash && args.historyHashes.has(row.watchedHash)) {
+    if (
+      row.state === "hung" &&
+      !row.sent &&
+      hungHashes(row).some((hash) => args.historyHashes.has(hash))
+    ) {
       markHungSent(rt, row.id);
     }
   }
@@ -187,10 +218,21 @@ export async function drainIntents(rt: SdkRuntime, args: DrainArgs): Promise<voi
   const due = dueAutoIntents(rt);
   tickSynced(rt);
 
-  for (const intent of due) {
+  const busy = busyIds(rt);
+  for (const queued of due) {
     if (!args.isLive()) return;
-    const result = await args.rebuild(intent);
-    applyRebuild(rt, intent, result);
+    const intent = listIntents(rt).find((row) => row.id === queued.id);
+    if (intent?.state !== "auto") continue;
+    if (busy.has(intent.id)) continue;
+    busy.add(intent.id);
+    try {
+      const result = await args.rebuild(intent);
+      applyRebuild(rt, intent, result);
+    } catch {
+      applyRebuild(rt, intent, "decoy");
+    } finally {
+      busy.delete(intent.id);
+    }
   }
 }
 
@@ -224,7 +266,10 @@ export async function rebuildDeposit(rt: SdkRuntime, intent: WalletIntent): Prom
  * pending, gone after a rescan) is a silent unfunded drop — the chain state took
  * the opportunity away, so there is nothing to retry.
  */
-export async function rebuildWithdraw(rt: SdkRuntime, intent: WalletIntent): Promise<RebuildResult> {
+export async function rebuildWithdraw(
+  rt: SdkRuntime,
+  intent: WalletIntent,
+): Promise<RebuildResult> {
   if (intent.kind !== "withdraw") return "skip";
   const { txHash, globalOutputIndex } = intent.payload;
   if (!isLiveRuntime(rt)) return "skip";

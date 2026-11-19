@@ -10,6 +10,7 @@ import {
   enqueueAuto,
   enqueueHung,
   listIntents,
+  noteHungHash,
   type WalletIntent,
 } from "@/lib/services/real-sdk/send-intent";
 import { isWalletHeightSyncing } from "@/lib/ui/wallet-sync";
@@ -166,6 +167,49 @@ describe("drainIntents", () => {
     expect(hashes).toHaveLength(0);
     expect(listIntents(rt).map((row) => row.id)).toContain(queued.id);
     expect(listIntents(rt)[0]?.sent).not.toBe(true);
+  });
+
+  it("counts a thrown rebuild as a decoy fail and still runs the next intent", async () => {
+    const rt = fakeRuntime();
+    const first = enqueueAuto(rt, payInput("ccx7throwFirst", 1_000_000), "decoy");
+    const second = enqueueAuto(rt, payInput("ccx7throwSecond", 1_000_000), "decoy");
+    const ticksLeft = listIntents(rt)[0]?.waitTicks;
+    if (ticksLeft === undefined) throw new Error("auto enqueue missing waitTicks");
+    const synced = syncPair(false);
+    for (let i = 0; i < ticksLeft; i++) {
+      await drainIntents(
+        rt,
+        drainArgs(synced, async () => "ok"),
+      );
+    }
+    expect(listIntents(rt)[0]?.waitTicks).toBe(0);
+
+    let secondRan = 0;
+    await drainIntents(
+      rt,
+      drainArgs(synced, async (intent) => {
+        if (intent.id === first.id) throw new Error("boom");
+        secondRan += 1;
+        return "ok";
+      }),
+    );
+
+    expect(secondRan).toBe(1);
+    expect(listIntents(rt).find((row) => row.id === first.id)?.decoyFails).toBe(2);
+    expect(listIntents(rt).map((row) => row.id)).not.toContain(second.id);
+  });
+
+  it("marks a hung row sent when an earlier hash is in history", async () => {
+    const rt = fakeRuntime();
+    const queued = enqueueHung(rt, payInput("ccx7hungMany", 5_500_000), "hash-old");
+    noteHungHash(rt, queued.id, "hash-new");
+    const synced = syncPair(false);
+    await drainIntents(
+      rt,
+      drainArgs(synced, async () => "ok", { historyHashes: new Set(["hash-old"]) }),
+    );
+    expect(listIntents(rt)[0]?.sent).toBe(true);
+    expect(listIntents(rt)[0]?.watchedHash).toBe("hash-new");
   });
 
   it("marks hung sent when watchedHash is in history", async () => {

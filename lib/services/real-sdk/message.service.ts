@@ -1,7 +1,4 @@
-import {
-  isValidAddress,
-  MAX_MESSAGE_BODY_BYTES,
-} from "conceal-wallet-sdk";
+import { isValidAddress, MAX_MESSAGE_BODY_BYTES } from "conceal-wallet-sdk";
 import type { MessageService, SendMessageInput } from "@/lib/services/message.service";
 import {
   createSentMessageRecord,
@@ -13,11 +10,13 @@ import {
   withReceivedRecords,
   withSentRecords,
 } from "@/lib/services/real-sdk/messages-store";
-import { enqueueAuto, enqueueHung, type IntentDraft } from "@/lib/services/real-sdk/send-intent";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import { persist, requireRuntime, type SdkRuntime, sync } from "@/lib/services/real-sdk/runtime";
+import { enqueueAuto, enqueueHung, type IntentDraft } from "@/lib/services/real-sdk/send-intent";
 import {
   decodeRecipient,
+  linkDown,
+  raceLinkHang,
   resolveOutboundPaymentId,
   runMessagePipeline,
 } from "@/lib/services/real-sdk/spend";
@@ -81,42 +80,23 @@ export const realSdkMessageService: MessageService = {
       ...(ttlUnixSeconds > 0 ? { ttlUnixSeconds } : {}),
     };
 
-    // Build + submit through the SAME classified pipeline the intent drain uses:
-    // a transient failure parks a session intent and returns a queued Message
-    // (the UI toasts "saved to send after sync"), while validation failures above
-    // and a short balance stay visible errors. The sent copy + pending record are
-    // written only after the relay accepted.
-    const result = await runMessagePipeline(
-      rt,
-      {
-        recipientAddress: destinationAddress,
-        body,
-        ...(paymentId ? { paymentId } : {}),
-        ttlUnixSeconds,
-      },
-      { gate: () => true },
-    );
-    if (!result.ok) {
-      const failure = result.failure;
-      if (failure.reason === "unfunded") {
-        throw new Error("Not enough unlocked balance to send a message.");
-      }
-      if (failure.reason === "select") {
-        throw failure.error;
-      }
-      if (failure.reason === "submit" && failure.timedOut) {
-        enqueueHung(rt, draft, failure.hash);
-        return queuedMessageView(
-          destinationAddress,
-          body,
-          paymentId,
-          ttlUnixSeconds,
-          "hung",
-          failure.hash,
-        );
-      }
-      const row = enqueueAuto(rt, draft, failure.reason === "decoy" ? "decoy" : "submit");
-      return queuedMessageView(
+    // Same hang window as send. A lost link before a hash exists parks one auto
+    // intent. A submit timeout after a hash exists parks hung. Validation failures
+    // above and a short balance still throw.
+    const request = {
+      recipientAddress: destinationAddress,
+      body,
+      ...(paymentId ? { paymentId } : {}),
+      ttlUnixSeconds,
+    };
+    const gate = { live: true };
+    let builtHash: string | undefined;
+    let saved: Message | undefined;
+
+    const parkAuto = (cause: "decoy" | "submit" = "decoy"): Message => {
+      if (saved) return saved;
+      const row = enqueueAuto(rt, draft, cause);
+      saved = queuedMessageView(
         destinationAddress,
         body,
         paymentId,
@@ -124,9 +104,63 @@ export const realSdkMessageService: MessageService = {
         "auto",
         row.id,
       );
-    }
+      return saved;
+    };
 
-    return toMessage(result.sent.record);
+    const attempt = async (): Promise<Message | "abandoned"> => {
+      if (linkDown()) return parkAuto();
+      const result = await runMessagePipeline(rt, request, {
+        gate: () => gate.live,
+        onBuilt: (hash) => {
+          builtHash = hash;
+        },
+      });
+      if (!result.ok) {
+        if (!gate.live || result.failure.reason === "skip") return "abandoned";
+        const failure = result.failure;
+        if (failure.reason === "unfunded") {
+          throw new Error("Not enough unlocked balance to send a message.");
+        }
+        if (failure.reason === "select") throw failure.error;
+        if (failure.reason === "submit" && failure.timedOut) {
+          enqueueHung(rt, draft, failure.hash);
+          saved = queuedMessageView(
+            destinationAddress,
+            body,
+            paymentId,
+            ttlUnixSeconds,
+            "hung",
+            failure.hash,
+          );
+          return saved;
+        }
+        return parkAuto(failure.reason === "submit" ? "submit" : "decoy");
+      }
+      return toMessage(result.sent.record);
+    };
+
+    return raceLinkHang({
+      done: attempt(),
+      daemon: rt.daemon,
+      killGate: () => {
+        gate.live = false;
+      },
+      saved: () => saved,
+      parkAuto,
+      parkHung: () => {
+        if (!builtHash) return undefined;
+        enqueueHung(rt, draft, builtHash);
+        saved = queuedMessageView(
+          destinationAddress,
+          body,
+          paymentId,
+          ttlUnixSeconds,
+          "hung",
+          builtHash,
+        );
+        return saved;
+      },
+    });
   },
 
   async markRead(id: string): Promise<Message> {

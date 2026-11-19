@@ -804,9 +804,7 @@ describe("sendMessage broadcast failure (review #5)", () => {
     // No phantom sent record left behind on the blob.
     expect(readSentRecords(runtimeMod.getRuntime()?.raw as RawWalletV1)).toHaveLength(0);
 
-    const { listIntents, clearIntents } = await import(
-      "@/lib/services/real-sdk/send-intent"
-    );
+    const { listIntents, clearIntents } = await import("@/lib/services/real-sdk/send-intent");
     const rt = runtimeMod.getRuntime();
     expect(listIntents(rt as never)).toHaveLength(1);
     if (rt) clearIntents(rt);

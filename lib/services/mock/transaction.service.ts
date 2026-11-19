@@ -9,6 +9,7 @@ import {
   enqueueHung,
   type FailCause,
   type FailNote,
+  hungHashes,
   type IntentDraft,
   listIntents,
   mapIntent,
@@ -132,14 +133,16 @@ export const mockTransactionService: TransactionService = {
     const row = listIntents(mockRt).find((intent) => intent.id === id);
     if (row?.state !== "hung") return false;
     if (row.sent) return true;
-    if (row.watchedHash && seenHashes.has(row.watchedHash)) {
+    if (hungHashes(row).some((hash) => seenHashes.has(hash))) {
       markHungSent(mockRt, id);
       return true;
     }
     const kind = armedKind ?? "ok";
     armedKind = undefined;
     if (kind === "hung") {
-      row.watchedHash = nextHung();
+      const next = nextHung();
+      row.watchedHashes = [...hungHashes(row), next];
+      row.watchedHash = next;
       return true;
     }
     if (kind === "decoy" || kind === "submit") {

@@ -76,8 +76,12 @@ describe("OutboundQueueCard auto intents", () => {
     renderCard();
 
     const title = DICTIONARIES.en["queue.title"];
-    expect(title).not.toBe("Pending broadcasts");
+    const description = DICTIONARIES.en["queue.description"];
+    expect(title).toBe("Saved intents");
+    expect(description).not.toMatch(/until they go through/);
+    expect(description).toMatch(/drops it/);
     expect(screen.getByText(title)).toBeInTheDocument();
+    expect(screen.getByText(description)).toBeInTheDocument();
     expect(screen.getByText(DICTIONARIES.en["queue.stateRetrying"])).toBeInTheDocument();
     expect(screen.getByText("Send to Alice")).toBeInTheDocument();
 
@@ -116,10 +120,30 @@ describe("OutboundQueueCard auto intents", () => {
     useQueuedTransactions.mockReturnValue({
       data: [
         autoIntent(),
-        { ...autoIntent(), id: "intent-dep-1", intentKind: "deposit", label: "Deposit 100.000000 CCX · 12 mo" },
-        { ...autoIntent(), id: "intent-withdraw-1", intentKind: "withdraw", label: "Withdraw deposit abcdef123456…" },
-        { ...autoIntent(), id: "intent-msg-1", intentKind: "message", label: "Message to ccx7mess..." },
-        { ...autoIntent(), id: "intent-fusion-1", intentKind: "fusion", label: "Fusion transaction" },
+        {
+          ...autoIntent(),
+          id: "intent-dep-1",
+          intentKind: "deposit",
+          label: "Deposit 100.000000 CCX · 12 mo",
+        },
+        {
+          ...autoIntent(),
+          id: "intent-withdraw-1",
+          intentKind: "withdraw",
+          label: "Withdraw deposit abcdef123456…",
+        },
+        {
+          ...autoIntent(),
+          id: "intent-msg-1",
+          intentKind: "message",
+          label: "Message to ccx7mess...",
+        },
+        {
+          ...autoIntent(),
+          id: "intent-fusion-1",
+          intentKind: "fusion",
+          label: "Fusion transaction",
+        },
         {
           ...hungIntent(),
           id: "intent-hung-dep",

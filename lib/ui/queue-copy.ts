@@ -10,7 +10,13 @@ import type { WalletIntentKind } from "@/lib/types";
 export const queueCopy = {
   submit: "Submit",
   exhaustToast: "Resubmit failed due to connectivity. Try later or another remote node.",
-  hungToast: "Submit timed out. The payment may already be on the network.",
+  hungToast: {
+    send: "Submit timed out. The payment may already be on the network.",
+    deposit: "Submit timed out. The deposit may already be on the network.",
+    withdraw: "Submit timed out. The withdrawal may already be on the network.",
+    message: "Submit timed out. The message may already be on the network.",
+    fusion: "Submit timed out. The fusion transaction may already be on the network.",
+  },
   queuedToast: {
     send: "Payment not submitted. Saved to send after sync.",
     deposit: "Deposit not submitted. Saved to create after sync.",
@@ -30,3 +36,13 @@ export const queueCopy = {
       "The node hung. The fusion transaction may already be in the mempool. This intent is saved. Wait a few confirmations, then click Submit if it is still missing.",
   },
 } as const satisfies Record<string, string | Record<WalletIntentKind, string>>;
+
+/** Toast for a spend that ended as an intent, or undefined after a relay accept. */
+export function queueToast(
+  kind: WalletIntentKind,
+  queued: "auto" | "hung" | undefined,
+): string | undefined {
+  if (queued === "hung") return queueCopy.hungToast[kind];
+  if (queued === "auto") return queueCopy.queuedToast[kind];
+  return undefined;
+}

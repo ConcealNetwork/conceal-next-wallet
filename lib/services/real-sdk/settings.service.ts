@@ -1,10 +1,5 @@
-import {
-  getBalance,
-  isOptimizationNeeded,
-  type RawWalletV1,
-} from "conceal-wallet-sdk";
+import { getBalance, isOptimizationNeeded, type RawWalletV1 } from "conceal-wallet-sdk";
 import { clearReceivedRecords } from "@/lib/services/real-sdk/messages-store";
-import { enqueueAuto, enqueueHung, type IntentDraft } from "@/lib/services/real-sdk/send-intent";
 import { ensureSdkReady } from "@/lib/services/real-sdk/ready";
 import {
   buildDaemon,
@@ -13,7 +8,18 @@ import {
   requireRuntime,
   sync,
 } from "@/lib/services/real-sdk/runtime";
-import { runFusionPipeline, selectableOutputs } from "@/lib/services/real-sdk/spend";
+import {
+  enqueueAuto,
+  enqueueHung,
+  fusionSaved,
+  type IntentDraft,
+} from "@/lib/services/real-sdk/send-intent";
+import {
+  linkDown,
+  raceLinkHang,
+  runFusionPipeline,
+  selectableOutputs,
+} from "@/lib/services/real-sdk/spend";
 import type { SettingsService } from "@/lib/services/settings.service";
 import { assertCanSpend } from "@/lib/services/view-only";
 import { resetPulseDismissed } from "@/lib/storage/pulse-dismiss-store";
@@ -161,6 +167,7 @@ export const realSdkSettingsService: SettingsService = {
   async getOptimizationStatus(): Promise<OptimizationStatus> {
     await ensureSdkReady();
     const rt = requireRuntime();
+    if (fusionSaved(rt)) return { isNeeded: false, unspentOutputs: 0, intentSaved: true };
     const blockchainHeight = await rt.daemon.getHeight();
     const balance = getBalance(rt.state);
     const status = isOptimizationNeeded({
@@ -175,25 +182,58 @@ export const realSdkSettingsService: SettingsService = {
     await ensureSdkReady();
     const rt = requireRuntime();
     assertCanSpend(rt.viewOnly, walletCopy.viewOnlyOptimizeDisabled);
+    if (fusionSaved(rt)) throw new Error(walletCopy.fusionAlreadySaved);
 
-    // Classified fusion pipeline shared with the intent drain: it re-runs the
-    // optimization checks on fresh state, so "nothing to optimize" stays a normal
-    // result while transient failures park a session intent.
-    const result = await runFusionPipeline(rt, { gate: () => true });
-    if (!result.ok) {
-      const failure = result.failure;
-      if (failure.reason === "select") {
-        throw failure.error;
+    // Same hang window as send. A height call that never returns parks an auto
+    // intent; "nothing to optimize" stays a normal result once height is known.
+    const draft: IntentDraft = { kind: "fusion" };
+    const gate = { live: true };
+    let builtHash: string | undefined;
+    let saved: OptimizeWalletResult | undefined;
+
+    const parkAuto = (cause: "decoy" | "submit" = "decoy"): OptimizeWalletResult => {
+      if (saved) return saved;
+      enqueueAuto(rt, draft, cause);
+      saved = { ok: true, optimized: false, queued: "auto" };
+      return saved;
+    };
+
+    const body = async (): Promise<OptimizeWalletResult | "abandoned"> => {
+      if (linkDown()) return parkAuto();
+      const result = await runFusionPipeline(rt, {
+        gate: () => gate.live,
+        onBuilt: (hash) => {
+          builtHash = hash;
+        },
+      });
+      if (!result.ok) {
+        if (!gate.live || result.failure.reason === "skip") return "abandoned";
+        if (result.failure.reason === "select") throw result.failure.error;
+        if (result.failure.reason === "submit" && result.failure.timedOut) {
+          enqueueHung(rt, draft, result.failure.hash);
+          saved = { ok: true, optimized: false, queued: "hung" };
+          return saved;
+        }
+        return parkAuto(result.failure.reason === "submit" ? "submit" : "decoy");
       }
-      const draft: IntentDraft = { kind: "fusion" };
-      if (failure.reason === "submit" && failure.timedOut) {
-        enqueueHung(rt, draft, failure.hash);
-        return { ok: true, optimized: false, queued: "hung" };
-      }
-      enqueueAuto(rt, draft, failure.reason === "decoy" ? "decoy" : "submit");
-      return { ok: true, optimized: false, queued: "auto" };
-    }
-    return { ok: true, optimized: result.sent.optimized };
+      return { ok: true, optimized: result.sent.optimized };
+    };
+
+    return raceLinkHang({
+      done: body(),
+      daemon: rt.daemon,
+      killGate: () => {
+        gate.live = false;
+      },
+      saved: () => saved,
+      parkAuto,
+      parkHung: () => {
+        if (!builtHash) return undefined;
+        enqueueHung(rt, draft, builtHash);
+        saved = { ok: true, optimized: false, queued: "hung" };
+        return saved;
+      },
+    });
   },
 
   async resetAndRescan(): Promise<{ ok: true }> {

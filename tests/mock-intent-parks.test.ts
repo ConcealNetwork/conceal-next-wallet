@@ -23,8 +23,8 @@ import {
   _resetMockIntents,
   mockTransactionService,
 } from "@/lib/services/mock/transaction.service";
-import { clearIntents } from "@/lib/services/real-sdk/send-intent";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
+import { clearIntents } from "@/lib/services/real-sdk/send-intent";
 import { ccxToNumber } from "@/lib/utils";
 
 const RECIPIENT = "ccx7queuedMockRecipientAddress";
@@ -61,9 +61,7 @@ describe("mock parked intents for deposit / message / fusion", () => {
 
   it("createDeposit parks an auto intent and returns a queued deposit", async () => {
     park("deposit", "decoy");
-    const deposit = await flush(
-      mockDepositService.createDeposit({ amount: 3, durationMonths: 6 }),
-    );
+    const deposit = await flush(mockDepositService.createDeposit({ amount: 3, durationMonths: 6 }));
     expect(deposit.queued).toBe("auto");
     expect(deposit.txHash).not.toBe("mock-deposit-tx-hash");
 
@@ -108,9 +106,7 @@ describe("mock parked intents for deposit / message / fusion", () => {
 
   it("parked rows are cancellable through the shared queue and defaults stay clean", async () => {
     park("deposit", "decoy");
-    const deposit = await flush(
-      mockDepositService.createDeposit({ amount: 3, durationMonths: 6 }),
-    );
+    const deposit = await flush(mockDepositService.createDeposit({ amount: 3, durationMonths: 6 }));
     const queued = await listQueue();
     const id = queued[0]?.id;
     if (!id) throw new Error("expected a parked deposit row");
@@ -119,9 +115,7 @@ describe("mock parked intents for deposit / message / fusion", () => {
     expect(deposit.queued).toBe("auto");
 
     // Default (unarmed) behavior: clean success, no queued marker, empty queue.
-    const clean = await flush(
-      mockDepositService.createDeposit({ amount: 1, durationMonths: 3 }),
-    );
+    const clean = await flush(mockDepositService.createDeposit({ amount: 1, durationMonths: 3 }));
     expect(clean.queued).toBeUndefined();
     expect(clean.txHash).toBe("mock-deposit-tx-hash");
   });

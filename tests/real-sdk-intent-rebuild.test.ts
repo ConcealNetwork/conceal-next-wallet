@@ -16,8 +16,8 @@ import {
   type WalletKeys,
 } from "conceal-wallet-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { drainIntents, type RebuildResult } from "@/lib/services/real-sdk/intent-drain";
 import { readIncomingPendingRecords } from "@/lib/services/real-sdk/incoming-pending-store";
+import { drainIntents, type RebuildResult } from "@/lib/services/real-sdk/intent-drain";
 import { readPendingRecords } from "@/lib/services/real-sdk/pending-store";
 import type { SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
 import { scanRawTransaction } from "@/lib/services/real-sdk/scan";
@@ -265,6 +265,7 @@ describe("per-kind intent rebuilds (deposit / withdraw / message / fusion)", () 
     const { rt, sendRawTransaction } = await installRuntime(4 * ATOMIC);
     const { rebuildDeposit } = await import("@/lib/services/real-sdk/intent-drain");
 
+    enqueueAuto(rt, { kind: "deposit", amount: 4, durationMonths: 1 }, "decoy");
     await drainOne(rt, rebuildDeposit);
     expect(listIntents(rt)).toEqual([]);
     expect(takeDropToast(rt)).toBeUndefined();
@@ -292,11 +293,7 @@ describe("per-kind intent rebuilds (deposit / withdraw / message / fusion)", () 
     expect(sendRawTransaction).not.toHaveBeenCalled();
 
     // Missing deposit → silent drop too.
-    enqueueAuto(
-      rt,
-      { kind: "withdraw", txHash: "cc".repeat(32), globalOutputIndex: 7 },
-      "submit",
-    );
+    enqueueAuto(rt, { kind: "withdraw", txHash: "cc".repeat(32), globalOutputIndex: 7 }, "submit");
     await drainOne(rt, rebuildWithdraw);
     expect(listIntents(rt)).toEqual([]);
 
@@ -344,29 +341,55 @@ describe("per-kind intent rebuilds (deposit / withdraw / message / fusion)", () 
     expect(readSentRecords(rt.raw)).toHaveLength(1);
   });
 
-  it("re-fusion silently drops when nothing is fuseable, and rebuilds when needed", async () => {
+  it("drops a fusion intent silently when one output cannot be fused", async () => {
     await init();
-    const fund = 50 * ATOMIC;
-    const { rt, sendRawTransaction } = await installRuntime(fund);
+    const { rt, sendRawTransaction } = await installRuntime(50 * ATOMIC);
     const { rebuildFusion } = await import("@/lib/services/real-sdk/intent-drain");
-    const { isOptimizationNeeded } = await import("conceal-wallet-sdk");
+    const { isOptimizationNeeded, OPTIMIZE_OUTPUTS } = await import("conceal-wallet-sdk");
+
+    expect(rt.state.outputs.length).toBeLessThan(OPTIMIZE_OUTPUTS);
+    expect(
+      isOptimizationNeeded({
+        unspentOutputs: rt.state.outputs,
+        balance: 50 * ATOMIC,
+        blockchainHeight: NETWORK_HEIGHT,
+      }).isNeeded,
+    ).toBe(false);
 
     enqueueAuto(rt, { kind: "fusion" }, "decoy");
-    const status = isOptimizationNeeded({
-      unspentOutputs: rt.state.outputs,
-      balance: fund,
-      blockchainHeight: NETWORK_HEIGHT,
-    });
-
     await drainOne(rt, rebuildFusion);
     expect(listIntents(rt)).toEqual([]);
-    if (!status.isNeeded) {
-      // Nothing to fuse on a fresh wallet → silent drop, no submit.
-      expect(takeDropToast(rt)).toBeUndefined();
-      expect(sendRawTransaction).not.toHaveBeenCalled();
-    } else {
-      expect(sendRawTransaction).toHaveBeenCalledOnce();
-    }
+    expect(takeDropToast(rt)).toBeUndefined();
+    expect(sendRawTransaction).not.toHaveBeenCalled();
+  });
+
+  it("rebuilds a fusion intent when a full bucket of pretty outputs is fuseable", async () => {
+    await init();
+    const { alice, rt, sendRawTransaction } = await installRuntime(0);
+    const { rebuildFusion } = await import("@/lib/services/real-sdk/intent-drain");
+    const { isOptimizationNeeded, OPTIMIZE_OUTPUTS } = await import("conceal-wallet-sdk");
+
+    const amount = 10_000_000;
+    rt.state = {
+      ...rt.state,
+      outputs: Array.from({ length: OPTIMIZE_OUTPUTS }, (_, index) => {
+        const output = fundOwnedOutput(alice, amount);
+        return { ...output, globalIndex: 4000 + index };
+      }),
+    };
+    expect(
+      isOptimizationNeeded({
+        unspentOutputs: rt.state.outputs,
+        balance: OPTIMIZE_OUTPUTS * amount,
+        blockchainHeight: NETWORK_HEIGHT,
+      }).isNeeded,
+    ).toBe(true);
+
+    enqueueAuto(rt, { kind: "fusion" }, "decoy");
+    await drainOne(rt, rebuildFusion);
+    expect(listIntents(rt)).toEqual([]);
+    expect(sendRawTransaction).toHaveBeenCalledOnce();
+    expect(pendingByType(rt, "fusion")).toHaveLength(1);
   });
 });
 
@@ -419,6 +442,7 @@ describe("queued field propagation (interactive returns)", () => {
     });
 
     // Locked deposit (term not elapsed) stays a visible interactive error.
+    clearIntents(rt);
     rt.state = {
       ...rt.state,
       deposits: [{ ...owned, blockHeight: RECENT_HEIGHT, txHash: DEPOSIT_TX_HASH }],
@@ -455,25 +479,121 @@ describe("queued field propagation (interactive returns)", () => {
     expect(readSentRecords(rt.raw)).toEqual([]);
   });
 
-  it("optimizeWallet parks a fusion intent when decoys fail and returns queued", async () => {
+  it("optimizeWallet returns nothing-to-optimize without parking when one output is present", async () => {
     await init();
-    const fund = 50 * ATOMIC;
-    const { rt } = await installRuntime(fund, {
-      getRandomOuts: () => Promise.reject(new Error("decoys down")),
-    });
+    const { rt } = await installRuntime(50 * ATOMIC);
     const { realSdkSettingsService } = await import("@/lib/services/real-sdk/settings.service");
 
     const result = await realSdkSettingsService.optimizeWallet();
+    expect(result.optimized).toBe(false);
+    expect(result.queued).toBeUndefined();
+    expect(listIntents(rt)).toEqual([]);
+  });
+
+  it("parks a hung withdraw when submit times out and writes no pending record", async () => {
+    await init();
+    const depositAmount = 5 * ATOMIC;
+    const { alice, rt } = await installRuntime(20 * ATOMIC, {
+      sendRawTransaction: () => Promise.reject(new Error("Daemon request timed out after 10000ms")),
+    });
+    const { owned } = await seedUnlockedDeposit(alice, rt, depositAmount);
+    const { realSdkDepositService } = await import("@/lib/services/real-sdk/deposit.service");
+
+    const result = await realSdkDepositService.withdrawDeposit({
+      txHash: DEPOSIT_TX_HASH,
+      globalOutputIndex: owned.globalIndex,
+    });
+    expect(result.queued).toBe("hung");
     const rows = listIntents(rt);
-    if (rows.length > 0) {
-      // The SDK deemed this wallet optimization-worthy; the decoy failure parks it.
-      expect(rows[0]?.kind).toBe("fusion");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("withdraw");
+    expect(rows[0]?.state).toBe("hung");
+    expect(rows[0]?.watchedHash).toBe(result.hash);
+    expect(pendingByType(rt, "withdrawal")).toEqual([]);
+  });
+
+  it("parks an auto withdraw when getHeight rejects with timed out and does not submit", async () => {
+    await init();
+    const depositAmount = 5 * ATOMIC;
+    const { alice, rt, sendRawTransaction } = await installRuntime(20 * ATOMIC, {
+      getHeight: () => Promise.reject(new Error("Daemon request timed out after 10000ms")),
+    });
+    const { owned } = await seedUnlockedDeposit(alice, rt, depositAmount);
+    const { realSdkDepositService } = await import("@/lib/services/real-sdk/deposit.service");
+
+    const result = await realSdkDepositService.withdrawDeposit({
+      txHash: DEPOSIT_TX_HASH,
+      globalOutputIndex: owned.globalIndex,
+    });
+    expect(result.queued).toBe("auto");
+    const rows = listIntents(rt);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.state).toBe("auto");
+    expect(rows[0]?.kind).toBe("withdraw");
+    expect(sendRawTransaction).not.toHaveBeenCalled();
+  });
+
+  it("parks an auto withdraw when getHeight never returns and a late height does not submit", async () => {
+    await init();
+    const depositAmount = 5 * ATOMIC;
+    const { alice, rt, sendRawTransaction } = await installRuntime(20 * ATOMIC);
+    const { owned } = await seedUnlockedDeposit(alice, rt, depositAmount);
+    const waiters: Array<(height: number) => void> = [];
+    rt.daemon.getHeight = () =>
+      new Promise((resolve) => {
+        waiters.push(resolve);
+      });
+    const { connectHangMs, probeHangMs } = await import("@/lib/services/real-sdk/spend");
+    const { realSdkDepositService } = await import("@/lib/services/real-sdk/deposit.service");
+
+    vi.useFakeTimers();
+    try {
+      const pending = realSdkDepositService.withdrawDeposit({
+        txHash: DEPOSIT_TX_HASH,
+        globalOutputIndex: owned.globalIndex,
+      });
+      await vi.advanceTimersByTimeAsync(connectHangMs + probeHangMs);
+      const result = await pending;
+      expect(result.queued).toBe("auto");
+      expect(listIntents(rt)).toHaveLength(1);
+      expect(sendRawTransaction).not.toHaveBeenCalled();
+
+      for (const release of waiters) release(NETWORK_HEIGHT);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(sendRawTransaction).not.toHaveBeenCalled();
+      expect(listIntents(rt)).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("parks an auto fusion when optimize getHeight never returns", async () => {
+    await init();
+    const { rt, sendRawTransaction } = await installRuntime(50 * ATOMIC);
+    const waiters: Array<(height: number) => void> = [];
+    rt.daemon.getHeight = () =>
+      new Promise((resolve) => {
+        waiters.push(resolve);
+      });
+    const { connectHangMs, probeHangMs } = await import("@/lib/services/real-sdk/spend");
+    const { realSdkSettingsService } = await import("@/lib/services/real-sdk/settings.service");
+
+    vi.useFakeTimers();
+    try {
+      const pending = realSdkSettingsService.optimizeWallet();
+      await vi.advanceTimersByTimeAsync(connectHangMs + probeHangMs);
+      const result = await pending;
       expect(result.queued).toBe("auto");
       expect(result.optimized).toBe(false);
-    } else {
-      // Nothing to optimize on a fresh wallet — a plain no-op result.
-      expect(result.optimized).toBe(false);
-      expect(result.queued).toBeUndefined();
+      expect(listIntents(rt)[0]?.kind).toBe("fusion");
+      expect(listIntents(rt)[0]?.state).toBe("auto");
+      expect(sendRawTransaction).not.toHaveBeenCalled();
+
+      for (const release of waiters) release(NETWORK_HEIGHT);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(sendRawTransaction).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
     }
   });
 });

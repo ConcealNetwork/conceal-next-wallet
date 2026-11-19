@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader, SectionCard } from "@/components/wallet/common";
 import { ContactAvatar } from "@/components/wallet/contact-avatar";
-import { useAddressBook, useMessages, useSendMessage, useWalletViewOnly } from "@/lib/hooks";
+import {
+  useAddressBook,
+  useMessages,
+  useSendMessage,
+  useWalletSyncStatus,
+  useWalletViewOnly,
+} from "@/lib/hooks";
 import { useWalletSynced } from "@/lib/hooks/use-pulse";
 import { useI18n } from "@/lib/i18n/i18n-provider";
 import { buildPulseRows } from "@/lib/messages/pulse-rows";
@@ -19,7 +25,8 @@ type PulseKind = smartPulse.PulseKind;
 
 import { usePulseDismissed } from "@/lib/hooks/use-pulse-dismissed";
 import type { AddressEntry } from "@/lib/types";
-import { queueCopy } from "@/lib/ui/queue-copy";
+import { messageSendBlock } from "@/lib/ui/message-send-plan";
+import { queueToast } from "@/lib/ui/queue-copy";
 import { toast } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -87,6 +94,8 @@ export default function PulsePage() {
   const messages = useMessages();
   const synced = useWalletSynced();
   const viewOnly = useWalletViewOnly();
+  const { isSyncing } = useWalletSyncStatus();
+  const sendBlock = messageSendBlock({ viewOnly, isSyncing });
   const sendMessage = useSendMessage();
 
   const contacts = addressBook.data ?? [];
@@ -118,7 +127,8 @@ export default function PulsePage() {
   }
 
   function broadcast() {
-    if (viewOnly || sendMessage.isPending) return;
+    if (sendMessage.isPending) return;
+    if (sendBlock) return toast.error(sendBlock);
     const contact = contacts.find((c) => c.id === sendContactId);
     const paymentIdTo = contact?.paymentIdTo?.trim();
     if (!contact || !hasRelationship(contact) || !paymentIdTo) {
@@ -133,9 +143,7 @@ export default function PulsePage() {
       {
         onSuccess: (sent) =>
           toast.success(
-            sent.queued
-              ? queueCopy.queuedToast.message
-              : t("pulse.sentTo", { label: contact.label }),
+            queueToast("message", sent.queued) ?? t("pulse.sentTo", { label: contact.label }),
           ),
         onError: (error: unknown) =>
           toast.error(error instanceof Error ? error.message : t("pulse.errSend")),
@@ -209,7 +217,12 @@ export default function PulsePage() {
                 onChange={(e) => setGrace(e.target.value)}
               />
             </div>
-            <Button type="button" onClick={broadcast} disabled={!canSend || viewOnly}>
+            <Button
+              type="button"
+              onClick={broadcast}
+              disabled={!canSend || !!sendBlock}
+              title={sendBlock}
+            >
               {t("pulse.broadcast")}
             </Button>
           </div>

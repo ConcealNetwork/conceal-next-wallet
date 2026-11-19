@@ -1,11 +1,11 @@
+import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import { isTtlExpired } from "@/lib/messages/ttl";
 import { mockMessages } from "@/lib/mock-data/wallet";
 import type { MessageService } from "@/lib/services/message.service";
 import { mockAddrBook } from "@/lib/services/mock/address-book.service";
 import { clone, mockDelay } from "@/lib/services/mock/helpers";
-import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
-import { buildMessageThreadKey } from "@/lib/messages/thread-key";
 import { mockIntentRuntime } from "@/lib/services/mock/transaction.service";
+import { isMockViewOnly } from "@/lib/services/mock/wallet.service";
 import {
   clearIntents,
   enqueueAuto,

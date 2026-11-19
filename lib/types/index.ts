@@ -280,6 +280,8 @@ export type WalletSettings = {
 export type OptimizationStatus = {
   isNeeded: boolean;
   unspentOutputs: number;
+  /** A fusion intent is already saved; it sends on its own once the node is reachable. */
+  intentSaved?: boolean;
 };
 
 export type OptimizeWalletResult = {

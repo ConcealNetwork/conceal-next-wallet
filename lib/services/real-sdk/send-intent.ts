@@ -1,15 +1,17 @@
 // Copyright (c) 2026 Conceal Network, Conceal Devs
 // SPDX-License-Identifier: BSD-3-Clause
 
+import type { SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
 /**
  * Session-only wallet intents on the unlocked runtime. WeakMap RAM — no IndexedDB,
  * no parked hex / `outbox:`. Auto rows retry after synced wait ticks; hung rows
- * watch a local hash only. One shared store serves every intent kind (send,
+ * watch every hash that submit produced. One shared store serves every intent kind (send,
  * deposit, withdraw, message, fusion); each kind carries its own payload and
  * rebuild function (see intent-drain.ts).
+ *
+ * @see docs/decisions/003-session-intent-creation.md
  */
 import type { QueuedTransaction, WalletIntentKind } from "@/lib/types";
-import type { SdkRuntime } from "@/lib/services/real-sdk/runtime-registry";
 import { queueCopy } from "@/lib/ui/queue-copy";
 import { formatCcx, truncateAddress } from "@/lib/utils";
 
@@ -60,7 +62,10 @@ export type IntentDraft =
 type IntentBase = {
   id: string;
   state: IntentState;
+  /** Latest hash. The card shows this one. */
   watchedHash?: string;
+  /** Every hash this hung row has produced. Any one of them marks it sent. */
+  watchedHashes?: string[];
   decoyFails: number;
   submitFails: number;
   waitTicks: number;
@@ -218,6 +223,7 @@ function rowFrom(
     submitFails: number;
     waitTicks: number;
     watchedHash?: string;
+    watchedHashes?: string[];
   },
 ): WalletIntent {
   const base = {
@@ -242,12 +248,30 @@ export function enqueueAuto(rt: SdkRuntime, draft: IntentDraft, cause: FailCause
 export function enqueueHung(rt: SdkRuntime, draft: IntentDraft, watchedHash: string): WalletIntent {
   const row = rowFrom(draft, "hung", {
     watchedHash,
+    watchedHashes: [watchedHash],
     decoyFails: 0,
     submitFails: 0,
     waitTicks: 0,
   });
   rowsFor(rt).push(row);
   return row;
+}
+
+/** Hashes a hung row is watching. Falls back to the single latest hash. */
+export function hungHashes(row: WalletIntent): string[] {
+  if (row.watchedHashes && row.watchedHashes.length > 0) return row.watchedHashes;
+  return row.watchedHash ? [row.watchedHash] : [];
+}
+
+/** Keep a new submit hash on a hung row. The row is not replaced. */
+export function noteHungHash(rt: SdkRuntime, id: string, hash: string): void {
+  const rows = rowsFor(rt);
+  const idx = rows.findIndex((row) => row.id === id);
+  const row = rows[idx];
+  if (row?.state !== "hung") return;
+  const prior = hungHashes(row);
+  const watchedHashes = prior.includes(hash) ? prior : [...prior, hash];
+  rows[idx] = { ...row, watchedHash: hash, watchedHashes };
 }
 
 export function listIntents(rt: SdkRuntime): WalletIntent[] {
@@ -320,6 +344,22 @@ export function dropUnfunded(
 export function markHungSent(rt: SdkRuntime, id: string): void {
   const row = findRow(rt, id);
   if (row) row.sent = true;
+}
+
+/** `txHash:globalOutputIndex` of every deposit a not-yet-sent withdraw intent targets. */
+export function savedWithdrawKeys(rt: SdkRuntime): Set<string> {
+  const keys = new Set<string>();
+  for (const row of rowsFor(rt)) {
+    if (row.kind === "withdraw" && !row.sent) {
+      keys.add(`${row.payload.txHash}:${row.payload.globalOutputIndex}`);
+    }
+  }
+  return keys;
+}
+
+/** True while a not-yet-sent fusion intent is saved. */
+export function fusionSaved(rt: SdkRuntime): boolean {
+  return rowsFor(rt).some((row) => row.kind === "fusion" && !row.sent);
 }
 
 export function resetAutoWait(rt: SdkRuntime, id: string): void {

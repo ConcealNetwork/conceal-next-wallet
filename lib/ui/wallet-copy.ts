@@ -85,6 +85,11 @@ export const walletCopy = {
   depositMinBalanceDisabled:
     "Creating a deposit needs at least 1 CCX available (plus the network fee) — funds locked in deposits or held by pending transactions don't count.",
   viewOnlyMessageDisabled: "This is a view-only wallet. Import the spend key to send messages.",
+  messageSyncingDisabled:
+    "Wallet is still syncing — wait until it's up to date before sending a message.",
+  withdrawAlreadyPending: "A withdrawal for this deposit is already pending confirmation.",
+  fusionAlreadySaved:
+    "An optimization transaction is already saved. It is sent automatically once the node is reachable.",
   viewOnlyOptimizeDisabled:
     "This is a view-only wallet. Optimizing outputs requires the spend key.",
   exportCsvButton: "Export CSV",

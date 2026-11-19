@@ -65,9 +65,9 @@ import {
   setWatchOtherWalletsEnabled,
 } from "@/lib/notifications/watch-wallets";
 import type { SyncSpeed, WalletSettings } from "@/lib/types";
+import { queueToast } from "@/lib/ui/queue-copy";
 import { SYNC_SPEED_LABELS, SYNC_SPEED_OPTIONS } from "@/lib/ui/sync-speed";
 import { TICKER_OPTIONS, useTickerPreference } from "@/lib/ui/ticker-preference-provider";
-import { queueCopy } from "@/lib/ui/queue-copy";
 import { toast } from "@/lib/ui/toast";
 import { walletCopy } from "@/lib/ui/wallet-copy";
 import { cn } from "@/lib/utils";
@@ -492,6 +492,7 @@ export default function SettingsPage() {
 
   const optimizationNeeded = optimizationStatus.data?.isNeeded ?? false;
   const unspentOutputs = optimizationStatus.data?.unspentOutputs ?? 0;
+  const fusionSaved = optimizationStatus.data?.intentSaved ?? false;
 
   function handleOptimize() {
     if (viewOnly) {
@@ -500,8 +501,9 @@ export default function SettingsPage() {
     }
     optimizeWallet.mutate(undefined, {
       onSuccess: (result) => {
-        if (result.queued) {
-          toast.success(queueCopy.queuedToast.fusion);
+        const queuedNotice = queueToast("fusion", result.queued);
+        if (queuedNotice) {
+          toast.success(queuedNotice);
           return;
         }
         if (result.optimized) {
@@ -773,6 +775,10 @@ export default function SettingsPage() {
                 ) : viewOnly ? (
                   <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
                     {walletCopy.viewOnlyOptimizeDisabled}
+                  </p>
+                ) : fusionSaved ? (
+                  <p className="max-w-xs text-right text-xs text-muted-foreground sm:max-w-sm">
+                    {walletCopy.fusionAlreadySaved}
                   </p>
                 ) : optimizationNeeded ? (
                   <p className="max-w-xs text-right text-xs text-amber-400/90 sm:max-w-sm">

@@ -33,7 +33,7 @@ import {
   reconcileIncomingPending,
   withIncomingPendingRecords,
 } from "@/lib/services/real-sdk/incoming-pending-store";
-import { drainIntents, rebuildIntent } from "@/lib/services/real-sdk/intent-drain";
+import { drainIntents, knownTxHashes, rebuildIntent } from "@/lib/services/real-sdk/intent-drain";
 import {
   applyInboundScanToReceived,
   dropExpiredTtl,
@@ -736,12 +736,11 @@ async function finalizeSyncPass(rt: SdkRuntime, ctx: SyncPassCtx): Promise<void>
   // Session send intents: rebuild a due auto payment after synced wait ticks. Best-effort —
   // a drain error must never throw out of finalize (same wrap as the old #92 hex drain).
   try {
-    const historyHashes = new Set([...minedHashes, ...activeMempoolHashes]);
     await drainIntents(rt, {
       scannedHeight: rt.state.scannedHeight,
       networkHeight: ctx.height,
       spendableAtomic: getBalance(rt.state).spendable,
-      historyHashes,
+      historyHashes: knownTxHashes(rt),
       isLive: () => isLiveRuntime(rt),
       rebuild: (intent) => rebuildIntent(rt, intent),
     });
