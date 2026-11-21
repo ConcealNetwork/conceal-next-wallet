@@ -117,7 +117,8 @@ function applyRebuild(rt: SdkRuntime, intent: WalletIntent, result: RebuildResul
  * Rebuild + resubmit a queued send through the SAME shared pipeline the
  * interactive send uses (spend.ts runSendPipeline) — fee logic, builder, submit,
  * and post-OK records can no longer drift between the two paths. Only the input
- * validation and the failure→retry classification are drain-specific here.
+ * validation is drain-specific here; the failure→retry classification is the
+ * shared {@link pipelineToRebuildResult} mapping, same as every other kind.
  */
 export async function rebuildSend(rt: SdkRuntime, intent: WalletIntent): Promise<RebuildResult> {
   if (intent.kind !== "send") return "skip";
@@ -147,15 +148,7 @@ export async function rebuildSend(rt: SdkRuntime, intent: WalletIntent): Promise
     },
     { gate: () => isLiveRuntime(rt) },
   );
-  if (!result.ok) {
-    const failure = result.failure;
-    if (failure.reason === "unfunded" || failure.reason === "select") return "unfunded";
-    if (failure.reason === "decoy") return "decoy";
-    if (failure.reason === "skip") return "skip";
-    if (failure.reason === "submit" && failure.timedOut) return { hung: failure.hash };
-    return "submit";
-  }
-  return "ok";
+  return pipelineToRebuildResult(result);
 }
 
 /**

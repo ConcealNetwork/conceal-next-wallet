@@ -392,6 +392,60 @@ describe("per-kind intent rebuilds (deposit / withdraw / message / fusion)", () 
   });
 });
 
+describe("rebuildSend failure mapping (pinned to the shared pipelineToRebuildResult classification)", () => {
+  it("maps a relay reject to submit and a decoy-fetch failure to decoy", async () => {
+    await init();
+    const { alice, rt } = await installRuntime(5 * ATOMIC, {
+      sendRawTransaction: () => Promise.resolve({ status: "Rejected: bad promise" }),
+    });
+    const { rebuildSend } = await import("@/lib/services/real-sdk/intent-drain");
+
+    const send = (address: string) => {
+      enqueueAuto(rt, { kind: "send", address, amount: 1 }, "submit");
+      const row = listIntents(rt).at(-1);
+      if (!row) throw new Error("send intent missing after enqueue");
+      return row;
+    };
+
+    expect(await rebuildSend(rt, send(alice.address))).toBe("submit");
+
+    rt.daemon.getRandomOuts = () => Promise.reject(new Error("decoys down"));
+    expect(await rebuildSend(rt, send(alice.address))).toBe("decoy");
+  });
+
+  it("parks a timed-out submit as a hung result carrying the built hash", async () => {
+    await init();
+    const { alice, rt, sendRawTransaction } = await installRuntime(5 * ATOMIC, {
+      sendRawTransaction: () => Promise.reject(new Error("Daemon request timed out after 10000ms")),
+    });
+    const { rebuildSend } = await import("@/lib/services/real-sdk/intent-drain");
+
+    enqueueAuto(rt, { kind: "send", address: alice.address, amount: 1 }, "submit");
+    const row = listIntents(rt)[0];
+    if (!row) throw new Error("send intent missing after enqueue");
+
+    const result = await rebuildSend(rt, row);
+    expect(result).toEqual({ hung: expect.any(String) });
+    if (typeof result !== "string" && result.hung.length === 0) {
+      throw new Error("timed-out send must carry the built hash for double-pay protection");
+    }
+    expect(sendRawTransaction).toHaveBeenCalledOnce();
+  });
+
+  it("maps an underfunded rebuild to a silent unfunded drop", async () => {
+    await init();
+    const { alice, rt, sendRawTransaction } = await installRuntime(1 * ATOMIC);
+    const { rebuildSend } = await import("@/lib/services/real-sdk/intent-drain");
+
+    enqueueAuto(rt, { kind: "send", address: alice.address, amount: 5 }, "submit");
+    const row = listIntents(rt)[0];
+    if (!row) throw new Error("send intent missing after enqueue");
+
+    expect(await rebuildSend(rt, row)).toBe("unfunded");
+    expect(sendRawTransaction).not.toHaveBeenCalled();
+  });
+});
+
 describe("queued field propagation (interactive returns)", () => {
   it("createDeposit returns a queued auto deposit when decoys fail, throwing when unfunded", async () => {
     await init();
