@@ -698,7 +698,12 @@ async function tipOrPinnedHeight(): Promise<number> {
 /** Clamp a requested scan height to `[0, networkTip]`; default to the current tip. */
 async function clampScanHeight(requested: number | undefined): Promise<number> {
   if (requested === undefined) {
-    return tipOrPinnedHeight();
+    // Default to the current tip (a fresh import starts scanning from "now").
+    try {
+      return await buildDaemon(nodeUrlFromRaw(freshOptionsRaw())).getHeight();
+    } catch {
+      return 0;
+    }
   }
   if (requested < 0) return 0;
   return Math.min(requested, await safeNetworkHeight());

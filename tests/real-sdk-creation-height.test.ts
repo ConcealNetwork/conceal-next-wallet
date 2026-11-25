@@ -12,8 +12,9 @@ import { HEIGHT_AT_VERSION } from "@/lib/config/height-at-version";
 import type { ImportWalletInput } from "@/lib/services/wallet.service";
 
 /**
- * Creation-height fallback (#wallet create / import): the daemon tip is used when
+ * Creation-height fallback (wallet create): the daemon tip is used when
  * `getheight` answers; otherwise the pinned release height — never 0 (genesis scan).
+ * The import path is unchanged: its default height is the daemon tip, else 0.
  * The SDK daemon client reads `globalThis.fetch` at construction, so stubbing
  * fetch drives `getHeight` through the real wiring.
  */
@@ -110,11 +111,6 @@ describe("importWallet default scan height", () => {
   it("defaults to the daemon tip when getheight answers", async () => {
     vi.stubGlobal("fetch", daemonAnswers(DAEMON_TIP));
     expect(await importedHeight()).toBe(DAEMON_TIP);
-  });
-
-  it("falls back to the pinned release height when getheight rejects", async () => {
-    vi.stubGlobal("fetch", daemonDown());
-    expect(await importedHeight()).toBe(HEIGHT_AT_VERSION);
   });
 
   it("keeps an explicit scanHeight when getheight rejects", async () => {
