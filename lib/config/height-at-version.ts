@@ -4,10 +4,9 @@
 /**
  * Release height pin (`release-pin.json`, refreshed by `npm run release:pin`).
  *
- * A new wallet (and an import without an explicit height) is seeded at the
- * daemon tip. When `getheight` fails there, the pin is used instead of 0, so the
- * wallet never scans from genesis. A static JSON import keeps this safe for both
- * the client bundle and SSR.
+ * A new wallet is seeded at the daemon tip. When `getheight` fails there, the
+ * pin is used instead of 0, so the wallet never scans from genesis. A static
+ * JSON import keeps this safe for both the client bundle and SSR.
  */
 import releasePin from "@/lib/config/release-pin.json";
 

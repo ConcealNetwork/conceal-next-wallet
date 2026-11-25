@@ -6,8 +6,8 @@
  * Refresh `lib/config/release-pin.json` — the release pin tuple: the app version
  * (from package.json) and the mainnet height at this version (`heightAtVersion`).
  *
- * Wallet create/import fall back to the pin when the daemon `getheight` call
- * fails, so a fresh wallet never starts scanning from block 0.
+ * Wallet create falls back to the pin when the daemon `getheight` call fails,
+ * so a fresh wallet never starts scanning from block 0.
  *
  * Usage (run once per release, then commit the file):
  *   npm run release:pin             refresh version + height
