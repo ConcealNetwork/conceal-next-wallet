@@ -14,10 +14,12 @@
  *   npm run release:pin -- --force  allow a height lower than the current pin
  *
  * Exits non-zero WITHOUT writing when no default node answers with a valid
- * height, or when the height would move backwards without --force.
+ * height, or when the height would move backwards without --force. The
+ * validation and guard logic lives in `lib/config/release-pin.mjs` (unit-tested).
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { DEFAULT_DAEMON_NODES } from "../lib/config/config.ts";
+import { pickPinnedHeight, readPinnedHeight, shouldWritePin } from "../lib/config/release-pin.mjs";
 
 const PIN_FILE = "lib/config/release-pin.json";
 const PACKAGE_FILE = "package.json";
@@ -28,7 +30,7 @@ function fail(message) {
   process.exit(1);
 }
 
-async function fetchHeight(nodeUrl) {
+async function fetchGetHeight(nodeUrl) {
   const response = await fetch(`${nodeUrl.replace(/\/$/, "")}/getheight`, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -36,24 +38,7 @@ async function fetchHeight(nodeUrl) {
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
-  const body = await response.json();
-  if (body?.status !== "OK") {
-    throw new Error(`status "${body?.status ?? "missing"}"`);
-  }
-  const { height } = body;
-  if (!Number.isSafeInteger(height) || height <= 0) {
-    throw new Error(`invalid height "${String(height)}"`);
-  }
-  return height;
-}
-
-async function currentPinnedHeight() {
-  try {
-    const parsed = JSON.parse(await readFile(PIN_FILE, "utf8"));
-    return Number.isSafeInteger(parsed?.heightAtVersion) ? parsed.heightAtVersion : 0;
-  } catch {
-    return 0;
-  }
+  return await response.json();
 }
 
 async function main() {
@@ -63,24 +48,29 @@ async function main() {
     fail(`${PACKAGE_FILE} has no version.`);
   }
 
-  let height = 0;
-  let source = "";
-  const failures = [];
+  const outcomes = [];
   for (const nodeUrl of DEFAULT_DAEMON_NODES) {
     try {
-      height = await fetchHeight(nodeUrl);
-      source = nodeUrl;
-      break;
+      outcomes.push({ nodeUrl, body: await fetchGetHeight(nodeUrl) });
     } catch (error) {
-      failures.push(`${nodeUrl}: ${error?.message ?? error}`);
+      outcomes.push({ nodeUrl, body: null, error: error?.message ?? String(error) });
     }
-  }
-  if (height === 0) {
-    fail(`no node returned a valid height — pin left untouched.\n  ${failures.join("\n  ")}`);
+    if (pickPinnedHeight(outcomes).height !== null) break;
   }
 
-  const current = await currentPinnedHeight();
-  if (current > 0 && height < current && !force) {
+  const { height, source, errors } = pickPinnedHeight(outcomes);
+  if (height === null) {
+    fail(`no node returned a valid height — pin left untouched.\n  ${errors.join("\n  ")}`);
+  }
+
+  let pinText = "";
+  try {
+    pinText = await readFile(PIN_FILE, "utf8");
+  } catch {
+    // No pin file yet — nothing to protect.
+  }
+  const current = readPinnedHeight(pinText);
+  if (!shouldWritePin(current, height, force)) {
     fail(
       `height ${height} is lower than the current pin ${current} — refusing to write ` +
         "(use --force to override).",

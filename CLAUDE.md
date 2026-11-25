@@ -97,7 +97,8 @@ Before any version bump, PR, or release:
 1. List all remote branches and identify unmerged `fix/*` / `feature/*` work that is **not** on `main`/`development`.
 2. For each, decide explicitly: land it in this release, or record why it is deferred (issue or tracking note). A known-completed fix must never sit unmerged across a release.
 3. The PR review comments must surface any leftover discussions, issues, or unmerged PRs, so the maintainer merges with full situational awareness.
-4. After the release, delete merged or superseded branches so the open-branch list reflects reality.
+4. Run `npm run release:pin` and commit `lib/config/release-pin.json` on the branch being released, so the wallet-create fallback matches the chain height at this release. Nothing else forces this: the `version`-drift test only catches a `package.json` bump, which does not happen on every release.
+5. After the release, delete merged or superseded branches so the open-branch list reflects reality.
 
 Dependency-chain order: `conceal-lib-js` → `conceal-wallet-sdk` → `conceal-next-wallet`. Downstream work assumes the upstream step is clean; do not start downstream work while a completed upstream fix is unmerged (emergencies excepted).
 
