@@ -9,6 +9,7 @@
   },
   "scripts": {
     "generate:precache": "node scripts/generate-precache-manifest.mjs",
+    "release:pin": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/sync-release-pin.mjs",
     "dev": "next dev",
     "preflight": "npm run types && npm run test && npm run lint && npm run format && npm run check && npm run knip",
     "build": "NODE_OPTIONS=--no-deprecation next build && npm run generate:precache",

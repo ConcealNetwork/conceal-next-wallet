@@ -6,6 +6,7 @@ import {
 } from "conceal-wallet-sdk";
 import { clearPasskeyEnrollment, getPasskeyEnrollment } from "@/lib/auth/biometric-store";
 import { signalUnlockRemoved } from "@/lib/auth/platform-unlock";
+import { resolveCreationHeight } from "@/lib/config/height-at-version";
 import {
   omitMnemonic,
   openEncryptedWallet,
@@ -194,12 +195,7 @@ export const realSdkWalletService: WalletService = {
   async prepareCreateWallet() {
     await ensureSdkReady();
     // Seed the draft at the current tip so a new wallet doesn't rescan history.
-    let creationHeight = 0;
-    try {
-      creationHeight = await buildDaemon(nodeUrlFromRaw(freshOptionsRaw())).getHeight();
-    } catch {
-      creationHeight = 0;
-    }
+    const creationHeight = await tipOrPinnedHeight();
     pendingDraft = buildNewWallet(creationHeight);
     return {
       mnemonic: pendingDraft.mnemonic ?? "",
@@ -683,6 +679,20 @@ function freshOptionsRaw(): RawWalletV1 {
     nonce: "",
     options: { customNode: false, nodeUrl: "" },
   };
+}
+
+/**
+ * The current daemon tip, or the pinned release height when `getheight` fails or
+ * returns nothing usable — never 0 while the pin is set (no genesis scan).
+ */
+async function tipOrPinnedHeight(): Promise<number> {
+  let daemonHeight: number | undefined;
+  try {
+    daemonHeight = await buildDaemon(nodeUrlFromRaw(freshOptionsRaw())).getHeight();
+  } catch {
+    daemonHeight = undefined;
+  }
+  return resolveCreationHeight(daemonHeight);
 }
 
 /** Clamp a requested scan height to `[0, networkTip]`; default to the current tip. */
